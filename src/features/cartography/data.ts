@@ -247,7 +247,7 @@ export const MAP_NODES: MapNode[] = [
     ],
     plotCount: 20,
     // ── Town 1 ladder · 4 rungs, Outpost→City — ported from
-    // docs/town-layout/index.html (the roads-first growing-outpost mockup) and
+    // reference/docs/town-layout/index.html (the roads-first growing-outpost mockup) and
     // matching the authored maps in src/ui/town/townMaps.ts (test-enforced).
     // Plots grow 3 → 6 → 12 → 20. Each rung absorbs one or two rungs of the old
     // 6-rung PC2 Camp→Manor ladder: its `unlocks` are the union of the absorbed
@@ -464,7 +464,7 @@ export const MAP_NODES: MapNode[] = [
     ],
     plotCount: 15,
     // ── Mirefen ladder · 4 rungs (Fishing Stilt → Fen Town), ported from
-    // docs/zones (mirefen design: plots 3/6/10/15). Costs are resource-only
+    // reference/docs/zones (mirefen design: plots 3/6/10/15). Costs are resource-only
     // (matching home/quarry convention) and gate ONLY on fish-board-producible
     // resources — the per-zone inventory is siloed, so a fish settlement can only
     // ever stock fish goods. The design's `plank`/`fenmead` gates were swapped for

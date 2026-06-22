@@ -10,7 +10,7 @@ description: >-
   existing 128px seasonal pipeline, production cost/consistency, market differentiation, premium "wow"),
   the hard MOBILE-READABILITY GATE every direction must pass, the apples-to-apples PixelLab test-set
   method (same cottage/villager/tree/barrel across every candidate), how to assemble the comparison board
-  (docs/art-style-board/ + docs/art-style-board-r2/), the bright-vs-moody prompt levers, and a catalog of
+  (reference/docs/art-style-board/ + reference/docs/art-style-board-r2/), the bright-vs-moody prompt levers, and a catalog of
   directions already explored plus fresh ones to propose. For GENERATING a tile's seasonal art use
   seasonal-tile-pipeline; for static PIXEL CRAFT use pixel-art-craft; for MOTION use pixel-art-animation;
   this skill is about CHOOSING and PITCHING the overall direction.
@@ -83,7 +83,7 @@ calmer variant"** regardless of total — it can still win as a *village/hero* s
    Villager/figure jobs run much slower (~7 min) than buildings/props — front-load them.
 3. **VIEW every sprite and QA it yourself** — don't trust a subagent's "looks good"; art judgement needs
    eyes on the pixels. Regenerate duds.
-4. **Assemble a board** (see `docs/art-style-board-r2/index.html` for the template): a compare strip, one
+4. **Assemble a board** (see `reference/docs/art-style-board-r2/index.html` for the template): a compare strip, one
    tab per direction with a composed scene + asset chips + palette + pitch + style-spec + a
    **mobile-readability callout** + the PixelLab recipe + reference touchstones, then a shared mobile
    checklist and a "more directions" section. Reference games are **inspiration touchstones only** —
@@ -108,9 +108,9 @@ calmer variant"** regardless of total — it can still win as a *village/hero* s
 
 ## Directions already explored (don't re-propose as new)
 
-- **Round 1** (`docs/art-style-board/index.html`): Cozy Cottagecore · Storybook HD-2D · Bold Cartoon ·
+- **Round 1** (`reference/docs/art-style-board/index.html`): Cozy Cottagecore · Storybook HD-2D · Bold Cartoon ·
   Retro 16-Bit · Muted Painterly.
-- **Round 2** (`docs/art-style-board-r2/index.html`): Cozy Storybook (★ recommended hybrid) · Cheery
+- **Round 2** (`reference/docs/art-style-board-r2/index.html`): Cozy Storybook (★ recommended hybrid) · Cheery
   Storybook · Lush Fantasy HD-2D · Bright HD-2D.
 
 ## Fresh directions worth proposing (with mobile-readability notes)
@@ -129,7 +129,7 @@ calmer variant"** regardless of total — it can still win as a *village/hero* s
 
 ## Related skills & where things live
 
-- Concept boards: `docs/art-style-board/` (Round 1) · `docs/art-style-board-r2/` (Round 2).
+- Concept boards: `reference/docs/art-style-board/` (Round 1) · `reference/docs/art-style-board-r2/` (Round 2).
 - HTML board craft → **html-docs**. Generating a tile's full seasonal set → **seasonal-tile-pipeline**.
 - Static pixel craft (palette/shading/AA) → **pixel-art-craft**. Motion → **pixel-art-animation**.
 - Driving PixelLab (async job model, consistency, review/select) → **pixellab**.

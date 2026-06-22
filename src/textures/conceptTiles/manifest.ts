@@ -1,4 +1,4 @@
-/** Pixel-art concept GIFs from docs/assets (farm + grass review pages). */
+/** Pixel-art concept GIFs from reference/docs/assets (farm + grass review pages). */
 
 export interface ConceptTileSpec {
   /** GIF filename under `/concept-tiles/` (Vite `public/`). */

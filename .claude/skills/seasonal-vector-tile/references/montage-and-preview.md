@@ -62,7 +62,7 @@ await b.close();
 Common script bug: a double season lookup (`V[S[col.s]]` when `col.s` is already
 the season string) — index with `V[col.s]`.
 
-## B. Preview doc (`docs/seasonal-vector-tiles/`)
+## B. Preview doc (`reference/docs/seasonal-vector-tiles/`)
 
 The standalone, no-server page the user reviews before integration. It loads the
 real tile code via `tiles.bundle.js` and animates the full year (idle + morphs)
@@ -74,7 +74,7 @@ grid. To add tiles:
    and derives each tile's label/family from its key, so the preview tracks the
    registry automatically — there is no hand-maintained tile list to keep in
    sync (just wire the new tile into `showcaseTiles.ts` as usual). See
-   `docs/seasonal-vector-tiles/README.md` for the exact esbuild command.
+   `reference/docs/seasonal-vector-tiles/README.md` for the exact esbuild command.
 2. **Bump the cache-buster** in `index.html`: `tiles.bundle.js?v=N` → `?v=N+1`.
    The bundle has a stable filename, so without this the GitHub Pages CDN and
    returning browsers serve the stale bundle and the page looks unchanged.
@@ -83,5 +83,5 @@ grid. To add tiles:
    thumbnail on GitHub matches.
 
 The deployed copy lives at
-`https://grimatoma.github.io/puzzleDrag2/docs/seasonal-vector-tiles/index.html`
+`https://grimatoma.github.io/puzzleDrag2/reference/docs/seasonal-vector-tiles/index.html`
 (Pages deploys on push to `main`).
