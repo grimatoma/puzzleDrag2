@@ -410,9 +410,9 @@ const SUMMER_BLOBS: Array<[number, number, number]> = [
   [-6, -21, 7],
   [6, -21, 7],
   [0, -24, 6.5],
-  [-13.5, -9, 6],
-  [13.5, -9, 6],
-  [0, -10, 7.5],
+  [-13, -10, 5],
+  [13, -10, 5],
+  [0, -11.5, 6.5],
 ];
 
 function summerOak(ctx: CanvasRenderingContext2D, sway: number, bob: number): void {

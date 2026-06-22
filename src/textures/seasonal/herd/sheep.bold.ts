@@ -561,8 +561,8 @@ function paintSheep(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
 
   // ── SCARF (winter) — a little knitted band around the neck, below the head ──
   if (p.scarfAmt > 0.001) {
-    const sx = hx + 4.2;
-    const sy = hy + 4.6;
+    const sx = hx + 4.6;
+    const sy = hy - 0.8;
     ctx.save();
     ctx.globalAlpha = clamp01(p.scarfAmt);
     // wrap band
