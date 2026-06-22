@@ -5,7 +5,7 @@
 //
 // This is the parity-gated adapter for Task 1–3 of the Phase 2a engine
 // migration. The translator table lives in:
-//   docs/superpowers/plans/2026-06-03-progression-phase2-engine-migration.md
+//   reference/docs/superpowers/plans/2026-06-03-progression-phase2-engine-migration.md
 //
 // Import type only from story.ts to avoid a runtime import cycle.
 import type { BeatTrigger } from "../../story.js";

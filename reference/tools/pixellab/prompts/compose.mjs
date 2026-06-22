@@ -13,8 +13,8 @@ import { STYLE_WORDS, STYLE_LOCK, FRAMING, FOOTPRINT_LOCK, PAD_LOCK } from "./fr
 import { CATEGORIES, TOKEN_DEFAULTS } from "./categories.mjs";
 
 const CANONICAL_ANCHORS = [
-  "docs/seasonal-tile-system/assets/willow-summer.png",
-  "docs/seasonal-tile-system/assets/eggplant-summer.png",
+  "reference/docs/seasonal-tile-system/assets/willow-summer.png",
+  "reference/docs/seasonal-tile-system/assets/eggplant-summer.png",
 ];
 
 function fill(t, ctx) {
@@ -128,7 +128,7 @@ export function buildPlan(cfg) {
     category: cfg.category,
     size: cfg.size || 128,
     decimateTo: cfg.decimateTo || null,
-    assets: cfg.assets || "docs/seasonal-tile-system/assets",
+    assets: cfg.assets || "reference/docs/seasonal-tile-system/assets",
     summer: composeSummer(cfg, cat, ctx),
     seasons,
     transitions: composeTransitions(cfg, cat, ctx),

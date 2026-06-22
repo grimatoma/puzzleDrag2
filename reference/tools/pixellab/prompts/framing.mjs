@@ -4,7 +4,7 @@
 // framing + style contract on every call — the missing piece that let the subject
 // drift in size, position and footprint between seasons.
 //
-// Source of truth: docs/seasonal-tile-system/index.html -> #layers (L0 style anchor,
+// Source of truth: reference/docs/seasonal-tile-system/index.html -> #layers (L0 style anchor,
 // L1 base/framing — the willow diorama geometry).
 
 // L0 — style, expressed in words. The style is ALSO carried by the two canonical

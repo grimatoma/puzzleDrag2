@@ -2,7 +2,7 @@
 // that tune the shared `tree-deciduous` playbook. Every per-state prompt (summer
 // generate, each season edit, each transition, each idle) is COMPOSED from the
 // meta-prompt layers in tools/pixellab/prompts/ — run `… prompts` to dump the full set
-// to docs/seasonal-tile-system/prompts/birch.md for review.
+// to reference/docs/seasonal-tile-system/prompts/birch.md for review.
 //
 // Generated and shipped at 128px (no decimate — the set is 128 going forward).
 export default {

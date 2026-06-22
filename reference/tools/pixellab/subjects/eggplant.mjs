@@ -5,7 +5,7 @@ export default {
   tileKey: "tile_veg_eggplant", // engine folder: public/seasonal-tiles/<tileKey>/
   category: "produce-veg",
   size: 128,
-  summer: { existing: "docs/seasonal-tile-system/assets/eggplant-summer.png" },
+  summer: { existing: "reference/docs/seasonal-tile-system/assets/eggplant-summer.png" },
 
   identity:
     "a single large glossy deep-purple eggplant with a green calyx top, scaled to fill the tile",

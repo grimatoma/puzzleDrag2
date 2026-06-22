@@ -28,9 +28,9 @@ into the key-named dir via --out-name (the positional `subject` still names the 
 frame dirs under anim/):
 
 Usage:
-  python tools/pixellab/pack_sheets.py chicken --out-name tile_bird_chicken
-  python tools/pixellab/pack_sheets.py willow --out-name tile_tree_willow --concat autumn-baremound+baremound-winter=trans-autumn-winter
-  python tools/pixellab/pack_sheets.py carrot --out-name tile_veg_carrot --decimate 64 --static-idle spring,winter
+  python reference/tools/pixellab/pack_sheets.py chicken --out-name tile_bird_chicken
+  python reference/tools/pixellab/pack_sheets.py willow --out-name tile_tree_willow --concat autumn-baremound+baremound-winter=trans-autumn-winter
+  python reference/tools/pixellab/pack_sheets.py carrot --out-name tile_veg_carrot --decimate 64 --static-idle spring,winter
 
 --out-name NAME   output folder under --out (default = subject); use the TILE KEY so the engine
                   auto-discovers it (e.g. tile_tree_willow).
@@ -44,7 +44,7 @@ from PIL import Image
 
 ap = argparse.ArgumentParser()
 ap.add_argument('subject')
-ap.add_argument('--assets', default='docs/seasonal-tile-system/assets')
+ap.add_argument('--assets', default='reference/docs/seasonal-tile-system/assets')
 ap.add_argument('--out', default='public/seasonal-tiles')
 ap.add_argument('--out-name', dest='out_name', default=None,
                 help='output folder under --out (default=subject); use the TILE KEY for engine auto-discovery')

@@ -1,7 +1,7 @@
 // Headless frame-capture for the animated CANVAS icons (the Dev Panel "Icons" tab
 // library). Renders each `(ctx,t)=>void` animation faithfully in a real browser
 // canvas (same translate/scale wrapper the Dev Panel uses) at high resolution and
-// writes per-frame PNGs to docs/canvas-tile-review/frames/<key>/f##.png.
+// writes per-frame PNGs to reference/docs/canvas-tile-review/frames/<key>/f##.png.
 //
 // Run (dev server must be up):  node tools/icon-review/capture.mjs
 // Env: DEV_ORIGIN (default http://localhost:5199), APP_BASE (default /puzzleDrag2/),
@@ -13,7 +13,7 @@ import { Buffer } from "node:buffer";
 
 const ORIGIN = process.env.DEV_ORIGIN || "http://localhost:5199";
 const APP_BASE = process.env.APP_BASE || "/puzzleDrag2/";
-const OUT = "docs/canvas-tile-review/frames";
+const OUT = "reference/docs/canvas-tile-review/frames";
 const N = Number(process.env.N || 16);
 const SPAN = Number(process.env.SPAN || 4.0);
 const SCALE = Number(process.env.SCALE || 8);

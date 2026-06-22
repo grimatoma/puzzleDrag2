@@ -124,7 +124,7 @@ The GameScene is reachable from any scene; the season is registry-driven; so you
 ```
 
 The returned `data:` URL is too large for the tool result and gets saved to a file — decode it to a PNG
-with `python tools/pixellab/decode_dataurl.py <saved-file> <out.png>` and Read it. The **per-season canopy
+with `python reference/tools/pixellab/decode_dataurl.py <saved-file> <out.png>` and Read it. The **per-season canopy
 colour must differ** (the procedural fallback is season-identical, so four distinct season-correct colours
 prove both the load path and the season pick). `seasonIndexInSession` with `turnBudget=20`: turnsUsed
 0/7/12/18 → Spring/Summer/Autumn/Winter.

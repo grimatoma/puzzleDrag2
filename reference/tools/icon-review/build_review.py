@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build review artifacts for the animated CANVAS icons from captured frames.
 
-Reads docs/canvas-tile-review/frames/<key>/f##.png and writes under
-docs/canvas-tile-review/:
+Reads reference/docs/canvas-tile-review/frames/<key>/f##.png and writes under
+reference/docs/canvas-tile-review/:
   montages/<key>.png    hero (frame0, full res) + grid of all frames on checker
   gifs/<key>.gif        looping preview on parchment bg (see motion)
   category/<cat>.png     every hero in a module-category, side by side (cohesion)
@@ -13,8 +13,8 @@ from __future__ import annotations
 import glob, json, os, re
 from PIL import Image, ImageDraw, ImageFont
 
-FRAMES = "docs/canvas-tile-review/frames"
-OUT = "docs/canvas-tile-review"
+FRAMES = "reference/docs/canvas-tile-review/frames"
+OUT = "reference/docs/canvas-tile-review"
 PARCH = (243, 239, 230, 255)
 INK, SUB = (236, 238, 242), (150, 154, 162)
 BG_A, BG_B = (60, 62, 68), (44, 46, 52)

@@ -10,7 +10,7 @@ description: >-
   zone. Covers the organic-growth design principles (radial growth from a fixed evolving landmark,
   receding wilderness as the progress bar, path-material progression, varied lots + jitter, rising prop
   density), the puzzleDrag2 authored-map contract (the 40×30 @ 32px AuthoredTownMap, stable-additive lot
-  indices, the cartography tier ladder), the interactive layout mockup at docs/town-layout/index.html, and
+  indices, the cartography tier ladder), the interactive layout mockup at reference/docs/town-layout/index.html, and
   the workflow from ladder → mockup → port to townMaps.ts → tile manifest → art → wire TownScene → verify.
   For terrain BOUNDARIES / autotiling / transition tiles use tileset-scene-design; for the per-tile PIXEL
   ART use pixellab / seasonal-tile-pipeline / pixel-art-craft; this skill is about the SETTLEMENT LAYOUT
@@ -87,7 +87,7 @@ When inserting a new bottom rung into an existing ladder:
 ## Workflow
 
 1. **Set the ladder** — rung names + plot curve (above). Confirm count/curve with the user.
-2. **Author roads → frontage in the mockup** — `docs/town-layout/index.html` is a live, canvas-based tool
+2. **Author roads → frontage in the mockup** — `reference/docs/town-layout/index.html` is a live, canvas-based tool
    on the real 40×30 grid: it holds a `ROADS` list (segments with a `tier`) and a `SPEC` list of frontage
    slots (which road + side + position-along), resolves slots to building rects at a setback, and renders
    the network + plots + a "Grow" play-through, with a **Copy layout JSON** export of `roads` + `lots` in

@@ -15,7 +15,9 @@
 *.log
 
 # Ignore specific directories
-docs/
+# reference/ = design docs + art pipeline (the old docs/ + art tools); supporting
+# material, NOT the game — keep it out of the codebase graph (see reference/README.md).
+reference/
 public/
 dist/
 node_modules/

@@ -21,8 +21,8 @@
    the bright autumn endpoint legitimately raises the tail.
 
 Usage:
-  python tools/pixellab/check_glow.py docs/seasonal-tile-system/assets/anim/chicken-idle-summer
-  python tools/pixellab/check_glow.py <dir> [<dir2> ...] [--thresh 4] [--bloom 25]
+  python reference/tools/pixellab/check_glow.py reference/docs/seasonal-tile-system/assets/anim/chicken-idle-summer
+  python reference/tools/pixellab/check_glow.py <dir> [<dir2> ...] [--thresh 4] [--bloom 25]
 Exit code is non-zero if any SPIKE or BLOOM is flagged.
 """
 import sys, glob, os, argparse, statistics

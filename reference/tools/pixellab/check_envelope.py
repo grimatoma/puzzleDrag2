@@ -10,7 +10,7 @@ montage from assemble_gifs.py. This script is the cheap numeric gate; the montag
 is the real catch.
 
 Usage:
-  python tools/pixellab/check_envelope.py chicken [--assets DIR] [--seasons spring,summer,autumn,winter]
+  python reference/tools/pixellab/check_envelope.py chicken [--assets DIR] [--seasons spring,summer,autumn,winter]
 """
 import os, argparse
 from PIL import Image
@@ -39,7 +39,7 @@ def bbox(path):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('subject')
-    ap.add_argument('--assets', default='docs/seasonal-tile-system/assets')
+    ap.add_argument('--assets', default='reference/docs/seasonal-tile-system/assets')
     ap.add_argument('--seasons', default='spring,summer,autumn,winter')
     a = ap.parse_args()
     ref = bbox(os.path.join(a.assets, '%s-summer.png' % a.subject))

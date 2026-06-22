@@ -6,7 +6,7 @@
 // and the season lives entirely in the pad + light (for those, the big consistency lever
 // is "change ONLY the ground/light, keep the subject pixel-identical including colours").
 //
-// Source of truth: docs/seasonal-tile-system/index.html -> #roadmap-categories (the
+// Source of truth: reference/docs/seasonal-tile-system/index.html -> #roadmap-categories (the
 // category table) and #tree-lifecycle / #anim-meta (the refined tree + animation metas).
 //
 // `{tokens}` in the text are filled by the composer from the subject's `overrides`

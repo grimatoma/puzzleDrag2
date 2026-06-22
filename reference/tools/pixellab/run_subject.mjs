@@ -7,7 +7,7 @@
 //
 // THIN configs (subjects/<name>.mjs) carry only identity + locks + overrides; every
 // per-state prompt is COMPOSED from the meta-prompt layers (tools/pixellab/prompts/).
-//   `prompts` writes the full composed prompt set to docs/seasonal-tile-system/prompts/
+//   `prompts` writes the full composed prompt set to reference/docs/seasonal-tile-system/prompts/
 //            <subject>.md for review BEFORE any credits are spent (run this first).
 import { pathToFileURL } from "node:url";
 import { join, resolve } from "node:path";
@@ -31,7 +31,7 @@ const run = (label, fn) =>
 // Dump the fully-composed prompts to a reviewable per-subject Markdown sheet. No API.
 async function prompts() {
   const md = renderPlanMarkdown(rawCfg, plan);
-  const dir = "docs/seasonal-tile-system/prompts";
+  const dir = "reference/docs/seasonal-tile-system/prompts";
   mkdirSync(dir, { recursive: true });
   const out = `${dir}/${sub}.md`;
   writeFileSync(out, md, "utf8");

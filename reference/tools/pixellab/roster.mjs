@@ -3,12 +3,12 @@
 // on disk shows its real frames; a subject without art shows a placeholder so progress is
 // visible as the set fills in.
 //
-// `slug` is the asset filename stem (docs/seasonal-tile-system/assets/<slug>-summer.png …)
+// `slug` is the asset filename stem (reference/docs/seasonal-tile-system/assets/<slug>-summer.png …)
 // and MUST match the subject's run-config slug once it is generated — pick it now, keep it.
 // `category` keys match gen_gallery's CAT map (drives grouping + the category label/order).
 //
 // Source of truth for the names/categories is the "All tiles (first pass)" tab in
-// docs/seasonal-tile-system/index.html. Add a row here the moment a tile is planned.
+// reference/docs/seasonal-tile-system/index.html. Add a row here the moment a tile is planned.
 //
 // Mis-filed-in-constants note: Clover (a four-leaf clover) and Melon (a watermelon) live in
 // the `bird` family in constants.ts but are a groundcover and a produce item — filed here

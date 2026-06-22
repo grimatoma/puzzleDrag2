@@ -8,7 +8,7 @@
 import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
 
-const ROOT = new URL("..", import.meta.url).pathname;
+const ROOT = new URL("../..", import.meta.url).pathname;
 
 const filesRaw = execSync(`grep -rl ": { " src/ --include='*.ts' --include='*.tsx'`, {
   cwd: ROOT,

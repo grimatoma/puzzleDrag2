@@ -8,16 +8,16 @@ Composites on the board bg (#d7e7c0) at 3x nearest. GIFs go to anim/ (handy
 previews); strips + the stills montage go to --review (review-only, gitignore it).
 
 Usage:
-  python tools/pixellab/assemble_gifs.py chicken
-  python tools/pixellab/assemble_gifs.py willow --review docs/seasonal-tile-system/assets/_review
+  python reference/tools/pixellab/assemble_gifs.py chicken
+  python reference/tools/pixellab/assemble_gifs.py willow --review reference/docs/seasonal-tile-system/assets/_review
 """
 import os, glob, argparse
 from PIL import Image, ImageDraw
 
 ap = argparse.ArgumentParser()
 ap.add_argument('subject')
-ap.add_argument('--assets', default='docs/seasonal-tile-system/assets')
-ap.add_argument('--review', default='docs/seasonal-tile-system/assets/_review')
+ap.add_argument('--assets', default='reference/docs/seasonal-tile-system/assets')
+ap.add_argument('--review', default='reference/docs/seasonal-tile-system/assets/_review')
 ap.add_argument('--seasons', default='spring,summer,autumn,winter')
 ap.add_argument('--scale', type=int, default=3)
 a = ap.parse_args()

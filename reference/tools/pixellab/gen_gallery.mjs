@@ -1,4 +1,4 @@
-// Auto-generate the ASSETS gallery in docs/seasonal-tile-system/index.html FROM the actual
+// Auto-generate the ASSETS gallery in reference/docs/seasonal-tile-system/index.html FROM the actual
 // assets on disk + the planned-subject roster, so the doc can never drift from what was
 // really generated and adding a subject needs no hand-editing.
 //
@@ -21,9 +21,9 @@ import { pathToFileURL } from "node:url";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
-const DOC = "docs/seasonal-tile-system/index.html";
-const ASSETS = "docs/seasonal-tile-system/assets";
-const CANDS = "docs/seasonal-tile-system/assets/candidates";
+const DOC = "reference/docs/seasonal-tile-system/index.html";
+const ASSETS = "reference/docs/seasonal-tile-system/assets";
+const CANDS = "reference/docs/seasonal-tile-system/assets/candidates";
 const SUBJECTS_DIR = "tools/pixellab/subjects";
 
 const SEASON_ORDER = ["spring", "summer", "autumn", "baremound", "winter"];

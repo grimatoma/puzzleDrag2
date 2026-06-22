@@ -5,7 +5,7 @@
 // each API call gets the complete season spec, not a one-word hint — the thin
 // one-liner deltas were a primary cause of generation drift.
 //
-// Source of truth: docs/seasonal-tile-system/index.html  -> #roadmap-seasons (the
+// Source of truth: reference/docs/seasonal-tile-system/index.html  -> #roadmap-seasons (the
 // 4-dressing table) and #layers (L2 season defs).
 
 export const SEASONS = {

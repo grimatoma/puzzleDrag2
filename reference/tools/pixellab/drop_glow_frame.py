@@ -5,8 +5,8 @@ loop the glow is usually the second-to-last frame; dropping it keeps the loop
 seamless because the (new) last frame is still the rest frame.
 
 Usage:
-  python tools/pixellab/drop_glow_frame.py <frames_dir> <index>
-  e.g. python tools/pixellab/drop_glow_frame.py .../anim/chicken-idle-summer 7
+  python reference/tools/pixellab/drop_glow_frame.py <frames_dir> <index>
+  e.g. python reference/tools/pixellab/drop_glow_frame.py .../anim/chicken-idle-summer 7
 """
 import sys, os, glob
 

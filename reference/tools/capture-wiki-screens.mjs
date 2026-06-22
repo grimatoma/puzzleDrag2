@@ -3,7 +3,7 @@
  * named visual scenarios embedded in wiki content pages, so the wiki can show
  * still images instead of live interactive game iframes.
  *
- * Usage: node tools/capture-wiki-screens.mjs [baseURL]
+ * Usage: node reference/tools/capture-wiki-screens.mjs [baseURL]
  *   baseURL defaults to http://localhost:5173/puzzleDrag2/ (the Vite dev server).
  *
  * Mirrors the determinism + freeze recipe from tests/visual/desktop-smoke.spec.ts
@@ -16,7 +16,7 @@ import { dirname, resolve } from "node:path";
 import { mkdirSync } from "node:fs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const OUT_DIR = resolve(__dirname, "../src/balanceManager/wiki/assets/game-screens");
+const OUT_DIR = resolve(__dirname, "../../src/balanceManager/wiki/assets/game-screens");
 const BASE = process.argv[2] ?? "http://localhost:5173/puzzleDrag2/";
 const VISUAL_FIXED_NOW = 1_700_000_000_000;
 

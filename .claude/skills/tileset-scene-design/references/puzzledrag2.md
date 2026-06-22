@@ -2,7 +2,7 @@
 
 The settlement view (the `#/town` route) is where this skill applies today. It is a Phaser tilemap that
 currently violates the core rule: **roads are one flat tile, no autotiling, hard seams everywhere.**
-The full diagnosis + design lives in `docs/road-system-proposal.html` — read it for the before/after.
+The full diagnosis + design lives in `reference/docs/road-system-proposal.html` — read it for the before/after.
 
 ## The renderer
 - **`src/ui/town/TownScene.ts`** — Phaser scene. Grid is **40×30 @ 32px** (1280×960 design space).
@@ -40,7 +40,7 @@ Inspect it: `python .claude/skills/tileset-scene-design/scripts/tileset_montage.
   `buildTownPlan()` already computes.
 - **water** `250`; tree recipes (pine `168/192`), rocks `224/225`, fountain block `272…322`.
 
-## Wiring plan (matches docs/road-system-proposal.html)
+## Wiring plan (matches reference/docs/road-system-proposal.html)
 1. New `src/ui/town/roadAutotile.ts`: build masks from `plan.roads`/`plaza`/`fields`, run the 4-bit
    line autotiler (roads) + blob (plaza/fields) using `references/autotiling.md`.
 2. `TownScene`: replace the flat-`DIRT` stamps in `paintRoads/paintPlaza/paintFields` with

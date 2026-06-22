@@ -57,11 +57,11 @@ path). The one-paragraph essence:
 
 ## What each subject should look like
 
-`docs/tile-season-art-grid.md` is the project art catalog: per-subject Spring /
+`reference/docs/tile-season-art-grid.md` is the project art catalog: per-subject Spring /
 Summer / Autumn / Winter descriptors plus the global framing (the ground pad,
 camera, light) and the **identity rule** verbatim. Find your subject's row there
 and translate its four cells into the four `SP` param sets. Per-subject identity
-and palette-lock strings also live in `tools/pixellab/subjects/<name>.mjs`.
+and palette-lock strings also live in `reference/tools/pixellab/subjects/<name>.mjs`.
 
 A clean, current example to mirror: **`src/textures/seasonal/veg/pepper.ts`**.
 Type contract: `src/textures/seasonal/types.ts`.
@@ -131,7 +131,7 @@ the param model and reads cleanly, but a freshly-authored animal is the most
 likely to need a polish pass, so flag any that don't hold up.
 
 ### 6. Update the preview doc
-`docs/seasonal-vector-tiles/` is the standalone, no-server preview the user
+`reference/docs/seasonal-vector-tiles/` is the standalone, no-server preview the user
 reviews before integration. Regenerate its bundle to include the new tiles and
 bump the `?v=` cache-buster in `index.html` (see `references/montage-and-preview.md`).
 

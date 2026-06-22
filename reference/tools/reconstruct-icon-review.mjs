@@ -1,5 +1,5 @@
 // Reconstruct the gitignored icon-review/ working dir FROM the committed
-// docs/icon-review.html, so the tracker can be regenerated without the working
+// reference/docs/icon-review.html, so the tracker can be regenerated without the working
 // dir (which is .gitignored and disposable). The committed HTML is the only
 // surviving copy of the historical "before" thumbnails and per-key review
 // notes, so a clean rebuild from an empty dir would destroy them.
@@ -34,9 +34,9 @@ const fromArg = (() => {
   return i === -1 ? null : args[i + 1];
 })();
 // Source of truth: the PRISTINE committed HTML, not a freshly-rebuilt one. Pass
-// --from to point at a saved committed copy when docs/icon-review.html has
+// --from to point at a saved committed copy when reference/docs/icon-review.html has
 // already been rebuilt this session.
-const HTML = resolve(fromArg || "docs/icon-review.html");
+const HTML = resolve(fromArg || "reference/docs/icon-review.html");
 const exceptArg = (() => {
   const i = args.indexOf("--restore-except");
   return i === -1 ? null : (args[i + 1] || "");

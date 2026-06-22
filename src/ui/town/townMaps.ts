@@ -15,7 +15,7 @@
 // Both ladders are PC2's uniform 6-rung shape (home = Camp→Manor; quarry uses
 // mine-themed rung names). Layouts here are functional placeholders — correct
 // lot counts/positions on a plain street grid; organic-growth art is a later
-// polish pass (see docs/town-layout/index.html + the growing-settlement-layout
+// polish pass (see reference/docs/town-layout/index.html + the growing-settlement-layout
 // skill).
 //
 // Ground uses the same Tuxemon tileset indices `TownScene` references.
@@ -31,7 +31,7 @@ const DESIGN_W = COLS * TILE; // 1280
 const DESIGN_H = ROWS * TILE; // 960
 
 // ── Tileset indices (mirror of the private `T` in TownScene.ts; appendix of
-// docs/zone-tier-ladder.html). Authors may also write -1 for a blank cell.
+// reference/docs/zone-tier-ladder.html). Authors may also write -1 for a blank cell.
 // Clean flat fills — NOT 26/35 or the 50/51/… "variants", which each carry a
 // baked dark fleck / sand patch and tile into a regular grid of smudges. See the
 // `T` table in TownScene.ts. 125 = clean grass; sand fill is the autotiler's blob
@@ -116,7 +116,7 @@ export interface AuthoredTownMap {
 }
 
 // ── Town 1 — home (Hearthwood Vale) ladder · 4 rungs (Outpost→City) ──────────
-// Ported from docs/town-layout/index.html (the roads-first "growing outpost →
+// Ported from reference/docs/town-layout/index.html (the roads-first "growing outpost →
 // city" mockup) via the growing-settlement-layout skill: a forest clearing on a
 // river that grows a single dirt main street into a bridged little city. Lots are
 // laid roads-first — each building FRONTS a street at a fixed setback — and the
@@ -604,7 +604,7 @@ function quarryRung(plots: number): AuthoredTownMap {
 const QUARRY_MAPS: AuthoredTownMap[] = QUARRY_PLOTS.map(quarryRung);
 
 // ── Mirefen Hollow — mirefen (fish) ladder · 4 rungs (3/6/10/15) ─────────────
-// Ported from docs/zones/data/layouts/mirefen.mjs through `resolveLots()`: a
+// Ported from reference/docs/zones/data/layouts/mirefen.mjs through `resolveLots()`: a
 // ribbon-stilt town whose boardwalks ARE the roads, growing east/west/north
 // along the spine then dipping into the south lagoon. The lot list below is the
 // verbatim `resolveLots(mirefen)` output (index,cx,cy,w,h), ordered by index so

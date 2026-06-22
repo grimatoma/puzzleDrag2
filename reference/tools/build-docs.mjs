@@ -1,14 +1,14 @@
 // Build the public docs site that ships alongside the game on GitHub Pages.
 //
 // Run after `vite build` (see the `build` npm script). It mirrors every
-// version-controlled file under `docs/` into `dist/docs/`:
+// version-controlled file under `reference/docs/` into `dist/docs/`:
 //   - `.html` docs are copied as-is (they are already self-contained per CLAUDE.md).
 //   - `.md` docs are rendered to a styled `.html` sibling via `marked`.
 //   - an `index.html` landing page lists everything, grouped by section.
 //
 // Only git-tracked files are considered, so gitignored scratch content under
-// `docs/references/` never leaks into the deploy. Static assets under
-// `docs/assets/` (PNG/GIF/etc.) are copied alongside the HTML so relative
+// `reference/docs/references/` never leaks into the deploy. Static assets under
+// `reference/docs/assets/` (PNG/GIF/etc.) are copied alongside the HTML so relative
 // `<img src="assets/...">` links resolve on GitHub Pages. No network access
 // required at build time.
 
@@ -26,15 +26,19 @@ import { fileURLToPath } from "node:url";
 import { marked } from "marked";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const repoRoot = resolve(__dirname, "..");
-const docsRoot = join(repoRoot, "docs");
+// This tool lives at reference/tools/build-docs.mjs, so the repo root is two
+// levels up. The docs source is the isolated reference/docs/ tree; the output
+// path stays dist/docs/ so the published Pages URL (/puzzleDrag2/docs/) is
+// unchanged.
+const repoRoot = resolve(__dirname, "..", "..");
+const docsRoot = join(repoRoot, "reference", "docs");
 const outRoot = join(repoRoot, "dist", "docs");
 
 // --- collect tracked docs ---------------------------------------------------
 
 /** @returns {string[]} repo-relative paths of every tracked file under docs/ */
 function trackedDocs() {
-  const out = execFileSync("git", ["ls-files", "docs"], {
+  const out = execFileSync("git", ["ls-files", "reference/docs"], {
     cwd: repoRoot,
     encoding: "utf8",
   });
@@ -766,7 +770,7 @@ ${archiveHtml}
 ${byDateHtml}
     </div>
     <footer>
-      ${entries.length} documents · generated at build time by <code>tools/build-docs.mjs</code>
+      ${entries.length} documents · generated at build time by <code>reference/tools/build-docs.mjs</code>
     </footer>
   </div>
   <script>

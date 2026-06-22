@@ -1,4 +1,4 @@
-// Build the icon-review status tracker (docs/icon-review.html) from:
+// Build the icon-review status tracker (reference/docs/icon-review.html) from:
 //   - icon-review/manifest.json           (from render-icons.mjs)
 //   - icon-review/notes.json   (optional)  per-key review notes the loop appends
 //   - icon-review/{before,after}/<mod>/<key>.thumb.png  (base64-embedded)
@@ -169,5 +169,5 @@ function flt(){const r=fr.value,u=fu.value;document.querySelectorAll('.icon').fo
 fr.onchange=fu.onchange=flt;
 </script></body></html>`;
 
-writeFileSync(resolve("docs/icon-review.html"), html);
-console.log(`wrote docs/icon-review.html — ${done}/${total} reviewed`);
+writeFileSync(resolve("reference/docs/icon-review.html"), html);
+console.log(`wrote reference/docs/icon-review.html — ${done}/${total} reviewed`);

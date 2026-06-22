@@ -7,7 +7,7 @@ export default {
   tileKey: "tile_tree_willow", // engine folder: public/seasonal-tiles/<tileKey>/
   category: "tree-deciduous",
   size: 128,
-  summer: { existing: "docs/seasonal-tile-system/assets/willow-summer.png" },
+  summer: { existing: "reference/docs/seasonal-tile-system/assets/willow-summer.png" },
 
   identity:
     "a willow tree with a very full, dense, leafy weeping canopy and a short sturdy brown trunk",
