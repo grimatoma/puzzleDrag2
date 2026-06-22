@@ -4,7 +4,14 @@ import { categoryOfTileKey, lineFloor, PRODUCTION_LINES } from "../config/produc
 
 /** Resolve the production line that governs a tile's income: the produced-resource
  *  family when it is a production line, else the display category. Mirrors how
- *  TILES_PER_RESOURCE was built so floor and divisor agree for cross-category tiles. */
+ *  TILES_PER_RESOURCE was built so floor and divisor agree for cross-category tiles.
+ *
+ *  Note: this governs PRICING (divisor + floor) only. Worker threshold reductions
+ *  are attributed by DISPLAY category (threshold_reduce_category iterates tiles
+ *  grouped by t.category), so the two cross-category tiles — tile_bird_clover
+ *  (flowers) and tile_bird_melon (fruits) — are priced on the bird line but their
+ *  income is sped up by the flowers/fruits worker, not the Poultryman. Intentional
+ *  and harmless (two niche variants); income still reduces and the floor matches. */
 function lineCategoryForTileKey(tileKey: string): string | null {
   const fam = tileFamily(tileKey);
   if (fam && PRODUCTION_LINES[fam]) return fam;
