@@ -360,9 +360,12 @@ function byDateDesc(a, b) {
 const SECTION_META = {
   ".": { label: "Overview", blurb: "Top-level design, audit & proposal docs", order: 0, glyph: "🗺️", accent: "#e0913a" },
   projects: { label: "Project Briefs", blurb: "Ranked roadmap + self-contained implementation briefs", order: 1, glyph: "🧭", accent: "#e0913a" },
+  superpowers: { label: "Plans & Specs", blurb: "In-flight implementation plans & design specs (shipped ones graduate to the Archive)", order: 1.5, glyph: "📝", accent: "#9fb0bd" },
   "seasonal-tile-system": { label: "Seasonal Tile System", blurb: "Live seasonal-tile pipeline & prompts", order: 2, glyph: "🍂", accent: "#c8743a" },
+  "seasonal-vector-tiles": { label: "Seasonal Vector Tiles", blurb: "All-vector animated seasonal tiles — preview & spec", order: 2.5, glyph: "🍃", accent: "#8bab5a" },
   "town-layout": { label: "Town Layout", blurb: "Settlement growth mockups", order: 3, glyph: "🏘️", accent: "#8bab5a" },
   "town-camera": { label: "Town Camera", blurb: "Map camera-view decision board + live demo", order: 4, glyph: "🎥", accent: "#8bab5a" },
+  "town-orientation": { label: "Town Orientation", blurb: "Map perspective / camera-look studies", order: 4.5, glyph: "🧭", accent: "#8bab5a" },
   zones: { label: "Zone Atlas", blurb: "Unique growing-settlement zones & build-outs", order: 5, glyph: "🌍", accent: "#6fae8f" },
   "puzzle-prototypes": { label: "Puzzle Prototypes", blurb: "Playable browser prototypes of the drag-chain core", order: 6, glyph: "🧩", accent: "#9b8fd0" },
   "art-style-board": { label: "Art Style Board", blurb: "Candidate art directions, pitched & proven", order: 7, glyph: "🎨", accent: "#d98a8a" },
@@ -401,6 +404,11 @@ const COLLECTIONS = {
     label: "Project Briefs",
     hub: "projects/index.html",
     blurb: "Ranked roadmap + self-contained implementation briefs for upcoming work.",
+  },
+  "canvas-tile-review": {
+    label: "Canvas Icon Review",
+    hub: "canvas-tile-review/index.html",
+    blurb: "Per-icon animated review of the 159 canvas icons — verdicts, motion scores & deep-dives.",
   },
 };
 
