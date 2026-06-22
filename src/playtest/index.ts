@@ -203,3 +203,4 @@ export * from "./board.js";
 export * from "./policy.js";
 export * from "./payload.js";
 export * from "./prng.js";
+export * from "./campaign.js";

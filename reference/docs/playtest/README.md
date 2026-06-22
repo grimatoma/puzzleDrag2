@@ -9,7 +9,7 @@ See the implementation brief (archived — shipped): [`docs/archive/projects/05-
 ## Run it
 
 ```bash
-npm run playtest -- --zones home --runs 10 --seed 1 --out docs/playtest
+npm run playtest -- --zones home --runs 10 --seed 1 --out reference/docs/playtest
 # flags: --zones <csv>  --runs <n>  --seed <n>  --policy greedy
 #        --rows <n>  --cols <n>  --out <dir>  --no-write
 ```

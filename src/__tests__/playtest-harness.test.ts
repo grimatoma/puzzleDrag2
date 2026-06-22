@@ -11,6 +11,7 @@ import { turnBudgetForZone } from "../features/zones/data.js";
 import {
   simulateRun,
   runPlaytest,
+  runCampaign,
   familyValueSpread,
   buildChainCollectedPayload,
   type Chain,
@@ -112,6 +113,68 @@ describe("playtest harness — drift guard", () => {
       home: report.metrics.zones[0],
       spread: report.metrics.spread,
       changeList: report.metrics.changeList,
+    };
+    expect(snapshot).toMatchSnapshot();
+  });
+});
+
+describe("campaign harness — determinism", () => {
+  it("same seed → identical campaign metrics", () => {
+    const a = runCampaign({ zoneId: "home", runs: 8, seed: 1 });
+    const b = runCampaign({ zoneId: "home", runs: 8, seed: 1 });
+    expect(a.metrics).toEqual(b.metrics);
+  });
+
+  it("different seeds → different per-run chain coins", () => {
+    const a = runCampaign({ zoneId: "home", runs: 8, seed: 1 });
+    const c = runCampaign({ zoneId: "home", runs: 8, seed: 2 });
+    expect(a.metrics.runs.map((r) => r.chainCoins)).not.toEqual(c.metrics.runs.map((r) => r.chainCoins));
+  });
+});
+
+describe("campaign harness — progression contract", () => {
+  it("home farm-only campaign stalls before tier 1, blocked on crafted bread", () => {
+    const r = runCampaign({ zoneId: "home", runs: 30, seed: 1 });
+    // The home TIER ladder needs crafted/cross-zone goods; a farm-only campaign
+    // earns every Hamlet input EXCEPT bread, so it legitimately stalls at tier 0.
+    expect(r.metrics.finalTier).toBe(0);
+    expect(r.metrics.tierStall?.toName).toBe("Hamlet");
+    const bread = r.metrics.tierStall?.missing.find((x) => x.key === "bread");
+    expect(bread).toBeDefined();
+    expect(bread?.source).toBe("crafted");
+    // Every off-farm blocker must be classified as crafted or another zone —
+    // never silently "farm" (that would hide the gate the report is meant to find).
+    for (const mi of r.metrics.tierStall?.missing ?? []) {
+      if (mi.source === "farm") throw new Error(`farm-sourced input ${mi.key} should not block a farm campaign`);
+    }
+  });
+
+  it("coin economy paces sanely: founding #2 (300c) is reached within its band", () => {
+    const r = runCampaign({ zoneId: "home", runs: 30, seed: 1 });
+    const first = r.metrics.coinMilestones[0];
+    expect(first.runIndex).toBeGreaterThan(0);
+    expect(first.verdict).toBe("within");
+    // Bankroll grows monotonically across a farm loop (nothing spends coins).
+    const balances = r.metrics.runs.map((x) => x.balanceAfter);
+    for (let i = 1; i < balances.length; i++) expect(balances[i]).toBeGreaterThanOrEqual(balances[i - 1]);
+  });
+});
+
+describe("campaign harness — drift guard", () => {
+  it("campaign metrics snapshot (a pacing change must break this)", () => {
+    const r = runCampaign({ zoneId: "home", runs: 8, seed: 1 });
+    const m = r.metrics;
+    const snapshot = {
+      runsPlayed: m.runsPlayed,
+      startCoins: m.startCoins,
+      finalBalance: m.finalBalance,
+      finalTier: m.finalTier,
+      netCoinsPerRun: m.netCoinsPerRun,
+      chainCoinsPerRun: m.chainCoinsPerRun,
+      incomeTrendCorrelation: m.incomeTrendCorrelation,
+      coinMilestones: m.coinMilestones,
+      tierStall: m.tierStall,
+      runs: m.runs,
     };
     expect(snapshot).toMatchSnapshot();
   });

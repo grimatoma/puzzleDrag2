@@ -1,0 +1,99 @@
+{
+  "$comment": "puzzleDrag2 Balance Profile — the machine-readable per-game state the /game-balance skill reads on load. Theory lives in the skill's handbook; this file holds ONLY game-specifics. Keep it in sync after a balance pass (skill workflow step 9).",
+  "game": "puzzleDrag2",
+  "genre": "single-player, turn-based, transitive economy (tile-drag match/merge farming with a zone-tier progression spine)",
+  "schemaVersion": 1,
+  "generatedFrom": "codebase exploration + the campaign pacing harness",
+
+  "goals": {
+    "$status": "captured 2026-06-22 via the skill's goals interview",
+    "objective": ["fix the progression stall", "compress the value spread", "tune pacing / time-to-content", "reduce grind / friction"],
+    "targetPlayer": "mid-core (multiple sessions/day) as the baseline segment; casual & power on either side",
+    "sessionShape": "~2-3 sessions/day; a session ~= one farm run (~10 turns)",
+    "intendedTimeToContent": "STEADY ~1-2 weeks to mid-game (found 2nd settlement + grow home to City/tier 3) -> ~20-35 mid-core sessions",
+    "feel": "balanced middle — cozy surface, light strategy; enough economic tension that choices matter, but few hard walls",
+    "constraints": [
+      "no real-money mechanics (assumed; confirm)",
+      "save-compatibility — value tweaks are safe; structural/persisted-shape changes need a SAVE_SCHEMA bump + migration",
+      "don't silently break the family-value or campaign snapshot tests (update them intentionally)"
+    ]
+  },
+
+  "kpiTargets": {
+    "$note": "Derived from goals by working backward (mid-core ~2.5 sessions/day, steady ~1-2 weeks). Deliberately rough; refine against the campaign sim once it models buildings/crafting/mine. 'current' = what the harness/trace measures today.",
+    "timeToMidGame_runs": [20, 35],
+    "milestones": {
+      "home_found_2_affordable_coins": { "target_runs": [6, 15], "current": "~2 (coins arrive too fast to be a real gate; the true gate is completing home)" },
+      "home_tier1_hamlet": { "target_runs": [3, 8], "current": "UNREACHABLE (needs crafted bread -> bakery -> block)" },
+      "home_tier2_village": { "target_runs": [10, 20], "current": "UNREACHABLE (needs block/coke/silver_bar)" },
+      "home_tier3_city_MIDGAME": { "target_runs": [20, 35], "current": "UNREACHABLE (circular gate — see finding)" }
+    },
+    "coinsPerRun": [40, 140],
+    "familyValueSpreadRatio_max": 4
+  },
+
+  "knobs": [
+    { "name": "ITEMS[].value", "path": "src/constants.ts", "controls": "resource/tile sell worth (coins)", "shape": "Record<key, {value}>" },
+    { "name": "TILES_PER_RESOURCE", "path": "src/constants.ts", "controls": "income divisor: tiles chained per 1 inventory unit", "shape": "Record<tileKey, number>", "derivedFrom": "buildTilesPerResource(UPGRADE_THRESHOLDS)" },
+    { "name": "UPGRADE_THRESHOLDS", "path": "src/config/upgradeThresholds.ts", "controls": "board upgrade gate: chains to upgrade a tile (decoupled from income)", "shape": "Record<tileKey, number>" },
+    { "name": "RECIPES", "path": "src/constants.ts:929", "controls": "crafting input costs (resources/tools)", "shape": "Record<id, {item, station, inputs, tier?}>" },
+    { "name": "BUILDINGS[].cost", "path": "src/constants.ts:784", "controls": "building construction cost (gates completion + tier climb)", "shape": "Record<id, {cost, lv}>" },
+    { "name": "ZONES[].entryCost", "path": "src/features/cartography/data.ts (MAP_NODES)", "controls": "coins to start a session in a zone (home=50)", "shape": "{coins}" },
+    { "name": "tiers[].upgradeCost", "path": "src/features/cartography/data.ts (MAP_NODES[].tiers)", "controls": "settlement tier-up cost (coins + zone-inventory resources; rung 0 free)", "shape": "{coins?, resources?}" },
+    { "name": "requiresZoneTier", "path": "src/features/cartography/data.ts (MAP_NODES)", "controls": "zone unlock gate (e.g. quarry requires home tier 3) — the lever for the progression-stall finding", "shape": "{zone, tier}" },
+    { "name": "SETTLEMENT_FOUNDING_BASE_COINS / SETTLEMENT_FOUNDING_GROWTH", "path": "src/features/zones/data.ts:384", "controls": "settlement founding price escalation", "shape": "300 and 1.7" },
+    { "name": "SEASON_END_BONUS_COINS", "path": "src/state/helpers.ts:154", "controls": "flat coins granted at CLOSE_SEASON", "shape": "25" },
+    { "name": "DAILY_REWARDS", "path": "src/constants.ts", "controls": "login-streak rewards", "shape": "Record<day, reward>" },
+    { "name": "SEASON_POOL_MODS", "path": "src/constants.ts", "controls": "per-season spawn-weight shifts", "shape": "Record<season, Record<tileKey, number>>" },
+    { "name": "boards.farm.seasonDrops / upgradeMap", "path": "src/features/cartography/data.ts", "controls": "per-zone tile spawn rates + chain-upgrade redirects", "shape": "FarmBoardInstance" }
+  ],
+
+  "formulas": {
+    "chainCoins": "perChain = max(1, floor(chainLength * tileValue)) + coinHookBonus; then * coin_gain_mult boon. Source: src/state.ts:454. ~LINEAR in chain length.",
+    "resourceAccrual": "progress[res] += chainLength; whole units = floor(progress / TILES_PER_RESOURCE[tile]); remainder carried. Source: src/state.ts:392-416.",
+    "realizedValuePerTile": "ITEMS[res].value / TILES_PER_RESOURCE[tile]  — the dominant-strategy / distance-from-power-curve metric (family-value spread audit).",
+    "foundingCost": "round(300 * 1.7^(k-1)) for the k-th founding -> 300, 510, 867, 1474, ... EXPONENTIAL sink. Source: src/features/zones/data.ts:404.",
+    "netCoinsPerRun": "chainCoins(earned this run) - entryCost(50 home) + SEASON_END_BONUS_COINS(25) + buildingBonuses.",
+    "turnBudget": "max(1, floor((baseTurns + additive + bonus) * (useFertilizer?2:1))). Home baseTurns=10. Source: src/features/zones/data.ts:192."
+  },
+
+  "economyMap": {
+    "faucets": ["chain collection coins", "resource accrual into inventory", "SEASON_END_BONUS_COINS", "DAILY_REWARDS", "order/market sales"],
+    "converters": ["RECIPES (craft resources->goods/tools, station-gated)", "board upgradeMap (chain a tile -> spawn a higher-tier tile)"],
+    "sinks": ["zone entryCost (per session)", "tiers[].upgradeCost (resource-gated)", "settlement founding (coin-gated, exponential)", "BUILDINGS[].cost", "tool charges"]
+  },
+
+  "harness": {
+    "perRun": "npm run playtest -- --zones home --runs 10 --seed 1   (coins/run, coins/turn, family-value spread, change-list)",
+    "campaign": "npm run playtest -- --campaign --zones home --runs 30 --seed 1   (runs-to-coin-milestone + tier-stall pacing)",
+    "tests": "npx vitest run src/__tests__/playtest-harness.test.ts   (determinism + snapshot drift guard)",
+    "code": "src/playtest/  (run.ts per-run loop, campaign.ts pacing loop, metrics.ts spread, targets.ts bands)",
+    "knownGap": "the campaign sim is FARM-board-only and does not model crafting/buildings/mine, so it cannot yet validate a fix to the progression stall end-to-end. Extending it (or a manual trace) is the first tooling task of the pass."
+  },
+
+  "targets": {
+    "familySpreadOutlierFactor": 3,
+    "zoneCoinTargets": { "home": [40, 140], "$path": "src/playtest/targets.ts (ZONE_COIN_TARGETS)", "$note": "deliberately wide v1 bands; tighten from a real pass" },
+    "progressionTargets": { "home_found_2": [6, 15], "home_found_3": [10, 25], "$path": "src/playtest/targets.ts (PROGRESSION_TARGETS)", "$note": "updated toward the steady ~1-2 week goal; was [2,12]/[4,20]" }
+  },
+
+  "findings": [
+    {
+      "id": "home-progression-circular-lock",
+      "severity": "blocker",
+      "summary": "Home cannot progress past Outpost (tier 0) without mine goods (block/iron_bar), but mine goods come ONLY from the quarry, which carries requiresZoneTier {zone: home, tier: 3 (City)} — and home->City itself needs mine goods. A circular lock. Evidence: at tier 0 only the free Hearth is farm-buildable; the Bakery needed to craft bread (Hamlet's gate) costs block; Mill/Granary need block+iron_bar; completing home to found the next settlement needs ~4 buildings that need block; starting inventory has no mine goods and the market cannot buy them. Almost certainly a side-effect of PR #1299 (zones-as-spine) not reconciling the authored home tier/building costs.",
+      "confirmed": "HARD LOCK. CARTO/TRAVEL enforces the gate (src/features/cartography/slice.ts:78 returns state unchanged when zoneTierGateReason fails), so a fresh save cannot even TRAVEL to the quarry — let alone mine — until home is City. The player is stuck at home Outpost. (Residual uncertainty: story/quest grants not yet traced; a fresh-save manual playtest would confirm 100%.)",
+      "lever": "src/features/cartography/data.ts:344 — the quarry's requiresZoneTier {zone: home, tier: 3}. Lower/re-gate it so the mine opens early, AND/OR re-cost the early home tiers + tier-0 buildings so the first rungs don't demand mine goods before the mine is reachable.",
+      "source": "building-cost + gate trace (CARTO/TRAVEL slice.ts:78); campaign harness"
+    },
+    { "id": "family-value-spread", "severity": "known", "summary": "Realized value-per-tile spans ~10x (pearls ~133/tile vs pie ~12.9/tile; anything >3x median flagged). The per-run harness already emits a compression change-list toward a 3-4x ceiling.", "source": "familyValueSpread" },
+    { "id": "coins-too-fast-vs-pacing", "severity": "investigate", "summary": "Coins reach the founding price in ~2 runs — far faster than the steady ~1-2 week goal. Coins are NOT the pacing gate today (progression resources are). For the 'balanced middle' feel, consider making coins a softer secondary gate (raise founding/tier coin costs or trim an early faucet) once progression is unblocked.", "source": "campaign harness" }
+  ],
+
+  "openQuestions": [
+    "Is the quarry's home-City gate intended, or should the mine open earlier so home can climb its ladder? (objective 1 — the single highest-leverage change)",
+    "Is the quarry tier-gate enforced for travel/PLAY, or only for FOUND_SETTLEMENT? (decides hard-lock vs awkward-ordering)",
+    "Compress the family-value spread toward a 3-4x ceiling (per the auto change-list), or keep a premium for marquee resources? (objective 2)",
+    "Confirm constraints: no real-money; saves must survive value tweaks."
+  ]
+}
