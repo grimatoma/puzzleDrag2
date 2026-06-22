@@ -224,6 +224,29 @@ function blossom(
   ctx.globalAlpha = 1;
 }
 
+// ── Motion-v2 idle timing ───────────────────────────────────────────────────
+// One slow idle loop ≈ 5s. IDLE_W is the base angular frequency so the period
+// 2π/IDLE_W ≈ 5s. The subject bob uses A*(1-cos(IDLE_W t))*0.5 — value 0 with
+// zero velocity at t=0, and seamless over the 5s loop. Dressing micro-motion
+// (glint sweep, leaf stir, drifting flake) layers additively on top.
+const IDLE_PERIOD = 5.0;
+const IDLE_W = (2 * Math.PI) / IDLE_PERIOD; // ≈ 1.2566 rad/s
+const GLINT_SPEED = 1 / IDLE_PERIOD; // glint travels the cheek once per loop
+
+/** Idle vertical bob, 0 at t=0 with zero velocity, seamless over 2π/IDLE_W.
+ *  amp is the peak rise in design px. */
+function bobAt(t: number, amp: number): number {
+  return amp * (1 - Math.cos(IDLE_W * t)) * 0.5;
+}
+
+/** A slow eased side-sway gesture that starts at rest (0 at t=0) and returns
+ *  to 0 each loop — readable but subtle. Seamless over 2π/IDLE_W. */
+function swayAt(t: number, amp: number): number {
+  // sin(w t) is 0 at t=0 and seamless; shaping by (1-cos) keeps it gentle near
+  // the rest pose so the gesture eases in rather than snapping.
+  return amp * Math.sin(IDLE_W * t) * (0.5 + 0.5 * (1 - Math.cos(IDLE_W * t)) * 0.5);
+}
+
 // season-leaf colour pairs (dark backing, light fill)
 const LEAF_GREEN = { dark: "#2f5916", lite: "#6fae35" };
 const LEAF_GOLD = { dark: "#9a6a16", lite: "#e0a73a" };
@@ -269,9 +292,12 @@ function drawAppleSpring(ctx: CanvasRenderingContext2D): void {
   appleSpring(ctx, 0, 0.3);
 }
 
+// Motion-v2 idle: slow ~5s loop. The blossom rides a gentle eased sway; a slow
+// dewy glint creeps across once per loop. No silhouette change, all subtle.
 function animAppleSpring(ctx: CanvasRenderingContext2D, t: number): void {
-  const sway = Math.sin(t * 1.3) * 1.8; // gentle blossom sway, period 2π/1.3 s
-  appleSpring(ctx, sway, t * 2.4);
+  const sway = swayAt(t, 1.6); // gentle eased blossom sway, 0 at t=0
+  const glint = (t * GLINT_SPEED) % 1; // slow dewy glint travelling the cheek
+  appleSpring(ctx, sway, glint * Math.PI * 2);
 }
 
 // ── Summer: firm green apple has set ─────────────────────────────────────────
@@ -296,9 +322,11 @@ function drawAppleSummer(ctx: CanvasRenderingContext2D): void {
   appleSummer(ctx, 0, 0.3);
 }
 
+// Motion-v2 idle: slow ~5s loop. Apple bob starts at rest (0, zero velocity)
+// and a slow specular glint sweeps the cheek once per loop.
 function animAppleSummer(ctx: CanvasRenderingContext2D, t: number): void {
-  const bob = Math.sin(t * 1.3) * 1.6; // apple bobs gently, period 2π/1.3 s
-  const glint = (t * 0.45) % 1; // specular pulse
+  const bob = -bobAt(t, 1.6); // gentle rise (neg y) and settle, 0 at t=0
+  const glint = (t * GLINT_SPEED) % 1; // slow specular sweep
   appleSummer(ctx, bob, glint);
 }
 
@@ -331,15 +359,19 @@ function drawAppleAutumn(ctx: CanvasRenderingContext2D): void {
   appleAutumn(ctx, 0, 0.3, { x: 14, y: 8, rot: 0.6 });
 }
 
+// Motion-v2 idle: slow ~5s loop. Heavy ripe apple rises and settles; a slow
+// dewy glint sweeps the cheek; one gold leaf stirs (a small drift loop) rather
+// than tumbling fast — readable and unhurried.
 function animAppleAutumn(ctx: CanvasRenderingContext2D, t: number): void {
-  const bob = Math.sin(t * 1.0) * 1.7; // slow heavy bob
-  const glint = (t * 0.5) % 1; // traveling glint
-  // a leaf falling and looping seamlessly over a 4s period
-  const prog = ((t / 4) % 1 + 1) % 1;
+  const bob = -bobAt(t, 1.7); // slow heavy rise-and-settle, 0 at t=0
+  const glint = (t * GLINT_SPEED) % 1; // slow travelling glint
+  // a gold leaf stirs on the lower-right pad: a gentle slow drift loop that
+  // returns to its rest spot each loop (seamless), not a fast tumble.
+  const phase = IDLE_W * t;
   const leafFall = {
-    x: 12 + Math.sin(prog * Math.PI * 2) * 4,
-    y: -12 + prog * 30,
-    rot: 0.4 + prog * Math.PI * 2,
+    x: 14 + Math.sin(phase) * 3,
+    y: 8 - (1 - Math.cos(phase)) * 0.5 * 2.5,
+    rot: 0.6 + Math.sin(phase) * 0.35,
   };
   appleAutumn(ctx, bob, glint, leafFall);
 }
@@ -422,22 +454,28 @@ function drawAppleWinter(ctx: CanvasRenderingContext2D): void {
   );
 }
 
+// Motion-v2 idle: a calm slow winter. The four settled flakes stay put (as in
+// the still); ONE slow snowflake drifts down across the tile over a full ~10s
+// (two idle loops) so it reads clearly, with a soft side drift. The apple
+// barely sways and the cold sheen breathes gently.
 function animAppleWinter(ctx: CanvasRenderingContext2D, t: number): void {
   const span = 30;
-  const seeds: Array<[number, number, number]> = [
-    [-8, 1.4, 0.0],
-    [6, 1.1, 0.45],
-    [11, 1.0, 0.7],
-    [-3, 1.2, 0.25],
+  // the settled flakes from the still — kept static so density matches draw().
+  const settled: Array<[number, number, number]> = [
+    [-8, -6, 1.4],
+    [6, 2, 1.1],
+    [11, -12, 1.0],
+    [-3, 10, 1.2],
   ];
-  const flakes: Array<[number, number, number]> = seeds.map(([fx, r, phase]) => {
-    const prog = ((t / 3.2 + phase) % 1 + 1) % 1;
-    const fy = -22 + prog * span;
-    const driftX = fx + Math.sin((prog * Math.PI * 2) + phase * 6) * 3;
-    return [driftX, fy, r];
-  });
-  const sheen = 0.5 + 0.5 * Math.sin(t * 0.8);
-  const sway = Math.sin(t * 0.7) * 0.8; // wizened apple barely sways
+  // one slow drifting flake on a long ~10s fall, looping seamlessly.
+  const prog = ((t / (IDLE_PERIOD * 2)) % 1 + 1) % 1;
+  const fy = -22 + prog * span;
+  const fx = -2 + Math.sin(prog * Math.PI * 2) * 6; // gentle side drift
+  const drifting: [number, number, number] = [fx, fy, 1.3];
+  const flakes = settled.concat([drifting]);
+  // gentle cold sheen breathing, eased from the still's 0.4 baseline.
+  const sheen = 0.4 + 0.15 * (1 - Math.cos(IDLE_W * t)) * 0.5;
+  const sway = swayAt(t, 0.7); // wizened apple barely sways, 0 at t=0
   appleWinter(ctx, flakes, sheen, sway);
 }
 
@@ -451,145 +489,178 @@ function clamp01(p: number): number {
   return p < 0 ? 0 : p > 1 ? 1 : p;
 }
 
-/** Blend two hex colours "#rrggbb". */
-function mixHex(c1: string, c2: string, p: number): string {
-  const a = parseInt(c1.slice(1), 16);
-  const b = parseInt(c2.slice(1), 16);
-  const r = Math.round(lerp((a >> 16) & 255, (b >> 16) & 255, p));
-  const g = Math.round(lerp((a >> 8) & 255, (b >> 8) & 255, p));
-  const bl = Math.round(lerp(a & 255, b & 255, p));
-  return `rgb(${r},${g},${bl})`;
+// Quintic smootherstep — eased staging that still hits 0 at p=0 and 1 at p=1.
+function smoother(x: number): number {
+  const c = clamp01(x);
+  return c * c * c * (c * (6 * c - 15) + 10);
 }
 
-function mixSkin(
-  s1: { hi: string; mid: string; lo: string },
-  s2: { hi: string; mid: string; lo: string },
+// A transient bump that is exactly 0 at p=0 and p=1 (peaks mid-morph). Used for
+// overlay strengths (seam glow, sweep band, settling dust) so endpoints stay
+// pristine: every transient overlay fades fully away by p=1.
+function transient(p: number): number {
+  return Math.sin(Math.PI * clamp01(p));
+}
+
+// Directional ripening wipe. Renders the `from` still, then reveals the `to`
+// still inside a soft-edged region whose coverage grows 0→full as p goes 0→1,
+// sweeping along a direction (angle radians, dir vector ⟨cos,sin⟩). At p=0 the
+// reveal region is empty (only `from` shows ≡ draw(from)); at p=1 it covers the
+// whole design box (`to` fully overpaints ≡ draw(to)). A soft NON-brightening
+// haze rides the advancing edge and fades to 0 at both ends via `transient`.
+function ripeningWipe(
+  ctx: CanvasRenderingContext2D,
   p: number,
-): { hi: string; mid: string; lo: string } {
-  return {
-    hi: mixHex(s1.hi, s2.hi, p),
-    mid: mixHex(s1.mid, s2.mid, p),
-    lo: mixHex(s1.lo, s2.lo, p),
-  };
+  angle: number,
+  drawFrom: (c: CanvasRenderingContext2D) => void,
+  drawTo: (c: CanvasRenderingContext2D) => void,
+): void {
+  const q = clamp01(p);
+  // base layer: the outgoing season still, always fully drawn.
+  ctx.save();
+  drawFrom(ctx);
+  ctx.restore();
+
+  if (q <= 0) return; // p=0 ≡ draw(from) exactly.
+
+  // The wipe sweeps a half-plane across the box. We clip to a rectangle whose
+  // leading edge advances from fully off the box (covers nothing) at q=0 to
+  // fully past it (covers everything) at q=1. Box half-extent generously 40px.
+  const dx = Math.cos(angle);
+  const dy = Math.sin(angle);
+  const HALF = 40; // covers the whole −24..+24 box with margin
+  // s = signed offset of the leading edge along the sweep axis. At q=0 edge is
+  // at −HALF (nothing revealed on the +side); at q=1 edge at +HALF (all
+  // revealed). Eased so the wipe reads as an accelerating ripen.
+  const s = lerp(-HALF, HALF, smoother(q));
+
+  ctx.save();
+  // Build the revealed half-plane as a big rotated rectangle clip.
+  ctx.beginPath();
+  // rectangle spanning the "already ripened" side: points where
+  // (x*dx + y*dy) <= s. Construct it explicitly large.
+  const ux = dx;
+  const uy = dy; // sweep axis
+  const px = -dy;
+  const py = dx; // perpendicular axis
+  const L = 120;
+  // corner at the edge, going to the negative-axis side.
+  const ex = ux * s;
+  const ey = uy * s;
+  ctx.moveTo(ex + px * L, ey + py * L);
+  ctx.lineTo(ex - px * L, ey - py * L);
+  ctx.lineTo(ex - px * L - ux * L, ey - py * L - uy * L);
+  ctx.lineTo(ex + px * L - ux * L, ey + py * L - uy * L);
+  ctx.closePath();
+  ctx.clip();
+  // paint the incoming season still inside the revealed region.
+  drawTo(ctx);
+  ctx.restore();
+
+  // No additive seam flash (contract: no brightness flash). A soft, non-
+  // brightening haze rides the advancing edge so the wipe reads as a moving
+  // ripen front; it is 0 at both endpoints via `transient`, leaving the
+  // endpoint stills pristine.
+  if (q >= 1) return; // p=1 ≡ draw(to) exactly (full coverage; no overlay).
+  const haze = transient(q) * 0.18;
+  if (haze > 0.005) {
+    ctx.save();
+    ctx.globalAlpha = haze;
+    const g = ctx.createLinearGradient(
+      ux * (s - 7),
+      uy * (s - 7),
+      ux * (s + 7),
+      uy * (s + 7),
+    );
+    g.addColorStop(0, "rgba(255,236,200,0)");
+    g.addColorStop(0.5, "rgba(255,236,200,0.7)");
+    g.addColorStop(1, "rgba(255,236,200,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.rect(-24, -24, 48, 48);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
 }
 
-// 0: Spring → Summer.  Blossom petals drop & fade while the green fruitlet
-// swells from nub to a full firm green apple. Leaves stay green throughout.
+// 0: Spring → Summer (Motion-v2, ~1.9s).  The fruit SETS and ripens from one
+// side: a soft directional wipe sweeps the summer green-apple still in over the
+// spring blossom-twig still, lower-left → upper-right (the fruit swelling up the
+// branch). A transient veil of falling petals drifts down mid-morph and is gone
+// by both ends. Endpoints: p=0 ≡ draw(Spring), p=1 ≡ draw(Summer), exactly.
 function springToSummer(ctx: CanvasRenderingContext2D, p: number): void {
   const q = clamp01(p);
-  groundShadow(ctx, 12, 0.2);
-  twig(ctx, 0, false);
+  // directional ripening sweep, lower-left → upper-right.
+  ripeningWipe(ctx, q, -Math.PI * 0.25, drawAppleSpring, drawAppleSummer);
 
-  // green leaves (constant)
-  leaf(ctx, 7, -10, -0.7, lerp(11, 12, q), LEAF_GREEN.dark, LEAF_GREEN.lite);
-  leaf(ctx, -7, -2, 3.2, lerp(9, 10, q), LEAF_GREEN.dark, LEAF_GREEN.lite);
-  leaf(ctx, 11, -1, -0.2, lerp(8, 9, q), LEAF_GREEN.dark, LEAF_GREEN.lite);
-
-  // small secondary apple fades in as the fruit sets
-  if (q > 0.4) {
-    apple(ctx, 9, -11, lerp(2, 5, (q - 0.4) / 0.6), GREEN_SKIN, { color: "#cfe88a", amt: 0 }, 0.3, false);
+  // transient drifting petals — 0 at both endpoints, peak mid-morph.
+  const tr = transient(q);
+  if (tr > 0.01) {
+    const fall = smoother(q) * 16; // petals sink as the morph progresses
+    blossom(ctx, 4, 2 + fall, 4.5, tr, tr * 0.9);
+    blossom(ctx, -6, 6 + fall * 0.7, 3.2, tr, tr * 0.8);
+    blossom(ctx, 10, -4 + fall * 0.5, 3, tr, tr * 0.7);
   }
-
-  // the focal fruit swells from a 3px nub to a full 10px apple
-  const r = lerp(3, 10, q);
-  const fy = lerp(-2, 2, q); // nub sits high, ripe apple settles to center
-  apple(ctx, lerp(-3, -1, q), fy, r, GREEN_SKIN, { color: "#e8f0a0", amt: lerp(0, 0.25, q) }, 0.3, q > 0.3);
-
-  // blossoms shrink + fall + fade away over the first ~70% of the morph
-  const fade = clamp01(1 - q / 0.7);
-  if (fade > 0.01) {
-    const fall = q * 14; // petals drift downward as they drop
-    blossom(ctx, 2, 0 + fall, 8, fade, fade);
-    blossom(ctx, 11, -10 + fall * 0.8, 5, fade, fade * 0.9);
-  }
+  ctx.globalAlpha = 1;
 }
 
-// 1: Summer → Autumn.  The green apple ripens to red: skin colour green→red,
-// the warm yellow blush deepens, a brightening specular point appears, and
-// leaves turn green→gold. Colour + surface only — no global light flash.
+// 1: Summer → Autumn (Motion-v2, ~1.9s).  The apple RIPENS from its sun-cheek:
+// a soft directional wipe brings the autumn red-apple still in from the lower-
+// right (the warm blush side) sweeping up-left across the cheek, so the red
+// flushes across like real ripening. A transient amber wash blooms over the
+// stem-leaf as it turns. Endpoints: p=0 ≡ draw(Summer), p=1 ≡ draw(Autumn).
 function summerToAutumn(ctx: CanvasRenderingContext2D, p: number): void {
   const q = clamp01(p);
-  groundShadow(ctx, lerp(12, 13, q), lerp(0.2, 0.22, q));
-  twig(ctx, 0, false);
+  // sweep from lower-right (blush cheek) toward upper-left.
+  ripeningWipe(ctx, q, Math.PI * 0.85, drawAppleSummer, drawAppleAutumn);
 
-  // leaves turn green → gold
-  const ld = mixHex(LEAF_GREEN.dark, LEAF_GOLD.dark, q);
-  const ll = mixHex(LEAF_GREEN.lite, LEAF_GOLD.lite, q);
-  leaf(ctx, 7, -10, -0.7, 12, ld, ll);
-  leaf(ctx, -7, -2, 3.2, 10, ld, ll);
-  leaf(ctx, 11, -1, -0.2, lerp(9, 0.01, q), ld, ll); // third leaf recedes
-
-  // secondary apple ripens too
-  const skin2 = mixSkin(GREEN_SKIN, RED_SKIN, q);
-  apple(ctx, 10, -10, lerp(5, 5.5, q), skin2, { color: mixHex("#cfe88a", "#ffcf6a", q), amt: lerp(0, 0.5, q) }, 0.3, false);
-
-  // focal apple ripens green → red, blush deepens, specular brightens
-  const skin = mixSkin(GREEN_SKIN, RED_SKIN, q);
-  const blushColor = mixHex("#e8f0a0", "#ffd166", q);
-  apple(ctx, -1, lerp(2, 3, q), lerp(10, 11, q), skin, { color: blushColor, amt: lerp(0.25, 0.7, q) }, 0.3, true);
+  // transient amber wash over the stem-leaf area as the foliage turns gold.
+  const tr = transient(q);
+  if (tr > 0.01) {
+    ctx.save();
+    ctx.globalAlpha = tr * 0.45;
+    const g = ctx.createRadialGradient(5, -13, 1, 5, -13, 12);
+    g.addColorStop(0, "rgba(224,167,58,0.9)");
+    g.addColorStop(1, "rgba(224,167,58,0)");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(5, -12, 12, 9, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
 }
 
-// 2: Autumn → Winter.  Scene goes dormant. Staged: leaves drop FIRST (first
-// half), then frost/snow settles (second half). The red apple dulls/wizens
-// toward overripe deep-red as the twig goes bare.
+// 2: Autumn → Winter (Motion-v2, ~1.9s).  The scene goes dormant from the
+// GROUND UP: a soft directional wipe brings the winter still in sweeping bottom
+// → top, so frost/snow visibly creeps up from the base while the snow cap
+// settles on top last. Transient drifting flakes thicken mid-morph and clear by
+// the end. Endpoints: p=0 ≡ draw(Autumn), p=1 ≡ draw(Winter), exactly.
 function autumnToWinter(ctx: CanvasRenderingContext2D, p: number): void {
   const q = clamp01(p);
-  groundShadow(ctx, 14, lerp(0.22, 0.18, q));
+  // sweep bottom → top: with reveal region (x·dx + y·dy ≤ s) and s growing from
+  // −HALF, choosing dy = −1 (angle = −π/2) makes large-y (the base) the most
+  // negative, so the bottom is revealed first and frost creeps UP from the base.
+  ripeningWipe(ctx, q, -Math.PI * 0.5, drawAppleAutumn, drawAppleWinter);
 
-  // snow blanket settles in the SECOND half
-  const snowAmt = clamp01((q - 0.5) / 0.5);
-  if (snowAmt > 0.01) {
+  // transient extra drifting flakes — thicken mid-morph, gone by both ends.
+  const tr = transient(q);
+  if (tr > 0.01) {
     ctx.save();
-    ctx.globalAlpha = snowAmt;
-    const snow = ctx.createLinearGradient(0, 16, 0, 24);
-    snow.addColorStop(0, "#eef4fb");
-    snow.addColorStop(1, "#c2d2e4");
-    ctx.fillStyle = snow;
-    ctx.beginPath();
-    ctx.ellipse(0, 21, lerp(8, 16, snowAmt), lerp(3, 5.5, snowAmt), 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // twig darkens toward dead bark as the season turns
-  twig(ctx, 0, q > 0.5);
-
-  // leaves drop away over the FIRST half (shrink + fade + drift down)
-  const leafLife = clamp01(1 - q / 0.5);
-  if (leafLife > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = leafLife;
-    const drop = (1 - leafLife) * 16;
-    leaf(ctx, 7, -10 + drop, -0.7 + (1 - leafLife), 12 * leafLife + 2, LEAF_GOLD.dark, LEAF_GOLD.lite);
-    leaf(ctx, -7, -2 + drop, 3.2 + (1 - leafLife), 10 * leafLife + 2, LEAF_GOLD.dark, LEAF_GOLD.lite);
-    ctx.restore();
-  }
-
-  // secondary apple fades away as the twig goes bare
-  if (q < 0.6) {
-    const a2 = clamp01(1 - q / 0.6);
-    ctx.save();
-    ctx.globalAlpha = a2;
-    apple(ctx, 10, -10, 5.5, mixSkin(RED_SKIN, DULL_RED_SKIN, q), { color: "#7c4a30", amt: 0.4 }, 0.5, false);
-    ctx.restore();
-  }
-
-  // focal apple dulls/wizens: bright red → overripe deep-red
-  const skin = mixSkin(RED_SKIN, DULL_RED_SKIN, q);
-  apple(ctx, -1, 3, lerp(11, 10, q), skin, { color: mixHex("#ffd166", "#7c4a30", q), amt: lerp(0.7, 0.35, q) }, 0.5, q < 0.5);
-
-  // frost/snow accumulates on top of the apple in the SECOND half
-  if (snowAmt > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = snowAmt;
-    ctx.fillStyle = "#f4f8ff";
-    ctx.beginPath();
-    ctx.ellipse(8, -14, 3.4 * snowAmt, 1.8 * snowAmt, -0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(244,248,255,0.85)";
-    ctx.beginPath();
-    ctx.ellipse(-1, -5, lerp(3, 6, snowAmt), lerp(1.4, 2.6, snowAmt), 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.globalAlpha = tr * 0.85;
+    ctx.fillStyle = "#ffffff";
+    const motes: Array<[number, number, number]> = [
+      [-10, -8, 1.1],
+      [4, -16, 0.9],
+      [12, -3, 1.0],
+      [-2, -20, 0.8],
+    ];
+    motes.forEach(([mx, my, mr]) => {
+      ctx.beginPath();
+      ctx.arc(mx, my + smoother(q) * 10, mr, 0, Math.PI * 2);
+      ctx.fill();
+    });
     ctx.restore();
   }
   ctx.globalAlpha = 1;

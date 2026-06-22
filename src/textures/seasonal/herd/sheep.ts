@@ -49,8 +49,10 @@ function smoother(x: number): number {
 }
 
 // breathing bob: A*(1-cos(w t))*0.5 — value AND velocity are 0 at t=0,
-// seamless over a 2π/w period, peak amplitude A.
-function bobAt(t: number, amp = 1.1, w = 1.5): number {
+// seamless over a 2π/w period, peak amplitude A. Motion-v2: a slow, calm
+// breath — w = 2π/5.4 gives a ~5.4s rise-and-settle loop.
+const BREATH_W = (Math.PI * 2) / 5.4; // ≈ 1.164 rad/s → 5.4s period
+function bobAt(t: number, amp = 1.3, w = BREATH_W): number {
   return amp * (1 - Math.cos(w * t)) * 0.5;
 }
 
@@ -489,6 +491,22 @@ function draw(season: SeasonName) {
   return (ctx: CanvasRenderingContext2D): void => paint(ctx, SP[season], 0);
 }
 
+// A seamless, eased "occasional gesture" envelope over a long period: it sits
+// at rest (0) most of the cycle, then swells smoothly to 1 and back once per
+// loop. Built from a raised-cosine bump so value AND velocity are continuous
+// across the wrap (0 at the seam). `phase01` shifts the bump within the loop.
+function gestureEnvelope(t: number, periodS: number, widthFrac: number, phase01 = 0): number {
+  const loop = (((t / periodS) % 1) + 1) % 1; // 0..1, seamless
+  // signed distance to the bump centre on the circle (so it wraps cleanly)
+  let d = loop - phase01;
+  d = ((d % 1) + 1) % 1;
+  if (d > 0.5) d -= 1; // −0.5..0.5
+  const half = Math.max(0.02, widthFrac * 0.5);
+  if (Math.abs(d) >= half) return 0;
+  // raised cosine bump: 0 at the edges with zero slope, 1 at the centre
+  return 0.5 + 0.5 * Math.cos((d / half) * Math.PI);
+}
+
 function anim(season: SeasonName) {
   return (ctx: CanvasRenderingContext2D, t: number): void => {
     const p = clampP(SP[season]);
@@ -503,30 +521,57 @@ function anim(season: SeasonName) {
       const hx = bx - 11;
       const hy = by + 2;
 
-      // Occasional ear-flick / tail-flick: a brief sin pulse once per ~5s loop.
-      // gate is a short bump near the end of the period, seamless (0 at edges).
-      const loop = (t % 5) / 5; // 0..1
-      const flickGate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 6; // sharp brief bump
-      const flick = Math.sin(t * 9) * flickGate;
+      // Occasional, slow, eased gestures over a long ~6s cycle. Each gesture is
+      // a smooth raised-cosine swell (0 at the loop seam → readable, not jittery).
+      const earEnv = gestureEnvelope(t, 6, 0.26, 0.45); // a single ear flick mid-loop
+      const tailEnv = gestureEnvelope(t, 6, 0.3, 0.78); // a tail sway later in the loop
+      const headEnv = gestureEnvelope(t, 6, 0.34, 0.2); // a small head dip early
 
-      // ear flick (redraw a flicking ear over the existing one)
+      // ear flick (redraw a flicking ear over the existing one) — eased swing
       ctx.fillStyle = rgb(p.faceDark);
       ctx.save();
       ctx.translate(hx + 2.6, hy - 4);
-      ctx.rotate(0.6 + flick * 0.5);
+      ctx.rotate(0.6 + earEnv * 0.7);
       ctx.beginPath();
       ctx.ellipse(0, 0, 3.4, 1.7, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-      // tail flick
+
+      // tail flick (eased sway of the tail tuft)
       ctx.fillStyle = rgb(p.fleeceLight);
       ctx.beginPath();
-      ctx.arc(bx + 12.5 + flick * 1.4, by - 1, 2.4 + p.fleeceVolume * 0.6, 0, Math.PI * 2);
+      ctx.arc(bx + 12.5 + tailEnv * 2.2, by - 1 - tailEnv * 0.8, 2.4 + p.fleeceVolume * 0.6, 0, Math.PI * 2);
       ctx.fill();
 
+      // small head dip: re-stamp the dark muzzle a touch lower during the dip.
+      if (headEnv > 0.002) {
+        const dip = headEnv * 1.8;
+        ctx.save();
+        ctx.translate(hx, hy + dip);
+        ctx.rotate(0.28 + headEnv * 0.06);
+        ctx.fillStyle = rgb(p.faceDark);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 4.1, 4.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // re-stamp eyes so they travel with the dip
+        ctx.fillStyle = rgb([245, 245, 240]);
+        for (const ex of [-1.6, 1.6]) {
+          ctx.beginPath();
+          ctx.arc(ex, -1.2, 1.05, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = rgb([20, 18, 20]);
+        for (const ex of [-1.4, 1.8]) {
+          ctx.beginPath();
+          ctx.arc(ex, -1, 0.6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
       if (season === "Spring") {
-        // dew shimmer — a soft glint that pulses on the grass/blossoms
-        const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
+        // dew shimmer — a slow soft glint that swells on the grass/blossoms
+        const g = 0.18 + 0.26 * (0.5 - 0.5 * Math.cos(t * (Math.PI * 2 / 5.2)));
         ctx.fillStyle = rgb([255, 255, 255], g);
         ctx.beginPath();
         ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
@@ -535,20 +580,20 @@ function anim(season: SeasonName) {
         ctx.arc(10, 19.6, 0.9 + g * 0.8, 0, Math.PI * 2);
         ctx.fill();
       } else if (season === "Summer") {
-        // soft fleece sheen sweeping across the wool
-        const s = 0.5 + 0.5 * Math.sin(t * 1.1);
+        // soft fleece sheen sweeping slowly across the wool (one pass per ~6s)
+        const s = 0.5 - 0.5 * Math.cos(t * (Math.PI * 2 / 6));
         const sx = bx - 9 + s * 18;
         ctx.save();
         ctx.globalCompositeOperation = "soft-light";
-        ctx.fillStyle = rgb([255, 255, 255], 0.35);
+        ctx.fillStyle = rgb([255, 255, 255], 0.32);
         ctx.beginPath();
         ctx.ellipse(sx, by - 2, 3, 6, 0.3, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       } else if (season === "Autumn") {
-        // a fallen leaf stirs — gentle rock + tiny drift, seamless
-        const a = Math.sin(t * 1.3) * 0.5;
-        const dx = Math.sin(t * 0.7) * 1.2;
+        // a fallen leaf stirs — slow gentle rock + tiny drift, seamless
+        const a = Math.sin(t * (Math.PI * 2 / 5.6)) * 0.45;
+        const dx = Math.sin(t * (Math.PI * 2 / 7.2)) * 1.2;
         ctx.save();
         ctx.translate(10 + dx, 20.5);
         ctx.rotate(0.7 + a);
@@ -558,29 +603,29 @@ function anim(season: SeasonName) {
         ctx.fill();
         ctx.restore();
       } else {
-        // Winter: breath-fog puff gently pulses outward from the nose +
-        // a drifting snowflake + a cold sheen.
-        const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
-        const reach = 4 + breathe * 3;
-        ctx.fillStyle = rgb([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+        // Winter: a slow breath-fog puff that swells outward from the nose +
+        // a drifting snowflake + a gentle cold sheen.
+        const breathe = 0.5 - 0.5 * Math.cos(t * (Math.PI * 2 / 5.4));
+        const reach = 4 + breathe * 3.4;
+        ctx.fillStyle = rgb([235, 244, 255], (0.16 + 0.34 * breathe) * p.breathFogAmt);
         ctx.beginPath();
-        ctx.ellipse(hx - reach, hy + 3.4, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
+        ctx.ellipse(hx - reach, hy + 3.4, 2.6 + breathe * 2, 1.8 + breathe * 1.3, 0.2, 0, Math.PI * 2);
         ctx.fill();
 
-        // one drifting snowflake on a seamless 3.4s fall
-        const prog = ((t / 3.4) % 1 + 1) % 1;
+        // one drifting snowflake on a slow, seamless 6s fall
+        const prog = (((t / 6) % 1) + 1) % 1;
         const fy = -20 + prog * 36;
         const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-        ctx.fillStyle = rgb([255, 255, 255], 0.85);
+        ctx.fillStyle = rgb([255, 255, 255], 0.82);
         ctx.beginPath();
         ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
         ctx.fill();
 
-        // cold sheen pulse on the fleece
-        const sheen = 0.5 + 0.5 * Math.sin(t * 0.8);
+        // slow cold sheen pulse on the fleece
+        const sheen = 0.5 - 0.5 * Math.cos(t * (Math.PI * 2 / 6.4));
         ctx.save();
         ctx.globalCompositeOperation = "soft-light";
-        ctx.fillStyle = rgb([206, 224, 255], 0.12 + sheen * 0.14);
+        ctx.fillStyle = rgb([206, 224, 255], 0.1 + sheen * 0.14);
         ctx.beginPath();
         ctx.ellipse(bx, by, 13, 9, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -596,12 +641,101 @@ function anim(season: SeasonName) {
 
 // ── Forward transitions (lerp EVERY field through quintic smoothstep) ────────
 
+// A monotone ease that is EXACT at the endpoints (e(0)=0, e(1)=1) but can lead
+// or lag the baseline smoother. `bias < 1` makes it rise EARLY (lead), `bias > 1`
+// makes it rise LATE (lag). Endpoints stay pinned, so morph stays seamless.
+function biasedEase(k: number, bias: number): number {
+  const x = clamp01(k);
+  return Math.pow(smoother(x), bias);
+}
+
+// Staged transition. The whole-tile look still lerps from SP[from] (at p=0) to
+// SP[to] (at p=1) — so transition(0) === draw(from) and transition(1) ===
+// draw(to) EXACTLY. But the FLEECE VOLUME leads (the coat fluffs up early) while
+// the snow / frost / breath-fog dressing lags (settles late in the morph).
+// On top of the staged stills sit TRANSIENT overlays whose strength ∝ sin(π·p),
+// so they are exactly 0 at both ends and never alter the endpoint stills.
 function makeTransition(fromIdx: 0 | 1 | 2) {
   const from = SEASON_NAMES[fromIdx];
   const to = SEASON_NAMES[fromIdx + 1];
   return (ctx: CanvasRenderingContext2D, pp: number): void => {
-    const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(SP[from], SP[to], k), 0);
+    const p = clamp01(pp);
+    const kBase = smoother(p); // baseline progress
+    const kCoat = biasedEase(p, 0.62); // fleece volume LEADS (grows early)
+    const kSnow = biasedEase(p, 1.7); // snow / frost / fog LAG (settle late)
+
+    const a = SP[from];
+    const b = SP[to];
+    // start from a baseline lerp, then override the staged fields. Every field
+    // still equals a at p=0 and b at p=1, so the endpoints are unchanged.
+    const blended: P = lerpP(a, b, kBase);
+    blended.fleeceVolume = lerp(a.fleeceVolume, b.fleeceVolume, kCoat);
+    blended.backSnowAmt = lerp(a.backSnowAmt, b.backSnowAmt, kSnow);
+    blended.padSnowAmt = lerp(a.padSnowAmt, b.padSnowAmt, kSnow);
+    blended.frostAmt = lerp(a.frostAmt, b.frostAmt, kSnow);
+    blended.breathFogAmt = lerp(a.breathFogAmt, b.breathFogAmt, kSnow);
+
+    paint(ctx, blended, 0);
+
+    // ── Transient overlays (strength ∝ sin(π·p): 0 at both ends) ─────────────
+    const trans = Math.sin(Math.PI * p); // 0 → 1 → 0 across the morph
+    if (trans <= 0.0008) return;
+
+    ctx.save();
+    try {
+      const bx = -1;
+      const by = 4;
+
+      // Loose fluff motes lifting off the thickening coat — they read the fleece
+      // visibly fluffing/growing. Present in EVERY morph (deterministic in p).
+      const fluff = trans * (0.4 + 0.6 * Math.max(0, b.fleeceVolume - a.fleeceVolume + 0.4));
+      if (fluff > 0.01) {
+        ctx.fillStyle = rgb([255, 255, 255], 0.5 * fluff);
+        const motes: Array<[number, number, number]> = [
+          [-8, -8, 1.1], [3, -10, 1.4], [9, -6, 0.9], [-3, -11, 1.0],
+        ];
+        for (const [mx, my, mr] of motes) {
+          // motes drift slightly upward as the coat puffs (still ∝ sin(π·p))
+          const rise = (1 - Math.cos(Math.PI * p)) * 2.2;
+          ctx.beginPath();
+          ctx.arc(bx + mx, by + my - rise, mr * (0.7 + 0.5 * trans), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Snow settling onto the back, building visibly during the second half of
+      // the autumn→winter morph (only meaningful when the target gains snow).
+      const snowGain = Math.max(0, b.backSnowAmt - a.backSnowAmt);
+      if (snowGain > 0.01) {
+        // flecks that fall and "land" on the back — fade in with sin(π·p)
+        ctx.fillStyle = rgb([255, 255, 255], 0.8 * trans * snowGain);
+        const land = smoother(p); // landing point progresses with the morph
+        const flecks: Array<[number, number]> = [
+          [-6, -10], [-1, -11], [4, -9.5], [7, -8],
+        ];
+        for (const [fxx, fyy] of flecks) {
+          const fall = (1 - land) * 6; // starts higher, settles onto the back
+          ctx.beginPath();
+          ctx.arc(bx + fxx, by + fyy - fall, 1.0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // A breath-fog puff appearing as the cold sets in (target gains fog).
+      const fogGain = Math.max(0, b.breathFogAmt - a.breathFogAmt);
+      if (fogGain > 0.01) {
+        const hx = bx - 11;
+        const hy = by + 2;
+        ctx.fillStyle = rgb([235, 244, 255], 0.4 * trans * fogGain);
+        ctx.beginPath();
+        ctx.ellipse(hx - (4 + trans * 3), hy + 3.4, 2.6 + trans * 1.8, 1.8 + trans * 1.2, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.restore();
+    }
   };
 }
 
