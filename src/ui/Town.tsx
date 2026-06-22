@@ -573,7 +573,6 @@ function buildingCostEntries(building: Building | null | undefined, state: GameS
 interface BuildingRow {
   b: Building;
   isBuilt: boolean;
-  levelMet: boolean;
   prereqMet: boolean;
   canAfford: boolean;
   reason: string | null;
@@ -589,7 +588,6 @@ function buildingRows(
   return buildings.map((b) => {
     const isBuilt = !!locationBuilt[b.id];
     const prereqMet = !b.requires || !!locationBuilt[b.requires];
-    const levelMet = state.level >= b.lv;
     const cost = b.cost as Record<string, number>;
     const canCoin = state.coins >= (cost.coins || 0);
     const canRunes = (state.runes ?? 0) >= (cost.runes ?? 0);
@@ -600,16 +598,14 @@ function buildingRows(
     const canAfford = canCoin && canRes && canRunes;
     const reason = isBuilt
       ? "Already built"
-      : !levelMet
-        ? `Requires level ${b.lv}`
-        : !prereqMet
-          ? `Requires ${b.requires}`
-          : freePlots <= 0
-            ? "No free plots"
-            : !canAfford
-              ? "Not enough resources"
-              : null;
-    return { b, isBuilt, levelMet, prereqMet, canAfford, reason, pickable: !reason };
+      : !prereqMet
+        ? `Requires ${b.requires}`
+        : freePlots <= 0
+          ? "No free plots"
+          : !canAfford
+            ? "Not enough resources"
+            : null;
+    return { b, isBuilt, prereqMet, canAfford, reason, pickable: !reason };
   });
 }
 
@@ -655,7 +651,7 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
                     muted={!!reason}
                     icon={<BuildingPreview building={b} />}
                     title={b.name}
-                    subtitle={isBuilt ? "Built" : reason || `Level ${b.lv}`}
+                    subtitle={isBuilt ? "Built" : reason || "Ready to place"}
                     onClick={() => setSelectedId(b.id)}
                   />
                 ))}
@@ -663,7 +659,7 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
             }
             detail={
               <DetailPane
-                eyebrow={`Level ${selected?.b.lv ?? 1}`}
+                eyebrow="Building"
                 title={selected?.b.name}
                 description={selected?.b.desc}
                 status={selected?.reason || "Ready to place"}

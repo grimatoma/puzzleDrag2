@@ -5,7 +5,7 @@ interface MapPayload {
   current?: string;
   visited?: string[];
   discovered?: string[];
-  level?: number;
+  locked?: string[];
   founded?: Record<string, boolean>;
   keeperPaths?: Record<string, string>;
   tokenCount?: number;

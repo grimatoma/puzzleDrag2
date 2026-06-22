@@ -78,7 +78,8 @@ interface CartoPayload {
   visited?: string[];
   discovered?: string[];
   current?: string;
-  level?: number;
+  /** Node ids whose zone-tier prerequisite is unmet (paint as locked). */
+  locked?: string[];
   oldCapitalUnlocked?: boolean;
   founded?: Record<string, boolean>;
   keeperPaths?: Record<string, string>;
@@ -856,7 +857,7 @@ export class MapScene extends Phaser.Scene {
     const visited: Set<string> = new Set<string>(p.visited ?? ["home"]);
     const discovered: Set<string> = new Set<string>(p.discovered ?? []);
     const current: string = p.current ?? "home";
-    const playerLevel: number = p.level ?? 1;
+    const locked: Set<string> = new Set<string>(p.locked ?? []);
     const oldCapitalUnlocked = !!p.oldCapitalUnlocked;
     const founded: Record<string, boolean> = p.founded ?? {};
     const keeperPaths: Record<string, string> = p.keeperPaths ?? {};
@@ -875,7 +876,7 @@ export class MapScene extends Phaser.Scene {
 
     for (const [, view] of this.nodeViews) {
       const node = view.node;
-      const status = computeStatus(node, visited, discovered, current, playerLevel, oldCapitalUnlocked);
+      const status = computeStatus(node, visited, discovered, current, locked, oldCapitalUnlocked);
       this.paintNodeStatus(view, status, current, founded, keeperPaths);
     }
 
@@ -1298,13 +1299,13 @@ function drawFallbackIcon(ctx: CanvasRenderingContext2D, node: MapNode): void {
   ctx.fillText(node.icon || "?", 0, 2);
 }
 
-function computeStatus(node: MapNode, visited: Set<string>, discovered: Set<string>, current: string, playerLevel: number, oldCapitalUnlocked: boolean): NodeStatusKey {
+function computeStatus(node: MapNode, visited: Set<string>, discovered: Set<string>, current: string, locked: Set<string>, oldCapitalUnlocked: boolean): NodeStatusKey {
   if (node.requiresHearthTokens) return oldCapitalUnlocked ? "capital-ready" : "capital-locked";
   if (node.id === current) return "current";
   if (visited.has(node.id)) return "visited";
   if (discovered.has(node.id)) {
     if (!isAdjacent(current, node.id)) return "discovered-unreachable";
-    if (node.level > playerLevel) return "discovered-locked";
+    if (locked.has(node.id)) return "discovered-locked";
     return "discovered-ready";
   }
   return "hidden";
