@@ -27,6 +27,7 @@ import { SEASON_NAMES } from "./types.js";
 import { SEASONAL_TILES as GRAIN } from "./grain.js";
 import { SHOWCASE_TILES, SHOWCASE_TRANSITIONS } from "./showcaseTiles.js";
 import { VECTOR_PREFER_KEYS } from "./vectorPreferKeys.js";
+import { transitionSecondsFor } from "./transitionDurations.js";
 import { iconAnimation } from "../iconAnimations.js";
 
 const REGISTRY: Record<string, SeasonalTileEntry> = {
@@ -106,11 +107,11 @@ export function seasonalTilePrefersVector(key: string): boolean {
 // current season is registry-derived, so a season flip simply changes the season
 // passed in. Without help that would HARD-CUT between seasons; this controller
 // instead detects the flip and reports a forward transition to play once (over
-// `TRANS_SECONDS`) before settling into the new season's idle. State is per tile
-// key (every on-board instance of a key shares one baked texture, so they
-// transition in lockstep) and advanced off the loop's raw elapsed-seconds clock.
-
-const TRANS_SECONDS = 1.4;
+// the tile's transition duration — `transitionSecondsFor`, default 1.4s, tunable
+// per tile in `transitionDurations.ts`) before settling into the new season's
+// idle. State is per tile key (every on-board instance of a key shares one baked
+// texture, so they transition in lockstep) and advanced off the loop's raw
+// elapsed-seconds clock.
 
 interface VectorState {
   /** The season index we are currently settled on / animating the idle of. */
@@ -181,7 +182,7 @@ export function seasonalVectorAdvance(
   }
 
   if (st.fromIdx !== null) {
-    const p = (tSec - st.startSec) / TRANS_SECONDS;
+    const p = (tSec - st.startSec) / transitionSecondsFor(key, st.fromIdx);
     if (p >= 1) {
       st.settledIdx = st.fromIdx + 1;
       st.fromIdx = null;
