@@ -162,7 +162,7 @@ describe("CHAIN_COLLECTED: coin workers increase coins banked", () => {
       const next = dispatchGrainChain(mergeTestState({ workers: { hired } })) as { coins: number };
       return next.coins;
     };
-    const none = coinsFrom({ farmer: 0 });
+    const none = coinsFrom({}); // no workers hired
     const taxed = coinsFrom({ tax_collector: 10 });
     expect(taxed).toBeGreaterThan(none);
   });

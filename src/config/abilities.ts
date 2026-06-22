@@ -230,7 +230,9 @@ export const ABILITIES = Object.freeze([
     look: { iconKey: "goldring" },
     desc: "Lowers the number of supporting tiles needed to mint a rune (floored at 1).",
     scope: ["worker"],
-    trigger: "on_chain_commit",
+    // "passive" (not "on_chain_commit") so the aggregator never silently drops it
+    // — it is consumed unconditionally from the worker aggregate, like threshold_reduce_category.
+    trigger: "passive",
     channel: "runeSupportReduce",
     params: [
       { key: "amount", label: "Tiles Reduced", type: "int", default: 1, min: 1, max: 5 },

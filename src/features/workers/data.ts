@@ -191,11 +191,13 @@ function coinRuneWorkers(): WorkerDef[] {
       flavor: "Sells posies at the gate and pockets every petal's worth.",
     },
     {
+      // maxCount 1: rune chains need 2 supporting tiles (floored at 1), so a
+      // single Seeker's −1 already hits the floor — extra hires would do nothing.
       id: WorkerTypeId.RuneSeeker, name: "Rune Seeker", role: "Seeker",
       look: { iconKey: "worker_miner", color: "#9b59c4" },
-      hireCost: { coins: 200, coinsStep: 100 }, maxCount: 5,
+      hireCost: { coins: 200 }, maxCount: 1,
       abilities: [{ id: "rune_support_reduce", params: { amount: 1 } }],
-      description: "Each Rune Seeker lowers the supporting tiles needed to mint a rune.",
+      description: "The Rune Seeker lowers the supporting tiles needed to mint a rune by one.",
       flavor: "Hears the hum of buried runes through solid rock.",
     },
   ];

@@ -246,7 +246,7 @@ export function applyAbilityToChannels(out: AbilityChannels, ability: AbilityCat
     case "rune_support_reduce": {
       const amount = Number(p.amount) || 0;
       if (amount <= 0) break;
-      out.runeSupportReduce = (out.runeSupportReduce || 0) + Math.floor(amount * weight);
+      out.runeSupportReduce = (out.runeSupportReduce ?? 0) + Math.floor(amount * weight);
       break;
     }
     case "turn_budget_bonus": {
