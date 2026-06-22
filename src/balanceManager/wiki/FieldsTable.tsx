@@ -190,7 +190,7 @@ export function FieldsTable({
   return (
     <div className="wiki-table-scroll">
       <table
-        className="w-full text-[11px] border-collapse"
+        className="wiki-schema-table text-[11px] border-collapse"
         style={{ color: COLORS.ink }}
       >
         <thead>
@@ -238,7 +238,7 @@ export function KeyValueTable({
       >
         {heading}
       </div>
-      <table className="w-full text-[11px] border-collapse" style={{ color: COLORS.ink }}>
+      <table className="wiki-schema-table text-[11px] border-collapse" style={{ color: COLORS.ink }}>
         <thead>
           <tr style={{ borderBottom: `2px solid ${COLORS.border}` }}>
             <th

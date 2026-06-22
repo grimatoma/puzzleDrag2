@@ -1302,6 +1302,13 @@
   max-width: 100%;
 }
 
+/* Schema field tables (FieldsTable / KeyValueTable). On desktop they fill the
+ * content column exactly as the old `w-full` did (so layout is unchanged); the
+ * narrow-screen override below switches them to size-to-content + scroll. */
+.wiki-root .wiki-schema-table {
+  width: 100%;
+}
+
 /* Schema field tables: cap Type column width so aliases stay readable. */
 .wiki-root .wiki-field-type {
   max-width: 14rem;
@@ -1445,6 +1452,32 @@
     width: 28px;
     height: 28px;
     flex-shrink: 0;
+  }
+
+  /* ── Article two-column → single column ──
+   * The entity article normally renders its main content beside a fixed 190px
+   * Infobox rail. On a phone that leaves the content column ~140px wide, which
+   * crushes the Properties schema table into one character per line. Stack the
+   * Infobox below the content and let it span the full width instead. The
+   * !important overrides beat the inline width/position/maxHeight on the
+   * <aside>, which media queries cannot otherwise reach. */
+  .wiki-root .wiki-article-body {
+    flex-direction: column;
+  }
+
+  .wiki-root .wiki-article-body .wiki-infobox {
+    width: 100% !important;
+    position: static !important;
+    max-height: none !important;
+  }
+
+  /* Size schema tables to their content so the .wiki-table-scroll wrapper can
+   * scroll them horizontally instead of crushing every cell to one character
+   * per line. Scoped to phones so desktop layout (and its visual goldens) stay
+   * unchanged. */
+  .wiki-root .wiki-schema-table {
+    width: max-content;
+    min-width: 100%;
   }
 }
 
