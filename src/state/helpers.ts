@@ -232,15 +232,16 @@ interface NpcEntry {
 
 export function makeOrder(
   biomeKey: string,
-  level: number,
+  homeTier: number,
   excludeNpcs: string[] = [],
   excludeOrderKeys: string[] = [],
   npcRoster: string[] = Object.keys(NPCS),
 ): Order {
   const biome: BiomeEntry = BIOMES[biomeKey];
 
-  // At level 3+, 30% chance for a crafted item order
-  const useCrafted = level >= 3 && Math.random() < CRAFTED_ORDER_CHANCE;
+  // Once the home settlement reaches Village (tier 2), 30% chance for a
+  // premium crafted-item order. Tied to zone progression, not player level.
+  const useCrafted = homeTier >= 2 && Math.random() < CRAFTED_ORDER_CHANCE;
 
   let key: string;
   let need: number;
@@ -264,7 +265,8 @@ export function makeOrder(
     const value = Number(res?.value) || 1;
     const label = String(res?.label ?? key);
     const baseNeed = value < 3 ? 8 : 4;
-    need = baseNeed + Math.floor(Math.random() * 4) + Math.floor(level / 3) * 2;
+    // Orders grow with home-settlement progress (tier ≈ the old level/3 ramp).
+    need = baseNeed + Math.floor(Math.random() * 4) + homeTier * 2;
     reward = Math.max(20, need * value * 6);
     resourceLabel = label.toLowerCase();
   }

@@ -33,7 +33,7 @@ import {
   maxTier,
   plotsForTier,
 } from "../../features/zones/data.js";
-import { MAP_NODES, type ZoneTier } from "../../features/cartography/data.js";
+import { type ZoneTier } from "../../features/cartography/data.js";
 import { AmountChips } from "./EntityVisual.jsx";
 import { WikiLinkButton } from "./WikiLinkButton.jsx";
 import { COLORS } from "../shared.jsx";
@@ -43,8 +43,6 @@ import { COLORS } from "../shared.jsx";
 const BUILDING_NAME = new Map<string, string>(
   (BUILDINGS as Array<{ id: string; name?: string }>).map((b) => [b.id, b.name ?? b.id]),
 );
-
-const NODE_BY_ID = new Map(MAP_NODES.map((n) => [n.id, n]));
 
 /** Title-case a board kind for prose ("farm" → "Farm"). */
 function titleCase(s: string): string {
@@ -86,7 +84,6 @@ function zoneBoardKind(zoneId: string): string | null {
  *   boardKind     — "Farm" | "Mine" | "Fish"
  *   baseTurns     — the board's base turn budget (e.g. "10")
  *   entryCoins    — coins to start one session (e.g. "50"); "free" when 0
- *   level         — the cartography unlock level
  *   rungCount     — number of settlement-tier rungs (0 when un-tiered)
  *   plotsTop      — total building plots at the top rung
  *   plotsByTier   — "3 → 6 → 12 → 20"
@@ -103,7 +100,6 @@ export function resolveFact(key: string): string | null {
   const zoneId = parts[1];
   const field = parts[2];
   const zone = ZONES[zoneId];
-  const node = NODE_BY_ID.get(zoneId);
   if (!zone) return null;
 
   switch (field) {
@@ -121,8 +117,6 @@ export function resolveFact(key: string): string | null {
       const coins = (zone.entryCost as { coins?: number } | undefined)?.coins ?? 0;
       return coins > 0 ? String(coins) : "free";
     }
-    case "level":
-      return node ? String(node.level) : null;
     case "rungCount":
       return String(tiersForZone(zoneId).length);
     case "plotsTop":

@@ -18,8 +18,14 @@ import {
 import type { CSSProperties } from "react";
 import type { GameState, Dispatch } from "../../types/state.js";
 import { zoneInventory } from "../../state/zoneInventory.js";
+import { settlementTier } from "../zones/data.js";
 
 export const viewKey = "crafting";
+
+// Tier-2 recipes unlock once the home settlement reaches Village (tier 2) —
+// tied to zone progression, not player level.
+const TIER2_HOME_TIER = 2;
+const TIER2_GATE_LABEL = "Village";
 
 interface RecipeDef {
   item: string;
@@ -93,8 +99,8 @@ function stationBuilt(built: Record<string, unknown> | null | undefined, station
   return !!(built && built[station]);
 }
 
-function canCraft(recipe: RecipeDef, inputs: Record<string, number>, inventory: Record<string, number>, built: Record<string, unknown>, level: number): boolean {
-  if (recipe.tier === 2 && level < 3) return false;
+function canCraft(recipe: RecipeDef, inputs: Record<string, number>, inventory: Record<string, number>, built: Record<string, unknown>, tier2Unlocked: boolean): boolean {
+  if (recipe.tier === 2 && !tier2Unlocked) return false;
   if (!stationBuilt(built, recipe.station)) return false;
   for (const [res, need] of Object.entries(inputs)) {
     if ((inventory[res] || 0) < need) return false;
@@ -108,17 +114,17 @@ interface RecipeBrowserItemProps {
   selected: boolean;
   inventory: Record<string, number>;
   built: Record<string, unknown>;
-  level: number;
+  tier2Unlocked: boolean;
   craftedTotals: Record<string, number>;
   state: GameState;
   onSelect: () => void;
 }
 
-function RecipeBrowserItem({ recipeKey, recipe, selected, inventory, built, level, craftedTotals, state, onSelect }: RecipeBrowserItemProps) {
+function RecipeBrowserItem({ recipeKey, recipe, selected, inventory, built, tier2Unlocked, craftedTotals, state, onSelect }: RecipeBrowserItemProps) {
   const inputs = effectiveRecipeInputs(state, recipeKey, recipe.inputs);
-  const craftable = canCraft(recipe, inputs, inventory, built, level);
+  const craftable = canCraft(recipe, inputs, inventory, built, tier2Unlocked);
   const stationOk = stationBuilt(built, recipe.station);
-  const levelOk = !(recipe.tier === 2 && level < 3);
+  const tierOk = !(recipe.tier === 2) || tier2Unlocked;
   const timesBuilt = (craftedTotals || {})[recipeKey] || 0;
 
   const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
@@ -131,7 +137,7 @@ function RecipeBrowserItem({ recipeKey, recipe, selected, inventory, built, leve
       muted={!craftable}
       icon={<Icon iconKey={recipe.item} size={36} />}
       title={itemName}
-      subtitle={!levelOk ? "Level 3" : !stationOk ? "No station" : craftable ? "Ready" : "Missing inputs"}
+      subtitle={!tierOk ? TIER2_GATE_LABEL : !stationOk ? "No station" : craftable ? "Ready" : "Missing inputs"}
       count={timesBuilt > 0 ? `x${timesBuilt}` : null}
       onClick={onSelect}
       aria-label={`View recipe ${itemName}`}
@@ -144,17 +150,17 @@ interface RecipeDetailProps {
   recipe?: RecipeDef;
   inventory: Record<string, number>;
   built: Record<string, unknown>;
-  level: number;
+  tier2Unlocked: boolean;
   state: GameState;
   dispatch: Dispatch;
 }
 
-function RecipeDetail({ recipeKey, recipe, inventory, built, level, state, dispatch }: RecipeDetailProps) {
+function RecipeDetail({ recipeKey, recipe, inventory, built, tier2Unlocked, state, dispatch }: RecipeDetailProps) {
   if (!recipe || !recipeKey) return <DetailPane empty="Select a recipe to inspect it." />;
   const inputs = effectiveRecipeInputs(state, recipeKey, recipe.inputs);
-  const craftable = canCraft(recipe, inputs, inventory, built, level);
+  const craftable = canCraft(recipe, inputs, inventory, built, tier2Unlocked);
   const stationOk = stationBuilt(built, recipe.station);
-  const levelOk = !(recipe.tier === 2 && level < 3);
+  const tierOk = !(recipe.tier === 2) || tier2Unlocked;
   const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
   const itemDef = itemMap[recipe.item] || {};
   const itemName = itemDef.label || recipe.item;
@@ -174,7 +180,7 @@ function RecipeDetail({ recipeKey, recipe, inventory, built, level, state, dispa
     <DetailPane
       eyebrow={STATION_META[recipe.station]?.label ?? recipe.station}
       title={itemName}
-      status={!levelOk ? "Requires level 3" : !stationOk ? "Station not built" : craftable ? "Ready to craft" : "Missing inputs"}
+      status={!tierOk ? `Requires a ${TIER2_GATE_LABEL}` : !stationOk ? "Station not built" : craftable ? "Ready to craft" : "Missing inputs"}
       description={recipe.desc || itemDef.desc}
       icon={<Icon iconKey={recipe.item} size={64} />}
       actions={
@@ -304,7 +310,7 @@ interface CraftingScreenProps {
 
 export default function CraftingScreen({ state, dispatch }: CraftingScreenProps) {
   const inventory: Record<string, number> = zoneInventory(state);
-  const level: number = state.level ?? 1;
+  const tier2Unlocked: boolean = settlementTier(state, "home") >= TIER2_HOME_TIER;
   const craftedTotals: Record<string, number> = state.craftedTotals ?? {};
   const craftingTab = state.craftingTab;
   const built = locBuilt(state) as Record<string, unknown>;
@@ -350,7 +356,7 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
 
   // Header pill: how many recipes are craftable right now (or decor placed).
   const craftableCount = stationRecipes.filter(([key, recipe]) =>
-    canCraft(recipe, effectiveRecipeInputs(state, key, recipe.inputs), inventory, built, level),
+    canCraft(recipe, effectiveRecipeInputs(state, key, recipe.inputs), inventory, built, tier2Unlocked),
   ).length;
   const decorPlaced = Object.values(
     ((locBuilt(state) as { decorations?: Record<string, number> }).decorations) ?? {},
@@ -437,7 +443,7 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
                       selected={selectedRecipeEntry?.[0] === key}
                       inventory={inventory}
                       built={built}
-                      level={level}
+                      tier2Unlocked={tier2Unlocked}
                       craftedTotals={craftedTotals}
                       state={state}
                       onSelect={() => setSelectedRecipeKey(key)}
@@ -452,7 +458,7 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
                 recipe={selectedRecipeEntry?.[1]}
                 inventory={inventory}
                 built={built}
-                level={level}
+                tier2Unlocked={tier2Unlocked}
                 state={state}
                 dispatch={dispatch}
               />

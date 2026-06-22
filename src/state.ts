@@ -591,7 +591,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       const remainingOrders = state.orders.filter((x) => x.id !== o.id);
       const usedNpcs = remainingOrders.map((x) => x.npc);
       const usedKeys = remainingOrders.map((x) => x.key);
-      const replacement = makeOrder(state.biomeKey, state.level, usedNpcs, usedKeys, state.npcs?.roster);
+      const replacement = makeOrder(state.biomeKey, settlementTier(state, "home"), usedNpcs, usedKeys, state.npcs?.roster);
       // §17 locked: 5 XP per order into almanac
       const { newState: afterOrderAlmanac } = applyAlmanacXp(state, 5);
       // Bond multiplier (Phase 6.1): base reward × bond modifier
@@ -739,7 +739,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       const excludeNpcs: string[] = [];
       const excludeKeys: string[] = [];
       const replacements = (state.orders ?? []).map(() => {
-        const o = makeOrder(key, state.level, excludeNpcs, excludeKeys, state.npcs?.roster) as Order;
+        const o = makeOrder(key, settlementTier(state, "home"), excludeNpcs, excludeKeys, state.npcs?.roster) as Order;
         excludeNpcs.push(o.npc);
         excludeKeys.push(o.key);
         return o;
@@ -1248,8 +1248,7 @@ function coreReducer(state: GameState, action: Action): GameState {
       // (expeditionTurnsForFood, building-boosted); play until they run out.
       const biomeKey = action.payload?.biomeKey;
       if (biomeKey !== "mine" && biomeKey !== "fish") return state;
-      const needLevel = biomeKey === "mine" ? 2 : 3;
-      if ((state.level ?? 1) < needLevel) return state;
+      // Access is gated by founding the zone (below), not by player level.
       const zoneId = (state.activeZone as string | undefined) ?? (state.mapCurrent as string | undefined) ?? "home";
       // Founding gate (Phase 6a): can't depart on an expedition from an unfounded zone.
       if (!isSettlementFounded(state, zoneId)) {

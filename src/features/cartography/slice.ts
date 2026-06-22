@@ -1,10 +1,11 @@
 import { MAP_NODES, MAP_EDGES, type MapNode } from './data.js';
+import { zoneTierGateReason } from '../zones/data.js';
 import type { Action, GameState } from '../../types/state.js';
 
 // Node states (derived in the UI):
 //   visited    → player has been here at least once. Fast-travel allowed from anywhere.
 //   discovered → adjacent to a visited node, but not yet visited. Travel here only from
-//                an adjacent visited node, and only if the player meets the level req.
+//                an adjacent visited node, and only if its zone-tier prerequisite is met.
 //   hidden     → not adjacent to any visited node. Shown as a faint "?".
 //
 // `mapVisited` is the canonical list of visited node ids. `mapDiscovered` is kept
@@ -68,14 +69,13 @@ export function reduce(state: GameState, action: Action): GameState {
       // Backwards-compatible visited list: if the save predates `mapVisited`,
       // fall back to mapDiscovered (everything previously revealed counts as visited).
       const visited: string[] = state.mapVisited.length ? state.mapVisited : state.mapDiscovered;
-      const playerLevel = state.level || 1;
       const alreadyVisited = visited.includes(nodeId);
 
       // Fast-travel: any visited node, from anywhere on the map.
-      // First-visit: must be adjacent to current AND meet the level requirement.
+      // First-visit: must be adjacent to current AND meet the zone-tier prerequisite.
       if (!alreadyVisited) {
         if (!isAdjacent(state.mapCurrent, nodeId)) return state;
-        if (target.level > playerLevel) return state;
+        if (zoneTierGateReason(state, nodeId)) return state;
       }
 
       const nextVisited = alreadyVisited ? visited : [...visited, nodeId];
