@@ -226,7 +226,11 @@ export class TownScene extends Phaser.Scene {
       this.buildingsMap = data.buildingsMap;
       this.pendingBuilding = data.pendingBuilding;
       this.rebuildBuildingsAndPlots();
+      this.freezeAmbientForVisualTest();
     });
+
+    // Freeze ambient motion to a deterministic frame under the visual harness.
+    this.freezeAmbientForVisualTest();
   }
 
   // ── Texture baking ──────────────────────────────────────────────────────────
@@ -811,7 +815,29 @@ export class TownScene extends Phaser.Scene {
     return edge[0] === wpIdx ? edge[1] : edge[0];
   }
 
+  /**
+   * Under the visual-test harness (window.__HEARTH_VISUAL_TESTING__) the town
+   * must render a single deterministic frame. Perpetual ambient motion —
+   * chimney smoke, water flow, ember/lamp glow pulses, the rowboat bob and the
+   * wandering villagers — otherwise lands on a different frame every capture,
+   * making town goldens flaky. We freeze it: pause every looping tween at its
+   * t=0 value, and update() becomes a no-op so smoke/water/villagers never
+   * advance from their deterministic spawn state. Called after each ambient
+   * (re)build so freshly-spawned building tweens are caught too.
+   */
+  private get visualTesting(): boolean {
+    return typeof window !== "undefined"
+      && !!(window as unknown as { __HEARTH_VISUAL_TESTING__?: boolean }).__HEARTH_VISUAL_TESTING__;
+  }
+
+  private freezeAmbientForVisualTest() {
+    if (this.visualTesting) this.tweens.pauseAll();
+  }
+
   override update(_time: number, delta: number) {
+    // Visual-test harness: hold a single deterministic frame (see
+    // freezeAmbientForVisualTest) — no smoke/water/villager advancement.
+    if (this.visualTesting) return;
     // Ambient chimney smoke. Driven here (and via the ember flicker tweens), so
     // a paused/slept scene stops it dead — no off-screen CPU.
     if (this.smokeColumns.length || this.waterOverlay) {
