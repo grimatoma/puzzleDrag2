@@ -1,5 +1,6 @@
 import { WorkerTypeId } from "../../types/catalogKeys.js";
 import { PRODUCTION_LINES, lineStep } from "../../config/productionLines.js";
+import { PROMOTION_CHAINS } from "../../game/promotion.js";
 
 /** A single ability instance on a worker (or building / tile). */
 export interface WorkerAbility {
@@ -142,9 +143,36 @@ function productionLineWorkers(): WorkerDef[] {
   }));
 }
 
+interface PromotionWorkerMeta {
+  id: WorkerTypeId; fromCategory: string; name: string; iconKey: string; color: string;
+  coins: number; coinsStep: number; baseThreshold: number; minThreshold: number;
+  description: string; flavor: string;
+}
+const PROMOTION_WORKER_META: PromotionWorkerMeta[] = [
+  { id: WorkerTypeId.Steward, fromCategory: "grain", name: "Steward", iconKey: "worker_farmer", color: "#e0bf3e", coins: 120, coinsStep: 60, baseThreshold: 20, minThreshold: 10, description: "Long grain chains also yield a vegetable; each Steward lowers the count needed.", flavor: "Keeps the larder balanced so no harvest goes to waste." },
+  { id: WorkerTypeId.Greengrocer, fromCategory: "vegetables", name: "Greengrocer", iconKey: "worker_farmer", color: "#d97b32", coins: 140, coinsStep: 70, baseThreshold: 20, minThreshold: 10, description: "Long vegetable chains also yield a fruit; each Greengrocer lowers the count needed.", flavor: "Trades a turnip for a pear and somehow both leave happy." },
+  { id: WorkerTypeId.Perfumer, fromCategory: "fruits", name: "Perfumer", iconKey: "worker_farmer", color: "#d44b48", coins: 160, coinsStep: 80, baseThreshold: 22, minThreshold: 11, description: "Long fruit chains also yield a flower; each Perfumer lowers the count needed.", flavor: "Distils orchard sweetness into something you can wear." },
+  { id: WorkerTypeId.Rancher, fromCategory: "bird", name: "Rancher", iconKey: "worker_farmer", color: "#d9a85c", coins: 130, coinsStep: 65, baseThreshold: 20, minThreshold: 10, description: "Long bird chains also yield a herd animal; each Rancher lowers the count needed.", flavor: "From coop to pasture, every animal knows its name." },
+  { id: WorkerTypeId.Drover, fromCategory: "herd_animals", name: "Drover", iconKey: "worker_farmer", color: "#c97e7a", coins: 150, coinsStep: 75, baseThreshold: 20, minThreshold: 10, description: "Long herd chains also yield a cow; each Drover lowers the count needed.", flavor: "Walks the long road to market and never loses a head." },
+  { id: WorkerTypeId.Equerry, fromCategory: "cattle", name: "Equerry", iconKey: "worker_farmer", color: "#9c6230", coins: 170, coinsStep: 85, baseThreshold: 22, minThreshold: 11, description: "Long cattle chains also yield a mount; each Equerry lowers the count needed.", flavor: "Master of the stable, keeper of the finest tack." },
+  { id: WorkerTypeId.Smelter, fromCategory: "mine_iron_ore", name: "Smelter", iconKey: "worker_miner", color: "#a3795a", coins: 160, coinsStep: 80, baseThreshold: 22, minThreshold: 11, description: "Long ore chains also yield a gem; each Smelter lowers the count needed.", flavor: "Coaxes hidden colour out of the dullest rock." },
+  { id: WorkerTypeId.Assayer, fromCategory: "mine_gem", name: "Assayer", iconKey: "worker_miner", color: "#9b59c4", coins: 200, coinsStep: 100, baseThreshold: 24, minThreshold: 12, description: "Long gem chains also yield gold; each Assayer lowers the count needed.", flavor: "Weighs every stone twice and is never once wrong." },
+];
+function promotionWorkers(): WorkerDef[] {
+  return PROMOTION_WORKER_META.map((m) => ({
+    id: m.id, name: m.name, role: "Promoter",
+    look: { iconKey: m.iconKey, color: m.color },
+    hireCost: { coins: m.coins, coinsStep: m.coinsStep },
+    maxCount: 10,
+    abilities: [{ id: "chain_redirect_category", params: { fromCategory: m.fromCategory, toCategory: PROMOTION_CHAINS[m.fromCategory], baseThreshold: m.baseThreshold, minThreshold: m.minThreshold } }],
+    description: m.description, flavor: m.flavor,
+  }));
+}
+
 export const TYPE_WORKERS: WorkerDef[] = [
   ...BASE_WORKERS,
   ...productionLineWorkers(),
+  ...promotionWorkers(),
 ];
 
 export const TYPE_WORKER_MAP = Object.fromEntries(TYPE_WORKERS.map((w) => [w.id, w]));

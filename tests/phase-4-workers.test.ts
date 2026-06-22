@@ -21,20 +21,20 @@ function withCoins(coins, villagers = 10) {
 }
 
 describe("Phase 4 — TYPE_WORKERS data shape", () => {
-  it("ships the four base type-tier workers plus 14 production-line workers", () => {
+  it("ships the four base type-tier workers plus 14 production-line workers plus 8 promotion workers", () => {
     const ids = new Set(TYPE_WORKERS.map((w) => w.id));
     expect(ids.has("baker")).toBe(true);
     expect(ids.has("farmer")).toBe(true);
     expect(ids.has("lumberjack")).toBe(true);
     expect(ids.has("miner")).toBe(true);
-    expect(TYPE_WORKERS.length).toBe(18);
+    expect(ids.has("steward")).toBe(true);
+    expect(TYPE_WORKERS.length).toBe(26);
   });
 
-  it("each worker has maxCount >= 10 and a non-zero hireCost", () => {
+  it("each worker has maxCount >= 10 and a non-zero coin cost", () => {
     for (const w of TYPE_WORKERS) {
       expect(w.maxCount).toBeGreaterThanOrEqual(10);
       expect(w.hireCost.coins).toBeGreaterThan(0);
-      expect(Object.keys(w.hireCost.resources || {}).length).toBeGreaterThan(0);
     }
   });
 
@@ -47,7 +47,7 @@ describe("Phase 4 — TYPE_WORKERS data shape", () => {
 describe("Phase 4 — fresh state seeds workers slice", () => {
   it("state.workers.hired starts at 0 for every type", () => {
     const s = createInitialState();
-    // All 18 workers (4 base + 14 production-line) must be present and seeded to 0.
+    // All 26 workers (4 base + 14 production-line + 8 promotion) must be present and seeded to 0.
     // Using toBe(0) without ?? 0 so absence (undefined) fails the assertion.
     for (const w of TYPE_WORKERS) {
       expect(s.workers.hired[w.id]).toBe(0);

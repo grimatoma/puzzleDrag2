@@ -67,3 +67,49 @@ describe("CHAIN_COLLECTED: worker reductions increase resource income", () => {
     expect(flourFarmers).toBeGreaterThan(flourNoWorkers);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Promotion-chain mechanic (Unit 5 / PC2)
+// ---------------------------------------------------------------------------
+// Steward: grain -> vegetables (soup). baseThreshold=20, minThreshold=10.
+// With 10 Stewards hired (weight=1): eff threshold = 20 - (20-10)*1 = 10.
+// A grain chain of length 18 >= 10 → promotes; awards ≥1 soup.
+// With 0 Stewards hired: no promotion → 0 soup banked.
+// ---------------------------------------------------------------------------
+
+const PROMO_CHAIN_LENGTH = 18;
+
+function dispatchLongGrainChain(state: ReturnType<typeof mergeTestState>) {
+  return gameReducer(state, {
+    type: "CHAIN_COLLECTED",
+    payload: {
+      key: "tile_grain_wheat",
+      gained: PROMO_CHAIN_LENGTH,
+      upgrades: 0,
+      value: 2,
+      chainLength: PROMO_CHAIN_LENGTH,
+      resourceKey: "flour",
+    },
+  } as never);
+}
+
+describe("CHAIN_COLLECTED: promotion-chain mechanic (PC2)", () => {
+  it("with NO promotion workers, a long grain chain banks 0 soup", () => {
+    const state = mergeTestState({
+      workers: { hired: { farmer: 0, steward: 0 } },
+    });
+    const next = dispatchLongGrainChain(state);
+    // No Steward hired → no chainRedirect entry → 0 soup
+    expect(inv(next).soup ?? 0).toBe(0);
+  });
+
+  it("with 10 Stewards, a grain chain of 18 banks > 0 soup (promotion fired)", () => {
+    // 10 Stewards: eff threshold = 10. Chain 18 >= 10 → promotes.
+    // units = max(1, floor(1 * (18/10))) = max(1,1) = 1 soup
+    const state = mergeTestState({
+      workers: { hired: { steward: 10 } },
+    });
+    const next = dispatchLongGrainChain(state);
+    expect(inv(next).soup ?? 0).toBeGreaterThan(0);
+  });
+});

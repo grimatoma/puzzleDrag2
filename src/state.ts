@@ -1,5 +1,7 @@
 import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, getItem, tileFamilyResource, BALANCE_OVERRIDES } from "./constants.js";
 import { producedResource } from "./game/producedResource.js";
+import { computePromotion } from "./game/promotion.js";
+import { categoryOfTileKey } from "./config/productionLines.js";
 import { effectiveTilesPerResource } from "./game/effectiveDivisor.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor, effectiveSellPrice as _effectiveSellPrice } from "./features/market/pricing.js";
@@ -65,6 +67,22 @@ import { evaluateAndApplyStoryBeat, maybeFireResourceBeats } from "./state/story
 export { evaluateAndApplyStoryBeat, maybeFireResourceBeats };
 import { createFreshState, generateSaveSeed, initialState } from "./state/init.js";
 export { createFreshState, generateSaveSeed, initialState };
+
+// Promotion-chain helper: for each production category, find the resource
+// produced by the canonical (first) tile in that category so we can bank a
+// "promoted" resource when a long chain crosses a redirect worker's threshold.
+const FAMILY_RESOURCE_BY_CATEGORY: Record<string, string> = (() => {
+  const out: Record<string, string> = {};
+  for (const t of TILE_TYPES) {
+    if (out[t.category]) continue;
+    const r = producedResource({ key: t.id });
+    if (r) out[t.category] = r;
+  }
+  return out;
+})();
+function familyResourceForCategory(category: string): string | null {
+  return FAMILY_RESOURCE_BY_CATEGORY[category] ?? null;
+}
 
 // Apply authored `/story/` editor overrides (the `draft.story` slice of the
 // `hearth.balance.draft` localStorage doc, parsed into `BALANCE_OVERRIDES`) onto
@@ -373,6 +391,20 @@ function coreReducer(state: GameState, action: Action): GameState {
         progress[rk] = threshold === Infinity ? newProgress : newProgress % threshold;
         if (wholeUnits > 0) {
           addCappedResourceMut(inventory, chainCf, chainFloaters, resourceKey, wholeUnits, chainCap);
+        }
+        // Promotion chains (Unit 5): a long single-category chain also yields one of the
+        // next category's resource when a redirect worker is hired. Gated on chainRedirect
+        // (zero hires => null), so no behavioural change until a promoter is hired.
+        const fromCat = categoryOfTileKey(key);
+        if (fromCat) {
+          const chainLenForProgress2 = chainLength ?? gained;
+          const promo = computePromotion(chainAgg, fromCat, chainLenForProgress2);
+          if (promo) {
+            const promotedResource = familyResourceForCategory(promo.toCategory);
+            if (promotedResource) {
+              addCappedResourceMut(inventory, chainCf, chainFloaters, promotedResource as ResourceKey, promo.units, chainCap);
+            }
+          }
         }
       }
 
