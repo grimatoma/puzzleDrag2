@@ -18,12 +18,12 @@ import { COLORS } from "../../shared.jsx";
 import { ConceptRefForKey } from "../refs.js";
 import { StatusBadge } from "../StatusBadge.jsx";
 import { AmountChips } from "../EntityVisual.jsx";
-import { PROGRESSION_TRIGGERS } from "../../../config/progression/index.js";
 import type { ProgTrigger, Effect } from "../../../config/progression/index.js";
 import {
   progressionPoints,
-  childrenOf,
   cumulativeThrough,
+  effectCategory,
+  tilesUnlockedAtTrigger,
   type Category,
 } from "../../../config/progression/cumulative.js";
 import { findUnobtainableResources } from "../../../game/obtainable.js";
@@ -81,54 +81,110 @@ function TileChip({ tileId }: { tileId: string }) {
   return <ConceptRefForKey entityKey={tileId} conceptId="tiles" variant="inline" />;
 }
 
-// ─── Timeline spine (selectable) ──────────────────────────────────────────────
+// ─── Per-node unlocks (the restored per-step "what unlocks here" detail) ───────
 
-function SpineRow({
-  trigger, selected, onSelect, indent,
-}: {
-  trigger: ProgTrigger; selected: boolean; onSelect: () => void; indent: boolean;
-}) {
+function NodeUnlocks({ trigger, activeFilters }: { trigger: ProgTrigger; activeFilters: Set<string> }) {
+  const showAll = activeFilters.size === 0;
+  const effects = trigger.effects.filter((e) => showAll || activeFilters.has(effectCategory(e)));
+  const derived = showAll || activeFilters.has("tile") ? tilesUnlockedAtTrigger(trigger) : [];
+  if (effects.length === 0 && derived.length === 0) return null;
   return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-label={`Show state at ${trigger.label}`}
+    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, alignItems: "center", marginTop: 3 }}>
+      <span aria-hidden style={{ color: COLORS.inkSubtle, fontSize: 12, fontWeight: 700 }}>➜</span>
+      {effects.map((e, i) => <EffectChip key={`e${i}`} effect={e} />)}
+      {derived.map((id) => <TileChip key={`d${id}`} tileId={id} />)}
+    </div>
+  );
+}
+
+// ─── Full vertical timeline (selectable) ──────────────────────────────────────
+
+function TimelineNode({
+  trigger, selected, onSelect, activeFilters,
+}: {
+  trigger: ProgTrigger; selected: boolean; onSelect: () => void; activeFilters: Set<string>;
+}) {
+  const isMilestone = !!trigger.milestone;
+  return (
+    <div
       style={{
-        display: "flex", alignItems: "center", gap: 8, width: "100%",
-        textAlign: "left", cursor: "pointer",
-        padding: indent ? "4px 8px 4px 22px" : "6px 8px",
-        marginLeft: indent ? 8 : 0,
-        borderRadius: 8,
+        position: "relative",
+        paddingLeft: 30,
+        paddingBottom: 12,
+        borderRadius: 10,
         border: `1px solid ${selected ? COLORS.ember : "transparent"}`,
         background: selected ? COLORS.parchment : "transparent",
       }}
     >
-      <span style={{
-        fontWeight: trigger.milestone ? 700 : 600,
-        fontSize: trigger.milestone ? 15 : 13,
-        color: COLORS.ink,
-      }}>
-        {trigger.milestone ? "◆ " : ""}{trigger.label}
-      </span>
-      {trigger.zone && (
-        <span className="wiki-mono text-[11px]" style={{ color: COLORS.inkSubtle }}>{trigger.zone}</span>
+      {/* Node marker sitting on the rail — filled for milestones, hollow for steps. */}
+      <span
+        aria-hidden
+        style={{
+          position: "absolute",
+          left: isMilestone ? 8 : 10,
+          top: 11,
+          width: isMilestone ? 14 : 10,
+          height: isMilestone ? 14 : 10,
+          borderRadius: 999,
+          boxSizing: "border-box",
+          background: isMilestone ? COLORS.ember : COLORS.parchmentDeep,
+          border: `2px solid ${COLORS.ember}`,
+        }}
+      />
+      {/* Clickable header selects this step. Only non-interactive content lives
+          inside the <button>; the unlock chips (which contain links) sit below. */}
+      <button
+        type="button"
+        onClick={onSelect}
+        aria-label={`Show state at ${trigger.label}`}
+        aria-pressed={selected}
+        style={{
+          display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap",
+          width: "100%", textAlign: "left", cursor: "pointer",
+          background: "transparent", border: "none", padding: "4px 6px",
+        }}
+      >
+        <span style={{ fontWeight: isMilestone ? 700 : 600, fontSize: isMilestone ? 15 : 13, color: COLORS.ink }}>
+          {trigger.label}
+        </span>
+        {trigger.zone && (
+          <span className="wiki-mono text-[11px]" style={{ color: COLORS.inkSubtle }}>{trigger.zone}</span>
+        )}
+        <StatusBadge status={trigger.status} compact />
+      </button>
+      {isMilestone && trigger.blurb && (
+        <p style={{ fontStyle: "italic", color: COLORS.inkSubtle, fontSize: 12, margin: "0 0 0 6px" }}>
+          {trigger.blurb}
+        </p>
       )}
-      <StatusBadge status={trigger.status} compact />
-    </button>
+      <div style={{ paddingLeft: 6 }}>
+        <NodeUnlocks trigger={trigger} activeFilters={activeFilters} />
+      </div>
+    </div>
   );
 }
 
-function Spine({ selectedId, onSelect }: { selectedId: string; onSelect: (id: string) => void }) {
-  const milestones = PROGRESSION_TRIGGERS.filter((t) => t.milestone);
+function Timeline({
+  selectedId, onSelect, activeFilters,
+}: {
+  selectedId: string; onSelect: (id: string) => void; activeFilters: Set<string>;
+}) {
+  const points = progressionPoints();
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-      {milestones.map((m) => (
-        <section key={m.id} style={{ borderLeft: `3px solid ${COLORS.ember}`, paddingLeft: 8 }}>
-          <SpineRow trigger={m} selected={selectedId === m.id} onSelect={() => onSelect(m.id)} indent={false} />
-          {childrenOf(m.id).map((c) => (
-            <SpineRow key={c.id} trigger={c} selected={selectedId === c.id} onSelect={() => onSelect(c.id)} indent />
-          ))}
-        </section>
+    <div style={{ position: "relative" }}>
+      {/* Continuous vertical rail behind the node markers. */}
+      <div
+        aria-hidden
+        style={{ position: "absolute", left: 14, top: 12, bottom: 12, width: 2, background: COLORS.border }}
+      />
+      {points.map((p) => (
+        <TimelineNode
+          key={p.id}
+          trigger={p}
+          selected={selectedId === p.id}
+          onSelect={() => onSelect(p.id)}
+          activeFilters={activeFilters}
+        />
       ))}
     </div>
   );
@@ -329,26 +385,29 @@ export default function ProgressionPage() {
   };
 
   return (
-    <div style={{ padding: 16, maxWidth: 1100, margin: "0 auto" }}>
+    <div style={{ padding: 16, maxWidth: 1200, margin: "0 auto" }}>
       <h1 className="wiki-concept-title" style={{ fontSize: 26 }}>Progression &amp; Unlocks</h1>
       <p style={{ color: COLORS.inkSubtle, maxWidth: 760 }}>
-        The single source of truth for where the game goes and what it costs. Click a milestone on
-        the spine to see the cumulative state at that moment — every unlock accumulated from the
-        start, plus the running entry and tier-upgrade costs. Filter by category to focus a balancing
-        pass. All numbers are read live from the game data.
+        The single source of truth for where the game goes and what it costs. The full timeline on the
+        left lists every milestone and build step with what it unlocks; click any step to see the
+        cumulative state at that moment — everything unlocked from the start, plus the running entry
+        and tier-upgrade costs. Filter by category to focus a balancing pass. All numbers read live
+        from the game data.
       </p>
 
       <FilterBar active={active} toggle={toggle} clear={() => setActive(new Set())} />
 
       <div style={{ display: "flex", gap: 18, alignItems: "flex-start", marginTop: 8 }}>
-        <div style={{ flex: "0 0 320px", minWidth: 260 }}>
-          <SectionTitle>Timeline</SectionTitle>
-          <Spine selectedId={selectedId} onSelect={setSelectedId} />
+        <div style={{ flex: "1 1 480px", minWidth: 340 }}>
+          <SectionTitle>Full timeline</SectionTitle>
+          <Timeline selectedId={selectedId} onSelect={setSelectedId} activeFilters={active} />
         </div>
         <div style={{
-          flex: 1, minWidth: 0, padding: 14, borderRadius: 12,
+          flex: "1 1 360px", minWidth: 300, position: "sticky", top: 8,
+          padding: 14, borderRadius: 12,
           border: `1px solid ${COLORS.border}`, background: COLORS.parchmentDeep,
         }}>
+          <SectionTitle>State at selected step</SectionTitle>
           <CumulativeReport selectedId={selectedId} activeFilters={active} />
         </div>
       </div>
