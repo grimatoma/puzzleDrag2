@@ -1,5 +1,8 @@
-import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, TILES_PER_RESOURCE, getItem, tileFamilyResource, BALANCE_OVERRIDES } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, getItem, tileFamilyResource, tileFamily, BALANCE_OVERRIDES } from "./constants.js";
 import { producedResource } from "./game/producedResource.js";
+import { computePromotion } from "./game/promotion.js";
+import { categoryOfTileKey, PRODUCTION_LINES } from "./config/productionLines.js";
+import { effectiveTilesPerResource } from "./game/effectiveDivisor.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor, effectiveSellPrice as _effectiveSellPrice } from "./features/market/pricing.js";
 import { isTapTargetPower } from "./config/toolPowers.js";
@@ -44,6 +47,7 @@ import * as market from "./features/market/slice.js";
 import * as castle from "./features/castle/slice.js";
 import * as zones from "./features/zones/slice.js";
 import * as workers from "./features/workers/slice.js";
+import { defaultWorkersSlice } from "./features/workers/data.js";
 import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import * as civicEconomy from "./features/civicEconomy/slice.js";
@@ -63,6 +67,26 @@ import { evaluateAndApplyStoryBeat, maybeFireResourceBeats } from "./state/story
 export { evaluateAndApplyStoryBeat, maybeFireResourceBeats };
 import { createFreshState, generateSaveSeed, initialState } from "./state/init.js";
 export { createFreshState, generateSaveSeed, initialState };
+
+// Promotion-chain helper: for each production category, find the resource
+// produced by the canonical (first) tile in that category so we can bank a
+// "promoted" resource when a long chain crosses a redirect worker's threshold.
+const FAMILY_RESOURCE_BY_CATEGORY: Record<string, string> = (() => {
+  const out: Record<string, string> = {};
+  for (const t of TILE_TYPES) {
+    if (out[t.category]) continue;
+    // Skip cross-category tiles (e.g. tile_bird_clover is categorized "flowers"
+    // but produces eggs) so they don't poison the category→resource map.
+    const fam = tileFamily(t.id);
+    if (fam && PRODUCTION_LINES[fam] && fam !== t.category) continue;
+    const r = producedResource({ key: t.id });
+    if (r) out[t.category] = r;
+  }
+  return out;
+})();
+function familyResourceForCategory(category: string): string | null {
+  return FAMILY_RESOURCE_BY_CATEGORY[category] ?? null;
+}
 
 // Apply authored `/story/` editor overrides (the `draft.story` slice of the
 // `hearth.balance.draft` localStorage doc, parsed into `BALANCE_OVERRIDES`) onto
@@ -286,6 +310,11 @@ function coreReducer(state: GameState, action: Action): GameState {
       //  rather than a separate COMMIT_CHAIN)
       const chainTiles = (payload?.chain ?? null) as Tile[] | null;
       const currentBiome = state.biome ?? state.biomeKey;
+      // Aggregate worker/building abilities once per collected chain. Hoisted to
+      // the top of the handler so the rune-mint gates below (which return early)
+      // can honour Rune Seeker's support-tile reduction, and the income + coin
+      // blocks downstream reuse the same aggregate.
+      const chainAgg = computeWorkerEffects(state);
       type FireExtinguishPatch = { hazards: Record<string, unknown>; coinsBonus: number };
       type DeadlyPatch = { hazards: { rats: unknown[]; [k: string]: unknown }; coins: number; _deadlyKills?: number; _deadlyFloater?: string };
       let fireExtinguishPatch: FireExtinguishPatch | null = null;
@@ -311,7 +340,7 @@ function coreReducer(state: GameState, action: Action): GameState {
           // Mysterious ore capture
           const hasOre = chainTiles.some((t: Tile) => t.key === "mysterious_ore");
           if (hasOre) {
-            if (!isMysteriousChainValid(chainTiles)) return state;
+            if (!isMysteriousChainValid(chainTiles, chainAgg.runeSupportReduce ?? 0)) return state;
             return {
               ...state,
               runes: (state.runes ?? 0) + 1,
@@ -321,7 +350,7 @@ function coreReducer(state: GameState, action: Action): GameState {
         } else if (currentBiome === "fish") {
           // Pearl capture — chain pearl + ≥2 other fish-category tiles → +1 rune
           const hasPearl = chainTiles.some((t: Tile) => t.key === PEARL_KEY);
-          if (hasPearl && isPearlChainValid(chainTiles)) {
+          if (hasPearl && isPearlChainValid(chainTiles, chainAgg.runeSupportReduce ?? 0)) {
             return {
               ...state,
               runes: (state.runes ?? 0) + 1,
@@ -359,10 +388,10 @@ function coreReducer(state: GameState, action: Action): GameState {
       // zoneResourceProgress[resourceKey], rolling into inventory once it
       // crosses TILES_PER_RESOURCE[key] (the income divisor — decoupled from the
       // board-tier-upgrade threshold). Tile keys no longer enter state.inventory.
+      // Worker/building reductions are applied via effectiveTilesPerResource.
       const progress: Partial<Record<ResourceKey, number>> = { ...zoneResourceProgress(state) };
       if (resourceKey) {
-        const thresholds = TILES_PER_RESOURCE;
-        const threshold = thresholds[key] ?? Infinity;
+        const threshold = effectiveTilesPerResource(state, key, chainAgg);
         const chainLenForProgress = chainLength ?? gained;
         const rk = resourceKey as ResourceKey;
         const newProgress = (progress[rk] ?? 0) + chainLenForProgress;
@@ -370,6 +399,19 @@ function coreReducer(state: GameState, action: Action): GameState {
         progress[rk] = threshold === Infinity ? newProgress : newProgress % threshold;
         if (wholeUnits > 0) {
           addCappedResourceMut(inventory, chainCf, chainFloaters, resourceKey, wholeUnits, chainCap);
+        }
+        // Promotion chains (Unit 5): a long single-category chain also yields one of the
+        // next category's resource when a redirect worker is hired. Gated on chainRedirect
+        // (zero hires => null), so no behavioural change until a promoter is hired.
+        const fromCat = categoryOfTileKey(key);
+        if (fromCat) {
+          const promo = computePromotion(chainAgg, fromCat, chainLenForProgress);
+          if (promo) {
+            const promotedResource = familyResourceForCategory(promo.toCategory);
+            if (promotedResource) {
+              addCappedResourceMut(inventory, chainCf, chainFloaters, promotedResource as ResourceKey, promo.units, chainCap);
+            }
+          }
         }
       }
 
@@ -385,11 +427,10 @@ function coreReducer(state: GameState, action: Action): GameState {
       // resourceKey stacks correctly.
       const crossCollected = (payload?.crossCollected ?? null) as Record<string, number> | null;
       if (crossCollected) {
-        const thresholds = TILES_PER_RESOURCE;
         for (const [tileKey, count] of Object.entries(crossCollected)) {
           if (!count) continue;
           const rk = (producedResource({ key: tileKey }) ?? tileKey) as ResourceKey;
-          const threshold = thresholds[tileKey] ?? Infinity;
+          const threshold = effectiveTilesPerResource(state, tileKey, chainAgg);
           const newProgress = (progress[rk] ?? 0) + count;
           const wholeUnits = threshold === Infinity ? 0 : Math.floor(newProgress / threshold);
           progress[rk] = threshold === Infinity ? newProgress : newProgress % threshold;
@@ -401,8 +442,10 @@ function coreReducer(state: GameState, action: Action): GameState {
 
       // Power-hook coin bonuses (set via Dev Panel → Tile Powers).
       const chainTileEffects = (TILE_TYPES_MAP[key]?.effects ?? {}) as { coinBonusFlat?: number; coinBonusPerTile?: number };
-      const hookFlat = chainTileEffects.coinBonusFlat || 0;
-      const hookPerTile = chainTileEffects.coinBonusPerTile || 0;
+      // Tile-power coin hooks PLUS worker-aggregated coin bonuses (Tax Collector,
+      // Florist). Zero coin workers => chainAgg contributes 0 (no change).
+      const hookFlat = (chainTileEffects.coinBonusFlat || 0) + (chainAgg.coinBonusFlat || 0);
+      const hookPerTile = (chainTileEffects.coinBonusPerTile || 0) + (chainAgg.coinBonusPerTile || 0);
       const coinHookBonus = hookFlat + hookPerTile * effectiveChain;
 
       // Economy balance pass: chain coin yield raised ~2x (was floor(gained*value/2))
@@ -1628,7 +1671,7 @@ function coreReducer(state: GameState, action: Action): GameState {
             bonds: { wren: 5, mira: 5, tomas: 5, bram: 5, liss: 5 },
             giftCooldown: { wren: 0, mira: 0, tomas: 0, bram: 0, liss: 0 },
           },
-          workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
+          workers: defaultWorkersSlice(),
           tileCollection: defaultTileCollectionSlice() };
       }
       return state;

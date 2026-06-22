@@ -21,16 +21,33 @@ function withCoins(coins, villagers = 10) {
 }
 
 describe("Phase 4 — TYPE_WORKERS data shape", () => {
-  it("ships the four expected type-tier workers", () => {
-    const ids = TYPE_WORKERS.map((w) => w.id).sort();
-    expect(ids).toEqual(["baker", "farmer", "lumberjack", "miner"]);
+  it("ships 4 base + 14 production-line + 8 promotion + 3 coin/rune workers", () => {
+    const ids = new Set(TYPE_WORKERS.map((w) => w.id));
+    expect(ids.has("baker")).toBe(true);
+    expect(ids.has("farmer")).toBe(true);
+    expect(ids.has("lumberjack")).toBe(true);
+    expect(ids.has("miner")).toBe(true);
+    expect(ids.has("steward")).toBe(true);
+    expect(ids.has("tax_collector")).toBe(true);
+    expect(ids.has("rune_seeker")).toBe(true);
+    expect(TYPE_WORKERS.length).toBe(29);
   });
 
-  it("each worker has maxCount >= 10 and a non-zero hireCost", () => {
+  it("each worker is hireable (positive maxCount and coin cost)", () => {
     for (const w of TYPE_WORKERS) {
-      expect(w.maxCount).toBeGreaterThanOrEqual(10);
-      expect(w.hireCost.coins).toBeGreaterThan(0);
-      expect(Object.keys(w.hireCost.resources || {}).length).toBeGreaterThan(0);
+      expect(w.maxCount, w.id).toBeGreaterThan(0);
+      expect(w.hireCost.coins, w.id).toBeGreaterThan(0);
+    }
+  });
+
+  it("workers that reduce a production line or recipe also carry a resource cost", () => {
+    // Promotion (and later coin/rune) workers are coin-only by design; workers
+    // that shave a production category or recipe must additionally cost resources.
+    const RESOURCE_COST_ABILITIES = new Set(["threshold_reduce_category", "recipe_input_reduce"]);
+    for (const w of TYPE_WORKERS) {
+      const reducesLineOrRecipe = w.abilities.some((a) => RESOURCE_COST_ABILITIES.has(a.id));
+      if (!reducesLineOrRecipe) continue;
+      expect(Object.keys(w.hireCost.resources || {}).length, w.id).toBeGreaterThan(0);
     }
   });
 
@@ -43,7 +60,11 @@ describe("Phase 4 — TYPE_WORKERS data shape", () => {
 describe("Phase 4 — fresh state seeds workers slice", () => {
   it("state.workers.hired starts at 0 for every type", () => {
     const s = createInitialState();
-    expect(s.workers.hired).toEqual({ farmer: 0, lumberjack: 0, miner: 0, baker: 0 });
+    // All 26 workers (4 base + 14 production-line + 8 promotion) must be present and seeded to 0.
+    // Using toBe(0) without ?? 0 so absence (undefined) fails the assertion.
+    for (const w of TYPE_WORKERS) {
+      expect(s.workers.hired[w.id]).toBe(0);
+    }
   });
 });
 

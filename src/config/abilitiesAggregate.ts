@@ -31,6 +31,7 @@ export function emptyChannels(): {
   freeMovesIfChain: { minChain: number; count: number } | null;
   coinBonusFlat: number;
   coinBonusPerTile: number;
+  runeSupportReduce: number;
   seasonEndTools: Record<string, number>;
   seasonEndPoolStep: number;
   boardPreserveBiomes: Set<string>;
@@ -53,6 +54,7 @@ export function emptyChannels(): {
     freeMovesIfChain: null,
     coinBonusFlat: 0,
     coinBonusPerTile: 0,
+    runeSupportReduce: 0,
 
     // Building-only channels (new).
     seasonEndTools: {},
@@ -239,6 +241,12 @@ export function applyAbilityToChannels(out: AbilityChannels, ability: AbilityCat
       const amount = Number(p.amount) || 0;
       if (amount <= 0) break;
       out.coinBonusPerTile = (out.coinBonusPerTile || 0) + Math.floor(amount * weight);
+      break;
+    }
+    case "rune_support_reduce": {
+      const amount = Number(p.amount) || 0;
+      if (amount <= 0) break;
+      out.runeSupportReduce = (out.runeSupportReduce ?? 0) + Math.floor(amount * weight);
       break;
     }
     case "turn_budget_bonus": {

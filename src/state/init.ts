@@ -26,6 +26,7 @@ import {
   defaultTileCollectionSlice,
   mergeLoadedState,
 } from "./helpers.js";
+import { defaultWorkersSlice } from "../features/workers/data.js";
 import type { GameState } from "../types/state";
 
 /**
@@ -144,7 +145,7 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     activeTrial: null,
     dailyStreak: { lastClaimedDate: null, currentDay: 0 },
     civicEconomy: { lastClaimedAt: null, pendingProvisions: {} },
-    workers: { hired: { farmer: 0, lumberjack: 0, miner: 0, baker: 0 } },
+    workers: defaultWorkersSlice(),
     tileCollection: defaultTileCollectionSlice(),
     almanac: {
       xp: 0,

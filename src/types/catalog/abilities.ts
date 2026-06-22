@@ -18,6 +18,7 @@ export enum AbilityId {
   PoolWeightLegacy = "pool_weight_legacy",
   PreserveBoard = "preserve_board",
   RecipeInputReduce = "recipe_input_reduce",
+  RuneSupportReduce = "rune_support_reduce",
   SeasonBonus = "season_bonus",
   ThresholdReduce = "threshold_reduce",
   ThresholdReduceCategory = "threshold_reduce_category",

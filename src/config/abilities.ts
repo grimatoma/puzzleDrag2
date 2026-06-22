@@ -224,6 +224,20 @@ export const ABILITIES = Object.freeze([
       { key: "amount", label: "Coins / Tile", type: "int", default: 1, min: 1, max: 50 },
     ],
   },
+  {
+    id: "rune_support_reduce",
+    name: "Rune Support Reduce",
+    look: { iconKey: "goldring" },
+    desc: "Lowers the number of supporting tiles needed to mint a rune (floored at 1).",
+    scope: ["worker"],
+    // "passive" (not "on_chain_commit") so the aggregator never silently drops it
+    // — it is consumed unconditionally from the worker aggregate, like threshold_reduce_category.
+    trigger: "passive",
+    channel: "runeSupportReduce",
+    params: [
+      { key: "amount", label: "Tiles Reduced", type: "int", default: 1, min: 1, max: 5 },
+    ],
+  },
 
   // ── Building-only abilities (new for this refactor) ───────────────────
   {

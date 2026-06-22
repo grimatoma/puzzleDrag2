@@ -94,10 +94,12 @@ export function tickMysteriousOre(state: GameState): GameState {
 
 /**
  * Returns true if the chain contains the Mysterious Ore tile AND
- * at least REQUIRED_DIRT_IN_CHAIN dirt tiles.
+ * at least REQUIRED_DIRT_IN_CHAIN dirt tiles. `supportReduce` (from Rune Seeker
+ * workers) lowers the required dirt count, floored at 1.
  */
-export function isMysteriousChainValid(chain: ChainCell[]): boolean {
+export function isMysteriousChainValid(chain: ChainCell[], supportReduce = 0): boolean {
   const hasOre = chain.some((t: ChainCell) => t.key === "mysterious_ore");
   const dirtCnt = chain.filter((t: ChainCell) => t.key === "tile_special_dirt").length;
-  return hasOre && dirtCnt >= REQUIRED_DIRT_IN_CHAIN;
+  const required = Math.max(1, REQUIRED_DIRT_IN_CHAIN - (supportReduce | 0));
+  return hasOre && dirtCnt >= required;
 }
