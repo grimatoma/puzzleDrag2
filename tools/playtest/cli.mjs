@@ -10,7 +10,12 @@
  *   npm run playtest -- --zones home,meadow --runs 20 --seed 1234
  *
  * Flags: --zones <csv>  --runs <n>  --seed <n>  --policy <name>
- *        --rows <n>  --cols <n>  --out <dir>  --no-write
+ *        --rows <n>  --cols <n>  --out <dir>  --no-write  --campaign
+ *
+ * --campaign switches to the sequential progression sim (src/playtest/campaign.ts):
+ * one persistent state, runs carried forward, measuring runs-to-coin-milestone +
+ * tier pacing for the FIRST zone in --zones. Writes campaign-report.md /
+ * campaign-metrics.json instead of the per-run report.
  *
  * The harness logic lives in importable TS under src/playtest/. This file is
  * thin glue: it loads that TS through Vite's SSR pipeline (the same compiler the
@@ -36,7 +41,7 @@ globalThis.localStorage = {
 };
 
 function parseArgs(argv) {
-  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "docs/playtest", write: true };
+  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "docs/playtest", write: true, campaign: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const val = () => argv[++i];
@@ -49,6 +54,7 @@ function parseArgs(argv) {
       case "--cols": out.cols = Math.max(3, parseInt(val(), 10) || 6); break;
       case "--out": out.outDir = val(); break;
       case "--no-write": out.write = false; break;
+      case "--campaign": out.campaign = true; break;
       default:
         if (a.startsWith("--")) console.warn(`[playtest] ignoring unknown flag: ${a}`);
     }
@@ -72,14 +78,44 @@ async function main() {
   });
 
   let report;
+  let campaign;
   try {
     const mod = await server.ssrLoadModule("/src/playtest/index.ts");
-    report = mod.runPlaytest({
-      zones: args.zones, runs: args.runs, seed: args.seed,
-      policy: args.policy, rows: args.rows, cols: args.cols,
-    });
+    if (args.campaign) {
+      campaign = mod.runCampaign({
+        zoneId: args.zones[0], runs: args.runs, seed: args.seed,
+        policy: args.policy, rows: args.rows, cols: args.cols,
+      });
+    } else {
+      report = mod.runPlaytest({
+        zones: args.zones, runs: args.runs, seed: args.seed,
+        policy: args.policy, rows: args.rows, cols: args.cols,
+      });
+    }
   } finally {
     await server.close();
+  }
+
+  // ── Campaign mode: progression pacing for a single zone ──────────────────
+  if (campaign) {
+    const m = campaign.metrics;
+    console.log(`\npuzzleDrag2 campaign — zone ${m.zoneId}, up to ${args.runs} run(s), seed ${args.seed}\n`);
+    console.log(`  start ${m.startCoins}c → ${m.runsPlayed} run(s) → ${fmt(m.finalBalance)}c · tier ${m.finalTier}${m.stalledOnEntry ? " · ⚠ stalled on entry" : ""}`);
+    console.log(`  net coins/run: mean ${fmt(m.netCoinsPerRun.mean)} ± ${fmt(m.netCoinsPerRun.stdev)} (median ${fmt(m.netCoinsPerRun.median)}) · income trend r=${fmt(m.incomeTrendCorrelation)}`);
+    for (const ms of m.coinMilestones) {
+      console.log(`  ${ms.label}: ${ms.runIndex < 0 ? "not reached" : `run ${ms.runIndex}`}${ms.target ? ` (band ${ms.target[0]}–${ms.target[1]}, ${ms.verdict})` : ""}`);
+    }
+    if (m.tierStall) {
+      const gated = m.tierStall.missing.filter((x) => x.source !== "farm").map((x) => `${x.key}(${x.source})`);
+      console.log(`  stall → ${m.tierStall.toName}: missing ${m.tierStall.missing.map((x) => `${x.key}×${x.need - x.have}`).join(", ")}${gated.length ? `  ⚠ off-farm: ${gated.join(", ")}` : ""}`);
+    }
+    if (!args.write) { console.log("\n(--no-write: skipped file output)\n"); return; }
+    const outDir = path.resolve(process.cwd(), args.outDir);
+    await mkdir(outDir, { recursive: true });
+    await writeFile(path.join(outDir, "campaign-report.md"), campaign.reportMarkdown + "\n", "utf8");
+    await writeFile(path.join(outDir, "campaign-metrics.json"), JSON.stringify(m, null, 2) + "\n", "utf8");
+    console.log(`\n  wrote campaign-report.md, campaign-metrics.json → ${args.outDir}\n`);
+    return;
   }
 
   // Console summary.
