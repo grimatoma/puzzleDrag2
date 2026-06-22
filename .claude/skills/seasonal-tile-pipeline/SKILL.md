@@ -21,7 +21,7 @@ Produce every seasonal asset for one board tile in one consistent style, validat
 it for the game, and wire it into the Phaser board. This is the workflow that was built and validated
 end-to-end on **willow, grass, eggplant** (+ the willow live in-game).
 
-**Source of truth:** `docs/seasonal-tile-system/index.html` — the comprehensive design doc (decisions,
+**Source of truth:** `reference/docs/seasonal-tile-system/index.html` — the comprehensive design doc (decisions,
 exact API schemas, the meta-prompt model + per-category playbooks, the validated results, gotchas). Read
 it (or its relevant tab) before authoring prompts for a new subject; this skill is the procedure, the doc
 is the reference.
@@ -39,7 +39,7 @@ under-specified call lets the subject move, resize, and recolour between seasons
 from meta-prompt layers** (next section), never hand-written per state.
 
 Two halves:
-1. **Art generation** — PixelLab raw v2 REST (`tools/pixellab/pixellab.mjs`), config-driven via
+1. **Art generation** — PixelLab raw v2 REST (`reference/tools/pixellab/pixellab.mjs`), config-driven via
    `run_subject.mjs`, gated and QA'd.
 2. **Engine integration** — render the baked art on the Phaser board, season-aware, with idle + transition
    playback. See `references/engine-integration.md`.
@@ -51,7 +51,7 @@ next batch. **Stop and show the user at each ⟂ gate.**
 ## Prompt composition (the meta-prompt layers)
 
 Prompts are **composed, not hand-written.** A thin subject config carries only identity + locks + per-subject
-overrides; the composer (`tools/pixellab/prompts/`) layers the shared metas under it to emit a fully-quantified
+overrides; the composer (`reference/tools/pixellab/prompts/`) layers the shared metas under it to emit a fully-quantified
 prompt for **every** object state (summer generate, each season edit, each transition, each idle):
 
 - `framing.mjs` — L0 style words + L1 framing geometry + the footprint lock (carried on every call).
@@ -94,8 +94,8 @@ doc's "All tiles" tab; the essentials:
 ## Setup
 
 - **Auth:** the PixelLab Bearer token is read at runtime from `~/.claude.json` (the `pixellab` http-MCP
-  entry). Never print or commit it. `tools/pixellab/pixellab.mjs` handles this.
-- **Canonical style anchors (use both):** `docs/seasonal-tile-system/assets/willow-summer.png` +
+  entry). Never print or commit it. `reference/tools/pixellab/pixellab.mjs` handles this.
+- **Canonical style anchors (use both):** `reference/docs/seasonal-tile-system/assets/willow-summer.png` +
   `eggplant-summer.png` — passed together as `style_images` so a new subject inherits the set's look. They
   span the two dominant archetypes (organic mass + hero object).
 - **Resolution:** generate **AND ship at 128px** — `size:128`, **no decimate**. Native-64 generation drifts
@@ -104,26 +104,26 @@ doc's "All tiles" tab; the essentials:
   the one legacy exception — it shipped native-64 and is kept as-is; everything else is 128.) `pack_sheets.py`
   still has an optional `--decimate N` if a specific tile ever needs a smaller sheet, but it is **off by
   default**. (Output size = the `image_size` you request; style refs can be a different size.)
-- **Output convention:** stills at `docs/seasonal-tile-system/assets/<subject>-<season>.png`; animation
+- **Output convention:** stills at `reference/docs/seasonal-tile-system/assets/<subject>-<season>.png`; animation
   frames at `.../assets/anim/<subject>-<clip>/frame_NN.png`; game sheets at
   `public/seasonal-tiles/<subject>/`.
 
 ## Workflow
 
-Author a **thin** subject config (copy `tools/pixellab/subjects/chicken.mjs` — identity + category + overrides
+Author a **thin** subject config (copy `reference/tools/pixellab/subjects/chicken.mjs` — identity + category + overrides
 + locks, **not** per-state prompts), then run it phase by phase, gating between phases.
 
 ### 0 — Compose & review prompts  ⟂ GATE
 ```
-node tools/pixellab/run_subject.mjs tools/pixellab/subjects/<subject>.mjs prompts
+node reference/tools/pixellab/run_subject.mjs reference/tools/pixellab/subjects/<subject>.mjs prompts
 ```
-Dumps the fully-composed prompt for every state to `docs/seasonal-tile-system/prompts/<subject>.md` (no API
+Dumps the fully-composed prompt for every state to `reference/docs/seasonal-tile-system/prompts/<subject>.md` (no API
 calls). **Read it and show the user** before generating — this is where an under-specified or off-model prompt
 is caught for free. Tune the config (or the shared layers in `prompts/`) and re-dump until the set is right.
 
 ### 1 — Summer anchor  ⟂ GATE
 ```
-node tools/pixellab/run_subject.mjs tools/pixellab/subjects/<subject>.mjs summer
+node reference/tools/pixellab/run_subject.mjs reference/tools/pixellab/subjects/<subject>.mjs summer
 ```
 `generate-with-style-v2` returns several candidates (`<subject>-summer_cand_N.png`) — about **4 at 128px,
 ~16 at 64px** (smaller = more candidates). Montage them (e.g. a quick grid) and **show the user, and stop.**
@@ -133,7 +133,7 @@ sitting on an egg will fight every downstream seasonal edit. On the pick, copy i
 
 ### 2 — The other three seasons  ⟂ GATE
 ```
-node tools/pixellab/run_subject.mjs .../subjects/<subject>.mjs seasons
+node reference/tools/pixellab/run_subject.mjs .../subjects/<subject>.mjs seasons
 ```
 Each season is an `edit-images-v2` edit off the season named by its `from` (usually summer; deciduous
 winter chains summer→autumn→bare-mound→winter). Prompts are the seasonal *delta* + an identity-lock prefix
@@ -142,7 +142,7 @@ four together — seeing the set is where an off-model season gets caught.
 
 ### 3 — Forward transitions  ⟂ GATE
 ```
-node tools/pixellab/run_subject.mjs .../subjects/<subject>.mjs transitions
+node reference/tools/pixellab/run_subject.mjs .../subjects/<subject>.mjs transitions
 ```
 Forward only — spring→summer, summer→autumn, autumn→winter (NO winter→spring; a run ends at winter).
 `animate-with-text-v3` interpolates start→end. **Stage** the action text ("first… then…") so effects don't
@@ -152,7 +152,7 @@ midpoint keyframe (the tree's bare-mound). Glow/overshoot artifacts are **seed-d
 
 ### 4 — Idle loops  ⟂ GATE
 ```
-node tools/pixellab/run_subject.mjs .../subjects/<subject>.mjs idles
+node reference/tools/pixellab/run_subject.mjs .../subjects/<subject>.mjs idles
 ```
 A seamless micro-loop per season: `first_frame == last_frame ==` the season still, so it returns to rest
 and can play continuously OR periodically (an engine choice, not baked in). Keep motion subtle. **Idle
@@ -160,7 +160,7 @@ loops frequently get a bright overshoot frame** (usually frame_07) — always ru
 
 ### 5 — Pack game sheets
 ```
-python tools/pixellab/pack_sheets.py <subject>
+python reference/tools/pixellab/pack_sheets.py <subject>
 # deciduous two-segment: --concat autumn-baremound+baremound-winter=trans-autumn-winter
 ```
 Transparent horizontal strips → `public/seasonal-tiles/<subject>/{idle-<season>.png, trans-<from>-<to>.png}`.
@@ -185,11 +185,11 @@ generalize it to a registry so any subject registers declaratively. Then **verif
 
 ### 7 — Refresh the doc gallery
 ```
-node tools/pixellab/gen_gallery.mjs
+node reference/tools/pixellab/gen_gallery.mjs
 ```
-Regenerates the **Asset gallery** in the **Assets** tab of `docs/seasonal-tile-system/index.html` (the
+Regenerates the **Asset gallery** in the **Assets** tab of `reference/docs/seasonal-tile-system/index.html` (the
 `<!-- AUTOGALLERY -->` region) from the assets on disk **+ the planned-subject roster**
-(`tools/pixellab/roster.mjs`). Output: every category as a group with a `done / total` counter; each subject
+(`reference/tools/pixellab/roster.mjs`). Output: every category as a group with a `done / total` counter; each subject
 with art as **three stacked rows** (season key frames · idle animations · transitions) + an `in-game` chip if
 registered; each not-yet-generated subject as a `planned` placeholder so progress is visible. **Never
 hand-edit the gallery**; add/regenerate a subject and re-run this. (Hand-authored prose lives in the **Status**
@@ -201,7 +201,7 @@ idle's frames with the season still, then `assemble_gifs.py`) so the gallery sho
 **Candidate review (optional).** The gallery has a "Show candidates" toggle that reveals, per key frame, the
 other candidates it was picked from — the chosen one ringed green (matched **by hash**). Only **Summer** is a
 true pick-of-N (`generate-with-style`); other seasons are single chained edits unless re-rolled. To expose a
-subject's candidates, copy them from the archive into `docs/seasonal-tile-system/assets/candidates/` named
+subject's candidates, copy them from the archive into `reference/docs/seasonal-tile-system/assets/candidates/` named
 `<subject>-<season>-c<i>.png` (keep the original index `i`); the chosen frame must be byte-identical to the
 canonical `<subject>-<season>.png` so the generator can badge it. Re-run `gen_gallery.mjs` after.
 
@@ -209,18 +209,18 @@ canonical `<subject>-<season>.png` so the generator can badge it. Re-run `gen_ga
 
 | Check | Command | Catches |
 |---|---|---|
-| Pad alignment | `python tools/pixellab/check_pad.py --ref <subject>-summer.png --check <subject>-{spring,autumn,winter}.png [--fix]` | pad drift *between seasons* (SHIFT auto-fixes; REJECT = regenerate). Measures the bottom `--band` rim only, so base props don't skew it. Also prints the ref's `body_lean` (how far the subject leans off its pad — informational; a slant is fine). NOTE: this aligns seasons to each other; `pack_sheets.py` then centers the **pad in the frame** so the base sits at cell-center. The "land base must be centered + consistent across all seasons" rule is enforced by **both**, on the pad — never the content bbox. |
-| Envelope | `python tools/pixellab/check_envelope.py <subject>` | a season that grew/shrank/sprawled vs summer (numeric; pair with the montage) |
-| Glow | `python tools/pixellab/check_glow.py .../anim/<subject>-<clip>` | two failure modes: **SPIKE** = a single overshoot frame (drop it); **BLOOM** = a sustained mid-clip glow brighter than *both* endpoints — the median test misses it, so this is the gate that catches the summer→autumn "light warms" bloom. A BLOOM can't be frame-dropped; it's a prompt bug → regenerate. Run it on **transitions too**, not just idles. |
-| Fix glow | `python tools/pixellab/drop_glow_frame.py <dir> <index>` then re-pack (SPIKE only) | — |
-| Visual review | `python tools/pixellab/assemble_gifs.py <subject>` | builds loop GIFs + frame strips + a **gridline stills montage** — the real consistency/envelope eyeball. **Read these.** |
+| Pad alignment | `python reference/tools/pixellab/check_pad.py --ref <subject>-summer.png --check <subject>-{spring,autumn,winter}.png [--fix]` | pad drift *between seasons* (SHIFT auto-fixes; REJECT = regenerate). Measures the bottom `--band` rim only, so base props don't skew it. Also prints the ref's `body_lean` (how far the subject leans off its pad — informational; a slant is fine). NOTE: this aligns seasons to each other; `pack_sheets.py` then centers the **pad in the frame** so the base sits at cell-center. The "land base must be centered + consistent across all seasons" rule is enforced by **both**, on the pad — never the content bbox. |
+| Envelope | `python reference/tools/pixellab/check_envelope.py <subject>` | a season that grew/shrank/sprawled vs summer (numeric; pair with the montage) |
+| Glow | `python reference/tools/pixellab/check_glow.py .../anim/<subject>-<clip>` | two failure modes: **SPIKE** = a single overshoot frame (drop it); **BLOOM** = a sustained mid-clip glow brighter than *both* endpoints — the median test misses it, so this is the gate that catches the summer→autumn "light warms" bloom. A BLOOM can't be frame-dropped; it's a prompt bug → regenerate. Run it on **transitions too**, not just idles. |
+| Fix glow | `python reference/tools/pixellab/drop_glow_frame.py <dir> <index>` then re-pack (SPIKE only) | — |
+| Visual review | `python reference/tools/pixellab/assemble_gifs.py <subject>` | builds loop GIFs + frame strips + a **gridline stills montage** — the real consistency/envelope eyeball. **Read these.** |
 | In-game | browser eval, see `references/engine-integration.md` | per-season render correct (pixel-sample, since WebGL screenshots time out here) |
 
 After QA: rejected candidates + intermediates go to the **out-of-VC archive**
 (`…\aiDev\puzzleDrag2-art-archive\seasonal-tiles\`), never committed. Review montages/strips go to a
 `_review/` dir (gitignore it). Only the canonical stills + final GIFs + sheets stay in the repo.
 
-## Scripts (`tools/pixellab/`)
+## Scripts (`reference/tools/pixellab/`)
 
 - `pixellab.mjs` — the raw v2 wrapper: `generateWithStyle` / `editWithText` / `animateTransition` + poll +
   save. Token from `~/.claude.json`.
@@ -267,6 +267,6 @@ Throwaway one-offs are named `_*` and gitignored; the above are the durable pipe
 - WebGL-canvas **screenshots time out** in the preview here — verify in-game by pixel-sampling the tile
   texture via `window.__phaserScene`, not screenshots (see the reference).
 - A `data:` URL returned from `preview_eval` is too big for the tool result; it's saved to a file — decode
-  it with `tools/pixellab/_decode.py` (or base64-decode the `base64,` tail).
+  it with `reference/tools/pixellab/_decode.py` (or base64-decode the `base64,` tail).
 - Texture keys are double-prefixed in this game: `tile_${res.key}` where `res.key` already starts with
   `tile_` → e.g. `tile_tile_tree_willow`.

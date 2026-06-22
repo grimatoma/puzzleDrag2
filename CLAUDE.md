@@ -23,6 +23,37 @@ The split that matters:
 
 ---
 
+## Reference material vs. the game (read before evaluating anything)
+
+Everything under **`reference/`** — `reference/docs/` (design specs, strategy &
+UX reviews, zone proposals, art-style boards, playtest write-ups, the
+seasonal-tile system), `reference/tools/` (the art/PixelLab pipeline, docs-site
+generator, icon-review renderers), and `reference/scripts/` — is **supporting
+material and prior internal thinking. It is NOT the game and NOT the source of
+truth.**
+
+The game is `src/`, `public/`, `tests/`, and the three Vite entries below. When
+a `reference/` doc and the code disagree, **the code is right.**
+
+This folder was once split into a separate repo because, asked to *evaluate* the
+codebase, agents kept lifting opinions straight from these docs instead of
+reading the code. The rule that replaces that split:
+
+- **Evaluating, critiquing, auditing, or proposing a direction?** Form your own
+  assessment **from the code**. Treat anything in `reference/` as *claims to
+  verify against the source* — never conclusions to adopt or repeat. Do not cite
+  a reference doc as evidence of how the game behaves; read `src/`.
+- **Implementing art / seasonal tiles / zones / wiki / town layout?** This
+  material *is* the intended pipeline — use it, together with the matching
+  skills below.
+
+Note: the **art/design skills stay in `.claude/skills/`** (so they remain
+invocable as `/commands`) even though they belong to this reference pipeline —
+e.g. `seasonal-tile-pipeline`, `pixel-art-craft`, `pixel-art-animation`,
+`tileset-scene-design`, `zone-design`, `art-direction-eval`. See `reference/README.md`.
+
+---
+
 ## The three Vite entries (one repo, three apps)
 
 | Route | Entry chain | Notes |

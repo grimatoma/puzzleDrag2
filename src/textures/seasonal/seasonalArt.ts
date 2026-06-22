@@ -14,8 +14,8 @@
 //     any season still missing keeps falling back to the Summer anchor (then to whatever
 //     frame is present). A missing transition just snaps.
 //
-// Sheets are packed by tools/pixellab/pack_sheets.py (one row of square frames, no bg);
-// source of truth for the art is docs/seasonal-tile-system/. Self-contained: imports
+// Sheets are packed by reference/tools/pixellab/pack_sheets.py (one row of square frames, no bg);
+// source of truth for the art is reference/docs/seasonal-tile-system/. Self-contained: imports
 // only the season-name types. Per-subject state is module-level + keyed by tile key
 // because every tile of a key shares one canvas texture and animates in lockstep.
 

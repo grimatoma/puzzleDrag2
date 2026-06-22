@@ -2,7 +2,7 @@
 //
 // The town map's biggest "programmer-art" tell was roads/plaza painted as flat
 // DIRT rectangles butted straight against grass — a hard pixel staircase at
-// every boundary. The fix (see docs/road-system-proposal.html and the
+// every boundary. The fix (see reference/docs/road-system-proposal.html and the
 // tileset-scene-design skill) is to never let two materials touch as flat fills:
 // bridge each boundary with TRANSITION TILES chosen automatically from each
 // cell's neighbours.

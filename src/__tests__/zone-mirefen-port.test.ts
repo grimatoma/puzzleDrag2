@@ -1,5 +1,5 @@
-// Mirefen Hollow port — the first docs/zones atlas zone wired into the playable
-// cartography (see docs/projects/14-port-zones-atlas.md). The broad invariants
+// Mirefen Hollow port — the first reference/docs/zones atlas zone wired into the playable
+// cartography (see reference/docs/projects/14-port-zones-atlas.md). The broad invariants
 // (union(unlocks)===buildings, authoredLotCount===plotsForTier, lot stability)
 // are already exercised for mirefen by zone-tier-ladder.test.ts because both its
 // loops iterate every node/TOWN_MAPS entry. This file adds the zone-specific

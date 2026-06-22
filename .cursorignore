@@ -5,6 +5,11 @@
 node_modules/
 dist/
 
+# Reference material — design docs + art pipeline under reference/. Supporting
+# material, NOT the game source. Kept out of Agent/search so codebase evals form
+# their own view from src/ instead of parroting the docs (see reference/README.md).
+reference/
+
 # Visual regression goldens (~66MB of PNG screenshots; not useful for code context)
 tests/visual/__goldens__/
 

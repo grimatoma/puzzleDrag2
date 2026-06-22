@@ -10,7 +10,7 @@
 //
 // Pure module: no Phaser, no DOM. It returns an RGBA byte buffer, so the exact
 // same code runs in a Node preview and in the browser (TownScene uploads the
-// bytes into a texture). See docs/town-layout/index.html for the reference look.
+// bytes into a texture). See reference/docs/town-layout/index.html for the reference look.
 
 // A road segment. `material` names a reusable surface from the MATERIALS registry
 // (default "dirt"); transitions to grass + to any neighbouring material stay smooth
