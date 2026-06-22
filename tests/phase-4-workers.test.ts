@@ -38,6 +38,17 @@ describe("Phase 4 — TYPE_WORKERS data shape", () => {
     }
   });
 
+  it("workers that reduce a production line or recipe also carry a resource cost", () => {
+    // Promotion (and later coin/rune) workers are coin-only by design; workers
+    // that shave a production category or recipe must additionally cost resources.
+    const RESOURCE_COST_ABILITIES = new Set(["threshold_reduce_category", "recipe_input_reduce"]);
+    for (const w of TYPE_WORKERS) {
+      const reducesLineOrRecipe = w.abilities.some((a) => RESOURCE_COST_ABILITIES.has(a.id));
+      if (!reducesLineOrRecipe) continue;
+      expect(Object.keys(w.hireCost.resources || {}).length, w.id).toBeGreaterThan(0);
+    }
+  });
+
   it("TYPE_WORKER_MAP indexes by id", () => {
     expect(TYPE_WORKER_MAP.farmer.name).toBe("Farmer");
     expect(TYPE_WORKER_MAP.baker.abilities[0].id).toBe("recipe_input_reduce");
