@@ -60,11 +60,15 @@ describe("subject discovery + inactive guards", () => {
     // Wired through the seasonalSubjects() Vite plugin scanning public/seasonal-tiles/.
     // Keys claimed by the all-vector showcase set (VECTOR_PREFER_KEYS) are filtered
     // OUT of the baked manifest, so the discovered set is the baked-only remainder.
-    expect(SEASONAL_SUBJECT_KEYS.has("tile_mine_stone")).toBe(true);
-    expect(SEASONAL_SUBJECT_KEYS.has("tile_mine_coal")).toBe(true);
+    // tile_special_dirt ships a PNG folder and has NO vector art, so it stays in
+    // the baked-only discovered set.
     expect(SEASONAL_SUBJECT_KEYS.has("tile_special_dirt")).toBe(true);
-    // ...and a vector-preferred key (willow ships a PNG folder too) is excluded:
+    // ...and vector-preferred keys that ALSO ship a PNG folder (willow, plus the
+    // roster-completing mine tiles stone/coal now claimed by the vector set) are
+    // filtered OUT of the baked manifest:
     expect(SEASONAL_SUBJECT_KEYS.has("tile_tree_willow")).toBe(false);
+    expect(SEASONAL_SUBJECT_KEYS.has("tile_mine_stone")).toBe(false);
+    expect(SEASONAL_SUBJECT_KEYS.has("tile_mine_coal")).toBe(false);
   });
 
   it("art is inactive (procedural fallback) until sheets decode — no fetch in node", () => {

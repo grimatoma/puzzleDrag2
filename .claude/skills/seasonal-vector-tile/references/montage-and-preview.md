@@ -69,10 +69,12 @@ real tile code via `tiles.bundle.js` and animates the full year (idle + morphs)
 with play/pause, speed, year-scrub and hold-on-season controls, plus a reference
 grid. To add tiles:
 
-1. Regenerate `tiles.bundle.js` from an entry that imports ALL showcased tiles
-   (see `docs/seasonal-vector-tiles/README.md` for the exact esbuild command; the
-   entry assigns `window.SEASONAL_DEMO = { tiles: [...] }`). Keep the tile list in
-   sync with `showcaseTiles.ts`.
+1. Regenerate `tiles.bundle.js`. The entry imports `SHOWCASE_TILES` /
+   `SHOWCASE_TRANSITIONS` straight from `src/textures/seasonal/showcaseTiles.ts`
+   and derives each tile's label/family from its key, so the preview tracks the
+   registry automatically — there is no hand-maintained tile list to keep in
+   sync (just wire the new tile into `showcaseTiles.ts` as usual). See
+   `docs/seasonal-vector-tiles/README.md` for the exact esbuild command.
 2. **Bump the cache-buster** in `index.html`: `tiles.bundle.js?v=N` → `?v=N+1`.
    The bundle has a stable filename, so without this the GitHub Pages CDN and
    returning browsers serve the stale bundle and the page looks unchanged.
