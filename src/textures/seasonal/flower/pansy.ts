@@ -569,11 +569,32 @@ function drawPadDressing(ctx: CanvasRenderingContext2D, p: P): void {
   }
 }
 
-// ── Idle bob: zero value and zero velocity at t=0, seamless ───────────────────
+// ── Idle motion (Motion-v2): a slow breeze sway, ~5.7s loop ───────────────────
+//
+// One base angular frequency drives everything so the whole idle is a single
+// seamless loop. Period = 2π/IDLE_W ≈ 5.71s. All idle terms are built from
+// IDLE_W (or its integer harmonics) so they share that period exactly, and each
+// is shaped by a `(1-cos)` envelope so value AND velocity are zero at t=0.
 
-function bobAt(t: number, amp = 0.8, w = 1.4): number {
-  // A*(1-cos(w t))*0.5 — starts at 0 with zero velocity.
+const IDLE_W = 1.1; // rad/s → idle loop ≈ 5.71s (≈ half the old 1.4/1.2 rates)
+
+/** Subject bob: A*(1-cos(w t))*0.5 — starts at 0 with zero velocity, seamless. */
+function bobAt(t: number, amp = 0.7, w = IDLE_W): number {
   return amp * (1 - Math.cos(w * t)) * 0.5;
+}
+
+/** A slow eased breeze sway of the whole bloom — a gentle nod that rises out of
+ *  rest and returns. Built from IDLE_W so it loops with the bob; the amplitude
+ *  itself rides a `(1-cos)` envelope so it begins at zero with zero velocity. */
+function breezeSway(t: number): number {
+  const env = (1 - Math.cos(IDLE_W * t)) * 0.5; // 0 at t=0, eased, 1-periodic
+  return Math.sin(IDLE_W * t) * 0.85 * env;
+}
+
+/** A soft petal-shimmer phase in 0..1, a slow swell that is 0 at t=0. Used to
+ *  modulate the dew glint / shimmer subtly and legibly (no flash on subject). */
+function shimmerPhase(t: number): number {
+  return (1 - Math.cos(IDLE_W * t)) * 0.5;
 }
 
 // ── draw / anim / transition factories ───────────────────────────────────────
@@ -585,33 +606,51 @@ function makeDraw(season: SeasonName) {
 function makeAnim(season: SeasonName) {
   return (ctx: CanvasRenderingContext2D, t: number): void => {
     const bob = bobAt(t);
-    // gentle horizontal sway of the whole plant, additive; zero at t=0.
-    const sway = Math.sin(t * 1.2) * 0.7 * (1 - Math.cos(t * 1.2)) * 0.5;
+    // Slow breeze sway of the whole plant, additive; zero (value+velocity) at t=0.
+    const sway = breezeSway(t);
+    const shimmer = shimmerPhase(t); // 0..1, 0 at t=0, loops with the bob
 
     ctx.save();
     try {
-      ctx.translate(sway, 0);
+      // The bloom rocks very slightly with the breeze (tiny, anchored low at the
+      // stem so the stem base stays put) — a legible nod rather than a slide.
+      const lean = sway * 0.012; // radians, ~0.6° max
+      ctx.translate(sway * 0.5, 0);
+      ctx.translate(STEM_BASE[0], STEM_BASE[1]);
+      ctx.rotate(lean);
+      ctx.translate(-STEM_BASE[0], -STEM_BASE[1]);
+
       paint(ctx, SP[season], bob);
 
       // per-season micro-motion overlays (subtle; subject stays intact)
       ctx.translate(0, bob);
       if (season === "Spring" || season === "Summer") {
-        // dewy glint pulsing on an upper petal
-        const glint = 0.2 + 0.32 * (0.5 + 0.5 * Math.sin(t * 2.3));
+        // dewy glint: a slow soft swell on an upper petal (no harsh flash).
+        const glint = 0.16 + 0.26 * shimmer;
         ctx.fillStyle = `rgba(255,255,255,${glint})`;
         ctx.beginPath();
         ctx.arc(BLOOM_CX - 2.6, BLOOM_CY - 4.4, 1 + glint, 0, Math.PI * 2);
         ctx.fill();
+        // a faint second dew bead glinting lower, slightly out of phase
+        const g2 = 0.1 + 0.18 * shimmerPhase(t + 1.9);
+        ctx.fillStyle = `rgba(255,255,255,${g2})`;
+        ctx.beginPath();
+        ctx.arc(BLOOM_CX + 3.4, BLOOM_CY - 1.2, 0.8 + g2, 0, Math.PI * 2);
+        ctx.fill();
       } else if (season === "Autumn") {
-        // a single spent petal flutters loose and drifts down (the face stays
-        // whole — this is a stray extra, not one removed from the bloom).
-        const k = (t / 3.6) % 1;
-        const px = BLOOM_CX + 6 + k * 9;
-        const py = BLOOM_CY + 2 + k * 18;
+        // a single spent petal drifts loose and falls (the face stays whole —
+        // this is a stray extra, not one removed from the bloom). One slow,
+        // readable drift per idle loop, fading out before it repeats.
+        const period = (2 * Math.PI) / IDLE_W; // one drift per idle loop (~5.7s)
+        const k = (t % period) / period; // 0..1 across the loop
+        const ease = k * k * (3 - 2 * k); // smoothstep fall
+        const px = BLOOM_CX + 6 + ease * 9;
+        const py = BLOOM_CY + 2 + ease * 18;
         ctx.save();
-        ctx.globalAlpha = Math.max(0, 0.95 * (1 - k));
+        // fade in fast, hold, fade out near the end → 0 at the loop seam
+        ctx.globalAlpha = Math.max(0, Math.sin(Math.PI * k)) * 0.95;
         ctx.translate(px, py);
-        ctx.rotate(k * 2.4);
+        ctx.rotate(ease * 2.4 + Math.sin(t * IDLE_W) * 0.25);
         ctx.fillStyle = rgb(SP.Autumn.petalSide);
         ctx.strokeStyle = rgb(SP.Autumn.petalEdge);
         ctx.lineWidth = 1;
@@ -625,21 +664,18 @@ function makeAnim(season: SeasonName) {
         ctx.stroke();
         ctx.restore();
       } else {
-        // Winter — a couple of drifting snowflakes + a faint cold sheen.
-        const span = 30;
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
-        for (const [fx, ph] of [[-7, 0.0], [8, 0.55]] as const) {
-          const prog = ((t / 3.2 + ph) % 1 + 1) % 1;
+        // Winter — slow drifting snowflakes (no cold flash on the subject).
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        const span = 32;
+        // each flake completes whole loops per idle period → seamless
+        for (const [fx, ph, sz] of [[-7, 0.0, 1.0], [8, 0.5, 0.85], [1, 0.78, 0.7]] as const) {
+          const prog = (((IDLE_W * t) / (2 * Math.PI) + ph) % 1 + 1) % 1;
           const y = -20 + prog * span;
-          const x = fx + Math.sin(prog * 6.28 + ph * 6) * 3;
+          const x = fx + Math.sin(prog * 2 * Math.PI + ph * 6) * 3.2;
           ctx.beginPath();
-          ctx.arc(x, y, 1, 0, Math.PI * 2);
+          ctx.arc(x, y, sz, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = `rgba(210,228,255,${0.1 + 0.08 * (0.5 + 0.5 * Math.sin(t * 0.8))})`;
-        ctx.beginPath();
-        ctx.ellipse(BLOOM_CX, BLOOM_CY, 11, 11, 0, 0, Math.PI * 2);
-        ctx.fill();
       }
     } catch {
       /* never throw */
@@ -650,10 +686,88 @@ function makeAnim(season: SeasonName) {
   };
 }
 
+// ── Transition (Motion-v2): staged colour shift + a nod through the morph ─────
+//
+// HARD CONSTRAINT (paint-contract §2): transition(0) ≡ draw(from) and
+// transition(1) ≡ draw(to) EXACTLY. The base art is always `paint(lerpP(...))`
+// with a `k` that is 0 at p=0 and 1 at p=1, so the endpoints reproduce the
+// neighbouring stills bit-for-bit. Every transient (the through-morph bob and
+// any overlay flecks) is shaped by `sin(π·p)`, which is 0 at BOTH p=0 and p=1 —
+// so transients contribute nothing at either endpoint.
+
+/** A staged colour ease: same monotonic smootherstep at the ends, but lingers a
+ *  touch in the mid-tone (the mauve mid-point of the violet→grey shift) so the
+ *  colour change reads as a staged crossfade rather than a single snap. Still
+ *  0 at p=0 and 1 at p=1. */
+function stagedEase(p: number): number {
+  const s = smoother(clamp01(p));
+  // gentle S-on-S: pull slightly toward the midpoint without breaking endpoints
+  const pull = Math.sin(Math.PI * s) * 0.08; // 0 at s=0 and s=1
+  return clamp01(s + pull * (0.5 - s) * 2);
+}
+
 function makeTransition(from: SeasonName, to: SeasonName) {
   return (ctx: CanvasRenderingContext2D, pp: number): void => {
-    const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(SP[from], SP[to], k), 0);
+    const p = clamp01(pp);
+    const k = stagedEase(p); // 0 at p=0, 1 at p=1
+    const trans = Math.sin(Math.PI * p); // 0 at both ends, peaks at p=0.5
+    const lp = lerpP(SP[from], SP[to], k);
+
+    // A bloom nod that swells through the morph and returns to rest — the flower
+    // "breathes" across the colour change. Zero at both endpoints (∝ sin(π·p)),
+    // so the static endpoints are untouched.
+    const bob = -0.9 * trans; // small upward lift mid-morph
+
+    ctx.save();
+    try {
+      paint(ctx, lp, bob);
+
+      // — per-morph transient overlays — all ∝ sin(π·p) so 0 at both ends —
+      ctx.save();
+      ctx.translate(0, bob);
+      if (to === "Summer") {
+        // Spring→Summer: a brief saturating bloom-glow swell as colour deepens.
+        ctx.globalAlpha = 0.22 * trans;
+        ctx.fillStyle = "rgba(255,250,210,1)";
+        ctx.beginPath();
+        ctx.arc(BLOOM_CX, BLOOM_CY, 9, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (to === "Autumn") {
+        // Summer→Autumn: a few mauve-rust motes lift off the petal edges as the
+        // bloom fades, then settle — a hint of the spent-petal idle to come.
+        ctx.fillStyle = `rgba(150,96,60,${0.55 * trans})`;
+        for (const [mx, my, ph] of [[-5, -5, 0], [4, -6, 1.7], [6, 0, 3.1]] as const) {
+          const rise = trans * 3;
+          ctx.beginPath();
+          ctx.arc(mx + Math.sin(ph) * 1.5, my - rise, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else {
+        // Autumn→Winter: frost dusts in and a few slow flakes settle as the snow
+        // cap accrues. Transients vanish at both ends; the cap itself is carried
+        // by the lerped snowCapAmt/padSnowAmt in `lp` (so it's exact at p=1).
+        ctx.fillStyle = `rgba(236,246,255,${0.7 * trans})`;
+        for (const [fx, fy] of [[-5, -6], [-0.5, -8], [4, -6.5], [-7, -2.5], [6, -3]] as const) {
+          ctx.beginPath();
+          ctx.arc(fx, fy, 0.9, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        // a couple of flakes drifting down onto the pad during the freeze
+        ctx.fillStyle = `rgba(255,255,255,${0.8 * trans})`;
+        for (const [fx, ph] of [[-6, 0.2], [7, 0.65]] as const) {
+          const yy = -16 + p * 30;
+          ctx.beginPath();
+          ctx.arc(fx + Math.sin(p * 6 + ph * 6) * 3, yy, 1, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+    } catch {
+      /* never throw from a transition */
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
   };
 }
 

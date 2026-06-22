@@ -576,6 +576,10 @@ interface Micro {
   extraFlakes?: Array<[number, number, number]>; // drifting snowflakes (winter)
   dew?: number; // 0..1 dew shimmer pulse (spring)
   coldSheen?: number; // 0..1 faint cold sheen pulse (winter)
+  // ── transition-only transient overlays (each ∝ sin(π·p), 0 at both ends) ──
+  peelGlow?: number; // 0..1 soft light spilling from the opening husk (Spring→Summer)
+  deepenWash?: number; // 0..1 warm amber wash as kernels deepen/dent (Summer→Autumn)
+  settleFall?: number; // 0..1 a few specks settling as the snow cap forms (Autumn→Winter)
 }
 
 function paint(
@@ -632,6 +636,40 @@ function paint(
     ctx.restore();
   }
 
+  // ── Transition transients (each fully zero at p=0 and p=1) ───────────────
+
+  // Spring→Summer: a soft warm glow spilling out of the opening husk, peaking
+  // mid-morph as the leaves curl back — reads as the cob "opening up".
+  if (m.peelGlow !== undefined && m.peelGlow > 0.01) {
+    ctx.save();
+    cobBodyPath(ctx);
+    ctx.clip();
+    const a = clamp01(m.peelGlow);
+    const glow = ctx.createRadialGradient(0, -2, 0, 0, -2, 13);
+    glow.addColorStop(0, `rgba(255,246,196,${0.5 * a})`);
+    glow.addColorStop(1, "rgba(255,246,196,0)");
+    ctx.fillStyle = glow;
+    cobBodyPath(ctx);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Summer→Autumn: a warm amber wash pooling low on the cob as the kernels
+  // deepen and dent — a clear colour-deepening gesture, separate from peeling.
+  if (m.deepenWash !== undefined && m.deepenWash > 0.01) {
+    ctx.save();
+    cobBodyPath(ctx);
+    ctx.clip();
+    const a = clamp01(m.deepenWash);
+    const wash = ctx.createLinearGradient(0, COB_TOP + 4, 0, COB_BOT);
+    wash.addColorStop(0, "rgba(196,120,28,0)");
+    wash.addColorStop(1, `rgba(168,96,20,${0.34 * a})`);
+    ctx.fillStyle = wash;
+    cobBodyPath(ctx);
+    ctx.fill();
+    ctx.restore();
+  }
+
   // dew shimmer (spring), additive, a tiny pulsing droplet glint
   if (m.dew !== undefined && m.dew > 0.01) {
     ctx.save();
@@ -647,6 +685,26 @@ function paint(
   }
 
   ctx.restore(); // end subject bob
+
+  // Autumn→Winter: a short fall of settling specks drifting down onto the cob
+  // as the husk mutes and the snow cap forms — vanishes at both endpoints.
+  if (m.settleFall !== undefined && m.settleFall > 0.01) {
+    ctx.save();
+    const a = clamp01(m.settleFall);
+    ctx.fillStyle = "#f1f7ff";
+    const specks: Array<[number, number]> = [
+      [-7, -10], [-2, -16], [4, -12], [6, -4], [-4, 2], [1, -7],
+    ];
+    specks.forEach(([sx, sy], i) => {
+      // each speck eases downward as the morph proceeds, then fades out
+      const fall = (1 - a) * 9; // higher early in the morph, settles by the end
+      ctx.globalAlpha = 0.8 * a;
+      ctx.beginPath();
+      ctx.arc(sx + (i % 2 === 0 ? -0.6 : 0.6) * fall, sy - fall, 0.85, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
 
   // drifting snowflakes (winter), additive, in tile space (not bobbed)
   if (m.extraFlakes) {
@@ -667,10 +725,19 @@ function paint(
 // ── Idle bob: seamless, zero at t=0 with zero velocity ──────────────────────
 // A*(1-cos(w t))*0.5 : value 0 and derivative 0 at t=0, seamless loop period 2π/w.
 
+// Idle period is ~5s: w = 2π/5 ≈ 1.257 rad/s (roughly half the previous 1.5).
+const IDLE_W = (2 * Math.PI) / 5; // rad/s — one breath every ~5 seconds
+
 function bobAt(t: number): number {
   const A = 1.4; // peak rise in design px
-  const w = 1.5; // rad/s
-  return -A * (1 - Math.cos(w * t)) * 0.5; // negative = rises upward
+  return -A * (1 - Math.cos(IDLE_W * t)) * 0.5; // negative = rises upward
+}
+
+// A smooth "gesture" envelope on the breath cycle: 0 at t=0 (and each loop
+// boundary), rising and easing back — gives the silk sway / flutter a single
+// readable swing per ~5s loop rather than a fast jitter.
+function gesture(t: number): number {
+  return Math.sin(IDLE_W * t); // seamless over the 5s period, 0 at t=0
 }
 
 // ── Per-season draw + anim ──────────────────────────────────────────────────
@@ -689,48 +756,53 @@ function drawCornWinter(ctx: CanvasRenderingContext2D): void {
 }
 
 function animCornSpring(ctx: CanvasRenderingContext2D, t: number): void {
-  // faint dew shimmer; subject bob is zero at t=0.
-  const dew = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.8));
+  // Slow silk sway at the top (one swing per ~5s loop) + a faint dew shimmer
+  // that breathes on the same slow cycle. Subject bob is zero at t=0.
+  const g = gesture(t);
+  const dew = 0.3 + 0.3 * (0.5 - 0.5 * Math.cos(IDLE_W * t));
   paint(ctx, SP.Spring, bobAt(t), {
-    silkSway: Math.sin(t * 1.4) * 0.8,
+    silkSway: g * 1.1,
     dew,
   });
 }
 
 function animCornSummer(ctx: CanvasRenderingContext2D, t: number): void {
-  // soft travelling glint cycles 0..1 seamlessly via fractional part of t.
-  const glint = (t * 0.45) % 1;
+  // Slow silk sway + a single travelling kernel glint that crosses the cob
+  // once per ~10s (two breath loops) so it reads as a clear slow sweep.
+  const glint = (t / 10) % 1; // seamless 0..1 sweep, ~10s per pass
   paint(ctx, SP.Summer, bobAt(t), {
-    silkSway: Math.sin(t * 1.3) * 1,
+    silkSway: gesture(t) * 1.3,
     glint,
   });
 }
 
 function animCornAutumn(ctx: CanvasRenderingContext2D, t: number): void {
-  // one husk-leaf tip flutters; seamless via sin.
-  const leafFlutter = Math.sin(t * 2.2) * 1.4;
+  // Slow husk-leaf flutter (one readable curl-back swing per ~5s loop) plus a
+  // gentle silk sway slightly offset so the gesture stays legible.
+  const leafFlutter = gesture(t) * 1.5;
   paint(ctx, SP.Autumn, bobAt(t), {
     leafFlutter,
-    silkSway: Math.sin(t * 1.1) * 0.7,
+    silkSway: Math.sin(IDLE_W * t - 0.6) * 0.9,
   });
 }
 
 function animCornWinter(ctx: CanvasRenderingContext2D, t: number): void {
-  // a couple of drifting snowflakes + faint cold sheen.
+  // Slow drifting flakes + a faint cold sheen breathing on the ~5s cycle.
   const seeds: Array<[number, number, number]> = [
     [-6, 1.1, 0.0],
     [7, 0.9, 0.5],
   ];
   const span = 36;
   const flakes: Array<[number, number, number]> = seeds.map(([fx, r, phase]) => {
-    const prog = (((t / 3.6 + phase) % 1) + 1) % 1;
+    // slower descent: one fall every ~7.2s per flake (halved fall rate).
+    const prog = (((t / 7.2 + phase) % 1) + 1) % 1;
     const fy = -22 + prog * span;
     const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
     return [driftX, fy, r];
   });
-  const coldSheen = 0.5 + 0.5 * Math.sin(t * 0.8);
+  const coldSheen = 0.5 - 0.5 * Math.cos(IDLE_W * t);
   paint(ctx, SP.Winter, bobAt(t), {
-    silkSway: Math.sin(t * 0.9) * 0.5,
+    silkSway: gesture(t) * 0.6,
     extraFlakes: flakes,
     coldSheen,
   });
@@ -739,16 +811,90 @@ function animCornWinter(ctx: CanvasRenderingContext2D, t: number): void {
 // ── Transitions: lerp every field through a smoothstep ──────────────────────
 // transition(ctx,0) === draw(from); transition(ctx,1) === draw(to). No snap.
 
-function makeTransition(from: SeasonName, to: SeasonName) {
-  return (ctx: CanvasRenderingContext2D, pp: number): void => {
-    const t = smoother(clamp01(pp));
-    paint(ctx, lerpP(SP[from], SP[to], t), 0);
-  };
+// A transient envelope that is EXACTLY 0 at p=0 and p=1 and peaks at p=0.5.
+// Every transition overlay scales by this so endpoints are untouched.
+const transient = (p: number): number => Math.sin(Math.PI * clamp01(p));
+
+// Staged interpolation: drive ONE subset of P fields by `early` (a remapped,
+// front-loaded smootherstep) and the REST by `late`, so a transition can read
+// as two distinct gestures. Both `early(0)=late(0)=0` and `early(1)=late(1)=1`,
+// so the endpoints remain EXACTLY draw(from) / draw(to).
+function stageEarly(p: number): number {
+  // front-loaded: completes its travel by ~p=0.7, eased.
+  return smoother(clamp01(p / 0.7));
+}
+function stageLate(p: number): number {
+  // back-loaded: barely moves until ~p=0.35, eased.
+  return smoother(clamp01((p - 0.3) / 0.7));
 }
 
-const springToSummer = makeTransition("Spring", "Summer");
-const summerToAutumn = makeTransition("Summer", "Autumn");
-const autumnToWinter = makeTransition("Autumn", "Winter");
+/** Build a P where `huskKeys` follow `te` and everything else follows `tl`. */
+function stagedP(
+  from: P,
+  to: P,
+  te: number,
+  tl: number,
+  huskLeads: boolean,
+): P {
+  const full = lerpP(from, to, tl);
+  const huskT = huskLeads ? te : tl;
+  const restHusk: Pick<P, "huskOpen" | "huskLight" | "huskDark" | "huskBrownAmt"> = {
+    huskOpen: lerp(from.huskOpen, to.huskOpen, huskT),
+    huskLight: lerpRGB(from.huskLight, to.huskLight, huskT),
+    huskDark: lerpRGB(from.huskDark, to.huskDark, huskT),
+    huskBrownAmt: lerp(from.huskBrownAmt, to.huskBrownAmt, huskT),
+  };
+  return { ...full, ...restHusk };
+}
+
+// Spring→Summer: the husk PEELING OPEN leads (front-loaded), with a soft warm
+// glow spilling from the opening. Colours/silk follow a touch behind.
+function springToSummer(ctx: CanvasRenderingContext2D, pp: number): void {
+  const p = clamp01(pp);
+  const te = stageEarly(p);
+  const tl = stageLate(p);
+  paint(ctx, stagedP(SP.Spring, SP.Summer, te, tl, true), 0, {
+    peelGlow: 0.55 * transient(p),
+  });
+}
+
+// Summer→Autumn: the kernels DEEPENING/DENTING leads while the husk dries a
+// touch behind, with a warm amber wash that swells then fades.
+function summerToAutumn(ctx: CanvasRenderingContext2D, pp: number): void {
+  const p = clamp01(pp);
+  const te = stageEarly(p);
+  const tl = stageLate(p);
+  // kernels + dent follow the EARLY stage; husk dries on the LATE stage.
+  const full = lerpP(SP.Summer, SP.Autumn, tl);
+  const staged: P = {
+    ...full,
+    kernel: lerpRGB(SP.Summer.kernel, SP.Autumn.kernel, te),
+    kernelDeep: lerpRGB(SP.Summer.kernelDeep, SP.Autumn.kernelDeep, te),
+    kernelDent: lerp(SP.Summer.kernelDent, SP.Autumn.kernelDent, te),
+  };
+  paint(ctx, staged, 0, {
+    deepenWash: transient(p),
+  });
+}
+
+// Autumn→Winter: the husk MUTES (cools/greys) first while the snow cap + frost
+// settle a touch behind, with a brief fall of settling specks.
+function autumnToWinter(ctx: CanvasRenderingContext2D, pp: number): void {
+  const p = clamp01(pp);
+  const te = stageEarly(p);
+  const tl = stageLate(p);
+  const full = lerpP(SP.Autumn, SP.Winter, tl);
+  // husk colour mutes early; snow/frost amounts arrive late (default tl).
+  const staged: P = {
+    ...full,
+    huskLight: lerpRGB(SP.Autumn.huskLight, SP.Winter.huskLight, te),
+    huskDark: lerpRGB(SP.Autumn.huskDark, SP.Winter.huskDark, te),
+    huskBrownAmt: lerp(SP.Autumn.huskBrownAmt, SP.Winter.huskBrownAmt, te),
+  };
+  paint(ctx, staged, 0, {
+    settleFall: transient(p),
+  });
+}
 
 // ── Exports ─────────────────────────────────────────────────────────────────
 
