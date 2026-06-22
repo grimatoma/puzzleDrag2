@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useRef, useState } from "react";
+import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { COLS, ROWS, TILE, SCENE_EVENTS } from "./src/constants.js";
 import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
@@ -26,6 +26,7 @@ import { useA11yBridge } from "./src/a11y.js";
 import { useCapToasts } from "./src/ui/useCapToasts.jsx";
 import { seasonIndexInSession } from "./src/features/zones/data.js";
 import { zoneInventory } from "./src/state/zoneInventory.js";
+import { acquirableResourceKeys } from "./src/features/tileCollection/effects.js";
 import { dismissBootSplash } from "./src/bootSplash.js";
 import {
   BoardFrame,
@@ -378,6 +379,16 @@ export default function App() {
         armed: state.toolPending === drag?.key,
       }
     : null;
+  // Resources obtainable from this run's board (active tile pool → chain
+  // outputs). Memoised on the pool inputs so the idle stockpile only lists
+  // what the player can actually acquire this run. `state.registry` is a
+  // test-only pool-weight side channel and never changes the resource SET,
+  // so it's intentionally absent from the deps.
+  const runResourceKeys = useMemo(
+    () => Array.from(acquirableResourceKeys(state, state.biomeKey)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [state.tileCollection, state.biomeKey],
+  );
   const infoPanelEl = (
     <PuzzleActionPanel
       chainInfo={chainInfo}
@@ -386,6 +397,7 @@ export default function App() {
       fillBiasArmed={!!(state.fillBiasTarget || (state.magicFertilizerCharges ?? 0) > 0)}
       inventory={zoneInventory(state)}
       biomeKey={state.biomeKey}
+      runResourceKeys={runResourceKeys}
       cap={currentCap(state)}
       dispatch={dispatch}
       onCloseInspect={() => setInspectedTool(null)}

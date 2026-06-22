@@ -207,12 +207,29 @@ interface BiomeResource {
   [extra: string]: unknown;
 }
 
-function IdleView({ inventory, biomeKey, cap }: { inventory: Inventory; biomeKey: string; cap: number }) {
-  // The mock shows a 4-column grid of resource chips. Trim to the first 12
-  // resources of the biome so the grid stays tight and predictable.
+function IdleView({
+  inventory,
+  biomeKey,
+  cap,
+  runResourceKeys,
+}: {
+  inventory: Inventory;
+  biomeKey: string;
+  cap: number;
+  // Resource keys obtainable on this run's board. When provided, the stockpile
+  // hides biome resources the player can't acquire here (e.g. crafted goods, or
+  // produce from disabled categories). Undefined falls back to all biome resources.
+  runResourceKeys?: readonly string[];
+}) {
+  // The mock shows a 4-column grid of resource chips. Show only resources
+  // acquirable during this run, then trim to 12 so the grid stays tight.
   const list = useMemo<BiomeResource[]>(() => {
-    return (BIOMES[biomeKey]?.resources ?? []).slice(0, 12);
-  }, [biomeKey]);
+    const all = BIOMES[biomeKey]?.resources ?? [];
+    const acquirable = runResourceKeys
+      ? all.filter((r) => runResourceKeys.includes(r.key))
+      : all;
+    return acquirable.slice(0, 12);
+  }, [biomeKey, runResourceKeys]);
   const ownedCount = list.filter((r) => (inventory?.[r.key] ?? 0) > 0).length;
   return (
     <>
@@ -703,6 +720,7 @@ export function PuzzleActionPanel({
   fillBiasArmed,
   inventory,
   biomeKey,
+  runResourceKeys,
   cap = 200,
   dispatch,
   onCloseInspect,
@@ -715,6 +733,9 @@ export function PuzzleActionPanel({
   fillBiasArmed: boolean;
   inventory: Inventory;
   biomeKey: string;
+  // Resource keys obtainable on this run's board; forwarded to the idle
+  // stockpile so it only lists resources acquirable during the run.
+  runResourceKeys?: readonly string[];
   cap?: number;
   dispatch: Dispatch;
   onCloseInspect: (() => void) | undefined;
@@ -749,7 +770,7 @@ export function PuzzleActionPanel({
         }}
       />
       <div className="relative flex flex-col flex-1 min-h-0 overflow-hidden">
-        {state === "idle" && <IdleView inventory={inventory} biomeKey={biomeKey} cap={cap} />}
+        {state === "idle" && <IdleView inventory={inventory} biomeKey={biomeKey} cap={cap} runResourceKeys={runResourceKeys} />}
         {state === "chain" && chainInfo && <ChainView chainInfo={chainInfo} inventory={inventory} />}
         {state === "tool" && inspectedTool && (
           <ToolView

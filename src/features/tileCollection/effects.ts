@@ -1,5 +1,5 @@
 import { TILE_TYPES, TILE_TYPES_MAP, CATEGORY_OF } from "./data.js";
-import { BIOMES, BUILDINGS } from "../../constants.js";
+import { BIOMES, BUILDINGS, getItem } from "../../constants.js";
 import type { GameState } from "../../types/state.js";
 
 interface TileTypeDiscovery {
@@ -143,6 +143,28 @@ export function getActivePool(state: GameState, biomeKey: string = "farm"): stri
     if (activeIdForKey(state, k) !== k) continue; // boost key must be the active tile type
     const copies = Math.max(0, Math.round(n));
     for (let i = 0; i < copies; i++) out.push(k);
+  }
+  return out;
+}
+
+/**
+ * Run-scoped acquirable resources: the resource keys a player can actually
+ * obtain by chaining the tiles that can spawn on the board during this run.
+ *
+ * Derived from the active board pool (so disabled categories and the active
+ * tile-type variant per category are honoured) — each tile contributes its
+ * `next` target when that target is a resource. Custom-output tiles (golden
+ * coin, giant pearl) carry `next: null` and drop out naturally, while a tile
+ * like special dirt (`next: "dirt"`) is included because the run can yield it.
+ */
+export function acquirableResourceKeys(state: GameState, biomeKey: string = "farm"): Set<string> {
+  const out = new Set<string>();
+  for (const tileKey of getActivePool(state, biomeKey)) {
+    const tile = getItem(tileKey);
+    if (tile?.kind !== "tile") continue;
+    const next = tile.next;
+    if (!next) continue;
+    if (getItem(next)?.kind === "resource") out.add(next);
   }
   return out;
 }

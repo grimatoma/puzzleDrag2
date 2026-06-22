@@ -2,6 +2,7 @@ import "./src/index.css";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import PuzzleCraftStylePhaserPrototype from "./prototype";
+import UpdatePrompt from "./src/pwa/UpdatePrompt";
 import { registerDesignIcons } from "./src/ui/icons/index.jsx";
 
 registerDesignIcons();
@@ -61,7 +62,10 @@ class RootErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundar
 
 // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
 createRoot(document.getElementById("root")!).render(
-  <RootErrorBoundary>
-    <PuzzleCraftStylePhaserPrototype />
-  </RootErrorBoundary>,
+  <>
+    <RootErrorBoundary>
+      <PuzzleCraftStylePhaserPrototype />
+    </RootErrorBoundary>
+    <UpdatePrompt />
+  </>,
 );
