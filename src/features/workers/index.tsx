@@ -22,6 +22,29 @@ import {
 import type { Dispatch, GameState } from "../../types/state.js";
 import { zoneInventory } from "../../state/zoneInventory.js";
 import { inventoryQty } from "../../types/inventory.js";
+import { CATEGORY_TO_SUBCATEGORY } from "../tileCollection/data.js";
+
+// Section a worker by the board/role it serves, derived from its primary ability.
+// Keeps the ~29-worker roster scannable without per-worker JSX.
+type WorkerSection = "Farm" | "Mine" | "Water" | "Crafting" | "Promotion" | "Coin & Rune";
+
+const SECTION_ORDER: WorkerSection[] = ["Farm", "Mine", "Water", "Crafting", "Promotion", "Coin & Rune"];
+
+function sectionForWorker(worker: WorkerDef): WorkerSection {
+  const ab = worker.abilities?.[0];
+  if (!ab) return "Crafting";
+  if (ab.id === "chain_redirect_category") return "Promotion";
+  if (ab.id === "coin_bonus_flat" || ab.id === "coin_bonus_per_tile" || ab.id === "rune_support_reduce") return "Coin & Rune";
+  if (ab.id === "recipe_input_reduce") return "Crafting";
+  if (ab.id === "threshold_reduce_category") {
+    const cat = String((ab.params as { category?: string })?.category ?? "");
+    const sub = (CATEGORY_TO_SUBCATEGORY as Record<string, string>)[cat];
+    if (sub === "mining") return "Mine";
+    if (sub === "water") return "Water";
+    return "Farm";
+  }
+  return "Crafting";
+}
 
 function effectSummary(abilities: WorkerAbility[] | null | undefined, count: number, maxCount: number): string {
   if (!abilities || abilities.length === 0) return "";
@@ -218,17 +241,28 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
       <BrowserDetailLayout
         toolbar={undefined}
         browser={
-          <BrowserGrid min={180}>
-            {TYPE_WORKERS.map((w) => (
-              <WorkerBrowserItem
-                key={w.id}
-                worker={w}
-                count={hired[w.id] ?? 0}
-                selected={selected?.id === w.id}
-                onSelect={() => setSelectedId(w.id)}
-              />
-            ))}
-          </BrowserGrid>
+          <div className="flex flex-col gap-3">
+            {SECTION_ORDER.map((section) => {
+              const workers = TYPE_WORKERS.filter((w) => sectionForWorker(w) === section);
+              if (workers.length === 0) return null;
+              return (
+                <div key={section}>
+                  <div className="hl-section-label mb-1.5">{section}</div>
+                  <BrowserGrid min={180}>
+                    {workers.map((w) => (
+                      <WorkerBrowserItem
+                        key={w.id}
+                        worker={w}
+                        count={hired[w.id] ?? 0}
+                        selected={selected?.id === w.id}
+                        onSelect={() => setSelectedId(w.id)}
+                      />
+                    ))}
+                  </BrowserGrid>
+                </div>
+              );
+            })}
+          </div>
         }
         detail={
           <WorkerDetail
