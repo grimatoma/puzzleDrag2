@@ -1,3 +1,4 @@
+"use strict";
 (() => {
   // src/textures/seasonal/tree/oak.ts
   function groundShadow(ctx, rx = 16, alpha = 0.22) {
@@ -8203,10 +8204,10 @@
     if (p.snowCapAmt > 0.01) {
       ctx.save();
       ctx.globalAlpha = p.snowCapAmt;
-      const cap = ctx.createLinearGradient(0, COB_TOP - 3, 0, COB_TOP + 6);
-      cap.addColorStop(0, "#ffffff");
-      cap.addColorStop(1, "#dbe6f2");
-      ctx.fillStyle = cap;
+      const cap2 = ctx.createLinearGradient(0, COB_TOP - 3, 0, COB_TOP + 6);
+      cap2.addColorStop(0, "#ffffff");
+      cap2.addColorStop(1, "#dbe6f2");
+      ctx.fillStyle = cap2;
       ctx.beginPath();
       ctx.moveTo(-COB_HALF + 1, COB_TOP + 7);
       ctx.quadraticCurveTo(-6, COB_TOP - 4, 0, COB_TOP - 3);
@@ -10157,8 +10158,8 @@
         ctx.beginPath();
         ctx.arc(x, y, r, 0, Math.PI * 2);
         ctx.fill();
-        const cap = isCrown ? lerpRGB13(p.budLight, p.budCrown, open * 0.6) : p.budLight;
-        ctx.fillStyle = rgba10(cap, 0.9);
+        const cap2 = isCrown ? lerpRGB13(p.budLight, p.budCrown, open * 0.6) : p.budLight;
+        ctx.fillStyle = rgba10(cap2, 0.9);
         ctx.beginPath();
         ctx.arc(x - r * 0.32, y - r * 0.34, r * 0.62, 0, Math.PI * 2);
         ctx.fill();
@@ -15117,78 +15118,193 @@
   };
 
   // src/textures/seasonal/flower/pansy.ts
-  var VIOLET_DARK = "#5a2a8a";
-  var VIOLET = "#8a44c8";
-  var VIOLET_LIGHT = "#c089ee";
-  var PETAL_EDGE = "#3d1a63";
-  var THROAT_YELLOW = "#f4d23a";
-  var STEM_DARK = "#2c5018";
-  var STEM_GREEN = "#4f9a2e";
-  var LEAF_GREEN2 = "#5aa336";
-  var LEAF_DARK = "#2f5e1c";
-  var MAUVE = "#a07296";
-  var MAUVE_EDGE = "#6e4a52";
-  var BROWN_EDGE = "#7a5230";
-  var LEAF_YELLOW = "#b6a23a";
-  var DEAD_BROWN = "#6b4a26";
-  var DEAD_BROWN_LT = "#8c6638";
-  function groundShadow3(ctx, rx = 14, alpha = 0.22) {
-    ctx.fillStyle = `rgba(0,0,0,${alpha})`;
-    ctx.beginPath();
-    ctx.ellipse(0, 22, rx, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
+  var SP28 = {
+    // Spring — fresh violet bloom; dewy lime pad; cool-bright light.
+    Spring: {
+      petalLow: [196, 142, 240],
+      petalSide: [142, 72, 200],
+      petalUp: [96, 46, 146],
+      petalEdge: [61, 26, 99],
+      blotch: [44, 18, 70],
+      throat: [244, 210, 58],
+      throatDark: [200, 154, 22],
+      stem: [79, 154, 46],
+      stemDark: [44, 80, 24],
+      leaf: [90, 163, 54],
+      leafDark: [47, 94, 28],
+      pad: [126, 206, 96],
+      padDark: [70, 142, 60],
+      soil: [96, 66, 36],
+      outline: [40, 40, 44],
+      light: [220, 238, 255],
+      // cool-bright
+      lightAmt: 0.16,
+      shadowAmt: 0.2,
+      bloomOpen: 0.92,
+      droop: 0,
+      whiskerAmt: 0.82,
+      glossAmt: 0.5,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      blossomAmt: 0.5,
+      fallenLeafAmt: 0
+    },
+    // Summer — saturated violet bloom (PEAK), brightest throat; warm light.
+    Summer: {
+      petalLow: [204, 150, 248],
+      petalSide: [150, 70, 212],
+      petalUp: [100, 44, 156],
+      petalEdge: [58, 24, 96],
+      blotch: [42, 16, 66],
+      throat: [250, 216, 58],
+      throatDark: [206, 158, 22],
+      stem: [86, 166, 50],
+      stemDark: [44, 84, 26],
+      leaf: [96, 172, 58],
+      leafDark: [48, 98, 30],
+      pad: [78, 168, 70],
+      padDark: [44, 112, 46],
+      soil: [88, 58, 30],
+      outline: [38, 38, 42],
+      light: [255, 246, 214],
+      // warm
+      lightAmt: 0.14,
+      shadowAmt: 0.34,
+      bloomOpen: 1,
+      droop: 0,
+      whiskerAmt: 1,
+      glossAmt: 0.4,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — fading mauve bloom, browning edges, gentle droop; olive-tan pad.
+    Autumn: {
+      petalLow: [196, 160, 188],
+      petalSide: [160, 114, 150],
+      petalUp: [120, 80, 102],
+      petalEdge: [122, 82, 48],
+      // browning
+      blotch: [86, 56, 50],
+      throat: [222, 178, 64],
+      throatDark: [168, 122, 36],
+      stem: [120, 116, 60],
+      stemDark: [78, 66, 28],
+      leaf: [176, 158, 62],
+      // yellowing
+      leafDark: [107, 82, 16],
+      pad: [140, 150, 84],
+      padDark: [96, 102, 54],
+      soil: [92, 60, 30],
+      outline: [54, 46, 36],
+      light: [255, 224, 168],
+      // low amber
+      lightAmt: 0.2,
+      shadowAmt: 0.26,
+      bloomOpen: 0.9,
+      droop: 0.22,
+      whiskerAmt: 0.4,
+      glossAmt: 0,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0.7
+    },
+    // Winter — withered-but-present: greyed cool violet, frost-dusted, a snow
+    // cap, drooping a touch; snow-blued pad. Still a readable pansy face.
+    Winter: {
+      petalLow: [196, 182, 206],
+      petalSide: [150, 122, 168],
+      petalUp: [110, 90, 128],
+      petalEdge: [86, 78, 96],
+      // cool grey
+      blotch: [74, 66, 84],
+      throat: [212, 192, 124],
+      // muted, still reads as the throat
+      throatDark: [160, 142, 86],
+      stem: [110, 108, 96],
+      stemDark: [70, 70, 64],
+      leaf: [122, 134, 112],
+      // greyed sage
+      leafDark: [72, 84, 72],
+      pad: [206, 220, 234],
+      // snow-blued grass
+      padDark: [150, 170, 192],
+      soil: [110, 104, 96],
+      outline: [62, 64, 74],
+      light: [206, 224, 248],
+      // cool blue-grey
+      lightAmt: 0.22,
+      shadowAmt: 0.16,
+      bloomOpen: 0.82,
+      droop: 0.3,
+      whiskerAmt: 0.2,
+      glossAmt: 0,
+      frostAmt: 0.82,
+      snowCapAmt: 0.5,
+      padSnowAmt: 0.85,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var clamp0129 = (x) => x < 0 || Number.isNaN(x) ? 0 : x > 1 ? 1 : x;
+  var smoother28 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function rgb28(c, a = 1) {
+    const r = Math.round(clamp0129(c[0] / 255) * 255);
+    const g = Math.round(clamp0129(c[1] / 255) * 255);
+    const b = Math.round(clamp0129(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0129(a)})`;
   }
-  function soilClump(ctx, rx = 13) {
-    ctx.fillStyle = "#5a3a18";
-    ctx.beginPath();
-    ctx.ellipse(0, 20, rx, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#3f2810";
-    ctx.beginPath();
-    ctx.ellipse(0, 21, rx * 0.65, 2.6, 0, 0, Math.PI * 2);
-    ctx.fill();
+  function mixRGB(a, b, k) {
+    const t = clamp0129(k);
+    return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   }
-  function stem(ctx, cx, cy, sway) {
-    ctx.lineCap = "round";
-    ctx.strokeStyle = STEM_DARK;
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(0, 19);
-    ctx.quadraticCurveTo(cx * 0.4 + sway * 0.5, 8, cx + sway, cy);
-    ctx.stroke();
-    ctx.strokeStyle = STEM_GREEN;
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(0, 19);
-    ctx.quadraticCurveTo(cx * 0.4 + sway * 0.5, 8, cx + sway, cy);
-    ctx.stroke();
-    ctx.lineCap = "butt";
+  function lerp30(a, b, k) {
+    return a + (b - a) * clamp0129(k);
   }
-  function leafPair(ctx, fill, edge, sway) {
-    ctx.fillStyle = fill;
-    ctx.strokeStyle = edge;
-    ctx.lineWidth = 1.3;
-    ctx.beginPath();
-    ctx.moveTo(0, 14);
-    ctx.quadraticCurveTo(-11, 13 + sway * 0.3, -16, 5 + sway);
-    ctx.quadraticCurveTo(-8, 12, 0, 16);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.beginPath();
-    ctx.moveTo(0, 13);
-    ctx.quadraticCurveTo(11, 12 - sway * 0.3, 16, 4 - sway);
-    ctx.quadraticCurveTo(8, 11, 0, 15);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
+  function lerpP28(a, b, k) {
+    return {
+      petalLow: mixRGB(a.petalLow, b.petalLow, k),
+      petalSide: mixRGB(a.petalSide, b.petalSide, k),
+      petalUp: mixRGB(a.petalUp, b.petalUp, k),
+      petalEdge: mixRGB(a.petalEdge, b.petalEdge, k),
+      blotch: mixRGB(a.blotch, b.blotch, k),
+      throat: mixRGB(a.throat, b.throat, k),
+      throatDark: mixRGB(a.throatDark, b.throatDark, k),
+      stem: mixRGB(a.stem, b.stem, k),
+      stemDark: mixRGB(a.stemDark, b.stemDark, k),
+      leaf: mixRGB(a.leaf, b.leaf, k),
+      leafDark: mixRGB(a.leafDark, b.leafDark, k),
+      pad: mixRGB(a.pad, b.pad, k),
+      padDark: mixRGB(a.padDark, b.padDark, k),
+      soil: mixRGB(a.soil, b.soil, k),
+      outline: mixRGB(a.outline, b.outline, k),
+      light: mixRGB(a.light, b.light, k),
+      lightAmt: lerp30(a.lightAmt, b.lightAmt, k),
+      shadowAmt: lerp30(a.shadowAmt, b.shadowAmt, k),
+      bloomOpen: lerp30(a.bloomOpen, b.bloomOpen, k),
+      droop: lerp30(a.droop, b.droop, k),
+      whiskerAmt: lerp30(a.whiskerAmt, b.whiskerAmt, k),
+      glossAmt: lerp30(a.glossAmt, b.glossAmt, k),
+      frostAmt: lerp30(a.frostAmt, b.frostAmt, k),
+      snowCapAmt: lerp30(a.snowCapAmt, b.snowCapAmt, k),
+      padSnowAmt: lerp30(a.padSnowAmt, b.padSnowAmt, k),
+      blossomAmt: lerp30(a.blossomAmt, b.blossomAmt, k),
+      fallenLeafAmt: lerp30(a.fallenLeafAmt, b.fallenLeafAmt, k)
+    };
   }
-  function petal(ctx, cx, cy, angle, len, width, open, fill, edge) {
+  var BLOOM_CX = 0;
+  var BLOOM_CY = -4;
+  var STEM_BASE = [0, 17];
+  function petal(ctx, angle, len, width, open, fill, edge) {
     if (open <= 1e-3) return;
-    const L = len * open;
-    const W = width * (0.4 + 0.6 * open);
+    const L = len * (0.5 + 0.5 * open);
+    const W = width * (0.45 + 0.55 * open);
     ctx.save();
-    ctx.translate(cx, cy);
     ctx.rotate(angle);
     ctx.fillStyle = fill;
     ctx.strokeStyle = edge;
@@ -15203,373 +15319,317 @@
     ctx.stroke();
     ctx.restore();
   }
-  function bloomFace(ctx, cx, cy, open, droop, glint, faded, podGrow) {
-    if (open <= 1e-3) return;
-    const fillMain = faded > 0.01 ? MAUVE : VIOLET;
-    const fillLight = faded > 0.01 ? "#c4a0bc" : VIOLET_LIGHT;
-    const edge = faded > 0.5 ? BROWN_EDGE : faded > 0.01 ? MAUVE_EDGE : PETAL_EDGE;
-    const darkFill = faded > 0.01 ? MAUVE_EDGE : VIOLET_DARK;
+  function drawBloom(ctx, p, cx, cy) {
+    const open = clamp0129(p.bloomOpen);
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.rotate(droop);
-    petal(ctx, 0, 0, Math.PI, 11, 8, open, fillLight, edge);
-    petal(ctx, 0, 0, Math.PI * 0.62, 10, 6.5, open, fillMain, edge);
-    petal(ctx, 0, 0, -Math.PI * 0.62, 10, 6.5, open, fillMain, edge);
-    petal(ctx, 0, -1, Math.PI * 0.18, 9, 6, open, darkFill, edge);
-    petal(ctx, 0, -1, -Math.PI * 0.18, 9, 6, open, darkFill, edge);
-    const whiskerA = Math.max(0, (open - 0.4) / 0.6) * (1 - faded * 0.7);
-    if (whiskerA > 0.02) {
-      ctx.strokeStyle = `rgba(42,17,64,${whiskerA})`;
+    ctx.rotate(p.droop);
+    petal(ctx, Math.PI * 0.18, 9, 6, open, rgb28(p.petalUp), rgb28(p.petalEdge));
+    petal(ctx, -Math.PI * 0.18, 9, 6, open, rgb28(p.petalUp), rgb28(p.petalEdge));
+    petal(ctx, Math.PI * 0.62, 10, 6.6, open, rgb28(p.petalSide), rgb28(p.petalEdge));
+    petal(ctx, -Math.PI * 0.62, 10, 6.6, open, rgb28(p.petalSide), rgb28(p.petalEdge));
+    petal(ctx, Math.PI, 11, 8, open, rgb28(p.petalLow), rgb28(p.petalEdge));
+    ctx.fillStyle = rgb28(p.blotch, 0.9);
+    ctx.beginPath();
+    ctx.ellipse(0, 2.4, 3.4 * open, 3 * open, 0, 0, Math.PI * 2);
+    ctx.fill();
+    const wA = clamp0129(p.whiskerAmt) * Math.max(0, (open - 0.3) / 0.7);
+    if (wA > 0.02) {
+      ctx.strokeStyle = rgb28(p.blotch, wA);
       ctx.lineWidth = 0.9;
-      [-0.9, -0.45, 0, 0.45, 0.9].forEach((a) => {
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        const ang = Math.PI - a;
-        ctx.lineTo(Math.cos(ang + Math.PI / 2) * 7, Math.sin(ang + Math.PI / 2) * 7);
-        ctx.stroke();
-      });
-    }
-    if (podGrow < 0.99) {
-      const ya = (1 - podGrow) * Math.min(1, open * 1.4);
-      ctx.globalAlpha = ya;
-      ctx.fillStyle = THROAT_YELLOW;
-      ctx.beginPath();
-      ctx.arc(0, 0, 3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#c89a16";
-      ctx.beginPath();
-      ctx.arc(0, 0.6, 1.6, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
-    if (podGrow > 0.01) {
-      ctx.globalAlpha = podGrow;
-      const podGrad = ctx.createLinearGradient(0, -3, 0, 3);
-      podGrad.addColorStop(0, "#9aa84a");
-      podGrad.addColorStop(1, "#5f6b22");
-      ctx.fillStyle = podGrad;
-      ctx.beginPath();
-      ctx.ellipse(0, -0.5, 2.6 * podGrow + 0.6, 3.4 * podGrow + 0.6, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#3f4a14";
-      ctx.lineWidth = 0.9;
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-    }
-    if (glint > 0.01) {
-      ctx.fillStyle = `rgba(255,255,255,${0.25 + glint * 0.45})`;
-      ctx.beginPath();
-      ctx.arc(-2.4, -4.2, 1.2 + glint * 0.9, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-  function bud(ctx, cx, cy, open, sliverPulse) {
-    ctx.save();
-    ctx.translate(cx, cy);
-    const grad = ctx.createLinearGradient(0, -8, 0, 4);
-    grad.addColorStop(0, "#7ec24a");
-    grad.addColorStop(1, STEM_DARK);
-    ctx.fillStyle = grad;
-    ctx.strokeStyle = LEAF_DARK;
-    ctx.lineWidth = 1.1;
-    ctx.beginPath();
-    ctx.moveTo(0, -9 - open * 1.5);
-    ctx.quadraticCurveTo(-5, -2, -3.4, 3);
-    ctx.quadraticCurveTo(0, 5, 3.4, 3);
-    ctx.quadraticCurveTo(5, -2, 0, -9 - open * 1.5);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    const sw = 1.2 + open * 3.4;
-    const sh = 2 + open * 4;
-    const pulse = 0.85 + sliverPulse * 0.15;
-    ctx.fillStyle = VIOLET;
-    ctx.beginPath();
-    ctx.ellipse(0, -8 - open * 1.2, sw * pulse, sh, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = VIOLET_LIGHT;
-    ctx.beginPath();
-    ctx.ellipse(-0.5, -8.6 - open * 1.2, sw * 0.45 * pulse, sh * 0.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-  function springScene(ctx, sway, sliverPulse) {
-    groundShadow3(ctx, 12, 0.2);
-    soilClump(ctx, 12);
-    const cx = 0;
-    const cy = -2;
-    stem(ctx, cx, cy + 2, sway);
-    leafPair(ctx, LEAF_GREEN2, LEAF_DARK, sway * 0.4);
-    bud(ctx, cx + sway, cy, 0.35, sliverPulse);
-  }
-  function drawPansySpring(ctx) {
-    springScene(ctx, 0, 0.5);
-  }
-  function animPansySpring(ctx, t) {
-    const sway = Math.sin(t * 1.6) * 1.6;
-    const pulse = 0.5 + 0.5 * Math.sin(t * 2.4);
-    springScene(ctx, sway, pulse);
-  }
-  function summerScene(ctx, sway, glint) {
-    groundShadow3(ctx, 12, 0.2);
-    soilClump(ctx, 12);
-    const cx = 0;
-    const cy = -2;
-    stem(ctx, cx, cy + 4, sway);
-    leafPair(ctx, LEAF_GREEN2, LEAF_DARK, sway * 0.4);
-    bloomFace(ctx, cx + sway, cy, 1, sway * 0.012, glint, 0, 0);
-  }
-  function drawPansySummer(ctx) {
-    summerScene(ctx, 0, 0.4);
-  }
-  function animPansySummer(ctx, t) {
-    const sway = Math.sin(t * 1.5) * 1.8;
-    const glint = 0.5 + 0.5 * Math.sin(t * 2.2);
-    summerScene(ctx, sway, glint);
-  }
-  function autumnScene(ctx, sway, driftProg) {
-    groundShadow3(ctx, 12, 0.22);
-    soilClump(ctx, 12);
-    const cx = 0;
-    const cy = 0;
-    stem(ctx, cx + 1, cy + 4, sway);
-    leafPair(ctx, LEAF_YELLOW, "#6b5210", sway * 0.4);
-    bloomFace(ctx, cx + sway, cy, 0.86, 0.28 + sway * 0.012, 0, 1, 0.4);
-    ctx.save();
-    const dp = driftProg;
-    const px = cx + 6 + dp * 8;
-    const py = cy - 4 + dp * 18;
-    ctx.globalAlpha = Math.max(0, 1 - dp);
-    ctx.translate(px, py);
-    ctx.rotate(dp * 2.2);
-    ctx.fillStyle = MAUVE;
-    ctx.strokeStyle = BROWN_EDGE;
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.quadraticCurveTo(-4, -3, -2, -7);
-    ctx.quadraticCurveTo(0, -9, 2, -7);
-    ctx.quadraticCurveTo(4, -3, 0, 0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.restore();
-    ctx.globalAlpha = 1;
-  }
-  function drawPansyAutumn(ctx) {
-    autumnScene(ctx, 0, 0.15);
-  }
-  function animPansyAutumn(ctx, t) {
-    const sway = Math.sin(t * 0.95) * 1.4;
-    const driftProg = t * 0.32 % 1;
-    autumnScene(ctx, sway, driftProg);
-  }
-  function winterScene(ctx, flakes, sheen2) {
-    groundShadow3(ctx, 14, 0.18);
-    const snow = ctx.createLinearGradient(0, 14, 0, 24);
-    snow.addColorStop(0, "#eef4fb");
-    snow.addColorStop(1, "#c2d2e4");
-    ctx.fillStyle = snow;
-    ctx.beginPath();
-    ctx.ellipse(0, 20, 17, 6, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = DEAD_BROWN;
-    ctx.strokeStyle = "#4a3018";
-    ctx.lineWidth = 1.1;
-    ctx.beginPath();
-    ctx.moveTo(-13, 18);
-    ctx.quadraticCurveTo(-18, 15, -14, 13);
-    ctx.quadraticCurveTo(-10, 15, -7, 18);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.fillStyle = DEAD_BROWN_LT;
-    ctx.beginPath();
-    ctx.moveTo(13, 17);
-    ctx.quadraticCurveTo(18, 14, 14, 12);
-    ctx.quadraticCurveTo(10, 14, 7, 17);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#4a3219";
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(0, 19);
-    ctx.quadraticCurveTo(1.5, 12, 2, 7);
-    ctx.stroke();
-    ctx.strokeStyle = DEAD_BROWN_LT;
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(0, 19);
-    ctx.quadraticCurveTo(1.5, 12, 2, 7);
-    ctx.stroke();
-    ctx.lineCap = "butt";
-    ctx.fillStyle = "#f4f8ff";
-    ctx.beginPath();
-    ctx.ellipse(2, 6.5, 3.4, 2.2, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = `rgba(200,224,255,${0.18 + sheen2 * 0.16})`;
-    ctx.beginPath();
-    ctx.ellipse(-3, 18, 9, 2.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "#ffffff";
-    flakes.forEach(([fx, fy, r]) => {
-      ctx.globalAlpha = 0.85;
-      ctx.beginPath();
-      ctx.arc(fx, fy, r, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.globalAlpha = 1;
-  }
-  function drawPansyWinter(ctx) {
-    winterScene(
-      ctx,
-      [
-        [-8, -6, 1.4],
-        [4, 2, 1.1],
-        [10, -12, 1],
-        [-2, 9, 1.2]
-      ],
-      0.4
-    );
-  }
-  function animPansyWinter(ctx, t) {
-    const span = 30;
-    const seeds = [
-      [-8, 1.4, 0],
-      [4, 1.1, 0.45],
-      [10, 1, 0.7],
-      [-2, 1.2, 0.25]
-    ];
-    const flakes = seeds.map(([fx, r, phase]) => {
-      const prog = ((t / 3.2 + phase) % 1 + 1) % 1;
-      const fy = -22 + prog * span;
-      const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
-      return [driftX, fy, r];
-    });
-    const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
-    winterScene(ctx, flakes, sheen2);
-  }
-  function springToSummer24(ctx, p) {
-    const q = Math.max(0, Math.min(1, p));
-    groundShadow3(ctx, 12, 0.2);
-    soilClump(ctx, 12);
-    const cx = 0;
-    const cy = -2;
-    stem(ctx, cx, cy + 4, 0);
-    leafPair(ctx, LEAF_GREEN2, LEAF_DARK, 0);
-    if (q < 0.45) {
-      const o = 0.35 + q / 0.45 * 0.55;
-      bud(ctx, cx, cy, o, 0.5);
-    } else {
-      const open = (q - 0.45) / 0.55;
-      ctx.save();
-      ctx.globalAlpha = Math.max(0, 1 - open * 1.6);
-      bud(ctx, cx, cy, 0.9, 0.5);
-      ctx.restore();
-      ctx.globalAlpha = 1;
-      bloomFace(ctx, cx, cy, open, 0, 0.3, 0, 0);
-    }
-  }
-  function summerToAutumn24(ctx, p) {
-    const q = Math.max(0, Math.min(1, p));
-    groundShadow3(ctx, 12, 0.21);
-    soilClump(ctx, 12);
-    const cx = 0;
-    const cy = -2 + q * 2;
-    stem(ctx, cx, cy + 4, 0);
-    const lf = q < 0.5 ? LEAF_GREEN2 : LEAF_YELLOW;
-    const le = q < 0.5 ? LEAF_DARK : "#6b5210";
-    leafPair(ctx, lf, le, 0);
-    const faded = q;
-    const droop = q * 0.28;
-    const pod = Math.max(0, (q - 0.4) / 0.6);
-    const open = 1 - q * 0.14;
-    bloomFace(ctx, cx, cy, open, droop, 0, faded > 0 ? Math.max(0.02, faded) : 0, pod);
-  }
-  function autumnToWinter24(ctx, p) {
-    const q = Math.max(0, Math.min(1, p));
-    groundShadow3(ctx, q < 0.5 ? 12 : 13, 0.2);
-    soilClump(ctx, 12);
-    const cx = 0;
-    const cy = 0;
-    const wither = Math.min(1, q / 0.55);
-    const snowing = Math.max(0, (q - 0.45) / 0.55);
-    stem(ctx, cx + 1 * (1 - q), cy + 4 - q * 2, 0);
-    if (q > 0.3) {
-      ctx.save();
-      ctx.globalAlpha = Math.min(1, (q - 0.3) / 0.4);
       ctx.lineCap = "round";
-      ctx.strokeStyle = "#4a3219";
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(0, 19);
-      ctx.quadraticCurveTo(1.5, 12, 2, 7);
-      ctx.stroke();
+      for (const a of [-0.95, -0.5, 0, 0.5, 0.95]) {
+        const ang = Math.PI - a;
+        ctx.beginPath();
+        ctx.moveTo(0, 1.4);
+        ctx.lineTo(Math.cos(ang + Math.PI / 2) * 7, 1.4 + Math.sin(ang + Math.PI / 2) * 7);
+        ctx.stroke();
+      }
       ctx.lineCap = "butt";
-      ctx.restore();
-      ctx.globalAlpha = 1;
     }
-    if (q < 0.6) {
-      leafPair(ctx, LEAF_YELLOW, "#6b5210", 0);
-    } else {
-      const ca = Math.min(1, (q - 0.6) / 0.4);
-      ctx.save();
-      ctx.globalAlpha = 1 - ca * 0.6;
-      leafPair(ctx, "#8a7028", "#5a4010", 0);
-      ctx.restore();
-      ctx.globalAlpha = 1;
-      ctx.globalAlpha = ca;
-      ctx.fillStyle = DEAD_BROWN;
-      ctx.strokeStyle = "#4a3018";
-      ctx.lineWidth = 1.1;
+    ctx.fillStyle = rgb28(p.throat);
+    ctx.beginPath();
+    ctx.arc(0, 0.6, 2.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb28(p.throatDark);
+    ctx.beginPath();
+    ctx.arc(0, 1.4, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+    if (p.frostAmt > 0.01) {
+      ctx.fillStyle = rgb28([236, 244, 255], 0.6 * p.frostAmt);
+      for (const [fx, fy] of [[-4.5, -6], [-1, -8], [3.5, -6.5], [-6.5, -3], [5.5, -3.5]]) {
+        ctx.beginPath();
+        ctx.arc(fx, fy, 0.85, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (p.glossAmt > 0.01) {
+      ctx.fillStyle = rgb28([255, 255, 255], 0.22 + p.glossAmt * 0.4);
       ctx.beginPath();
-      ctx.moveTo(-13, 18);
-      ctx.quadraticCurveTo(-18, 15, -14, 13);
-      ctx.quadraticCurveTo(-10, 15, -7, 18);
+      ctx.arc(-2.6, -4.4, 1.2 + p.glossAmt * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (p.snowCapAmt > 0.01) {
+      ctx.fillStyle = rgb28([248, 252, 255], 0.9 * p.snowCapAmt);
+      ctx.beginPath();
+      ctx.moveTo(-4.6, -7);
+      ctx.quadraticCurveTo(-0.5, -10.4, 4.4, -7.2);
+      ctx.quadraticCurveTo(0, -8.4, -4.6, -7);
       ctx.closePath();
       ctx.fill();
-      ctx.stroke();
+      ctx.fillStyle = rgb28([214, 228, 244], 0.45 * p.snowCapAmt);
+      ctx.beginPath();
+      ctx.ellipse(-0.2, -7.4, 3.9, 1, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawStemAndLeaves(ctx, p) {
+    ctx.lineCap = "round";
+    ctx.strokeStyle = rgb28(p.stemDark);
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(STEM_BASE[0], STEM_BASE[1]);
+    ctx.quadraticCurveTo(1.5, 6, BLOOM_CX, BLOOM_CY + 4);
+    ctx.stroke();
+    ctx.strokeStyle = rgb28(p.stem);
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(STEM_BASE[0], STEM_BASE[1]);
+    ctx.quadraticCurveTo(1.5, 6, BLOOM_CX, BLOOM_CY + 4);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+    ctx.fillStyle = rgb28(p.leaf);
+    ctx.strokeStyle = rgb28(p.leafDark);
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(0, 13);
+    ctx.quadraticCurveTo(-11, 12, -15, 5);
+    ctx.quadraticCurveTo(-7, 11, 0, 15);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, 12);
+    ctx.quadraticCurveTo(11, 11, 15, 4);
+    ctx.quadraticCurveTo(7, 10, 0, 14);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  function paint28(ctx, p, bob) {
+    ctx.save();
+    try {
       ctx.globalAlpha = 1;
-    }
-    const open = Math.max(0, 0.86 * (1 - wither));
-    if (open > 0.01) {
-      bloomFace(ctx, cx, cy, open, 0.28 + wither * 0.2, 0, 1, Math.min(0.9, 0.4 + wither * 0.5));
-    }
-    if (snowing > 0.01) {
+      ctx.lineJoin = "round";
+      ctx.fillStyle = `rgba(0,0,0,${0.16 + p.shadowAmt * 0.26})`;
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 14, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      drawPad2(ctx, p);
       ctx.save();
-      ctx.globalAlpha = snowing;
-      const snow = ctx.createLinearGradient(0, 14, 0, 24);
-      snow.addColorStop(0, "#eef4fb");
-      snow.addColorStop(1, "#c2d2e4");
-      ctx.fillStyle = snow;
-      ctx.beginPath();
-      ctx.ellipse(0, 20, 10 + snowing * 7, 4 + snowing * 2, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#f4f8ff";
-      ctx.beginPath();
-      ctx.ellipse(2, 6.5, 1.4 + snowing * 2, 1 + snowing * 1.2, 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.translate(0, bob);
+      drawStemAndLeaves(ctx, p);
+      drawBloom(ctx, p, BLOOM_CX, BLOOM_CY);
       ctx.restore();
+      drawPadDressing2(ctx, p);
+      if (p.lightAmt > 1e-3) {
+        ctx.save();
+        ctx.globalCompositeOperation = "soft-light";
+        const lg = ctx.createRadialGradient(-10, -10, 2, 0, 0, 40);
+        lg.addColorStop(0, rgb28(p.light, p.lightAmt));
+        lg.addColorStop(1, rgb28(p.light, 0));
+        ctx.fillStyle = lg;
+        ctx.beginPath();
+        ctx.arc(0, 0, 40, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    } catch {
+    } finally {
       ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.restore();
     }
   }
+  function drawPad2(ctx, p) {
+    const cy = 19;
+    ctx.fillStyle = rgb28(p.padDark);
+    ctx.beginPath();
+    ctx.ellipse(0, cy + 1.6, 18, 5.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb28(p.pad);
+    ctx.beginPath();
+    ctx.ellipse(0, cy, 18, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgb28(p.outline, 0.5);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = rgb28(p.soil);
+    ctx.beginPath();
+    ctx.ellipse(0, cy - 0.6, 5.5, 2.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgb28(p.padDark);
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = "round";
+    for (let i = 0; i < 13; i++) {
+      const a = Math.PI * (0.08 + i / 12 * 0.84);
+      const ex = Math.cos(a) * -18;
+      const ey = cy + Math.sin(a) * 4.6;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + (i % 2 ? 1.2 : -1.2), ey - 2.4 - i % 3);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    ctx.strokeStyle = rgb28(mixRGB(p.pad, [255, 255, 255], 0.35), 0.7);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.ellipse(-2, cy - 0.6, 13, 3, 0, Math.PI * 1.05, Math.PI * 1.9);
+    ctx.stroke();
+  }
+  function drawPadDressing2(ctx, p) {
+    const cy = 19;
+    if (p.blossomAmt > 1e-3) {
+      const spots = [[-12, 18.5], [11, 19.5], [6, 21], [-7, 21]];
+      spots.forEach(([sx, sy], i) => {
+        if (i / spots.length < p.blossomAmt + 0.05) {
+          ctx.fillStyle = `rgba(248,210,232,${0.9 * clamp0129(p.blossomAmt * 1.6)})`;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 1.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = `rgba(255,238,120,${0.9 * clamp0129(p.blossomAmt * 1.6)})`;
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+    }
+    if (p.fallenLeafAmt > 1e-3) {
+      const leaves = [
+        [-11, 20, -0.5, [184, 108, 44]],
+        [10, 20.5, 0.7, [156, 76, 36]],
+        [2, 22, 0.2, [196, 140, 56]]
+      ];
+      leaves.forEach(([lx, ly, rot, col], i) => {
+        if (i / leaves.length < p.fallenLeafAmt + 0.05) {
+          ctx.save();
+          ctx.translate(lx, ly);
+          ctx.rotate(rot);
+          ctx.fillStyle = rgb28(col, clamp0129(p.fallenLeafAmt * 1.4));
+          ctx.strokeStyle = rgb28(p.outline, 0.5 * clamp0129(p.fallenLeafAmt * 1.4));
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 2.8, 1.4, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        }
+      });
+    }
+    if (p.padSnowAmt > 1e-3) {
+      ctx.save();
+      ctx.globalAlpha = clamp0129(p.padSnowAmt);
+      const sg = ctx.createLinearGradient(0, cy - 4, 0, cy + 4);
+      sg.addColorStop(0, "rgba(250,253,255,1)");
+      sg.addColorStop(1, "rgba(214,228,244,1)");
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      ctx.ellipse(-1, cy - 0.8, 16.5, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      for (const [sx, sy] of [[-9, 18], [5, 19.5], [12, 18.5], [-2, 20.5]]) {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+  function bobAt28(t, amp = 0.8, w = 1.4) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function makeDraw6(season) {
+    return (ctx) => paint28(ctx, SP28[season], 0);
+  }
+  function makeAnim2(season) {
+    return (ctx, t) => {
+      const bob = bobAt28(t);
+      const sway = Math.sin(t * 1.2) * 0.7 * (1 - Math.cos(t * 1.2)) * 0.5;
+      ctx.save();
+      try {
+        ctx.translate(sway, 0);
+        paint28(ctx, SP28[season], bob);
+        ctx.translate(0, bob);
+        if (season === "Spring" || season === "Summer") {
+          const glint = 0.2 + 0.32 * (0.5 + 0.5 * Math.sin(t * 2.3));
+          ctx.fillStyle = `rgba(255,255,255,${glint})`;
+          ctx.beginPath();
+          ctx.arc(BLOOM_CX - 2.6, BLOOM_CY - 4.4, 1 + glint, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Autumn") {
+          const k = t / 3.6 % 1;
+          const px = BLOOM_CX + 6 + k * 9;
+          const py = BLOOM_CY + 2 + k * 18;
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, 0.95 * (1 - k));
+          ctx.translate(px, py);
+          ctx.rotate(k * 2.4);
+          ctx.fillStyle = rgb28(SP28.Autumn.petalSide);
+          ctx.strokeStyle = rgb28(SP28.Autumn.petalEdge);
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.quadraticCurveTo(-4, -3, -2, -7);
+          ctx.quadraticCurveTo(0, -9, 2, -7);
+          ctx.quadraticCurveTo(4, -3, 0, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          const span = 30;
+          ctx.fillStyle = "rgba(255,255,255,0.9)";
+          for (const [fx, ph] of [[-7, 0], [8, 0.55]]) {
+            const prog = ((t / 3.2 + ph) % 1 + 1) % 1;
+            const y = -20 + prog * span;
+            const x = fx + Math.sin(prog * 6.28 + ph * 6) * 3;
+            ctx.beginPath();
+            ctx.arc(x, y, 1, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = `rgba(210,228,255,${0.1 + 0.08 * (0.5 + 0.5 * Math.sin(t * 0.8))})`;
+          ctx.beginPath();
+          ctx.ellipse(BLOOM_CX, BLOOM_CY, 11, 11, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } catch {
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition25(from, to) {
+    return (ctx, pp) => {
+      const k = smoother28(clamp0129(pp));
+      paint28(ctx, lerpP28(SP28[from], SP28[to], k), 0);
+    };
+  }
   var VARIANTS30 = {
-    Spring: { draw: drawPansySpring, anim: animPansySpring },
-    Summer: { draw: drawPansySummer, anim: animPansySummer },
-    Autumn: { draw: drawPansyAutumn, anim: animPansyAutumn },
-    Winter: { draw: drawPansyWinter, anim: animPansyWinter }
+    Spring: { draw: makeDraw6("Spring"), anim: makeAnim2("Spring") },
+    Summer: { draw: makeDraw6("Summer"), anim: makeAnim2("Summer") },
+    Autumn: { draw: makeDraw6("Autumn"), anim: makeAnim2("Autumn") },
+    Winter: { draw: makeDraw6("Winter"), anim: makeAnim2("Winter") }
   };
   var TRANSITIONS30 = {
-    0: springToSummer24,
-    1: summerToAutumn24,
-    2: autumnToWinter24
+    0: makeTransition25("Spring", "Summer"),
+    1: makeTransition25("Summer", "Autumn"),
+    2: makeTransition25("Autumn", "Winter")
   };
 
   // src/textures/seasonal/flower/heather.ts
-  var SP28 = {
+  var SP29 = {
     Spring: {
       bell: [150, 196, 96],
       // green buds blushing
@@ -15665,50 +15725,50 @@
       fallenLeafAmt: 0
     }
   };
-  var clamp0129 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
-  var smoother28 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function rgb28(c, a = 1) {
-    const r = Math.round(clamp0129(c[0] / 255) * 255);
-    const g = Math.round(clamp0129(c[1] / 255) * 255);
-    const b = Math.round(clamp0129(c[2] / 255) * 255);
+  var clamp0130 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+  var smoother29 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function rgb29(c, a = 1) {
+    const r = Math.round(clamp0130(c[0] / 255) * 255);
+    const g = Math.round(clamp0130(c[1] / 255) * 255);
+    const b = Math.round(clamp0130(c[2] / 255) * 255);
     return `rgba(${r},${g},${b},${a})`;
   }
-  function mixRGB(a, b, k) {
-    const t = clamp0129(k);
+  function mixRGB2(a, b, k) {
+    const t = clamp0130(k);
     return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   }
-  function lerp30(a, b, k) {
-    return a + (b - a) * clamp0129(k);
+  function lerp31(a, b, k) {
+    return a + (b - a) * clamp0130(k);
   }
-  function lerpP28(a, b, k) {
+  function lerpP29(a, b, k) {
     return {
-      bell: mixRGB(a.bell, b.bell, k),
-      bellHi: mixRGB(a.bellHi, b.bellHi, k),
-      foliage: mixRGB(a.foliage, b.foliage, k),
-      foliageDark: mixRGB(a.foliageDark, b.foliageDark, k),
-      stem: mixRGB(a.stem, b.stem, k),
-      pad: mixRGB(a.pad, b.pad, k),
-      padDark: mixRGB(a.padDark, b.padDark, k),
-      soil: mixRGB(a.soil, b.soil, k),
-      outline: mixRGB(a.outline, b.outline, k),
-      light: mixRGB(a.light, b.light, k),
-      lightAmt: lerp30(a.lightAmt, b.lightAmt, k),
-      shadowAmt: lerp30(a.shadowAmt, b.shadowAmt, k),
-      bloomAmount: lerp30(a.bloomAmount, b.bloomAmount, k),
-      frostAmt: lerp30(a.frostAmt, b.frostAmt, k),
-      snowCapAmt: lerp30(a.snowCapAmt, b.snowCapAmt, k),
-      padSnowAmt: lerp30(a.padSnowAmt, b.padSnowAmt, k),
-      blossomAmt: lerp30(a.blossomAmt, b.blossomAmt, k),
-      fallenLeafAmt: lerp30(a.fallenLeafAmt, b.fallenLeafAmt, k)
+      bell: mixRGB2(a.bell, b.bell, k),
+      bellHi: mixRGB2(a.bellHi, b.bellHi, k),
+      foliage: mixRGB2(a.foliage, b.foliage, k),
+      foliageDark: mixRGB2(a.foliageDark, b.foliageDark, k),
+      stem: mixRGB2(a.stem, b.stem, k),
+      pad: mixRGB2(a.pad, b.pad, k),
+      padDark: mixRGB2(a.padDark, b.padDark, k),
+      soil: mixRGB2(a.soil, b.soil, k),
+      outline: mixRGB2(a.outline, b.outline, k),
+      light: mixRGB2(a.light, b.light, k),
+      lightAmt: lerp31(a.lightAmt, b.lightAmt, k),
+      shadowAmt: lerp31(a.shadowAmt, b.shadowAmt, k),
+      bloomAmount: lerp31(a.bloomAmount, b.bloomAmount, k),
+      frostAmt: lerp31(a.frostAmt, b.frostAmt, k),
+      snowCapAmt: lerp31(a.snowCapAmt, b.snowCapAmt, k),
+      padSnowAmt: lerp31(a.padSnowAmt, b.padSnowAmt, k),
+      blossomAmt: lerp31(a.blossomAmt, b.blossomAmt, k),
+      fallenLeafAmt: lerp31(a.fallenLeafAmt, b.fallenLeafAmt, k)
     };
   }
-  var STEM_BASE = [0, 17];
+  var STEM_BASE2 = [0, 17];
   var STEM_TOP = [-1, -18];
   var STEM_CTRL = [3, -2];
   function stemPointAt(u) {
     const inv = 1 - u;
-    const x = inv * inv * STEM_BASE[0] + 2 * inv * u * STEM_CTRL[0] + u * u * STEM_TOP[0];
-    const y = inv * inv * STEM_BASE[1] + 2 * inv * u * STEM_CTRL[1] + u * u * STEM_TOP[1];
+    const x = inv * inv * STEM_BASE2[0] + 2 * inv * u * STEM_CTRL[0] + u * u * STEM_TOP[0];
+    const y = inv * inv * STEM_BASE2[1] + 2 * inv * u * STEM_CTRL[1] + u * u * STEM_TOP[1];
     return [x, y];
   }
   function buildBells() {
@@ -15741,7 +15801,7 @@
     }
     return arr;
   })();
-  function paint28(ctx, p, bob) {
+  function paint29(ctx, p, bob) {
     ctx.save();
     try {
       ctx.globalAlpha = 1;
@@ -15751,15 +15811,15 @@
       ctx.beginPath();
       ctx.ellipse(3, 21.5, 15, 4.2, 0, 0, Math.PI * 2);
       ctx.fill();
-      drawPad2(ctx, p);
+      drawPad3(ctx, p);
       drawSprig(ctx, p, bob);
-      drawPadDressing2(ctx, p);
+      drawPadDressing3(ctx, p);
       if (p.lightAmt > 1e-3) {
         ctx.save();
         ctx.globalCompositeOperation = "soft-light";
         const lg = ctx.createRadialGradient(-10, -10, 2, 0, 0, 40);
-        lg.addColorStop(0, rgb28(p.light, p.lightAmt));
-        lg.addColorStop(1, rgb28(p.light, 0));
+        lg.addColorStop(0, rgb29(p.light, p.lightAmt));
+        lg.addColorStop(1, rgb29(p.light, 0));
         ctx.fillStyle = lg;
         ctx.beginPath();
         ctx.arc(0, 0, 40, 0, Math.PI * 2);
@@ -15772,20 +15832,20 @@
       ctx.restore();
     }
   }
-  function drawPad2(ctx, p) {
+  function drawPad3(ctx, p) {
     const cy = 19;
-    ctx.fillStyle = rgb28(p.padDark);
+    ctx.fillStyle = rgb29(p.padDark);
     ctx.beginPath();
     ctx.ellipse(0, cy + 1.6, 18, 5.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb28(p.pad);
+    ctx.fillStyle = rgb29(p.pad);
     ctx.beginPath();
     ctx.ellipse(0, cy, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb28(p.outline, 0.5);
+    ctx.strokeStyle = rgb29(p.outline, 0.5);
     ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.strokeStyle = rgb28(p.padDark);
+    ctx.strokeStyle = rgb29(p.padDark);
     ctx.lineWidth = 1.6;
     for (let i = 0; i < 13; i++) {
       const a = Math.PI * (0.08 + i / 12 * 0.84);
@@ -15796,7 +15856,7 @@
       ctx.lineTo(ex + (i % 2 ? 1.2 : -1.2), ey - 2.4 - i % 3);
       ctx.stroke();
     }
-    ctx.strokeStyle = rgb28(mixRGB(p.pad, [255, 255, 255], 0.35), 0.7);
+    ctx.strokeStyle = rgb29(mixRGB2(p.pad, [255, 255, 255], 0.35), 0.7);
     ctx.lineWidth = 1.4;
     ctx.beginPath();
     ctx.ellipse(-2, cy - 0.6, 13, 3, 0, Math.PI * 1.05, Math.PI * 1.9);
@@ -15807,46 +15867,46 @@
     ctx.translate(0, bob);
     const drawStemPath = () => {
       ctx.beginPath();
-      ctx.moveTo(STEM_BASE[0], STEM_BASE[1]);
+      ctx.moveTo(STEM_BASE2[0], STEM_BASE2[1]);
       ctx.quadraticCurveTo(STEM_CTRL[0], STEM_CTRL[1], STEM_TOP[0], STEM_TOP[1]);
       ctx.moveTo(0, 9);
       ctx.quadraticCurveTo(-6, 4, -12, -9);
       ctx.moveTo(1, 11);
       ctx.quadraticCurveTo(7, 6, 11, -7);
     };
-    ctx.strokeStyle = rgb28(p.outline);
+    ctx.strokeStyle = rgb29(p.outline);
     ctx.lineWidth = 3.2;
     drawStemPath();
     ctx.stroke();
-    ctx.strokeStyle = rgb28(p.stem);
+    ctx.strokeStyle = rgb29(p.stem);
     ctx.lineWidth = 1.7;
     drawStemPath();
     ctx.stroke();
     LEAVES2.forEach(([lx, ly, side]) => {
       const tx = lx + side * 4.4;
       const ty = ly - 2.6;
-      ctx.strokeStyle = rgb28(p.foliageDark);
+      ctx.strokeStyle = rgb29(p.foliageDark);
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(lx, ly);
       ctx.lineTo(tx, ty);
       ctx.stroke();
-      ctx.strokeStyle = rgb28(p.foliage);
+      ctx.strokeStyle = rgb29(p.foliage);
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(lx, ly);
       ctx.lineTo(tx, ty);
       ctx.stroke();
     });
-    const open = clamp0129(p.bloomAmount);
+    const open = clamp0130(p.bloomAmount);
     BELLS.forEach((b) => {
       const w = (1.5 + open * 1) * b.s;
       const h = (2.4 + open * 0.6) * b.s;
       ctx.save();
       ctx.translate(b.x, b.y);
       ctx.rotate(b.side * 0.5 * (0.6 + open * 0.4));
-      ctx.fillStyle = rgb28(p.bell);
-      ctx.strokeStyle = rgb28(p.outline, 0.8);
+      ctx.fillStyle = rgb29(p.bell);
+      ctx.strokeStyle = rgb29(p.outline, 0.8);
       ctx.lineWidth = 0.7;
       ctx.beginPath();
       ctx.moveTo(-w, -h * 0.3);
@@ -15858,12 +15918,12 @@
       ctx.fill();
       ctx.stroke();
       if (open > 0.5) {
-        ctx.fillStyle = rgb28(mixRGB(p.bell, p.outline, 0.45));
+        ctx.fillStyle = rgb29(mixRGB2(p.bell, p.outline, 0.45));
         ctx.beginPath();
         ctx.ellipse(0, h * 0.55, w * 0.5, h * 0.28, 0, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.fillStyle = rgb28(p.bellHi, 0.85);
+      ctx.fillStyle = rgb29(p.bellHi, 0.85);
       ctx.beginPath();
       ctx.ellipse(-w * 0.35, -h * 0.45, w * 0.32, h * 0.3, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -15894,7 +15954,7 @@
     }
     ctx.restore();
   }
-  function drawPadDressing2(ctx, p) {
+  function drawPadDressing3(ctx, p) {
     const cy = 19;
     if (p.blossomAmt > 1e-3) {
       const spots = [
@@ -15905,11 +15965,11 @@
       ];
       spots.forEach(([sx, sy], i) => {
         if (i / spots.length < p.blossomAmt + 0.05) {
-          ctx.fillStyle = `rgba(248,210,232,${0.9 * clamp0129(p.blossomAmt * 1.6)})`;
+          ctx.fillStyle = `rgba(248,210,232,${0.9 * clamp0130(p.blossomAmt * 1.6)})`;
           ctx.beginPath();
           ctx.arc(sx, sy, 1.3, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = `rgba(255,238,120,${0.9 * clamp0129(p.blossomAmt * 1.6)})`;
+          ctx.fillStyle = `rgba(255,238,120,${0.9 * clamp0130(p.blossomAmt * 1.6)})`;
           ctx.beginPath();
           ctx.arc(sx, sy, 0.5, 0, Math.PI * 2);
           ctx.fill();
@@ -15927,8 +15987,8 @@
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
-          ctx.fillStyle = rgb28(col, clamp0129(p.fallenLeafAmt * 1.4));
-          ctx.strokeStyle = rgb28(p.outline, 0.5 * clamp0129(p.fallenLeafAmt * 1.4));
+          ctx.fillStyle = rgb29(col, clamp0130(p.fallenLeafAmt * 1.4));
+          ctx.strokeStyle = rgb29(p.outline, 0.5 * clamp0130(p.fallenLeafAmt * 1.4));
           ctx.lineWidth = 0.7;
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.8, 1.4, 0, 0, Math.PI * 2);
@@ -15940,7 +16000,7 @@
     }
     if (p.padSnowAmt > 1e-3) {
       ctx.save();
-      ctx.globalAlpha = clamp0129(p.padSnowAmt);
+      ctx.globalAlpha = clamp0130(p.padSnowAmt);
       const sg = ctx.createLinearGradient(0, cy - 4, 0, cy + 4);
       sg.addColorStop(0, "rgba(250,253,255,1)");
       sg.addColorStop(1, "rgba(214,228,244,1)");
@@ -15963,20 +16023,20 @@
       ctx.restore();
     }
   }
-  function bobAt28(t, amp = 0.8, w = 1.4) {
+  function bobAt29(t, amp = 0.8, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  function makeDraw6(season) {
-    return (ctx) => paint28(ctx, SP28[season], 0);
+  function makeDraw7(season) {
+    return (ctx) => paint29(ctx, SP29[season], 0);
   }
-  function makeAnim2(season) {
+  function makeAnim3(season) {
     return (ctx, t) => {
-      const bob = bobAt28(t);
+      const bob = bobAt29(t);
       const sway = Math.sin(t * 1.1) * 0.6 * (1 - Math.cos(t * 1.1)) * 0.5;
       ctx.save();
       try {
         ctx.translate(sway, 0);
-        paint28(ctx, SP28[season], bob);
+        paint29(ctx, SP29[season], bob);
         ctx.translate(0, bob);
         if (season === "Summer") {
           const k = t * 0.4 % 1;
@@ -15991,7 +16051,7 @@
           const fy = -6 + k * 18;
           ctx.save();
           ctx.globalAlpha = 0.9 * (1 - k);
-          ctx.fillStyle = rgb28(SP28.Autumn.bell);
+          ctx.fillStyle = rgb29(SP29.Autumn.bell);
           ctx.beginPath();
           ctx.ellipse(fx, fy, 1.3, 1.9, k * 4, 0, Math.PI * 2);
           ctx.fill();
@@ -16029,46 +16089,46 @@
       }
     };
   }
-  function makeTransition25(from, to) {
+  function makeTransition26(from, to) {
     return (ctx, pp) => {
-      const k = smoother28(clamp0129(pp));
-      paint28(ctx, lerpP28(SP28[from], SP28[to], k), 0);
+      const k = smoother29(clamp0130(pp));
+      paint29(ctx, lerpP29(SP29[from], SP29[to], k), 0);
     };
   }
   var VARIANTS31 = {
-    Spring: { draw: makeDraw6("Spring"), anim: makeAnim2("Spring") },
-    Summer: { draw: makeDraw6("Summer"), anim: makeAnim2("Summer") },
-    Autumn: { draw: makeDraw6("Autumn"), anim: makeAnim2("Autumn") },
-    Winter: { draw: makeDraw6("Winter"), anim: makeAnim2("Winter") }
+    Spring: { draw: makeDraw7("Spring"), anim: makeAnim3("Spring") },
+    Summer: { draw: makeDraw7("Summer"), anim: makeAnim3("Summer") },
+    Autumn: { draw: makeDraw7("Autumn"), anim: makeAnim3("Autumn") },
+    Winter: { draw: makeDraw7("Winter"), anim: makeAnim3("Winter") }
   };
   var TRANSITIONS31 = {
-    0: makeTransition25("Spring", "Summer"),
-    1: makeTransition25("Summer", "Autumn"),
-    2: makeTransition25("Autumn", "Winter")
+    0: makeTransition26("Spring", "Summer"),
+    1: makeTransition26("Summer", "Autumn"),
+    2: makeTransition26("Autumn", "Winter")
   };
 
   // src/textures/seasonal/flower/waterLily.ts
-  function clamp0130(x) {
+  function clamp0131(x) {
     if (!Number.isFinite(x)) return 0;
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
-  function lerp31(a, b, t) {
+  function lerp35(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB23(a, b, t) {
-    return [lerp31(a[0], b[0], t), lerp31(a[1], b[1], t), lerp31(a[2], b[2], t)];
+    return [lerp35(a[0], b[0], t), lerp35(a[1], b[1], t), lerp35(a[2], b[2], t)];
   }
-  function rgb29(c, alpha = 1) {
-    const r = Math.round(clamp0130(c[0] / 255) * 255);
-    const g = Math.round(clamp0130(c[1] / 255) * 255);
-    const b = Math.round(clamp0130(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0130(alpha)})`;
+  function rgb30(c, alpha = 1) {
+    const r = Math.round(clamp0131(c[0] / 255) * 255);
+    const g = Math.round(clamp0131(c[1] / 255) * 255);
+    const b = Math.round(clamp0131(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0131(alpha)})`;
   }
-  var smoother29 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt29(t, amp = 0.9, w = 1.5) {
+  var smoother30 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt30(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP29 = {
+  var SP30 = {
     // Spring — cool-bright; fresh blue water, new small pad, closed pink bud.
     Spring: {
       petal: [236, 168, 196],
@@ -16146,8 +16206,8 @@
       dressBlossom: 0
     }
   };
-  function lerpP29(a, b, t) {
-    const s = clamp0130(t);
+  function lerpP30(a, b, t) {
+    const s = clamp0131(t);
     return {
       petal: lerpRGB23(a.petal, b.petal, s),
       petalTip: lerpRGB23(a.petalTip, b.petalTip, s),
@@ -16157,14 +16217,14 @@
       water: lerpRGB23(a.water, b.water, s),
       waterDeep: lerpRGB23(a.waterDeep, b.waterDeep, s),
       outline: lerpRGB23(a.outline, b.outline, s),
-      bloomOpen: lerp31(a.bloomOpen, b.bloomOpen, s),
-      iceAmt: lerp31(a.iceAmt, b.iceAmt, s),
-      frostAmt: lerp31(a.frostAmt, b.frostAmt, s),
-      padSnowAmt: lerp31(a.padSnowAmt, b.padSnowAmt, s),
-      padYellow: lerp31(a.padYellow, b.padYellow, s),
-      gloss: lerp31(a.gloss, b.gloss, s),
-      dressLeaf: lerp31(a.dressLeaf, b.dressLeaf, s),
-      dressBlossom: lerp31(a.dressBlossom, b.dressBlossom, s)
+      bloomOpen: lerp35(a.bloomOpen, b.bloomOpen, s),
+      iceAmt: lerp35(a.iceAmt, b.iceAmt, s),
+      frostAmt: lerp35(a.frostAmt, b.frostAmt, s),
+      padSnowAmt: lerp35(a.padSnowAmt, b.padSnowAmt, s),
+      padYellow: lerp35(a.padYellow, b.padYellow, s),
+      gloss: lerp35(a.gloss, b.gloss, s),
+      dressLeaf: lerp35(a.dressLeaf, b.dressLeaf, s),
+      dressBlossom: lerp35(a.dressBlossom, b.dressBlossom, s)
     };
   }
   var NO_MICRO = {
@@ -16176,24 +16236,24 @@
     leafDrift: 0,
     dewPulse: 0
   };
-  function paint29(ctx, raw, bob, micro = NO_MICRO) {
+  function paint30(ctx, raw, bob, micro = NO_MICRO) {
     const p = {
       ...raw,
-      bloomOpen: clamp0130(raw.bloomOpen),
-      iceAmt: clamp0130(raw.iceAmt),
-      frostAmt: clamp0130(raw.frostAmt),
-      padSnowAmt: clamp0130(raw.padSnowAmt),
-      padYellow: clamp0130(raw.padYellow),
-      gloss: clamp0130(raw.gloss),
-      dressLeaf: clamp0130(raw.dressLeaf),
-      dressBlossom: clamp0130(raw.dressBlossom)
+      bloomOpen: clamp0131(raw.bloomOpen),
+      iceAmt: clamp0131(raw.iceAmt),
+      frostAmt: clamp0131(raw.frostAmt),
+      padSnowAmt: clamp0131(raw.padSnowAmt),
+      padYellow: clamp0131(raw.padYellow),
+      gloss: clamp0131(raw.gloss),
+      dressLeaf: clamp0131(raw.dressLeaf),
+      dressBlossom: clamp0131(raw.dressBlossom)
     };
     ctx.save();
     try {
       ctx.globalAlpha = 1;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
-      ctx.fillStyle = rgb29([0, 0, 0], 0.2);
+      ctx.fillStyle = rgb30([0, 0, 0], 0.2);
       ctx.beginPath();
       ctx.ellipse(2.5, 22.5, 16, 4.2, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -16201,13 +16261,13 @@
       const poolCy = 19;
       const poolRx = 18;
       const poolRy = 5.6;
-      ctx.fillStyle = rgb29(p.outline, 0.55);
+      ctx.fillStyle = rgb30(p.outline, 0.55);
       ctx.beginPath();
       ctx.ellipse(poolCx, poolCy + 0.6, poolRx + 1.1, poolRy + 1.1, 0, 0, Math.PI * 2);
       ctx.fill();
       const wg = ctx.createLinearGradient(0, poolCy - poolRy, 0, poolCy + poolRy);
-      wg.addColorStop(0, rgb29(p.water));
-      wg.addColorStop(1, rgb29(p.waterDeep));
+      wg.addColorStop(0, rgb30(p.water));
+      wg.addColorStop(1, rgb30(p.waterDeep));
       ctx.fillStyle = wg;
       ctx.beginPath();
       ctx.ellipse(poolCx, poolCy, poolRx, poolRy, 0, 0, Math.PI * 2);
@@ -16218,7 +16278,7 @@
         ctx.ellipse(poolCx, poolCy, poolRx, poolRy, 0, 0, Math.PI * 2);
         ctx.clip();
         const a = 0.16 * micro.ripple;
-        ctx.strokeStyle = rgb29([255, 255, 255], a);
+        ctx.strokeStyle = rgb30([255, 255, 255], a);
         ctx.lineWidth = 0.9;
         for (let i = 0; i < 3; i++) {
           const ry = 1.4 + i * 1.6 + micro.ripple * 0.8;
@@ -16230,13 +16290,13 @@
       }
       if (p.iceAmt > 0.02) {
         const ig = ctx.createLinearGradient(0, poolCy - poolRy, 0, poolCy + poolRy);
-        ig.addColorStop(0, rgb29([238, 248, 255], 0.9 * p.iceAmt));
-        ig.addColorStop(1, rgb29([196, 220, 236], 0.85 * p.iceAmt));
+        ig.addColorStop(0, rgb30([238, 248, 255], 0.9 * p.iceAmt));
+        ig.addColorStop(1, rgb30([196, 220, 236], 0.85 * p.iceAmt));
         ctx.fillStyle = ig;
         ctx.beginPath();
         ctx.ellipse(poolCx, poolCy, poolRx, poolRy, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb29([150, 184, 208], 0.5 * p.iceAmt);
+        ctx.strokeStyle = rgb30([150, 184, 208], 0.5 * p.iceAmt);
         ctx.lineWidth = 0.7;
         ctx.beginPath();
         ctx.moveTo(-12, poolCy + 1);
@@ -16245,11 +16305,11 @@
         ctx.lineTo(14, poolCy - 0.8);
         ctx.stroke();
         const sheen2 = 0.18 + micro.iceSheen * 0.28;
-        ctx.fillStyle = rgb29([255, 255, 255], sheen2 * p.iceAmt);
+        ctx.fillStyle = rgb30([255, 255, 255], sheen2 * p.iceAmt);
         ctx.beginPath();
         ctx.ellipse(-4, poolCy - 1.6, 11, 1.8, -0.08, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb29([255, 255, 255], 0.8 * p.frostAmt);
+        ctx.fillStyle = rgb30([255, 255, 255], 0.8 * p.frostAmt);
         const sparkles = [
           [-13, 20],
           [-6, 17.5],
@@ -16264,7 +16324,7 @@
           ctx.fill();
         }
       } else {
-        ctx.fillStyle = rgb29([255, 255, 255], 0.16 + 0.22 * p.gloss);
+        ctx.fillStyle = rgb30([255, 255, 255], 0.16 + 0.22 * p.gloss);
         ctx.beginPath();
         ctx.ellipse(-5, poolCy - 2, 9, 1.5, -0.06, 0, Math.PI * 2);
         ctx.fill();
@@ -16276,11 +16336,11 @@
         const ly = 21;
         ctx.translate(lx, ly);
         ctx.rotate(0.5 + micro.leafDrift * 0.03);
-        ctx.fillStyle = rgb29([186, 116, 48]);
+        ctx.fillStyle = rgb30([186, 116, 48]);
         ctx.beginPath();
         ctx.ellipse(0, 0, 3.6, 2.1, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb29([120, 70, 28]);
+        ctx.strokeStyle = rgb30([120, 70, 28]);
         ctx.lineWidth = 0.7;
         ctx.beginPath();
         ctx.moveTo(-3.4, 0);
@@ -16296,26 +16356,26 @@
       const padRy = 6.2;
       const padCol = lerpRGB23(p.pad, [196, 182, 86], p.padYellow * 0.55);
       const padDarkCol = lerpRGB23(p.padDark, [148, 132, 58], p.padYellow * 0.55);
-      ctx.fillStyle = rgb29(p.outline, 0.7);
+      ctx.fillStyle = rgb30(p.outline, 0.7);
       ctx.beginPath();
       ctx.ellipse(padCx, padCy + 0.8, padRx + 1, padRy + 1, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb29(padDarkCol);
+      ctx.fillStyle = rgb30(padDarkCol);
       ctx.beginPath();
       ctx.ellipse(padCx, padCy, padRx, padRy, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb29(padCol);
+      ctx.fillStyle = rgb30(padCol);
       ctx.beginPath();
       ctx.ellipse(padCx - 0.6, padCy - 0.9, padRx - 1.2, padRy - 1.4, 0, 0, Math.PI * 2);
       ctx.fill();
       if (p.padYellow > 0.04) {
-        ctx.strokeStyle = rgb29([206, 184, 78], 0.6 * p.padYellow);
+        ctx.strokeStyle = rgb30([206, 184, 78], 0.6 * p.padYellow);
         ctx.lineWidth = 2.2;
         ctx.beginPath();
         ctx.ellipse(padCx, padCy, padRx - 1.4, padRy - 1.2, 0, 0, Math.PI * 2);
         ctx.stroke();
       }
-      ctx.fillStyle = rgb29(p.waterDeep);
+      ctx.fillStyle = rgb30(p.waterDeep);
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(padCx + 1, padCy);
@@ -16324,7 +16384,7 @@
       ctx.closePath();
       ctx.fill();
       ctx.restore();
-      ctx.strokeStyle = rgb29(padDarkCol, 0.7);
+      ctx.strokeStyle = rgb30(padDarkCol, 0.7);
       ctx.lineWidth = 0.7;
       for (let i = 0; i < 7; i++) {
         const ang = i / 7 * Math.PI * 2 + 0.25;
@@ -16337,12 +16397,12 @@
         );
         ctx.stroke();
       }
-      ctx.fillStyle = rgb29([255, 255, 255], 0.12 + 0.18 * p.gloss);
+      ctx.fillStyle = rgb30([255, 255, 255], 0.12 + 0.18 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(padCx - 4, padCy - 2.4, 5, 1.8, -0.2, 0, Math.PI * 2);
       ctx.fill();
       if (p.padSnowAmt > 0.03) {
-        ctx.fillStyle = rgb29([244, 250, 255], 0.85 * p.padSnowAmt);
+        ctx.fillStyle = rgb30([244, 250, 255], 0.85 * p.padSnowAmt);
         ctx.beginPath();
         ctx.ellipse(padCx - 1, padCy - 1.6, padRx - 3.5, padRy - 3, -0.05, 0, Math.PI * 2);
         ctx.fill();
@@ -16350,7 +16410,7 @@
       if (p.dressBlossom > 0.04) {
         ctx.save();
         ctx.globalAlpha = p.dressBlossom;
-        ctx.fillStyle = rgb29([244, 196, 214]);
+        ctx.fillStyle = rgb30([244, 196, 214]);
         ctx.translate(padCx + 8.5, padCy + 0.5);
         for (let i = 0; i < 5; i++) {
           ctx.save();
@@ -16360,7 +16420,7 @@
           ctx.fill();
           ctx.restore();
         }
-        ctx.fillStyle = rgb29([244, 220, 120]);
+        ctx.fillStyle = rgb30([244, 220, 120]);
         ctx.beginPath();
         ctx.arc(0, 0, 0.9, 0, Math.PI * 2);
         ctx.fill();
@@ -16377,15 +16437,15 @@
         ctx.save();
         ctx.translate(bloomCx, bloomCy);
         ctx.rotate(angle);
-        ctx.fillStyle = rgb29(outlineCol, 0.85);
+        ctx.fillStyle = rgb30(outlineCol, 0.85);
         ctx.beginPath();
         ctx.moveTo(0, spread + 0.6);
         ctx.quadraticCurveTo(-width - 0.6, -length * 0.55, 0, -length - 0.6);
         ctx.quadraticCurveTo(width + 0.6, -length * 0.55, 0, spread + 0.6);
         ctx.fill();
         const pg = ctx.createLinearGradient(0, spread, 0, -length);
-        pg.addColorStop(0, rgb29(fill));
-        pg.addColorStop(1, rgb29(tip));
+        pg.addColorStop(0, rgb30(fill));
+        pg.addColorStop(1, rgb30(tip));
         ctx.fillStyle = pg;
         ctx.beginPath();
         ctx.moveTo(0, spread);
@@ -16398,8 +16458,8 @@
       for (let i = 0; i < backCount; i++) {
         const base = (i - (backCount - 1) / 2) * 0.42;
         const angle = base * (0.35 + open * 1.05);
-        const length = lerp31(8.5, 12.5, open);
-        const width = lerp31(2.4, 4.2, open);
+        const length = lerp35(8.5, 12.5, open);
+        const width = lerp35(2.4, 4.2, open);
         drawPetal(angle, 2.2, length, width, petalCol, tipCol);
       }
       const frontCount = 5;
@@ -16407,21 +16467,21 @@
       for (let i = 0; i < frontCount; i++) {
         const base = (i - (frontCount - 1) / 2) * 0.4;
         const angle = base * (0.28 + open * 0.7);
-        const length = lerp31(7.5, 10, open);
-        const width = lerp31(2, 3.2, open);
+        const length = lerp35(7.5, 10, open);
+        const width = lerp35(2, 3.2, open);
         drawPetal(angle, 1.4, length, width, frontFill, tipCol);
       }
       if (open > 0.12) {
-        const ca = clamp0130((open - 0.12) / 0.88);
-        ctx.fillStyle = rgb29(outlineCol, 0.8 * ca);
+        const ca = clamp0131((open - 0.12) / 0.88);
+        ctx.fillStyle = rgb30(outlineCol, 0.8 * ca);
         ctx.beginPath();
         ctx.ellipse(bloomCx, bloomCy - 1.4, 3.2, 2.6, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb29(p.center, ca);
+        ctx.fillStyle = rgb30(p.center, ca);
         ctx.beginPath();
         ctx.ellipse(bloomCx, bloomCy - 1.7, 2.6, 2.1, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb29(lerpRGB23(p.center, [120, 80, 20], 0.4), ca);
+        ctx.fillStyle = rgb30(lerpRGB23(p.center, [120, 80, 20], 0.4), ca);
         for (let i = 0; i < 6; i++) {
           const a = i / 6 * Math.PI * 2;
           ctx.beginPath();
@@ -16429,15 +16489,15 @@
           ctx.fill();
         }
       } else {
-        ctx.fillStyle = rgb29(outlineCol, 0.8);
+        ctx.fillStyle = rgb30(outlineCol, 0.8);
         ctx.beginPath();
         ctx.moveTo(bloomCx, bloomCy + 2.4);
         ctx.quadraticCurveTo(bloomCx - 3.6, bloomCy - 3, bloomCx, bloomCy - 9.5);
         ctx.quadraticCurveTo(bloomCx + 3.6, bloomCy - 3, bloomCx, bloomCy + 2.4);
         ctx.fill();
         const bg = ctx.createLinearGradient(0, bloomCy + 2, 0, bloomCy - 9);
-        bg.addColorStop(0, rgb29(petalCol));
-        bg.addColorStop(1, rgb29(tipCol));
+        bg.addColorStop(0, rgb30(petalCol));
+        bg.addColorStop(1, rgb30(tipCol));
         ctx.fillStyle = bg;
         ctx.beginPath();
         ctx.moveTo(bloomCx, bloomCy + 1.8);
@@ -16446,11 +16506,11 @@
         ctx.fill();
       }
       if (p.frostAmt > 0.04) {
-        ctx.fillStyle = rgb29([236, 246, 255], 0.3 * p.frostAmt);
+        ctx.fillStyle = rgb30([236, 246, 255], 0.3 * p.frostAmt);
         ctx.beginPath();
         ctx.ellipse(bloomCx, bloomCy - 1, 7.5, 8.5, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb29([255, 255, 255], 0.85 * p.frostAmt);
+        ctx.fillStyle = rgb30([255, 255, 255], 0.85 * p.frostAmt);
         const fs = [[-3, bloomCy - 4], [2.5, bloomCy - 6], [0, bloomCy + 1]];
         for (const [fx, fy] of fs) {
           ctx.beginPath();
@@ -16459,13 +16519,13 @@
         }
       }
       if (micro.petalGlint > 0) {
-        ctx.fillStyle = rgb29([255, 255, 255], 0.45 * micro.petalGlint);
+        ctx.fillStyle = rgb30([255, 255, 255], 0.45 * micro.petalGlint);
         ctx.beginPath();
         ctx.ellipse(bloomCx - 2.2, bloomCy - 3.5, 1.4, 2.2, -0.3, 0, Math.PI * 2);
         ctx.fill();
       }
       if (micro.dewPulse > 0) {
-        ctx.fillStyle = rgb29([255, 255, 255], 0.5 * micro.dewPulse);
+        ctx.fillStyle = rgb30([255, 255, 255], 0.5 * micro.dewPulse);
         ctx.beginPath();
         ctx.arc(bloomCx + 2, bloomCy + 1, 1 + 0.4 * micro.dewPulse, 0, Math.PI * 2);
         ctx.fill();
@@ -16480,38 +16540,38 @@
     }
     ctx.globalAlpha = 1;
   }
-  function makeDraw7(season) {
-    return (ctx) => paint29(ctx, SP29[season], 0);
+  function makeDraw8(season) {
+    return (ctx) => paint30(ctx, SP30[season], 0);
   }
   function animSpring5(ctx, t) {
-    const bob = bobAt29(t, 0.7, 1.4);
+    const bob = bobAt30(t, 0.7, 1.4);
     const micro = {
       ...NO_MICRO,
       ripple: 0.5 + 0.5 * Math.sin(t * 1.8),
       dewPulse: 0.5 + 0.5 * Math.sin(t * 2.2)
     };
-    paint29(ctx, SP29.Spring, bob, micro);
+    paint30(ctx, SP30.Spring, bob, micro);
   }
   function animSummer5(ctx, t) {
-    const bob = bobAt29(t, 0.9, 1.5);
+    const bob = bobAt30(t, 0.9, 1.5);
     const micro = {
       ...NO_MICRO,
       ripple: 0.5 + 0.5 * Math.sin(t * 2),
       petalGlint: 0.5 + 0.5 * Math.sin(t * 1.6)
     };
-    paint29(ctx, SP29.Summer, bob, micro);
+    paint30(ctx, SP30.Summer, bob, micro);
   }
   function animAutumn5(ctx, t) {
-    const bob = bobAt29(t, 0.6, 1.1);
+    const bob = bobAt30(t, 0.6, 1.1);
     const micro = {
       ...NO_MICRO,
       ripple: 0.4 + 0.4 * Math.sin(t * 1.4),
       leafDrift: Math.sin(t * 0.9) * 4
     };
-    paint29(ctx, SP29.Autumn, bob, micro);
+    paint30(ctx, SP30.Autumn, bob, micro);
   }
   function animWinter5(ctx, t) {
-    const bob = bobAt29(t, 0.5, 1);
+    const bob = bobAt30(t, 0.5, 1);
     const prog = t / 3.4 % 1;
     const micro = {
       ...NO_MICRO,
@@ -16519,7 +16579,7 @@
       flakeY: prog,
       flakeX: Math.sin(prog * Math.PI * 2) * 5
     };
-    paint29(ctx, SP29.Winter, bob, micro);
+    paint30(ctx, SP30.Winter, bob, micro);
     if (micro.flakeY >= 0) {
       const fy = -20 + prog * 40;
       const fx = micro.flakeX;
@@ -16533,48 +16593,48 @@
       ctx.globalAlpha = 1;
     }
   }
-  function makeTransition26(fromIdx) {
+  function makeTransition27(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      paint29(ctx, lerpP29(SP29[from], SP29[to], smoother29(clamp0130(pp))), 0);
+      paint30(ctx, lerpP30(SP30[from], SP30[to], smoother30(clamp0131(pp))), 0);
     };
   }
-  var springToSummer25 = makeTransition26(0);
-  var summerToAutumn25 = makeTransition26(1);
-  var autumnToWinter25 = makeTransition26(2);
+  var springToSummer24 = makeTransition27(0);
+  var summerToAutumn24 = makeTransition27(1);
+  var autumnToWinter24 = makeTransition27(2);
   var VARIANTS32 = {
-    Spring: { draw: makeDraw7("Spring"), anim: animSpring5 },
-    Summer: { draw: makeDraw7("Summer"), anim: animSummer5 },
-    Autumn: { draw: makeDraw7("Autumn"), anim: animAutumn5 },
-    Winter: { draw: makeDraw7("Winter"), anim: animWinter5 }
+    Spring: { draw: makeDraw8("Spring"), anim: animSpring5 },
+    Summer: { draw: makeDraw8("Summer"), anim: animSummer5 },
+    Autumn: { draw: makeDraw8("Autumn"), anim: animAutumn5 },
+    Winter: { draw: makeDraw8("Winter"), anim: animWinter5 }
   };
   var TRANSITIONS32 = {
-    0: springToSummer25,
-    1: summerToAutumn25,
-    2: autumnToWinter25
+    0: springToSummer24,
+    1: summerToAutumn24,
+    2: autumnToWinter24
   };
 
   // src/textures/seasonal/bird/chicken.ts
-  function clamp0131(x) {
+  function clamp0132(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother30 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function lerp35(a, b, t) {
+  var smoother31 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp36(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB24(a, b, t) {
-    return [lerp35(a[0], b[0], t), lerp35(a[1], b[1], t), lerp35(a[2], b[2], t)];
+    return [lerp36(a[0], b[0], t), lerp36(a[1], b[1], t), lerp36(a[2], b[2], t)];
   }
-  function rgb30(c) {
+  function rgb31(c) {
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba20(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0131(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0132(a)})`;
   }
-  function lerpP30(a, b, t) {
+  function lerpP31(a, b, t) {
     return {
       featherLight: lerpRGB24(a.featherLight, b.featherLight, t),
       featherMid: lerpRGB24(a.featherMid, b.featherMid, t),
@@ -16588,32 +16648,32 @@
       soil: lerpRGB24(a.soil, b.soil, t),
       outline: lerpRGB24(a.outline, b.outline, t),
       light: lerpRGB24(a.light, b.light, t),
-      lightAmt: lerp35(a.lightAmt, b.lightAmt, t),
-      fluff: lerp35(a.fluff, b.fluff, t),
-      sheen: lerp35(a.sheen, b.sheen, t),
-      frostAmt: lerp35(a.frostAmt, b.frostAmt, t),
-      snowCapAmt: lerp35(a.snowCapAmt, b.snowCapAmt, t),
-      padSnowAmt: lerp35(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp35(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp35(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      chickAmt: lerp35(a.chickAmt, b.chickAmt, t)
+      lightAmt: lerp36(a.lightAmt, b.lightAmt, t),
+      fluff: lerp36(a.fluff, b.fluff, t),
+      sheen: lerp36(a.sheen, b.sheen, t),
+      frostAmt: lerp36(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp36(a.snowCapAmt, b.snowCapAmt, t),
+      padSnowAmt: lerp36(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp36(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp36(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      chickAmt: lerp36(a.chickAmt, b.chickAmt, t)
     };
   }
   function clampP20(p) {
     return {
       ...p,
-      lightAmt: clamp0131(p.lightAmt),
-      fluff: clamp0131(p.fluff),
-      sheen: clamp0131(p.sheen),
-      frostAmt: clamp0131(p.frostAmt),
-      snowCapAmt: clamp0131(p.snowCapAmt),
-      padSnowAmt: clamp0131(p.padSnowAmt),
-      blossomAmt: clamp0131(p.blossomAmt),
-      fallenLeafAmt: clamp0131(p.fallenLeafAmt),
-      chickAmt: clamp0131(p.chickAmt)
+      lightAmt: clamp0132(p.lightAmt),
+      fluff: clamp0132(p.fluff),
+      sheen: clamp0132(p.sheen),
+      frostAmt: clamp0132(p.frostAmt),
+      snowCapAmt: clamp0132(p.snowCapAmt),
+      padSnowAmt: clamp0132(p.padSnowAmt),
+      blossomAmt: clamp0132(p.blossomAmt),
+      fallenLeafAmt: clamp0132(p.fallenLeafAmt),
+      chickAmt: clamp0132(p.chickAmt)
     };
   }
-  var SP30 = {
+  var SP31 = {
     // Spring — fresh pastel; lime dewy pad + blossom + a yellow chick beside her.
     Spring: {
       featherLight: [252, 250, 244],
@@ -16734,7 +16794,7 @@
     ctx.quadraticCurveTo(cx - rx - 1, cy + ry * 0.2, cx - rx, cy + 1.5);
     ctx.closePath();
   }
-  function paint30(ctx, raw, bob) {
+  function paint31(ctx, raw, bob) {
     const p = clampP20(raw);
     ctx.save();
     try {
@@ -16745,15 +16805,15 @@
       ctx.beginPath();
       ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb30(p.padDark);
+      ctx.fillStyle = rgb31(p.padDark);
       ctx.beginPath();
       ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb30(p.padGrass);
+      ctx.fillStyle = rgb31(p.padGrass);
       ctx.beginPath();
       ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = rgb30(p.padDark);
+      ctx.strokeStyle = rgb31(p.padDark);
       ctx.lineWidth = 1.1;
       for (let i = -7; i <= 7; i++) {
         const tx = i * 2.4;
@@ -16839,22 +16899,22 @@
       ctx.lineJoin = "round";
       henBodyPath(ctx, bob, p.fluff);
       ctx.lineWidth = 2.2;
-      ctx.strokeStyle = rgb30(p.outline);
+      ctx.strokeStyle = rgb31(p.outline);
       ctx.stroke();
-      ctx.fillStyle = rgb30(p.featherMid);
+      ctx.fillStyle = rgb31(p.featherMid);
       ctx.fill();
       ctx.save();
       henBodyPath(ctx, bob, p.fluff);
       ctx.clip();
-      ctx.fillStyle = rgb30(p.featherDark);
+      ctx.fillStyle = rgb31(p.featherDark);
       ctx.beginPath();
       ctx.ellipse(BODY_CX2 + 2, bcy + BODY_RY2 * 0.5, BODY_RX2, BODY_RY2 * 0.7, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb30(p.featherMid);
+      ctx.fillStyle = rgb31(p.featherMid);
       ctx.beginPath();
       ctx.ellipse(BODY_CX2, bcy + 0.5, BODY_RX2 * 0.92, BODY_RY2 * 0.82, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb30(p.featherLight);
+      ctx.fillStyle = rgb31(p.featherLight);
       ctx.beginPath();
       ctx.ellipse(BODY_CX2 - 3.5, bcy - 4, BODY_RX2 * 0.62, BODY_RY2 * 0.52, -0.3, 0, Math.PI * 2);
       ctx.fill();
@@ -16939,19 +16999,19 @@
       // back leg
     ];
     legs.forEach(([lx, fy]) => {
-      ctx.strokeStyle = rgb30(p.beakDark);
+      ctx.strokeStyle = rgb31(p.beakDark);
       ctx.lineWidth = 2.6;
       ctx.beginPath();
       ctx.moveTo(lx, bcy + BODY_RY2 * 0.6);
       ctx.lineTo(lx - 1, fy);
       ctx.stroke();
-      ctx.strokeStyle = rgb30(p.beak);
+      ctx.strokeStyle = rgb31(p.beak);
       ctx.lineWidth = 1.6;
       ctx.beginPath();
       ctx.moveTo(lx, bcy + BODY_RY2 * 0.6);
       ctx.lineTo(lx - 1, fy);
       ctx.stroke();
-      ctx.strokeStyle = rgb30(p.beak);
+      ctx.strokeStyle = rgb31(p.beak);
       ctx.lineWidth = 1.4;
       [-2.4, 0, 2].forEach((tx) => {
         ctx.beginPath();
@@ -16965,7 +17025,7 @@
     const tx = BODY_CX2 + BODY_RX2 - 1;
     const ty = BODY_CY2 + bob - BODY_RY2 * 0.4;
     ctx.save();
-    ctx.fillStyle = rgb30(p.outline);
+    ctx.fillStyle = rgb31(p.outline);
     ctx.beginPath();
     ctx.moveTo(tx - 2, ty + 2);
     ctx.quadraticCurveTo(tx + 6, ty - 7, tx + 10, ty - 8);
@@ -16973,7 +17033,7 @@
     ctx.quadraticCurveTo(tx + 5, ty + 5, tx - 2, ty + 2);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb30(p.featherMid);
+    ctx.fillStyle = rgb31(p.featherMid);
     ctx.beginPath();
     ctx.moveTo(tx - 1, ty + 1.5);
     ctx.quadraticCurveTo(tx + 5.5, ty - 6, tx + 9, ty - 7);
@@ -17001,73 +17061,73 @@
     const hx = HEAD_CX;
     const hy = HEAD_CY + bob;
     ctx.save();
-    ctx.strokeStyle = rgb30(p.outline);
+    ctx.strokeStyle = rgb31(p.outline);
     ctx.lineWidth = 7.5;
     ctx.beginPath();
     ctx.moveTo(hx + 1.5, hy + 3);
     ctx.lineTo(BODY_CX2 - 5, BODY_CY2 + bob - 3);
     ctx.stroke();
-    ctx.strokeStyle = rgb30(p.featherMid);
+    ctx.strokeStyle = rgb31(p.featherMid);
     ctx.lineWidth = 5.6;
     ctx.beginPath();
     ctx.moveTo(hx + 1.5, hy + 3);
     ctx.lineTo(BODY_CX2 - 5, BODY_CY2 + bob - 3);
     ctx.stroke();
-    ctx.fillStyle = rgb30(p.combDark);
+    ctx.fillStyle = rgb31(p.combDark);
     [-2.6, 0.2, 2.8].forEach((cx, i) => {
       ctx.beginPath();
       ctx.arc(hx + cx, hy - HEAD_R + 0.5, 2 - i * 0.1, 0, Math.PI * 2);
       ctx.fill();
     });
-    ctx.fillStyle = rgb30(p.comb);
+    ctx.fillStyle = rgb31(p.comb);
     [-2.6, 0.2, 2.8].forEach((cx, i) => {
       ctx.beginPath();
       ctx.arc(hx + cx - 0.4, hy - HEAD_R - 0.1, 1.7 - i * 0.1, 0, Math.PI * 2);
       ctx.fill();
     });
     ctx.lineWidth = 2;
-    ctx.strokeStyle = rgb30(p.outline);
+    ctx.strokeStyle = rgb31(p.outline);
     ctx.beginPath();
     ctx.arc(hx, hy, HEAD_R, 0, Math.PI * 2);
     ctx.stroke();
-    ctx.fillStyle = rgb30(p.featherMid);
+    ctx.fillStyle = rgb31(p.featherMid);
     ctx.fill();
     ctx.save();
     ctx.beginPath();
     ctx.arc(hx, hy, HEAD_R, 0, Math.PI * 2);
     ctx.clip();
-    ctx.fillStyle = rgb30(p.featherDark);
+    ctx.fillStyle = rgb31(p.featherDark);
     ctx.beginPath();
     ctx.ellipse(hx + 1.5, hy + 2.5, HEAD_R, HEAD_R * 0.7, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb30(p.featherLight);
+    ctx.fillStyle = rgb31(p.featherLight);
     ctx.beginPath();
     ctx.ellipse(hx - 1.8, hy - 2, HEAD_R * 0.62, HEAD_R * 0.52, -0.3, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb30(p.combDark);
+    ctx.fillStyle = rgb31(p.combDark);
     ctx.beginPath();
     ctx.ellipse(hx - 3.2, hy + HEAD_R - 0.5, 1.6, 2.4, 0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb30(p.comb);
+    ctx.fillStyle = rgb31(p.comb);
     ctx.beginPath();
     ctx.ellipse(hx - 3.5, hy + HEAD_R - 1, 1.2, 1.9, 0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb30(p.beakDark);
+    ctx.fillStyle = rgb31(p.beakDark);
     ctx.beginPath();
     ctx.moveTo(hx - HEAD_R + 0.5, hy - 0.5);
     ctx.lineTo(hx - HEAD_R - 4.5, hy + 1.6);
     ctx.lineTo(hx - HEAD_R + 1, hy + 3);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb30(p.beak);
+    ctx.fillStyle = rgb31(p.beak);
     ctx.beginPath();
     ctx.moveTo(hx - HEAD_R + 0.8, hy - 0.2);
     ctx.lineTo(hx - HEAD_R - 3.8, hy + 1.4);
     ctx.lineTo(hx - HEAD_R + 1, hy + 2.2);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb30(p.outline);
+    ctx.fillStyle = rgb31(p.outline);
     ctx.beginPath();
     ctx.arc(hx - 1.8, hy - 0.6, 1.4, 0, Math.PI * 2);
     ctx.fill();
@@ -17078,7 +17138,7 @@
     ctx.restore();
   }
   function drawChick(ctx, p, bob) {
-    const a = clamp0131(p.chickAmt);
+    const a = clamp0132(p.chickAmt);
     if (a <= 0.01) return;
     const cx = 13.5;
     const cy = 12 + bob * 0.5;
@@ -17088,7 +17148,7 @@
     ctx.beginPath();
     ctx.ellipse(cx, cy + 4.5, 4.2, 1.3, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb30(p.beak);
+    ctx.strokeStyle = rgb31(p.beak);
     ctx.lineWidth = 1;
     [-1.2, 1.2].forEach((lx) => {
       ctx.beginPath();
@@ -17097,7 +17157,7 @@
       ctx.stroke();
     });
     ctx.lineWidth = 1.6;
-    ctx.strokeStyle = rgb30(p.outline);
+    ctx.strokeStyle = rgb31(p.outline);
     ctx.fillStyle = "rgb(248,214,86)";
     ctx.beginPath();
     ctx.ellipse(cx, cy + 0.5, 3.4, 3, 0, 0, Math.PI * 2);
@@ -17107,51 +17167,51 @@
     ctx.beginPath();
     ctx.arc(cx - 2, cy - 2.4, 2.4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb30(p.outline);
+    ctx.strokeStyle = rgb31(p.outline);
     ctx.lineWidth = 1.2;
     ctx.stroke();
     ctx.fillStyle = "rgba(255,245,190,0.8)";
     ctx.beginPath();
     ctx.ellipse(cx - 2.8, cy - 3.2, 1.2, 0.9, -0.3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb30(p.beakDark);
+    ctx.fillStyle = rgb31(p.beakDark);
     ctx.beginPath();
     ctx.moveTo(cx - 4, cy - 2.4);
     ctx.lineTo(cx - 5.6, cy - 1.8);
     ctx.lineTo(cx - 4, cy - 1.4);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb30(p.outline);
+    ctx.fillStyle = rgb31(p.outline);
     ctx.beginPath();
     ctx.arc(cx - 2.4, cy - 2.6, 0.7, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function bobAt30(t, amp = 0.7, w = 1.4) {
+  function bobAt31(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function peckAt(t, w = 1.4) {
     const ph = w * t / (Math.PI * 2) % 1;
-    const x = clamp0131((ph - 0.32) / 0.36);
+    const x = clamp0132((ph - 0.32) / 0.36);
     const hump = x <= 0 || x >= 1 ? 0 : Math.sin(x * Math.PI);
     return hump * hump * 3.2;
   }
   function draw21(season) {
-    return (ctx) => paint30(ctx, SP30[season], 0);
+    return (ctx) => paint31(ctx, SP31[season], 0);
   }
   function anim21(season) {
     return (ctx, t) => {
-      const bob = bobAt30(t);
+      const bob = bobAt31(t);
       const peck = peckAt(t);
       if (peck < 0.05) {
-        paint30(ctx, SP30[season], bob);
+        paint31(ctx, SP31[season], bob);
       } else {
-        paint30(ctx, SP30[season], bob);
+        paint31(ctx, SP31[season], bob);
         ctx.save();
         try {
           ctx.translate(-1, peck);
           ctx.globalAlpha = 1;
-          drawHead(ctx, clampP20(SP30[season]), bob);
+          drawHead(ctx, clampP20(SP31[season]), bob);
         } finally {
           ctx.restore();
         }
@@ -17161,7 +17221,7 @@
         ctx.globalAlpha = 1;
         if (season === "Spring") {
           const cb = Math.sin(t * 2) * 0.8;
-          const sp = clampP20(SP30.Spring);
+          const sp = clampP20(SP31.Spring);
           ctx.save();
           ctx.translate(0, cb);
           drawChick(ctx, sp, bob);
@@ -17218,17 +17278,17 @@
       }
     };
   }
-  function makeTransition27(fromIdx) {
-    const from = SP30[SEASON_NAMES[fromIdx]];
-    const to = SP30[SEASON_NAMES[fromIdx + 1]];
+  function makeTransition28(fromIdx) {
+    const from = SP31[SEASON_NAMES[fromIdx]];
+    const to = SP31[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother30(clamp0131(pp));
-      paint30(ctx, lerpP30(from, to, k), 0);
+      const k = smoother31(clamp0132(pp));
+      paint31(ctx, lerpP31(from, to, k), 0);
     };
   }
-  var springToSummer26 = makeTransition27(0);
-  var summerToAutumn26 = makeTransition27(1);
-  var autumnToWinter26 = makeTransition27(2);
+  var springToSummer25 = makeTransition28(0);
+  var summerToAutumn25 = makeTransition28(1);
+  var autumnToWinter25 = makeTransition28(2);
   var VARIANTS33 = {
     Spring: { draw: draw21("Spring"), anim: anim21("Spring") },
     Summer: { draw: draw21("Summer"), anim: anim21("Summer") },
@@ -17236,33 +17296,33 @@
     Winter: { draw: draw21("Winter"), anim: anim21("Winter") }
   };
   var TRANSITIONS33 = {
-    0: springToSummer26,
-    1: summerToAutumn26,
-    2: autumnToWinter26
+    0: springToSummer25,
+    1: summerToAutumn25,
+    2: autumnToWinter25
   };
 
   // src/textures/seasonal/bird/rooster.ts
-  function clamp0132(x) {
+  function clamp0133(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  function lerp36(a, b, t) {
+  function lerp37(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB25(a, b, t) {
-    return [lerp36(a[0], b[0], t), lerp36(a[1], b[1], t), lerp36(a[2], b[2], t)];
+    return [lerp37(a[0], b[0], t), lerp37(a[1], b[1], t), lerp37(a[2], b[2], t)];
   }
-  function rgb31(c, a = 1) {
-    const r = Math.round(clamp0132(c[0] / 255) * 255);
-    const g = Math.round(clamp0132(c[1] / 255) * 255);
-    const b = Math.round(clamp0132(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0132(a)})`;
+  function rgb32(c, a = 1) {
+    const r = Math.round(clamp0133(c[0] / 255) * 255);
+    const g = Math.round(clamp0133(c[1] / 255) * 255);
+    const b = Math.round(clamp0133(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0133(a)})`;
   }
-  function smoother31(x) {
+  function smoother32(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt31(t, amp = 0.9, w = 1.5) {
+  function bobAt32(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var COMB = [214, 44, 42];
@@ -17275,7 +17335,7 @@
   var TAIL = [30, 48, 38];
   var TAIL_SHEEN = [70, 132, 92];
   var BEAK = [228, 184, 70];
-  var SP31 = {
+  var SP32 = {
     // Spring — bright plumage, dewy lime pad + blossom, cool-bright light.
     Spring: {
       comb: COMB,
@@ -17392,7 +17452,7 @@
       gloss: 0.35
     }
   };
-  function lerpP31(a, b, t) {
+  function lerpP32(a, b, t) {
     return {
       comb: lerpRGB25(a.comb, b.comb, t),
       combShade: lerpRGB25(a.combShade, b.combShade, t),
@@ -17408,45 +17468,45 @@
       soil: lerpRGB25(a.soil, b.soil, t),
       outline: lerpRGB25(a.outline, b.outline, t),
       lightWash: lerpRGB25(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp36(a.lightWashAmt, b.lightWashAmt, t),
-      fluff: lerp36(a.fluff, b.fluff, t),
-      frostAmt: lerp36(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp36(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp36(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp36(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp36(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp36(a.breathFogAmt, b.breathFogAmt, t),
-      gloss: lerp36(a.gloss, b.gloss, t)
+      lightWashAmt: lerp37(a.lightWashAmt, b.lightWashAmt, t),
+      fluff: lerp37(a.fluff, b.fluff, t),
+      frostAmt: lerp37(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp37(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp37(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp37(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp37(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp37(a.breathFogAmt, b.breathFogAmt, t),
+      gloss: lerp37(a.gloss, b.gloss, t)
     };
   }
   function clampP21(p) {
     return {
       ...p,
-      lightWashAmt: clamp0132(p.lightWashAmt),
-      fluff: clamp0132(p.fluff),
-      frostAmt: clamp0132(p.frostAmt),
-      backSnowAmt: clamp0132(p.backSnowAmt),
-      padSnowAmt: clamp0132(p.padSnowAmt),
-      blossomAmt: clamp0132(p.blossomAmt),
-      fallenLeafAmt: clamp0132(p.fallenLeafAmt),
-      breathFogAmt: clamp0132(p.breathFogAmt),
-      gloss: clamp0132(p.gloss)
+      lightWashAmt: clamp0133(p.lightWashAmt),
+      fluff: clamp0133(p.fluff),
+      frostAmt: clamp0133(p.frostAmt),
+      backSnowAmt: clamp0133(p.backSnowAmt),
+      padSnowAmt: clamp0133(p.padSnowAmt),
+      blossomAmt: clamp0133(p.blossomAmt),
+      fallenLeafAmt: clamp0133(p.fallenLeafAmt),
+      breathFogAmt: clamp0133(p.breathFogAmt),
+      gloss: clamp0133(p.gloss)
     };
   }
   function paintPad2(ctx, p) {
-    ctx.fillStyle = rgb31([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb32([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb31(p.soil);
+    ctx.fillStyle = rgb32(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb31(p.padGrass);
+    ctx.fillStyle = rgb32(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb31(p.padGrass);
+    ctx.strokeStyle = rgb32(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -17458,16 +17518,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb31([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb32([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb31([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb32([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb31([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb32([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -17476,14 +17536,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb31([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb32([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb31([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb32([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -17499,11 +17559,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb31(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb32(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb31([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb32([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -17516,20 +17576,20 @@
   function paintLeg(ctx, p, x, topY, baseY, alpha) {
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.strokeStyle = rgb31(p.outline);
+    ctx.strokeStyle = rgb32(p.outline);
     ctx.lineWidth = 3.2;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.strokeStyle = rgb31(p.beak);
+    ctx.strokeStyle = rgb32(p.beak);
     ctx.lineWidth = 1.8;
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.strokeStyle = rgb31(p.beak);
+    ctx.strokeStyle = rgb32(p.beak);
     ctx.lineWidth = 1.4;
     for (const dx of [-2.4, 0, 2.4]) {
       ctx.beginPath();
@@ -17556,7 +17616,7 @@
       [17, -14, 13],
       [16, -7, 12]
     ];
-    ctx.strokeStyle = rgb31(p.outline);
+    ctx.strokeStyle = rgb32(p.outline);
     ctx.lineWidth = 6.5;
     ctx.lineCap = "round";
     for (const [tx, ty, cb] of sickles) {
@@ -17565,7 +17625,7 @@
       ctx.quadraticCurveTo(baseX + cb, baseY - 16, baseX + tx, baseY + ty);
       ctx.stroke();
     }
-    ctx.strokeStyle = rgb31(p.tail);
+    ctx.strokeStyle = rgb32(p.tail);
     ctx.lineWidth = 4.4;
     for (const [tx, ty, cb] of sickles) {
       ctx.beginPath();
@@ -17574,7 +17634,7 @@
       ctx.stroke();
     }
     if (p.gloss > 0.02) {
-      ctx.strokeStyle = rgb31(p.tailSheen, 0.5 + 0.45 * p.gloss);
+      ctx.strokeStyle = rgb32(p.tailSheen, 0.5 + 0.45 * p.gloss);
       ctx.lineWidth = 1.5;
       for (const [tx, ty, cb] of sickles) {
         ctx.beginPath();
@@ -17595,28 +17655,28 @@
     paintLeg(ctx, p, cx - 2.5, cy + 9, 19.2, 1);
     paintLeg(ctx, p, cx + 2.8, cy + 9, 19, 0.9);
     bodyPath(ctx, cx, cy, p.fluff);
-    ctx.fillStyle = rgb31(p.outline);
+    ctx.fillStyle = rgb32(p.outline);
     ctx.save();
     ctx.translate(0, 0);
     bodyPath(ctx, cx, cy, p.fluff + 0.5);
-    ctx.fillStyle = rgb31(p.outline);
+    ctx.fillStyle = rgb32(p.outline);
     ctx.fill();
     ctx.restore();
     bodyPath(ctx, cx, cy, p.fluff);
-    ctx.fillStyle = rgb31(p.bodyMid);
+    ctx.fillStyle = rgb32(p.bodyMid);
     ctx.fill();
     ctx.save();
     bodyPath(ctx, cx, cy, p.fluff);
     ctx.clip();
-    ctx.fillStyle = rgb31(p.bodyDark);
+    ctx.fillStyle = rgb32(p.bodyDark);
     ctx.beginPath();
     ctx.ellipse(cx + 4, cy + 7, 10, 9, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb31(p.bodyLight);
+    ctx.fillStyle = rgb32(p.bodyLight);
     ctx.beginPath();
     ctx.ellipse(cx - 4, cy - 3, 7, 8.5, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb31(p.bodyDark, 0.4);
+    ctx.strokeStyle = rgb32(p.bodyDark, 0.4);
     ctx.lineWidth = 1;
     for (const dx of [-5, -1.5, 2]) {
       ctx.beginPath();
@@ -17626,11 +17686,11 @@
     }
     ctx.restore();
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb31([248, 252, 255], 0.9 * p.backSnowAmt);
+      ctx.fillStyle = rgb32([248, 252, 255], 0.9 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(cx + 3, cy - 8.5, 8 * (0.9 + p.fluff * 0.25), 3, -0.2, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb31([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb32([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-2, -9.4], [3, -9.6], [7, -8.4]]) {
         ctx.beginPath();
         ctx.arc(cx + dx, cy + dy, 1.4 + p.fluff * 0.4, 0, Math.PI * 2);
@@ -17649,7 +17709,7 @@
       ctx.save();
       ctx.translate(nx + dx, ny + 3);
       ctx.rotate(rot);
-      ctx.fillStyle = rgb31(p.hackleDark);
+      ctx.fillStyle = rgb32(p.hackleDark);
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.quadraticCurveTo(-2.6, len * 0.6, -1.2, len);
@@ -17662,7 +17722,7 @@
       ctx.save();
       ctx.translate(nx + dx - 0.6, ny + 2.2);
       ctx.rotate(rot);
-      ctx.fillStyle = rgb31(p.hackle);
+      ctx.fillStyle = rgb32(p.hackle);
       ctx.beginPath();
       ctx.moveTo(0, 0);
       ctx.quadraticCurveTo(-2, len * 0.6, -0.8, len * 0.92);
@@ -17673,20 +17733,20 @@
     }
     const hx = cx - 7;
     const hy = cy - 12 + headBob;
-    ctx.fillStyle = rgb31(p.outline);
+    ctx.fillStyle = rgb32(p.outline);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 5.2, 5.4, -0.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb31(p.bodyMid);
+    ctx.fillStyle = rgb32(p.bodyMid);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 4.4, 4.6, -0.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb31(p.bodyLight);
+    ctx.fillStyle = rgb32(p.bodyLight);
     ctx.beginPath();
     ctx.ellipse(hx - 1.4, hy - 1.4, 2.4, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
     const combY = hy - 4.6;
-    ctx.fillStyle = rgb31(p.combShade);
+    ctx.fillStyle = rgb32(p.combShade);
     ctx.beginPath();
     ctx.moveTo(hx - 4, combY + 2);
     for (let i = 0; i <= 4; i++) {
@@ -17698,7 +17758,7 @@
     ctx.quadraticCurveTo(hx, combY + 3, hx - 4, combY + 2);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb31(p.comb);
+    ctx.fillStyle = rgb32(p.comb);
     ctx.beginPath();
     ctx.moveTo(hx - 4.4, combY + 1.6);
     for (let i = 0; i <= 4; i++) {
@@ -17710,43 +17770,43 @@
     ctx.quadraticCurveTo(hx, combY + 2.4, hx - 4.4, combY + 1.6);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb31(p.comb);
+    ctx.fillStyle = rgb32(p.comb);
     for (const dx of [-1.4, 1]) {
       ctx.beginPath();
       ctx.ellipse(hx - 4.4 + dx, hy + 4.2, 1.5, 2.6, 0.1, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb31(p.combShade, 0.5);
+    ctx.fillStyle = rgb32(p.combShade, 0.5);
     ctx.beginPath();
     ctx.ellipse(hx - 4.6, hy + 5, 1.3, 1.8, 0.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb31(p.beak);
+    ctx.fillStyle = rgb32(p.beak);
     ctx.beginPath();
     ctx.moveTo(hx - 3.8, hy);
     ctx.lineTo(hx - 8.4, hy + 1.8);
     ctx.lineTo(hx - 3.8, hy + 3.2);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = rgb31(p.outline, 0.6);
+    ctx.strokeStyle = rgb32(p.outline, 0.6);
     ctx.lineWidth = 0.6;
     ctx.beginPath();
     ctx.moveTo(hx - 8.4, hy + 1.8);
     ctx.lineTo(hx - 4, hy + 1.9);
     ctx.stroke();
-    ctx.fillStyle = rgb31([250, 248, 240]);
+    ctx.fillStyle = rgb32([250, 248, 240]);
     ctx.beginPath();
     ctx.arc(hx - 1.2, hy - 0.4, 1.4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb31([22, 18, 18]);
+    ctx.fillStyle = rgb32([22, 18, 18]);
     ctx.beginPath();
     ctx.arc(hx - 1.4, hy - 0.4, 0.85, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb31([255, 255, 255], 0.9);
+    ctx.fillStyle = rgb32([255, 255, 255], 0.9);
     ctx.beginPath();
     ctx.arc(hx - 1.7, hy - 0.8, 0.3, 0, Math.PI * 2);
     ctx.fill();
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb31([235, 246, 255], 0.55 * p.frostAmt);
+      ctx.fillStyle = rgb32([235, 246, 255], 0.55 * p.frostAmt);
       for (const [fx, fy] of [
         [hx - 3, combY - 2.5],
         [hx, combY - 3.2],
@@ -17758,7 +17818,7 @@
         ctx.arc(fx, fy, 0.7, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.fillStyle = rgb31([255, 255, 255], 0.4 * p.frostAmt);
+      ctx.fillStyle = rgb32([255, 255, 255], 0.4 * p.frostAmt);
       for (const [fx, fy] of [[cx - 4, cy - 4], [cx + 2, cy - 6], [cx - 1, cy - 1]]) {
         ctx.beginPath();
         ctx.arc(fx, fy, 0.6, 0, Math.PI * 2);
@@ -17766,7 +17826,7 @@
       }
     }
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb31([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb32([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 11, hy + 2.4, 3, 2, 0.15, 0, Math.PI * 2);
       ctx.fill();
@@ -17776,13 +17836,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb31(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb32(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 2, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint31(ctx, pIn, bob, headBob = 0, tailFlick = 0) {
+  function paint32(ctx, pIn, bob, headBob = 0, tailFlick = 0) {
     const p = clampP21(pIn);
     ctx.save();
     try {
@@ -17797,17 +17857,17 @@
     }
   }
   function draw22(season) {
-    return (ctx) => paint31(ctx, SP31[season], 0);
+    return (ctx) => paint32(ctx, SP32[season], 0);
   }
   function anim22(season) {
     return (ctx, t) => {
-      const p = clampP21(SP31[season]);
-      const bob = bobAt31(t);
+      const p = clampP21(SP32[season]);
+      const bob = bobAt32(t);
       const loop = t % 5 / 5;
       const gate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 4;
       const headBob = gate * -1.4;
       const tailFlick = Math.sin(t * 8) * gate * 1.2;
-      paint31(ctx, SP31[season], bob, headBob, tailFlick);
+      paint32(ctx, SP32[season], bob, headBob, tailFlick);
       ctx.save();
       try {
         const cx = -1;
@@ -17816,7 +17876,7 @@
         const hy = cy - 12 + headBob;
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb31([255, 255, 255], g);
+          ctx.fillStyle = rgb32([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -17829,10 +17889,10 @@
           const baseY = cy + 2;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.strokeStyle = rgb31([180, 255, 210], 0.4 + 0.3 * s);
+          ctx.strokeStyle = rgb32([180, 255, 210], 0.4 + 0.3 * s);
           ctx.lineWidth = 1.4;
-          const ty = lerp36(-20, -7, s);
-          const cb = lerp36(10, 12, s);
+          const ty = lerp37(-20, -7, s);
+          const cb = lerp37(10, 12, s);
           ctx.beginPath();
           ctx.moveTo(baseX, baseY);
           ctx.quadraticCurveTo(baseX + cb, baseY - 16, baseX + 15, baseY + ty);
@@ -17844,7 +17904,7 @@
           ctx.save();
           ctx.translate(11 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb31([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb32([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -17852,14 +17912,14 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 5 + breathe * 3;
-          ctx.fillStyle = rgb31([235, 244, 255], (0.18 + 0.3 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb32([235, 244, 255], (0.18 + 0.3 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - reach - 2, hy + 2.4, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.15, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb31([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb32([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
@@ -17871,17 +17931,17 @@
       }
     };
   }
-  function makeTransition28(fromIdx) {
+  function makeTransition29(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother31(clamp0132(pp));
-      paint31(ctx, lerpP31(SP31[from], SP31[to], k), 0);
+      const k = smoother32(clamp0133(pp));
+      paint32(ctx, lerpP32(SP32[from], SP32[to], k), 0);
     };
   }
-  var springToSummer27 = makeTransition28(0);
-  var summerToAutumn27 = makeTransition28(1);
-  var autumnToWinter27 = makeTransition28(2);
+  var springToSummer26 = makeTransition29(0);
+  var summerToAutumn26 = makeTransition29(1);
+  var autumnToWinter26 = makeTransition29(2);
   var VARIANTS34 = {
     Spring: { draw: draw22("Spring"), anim: anim22("Spring") },
     Summer: { draw: draw22("Summer"), anim: anim22("Summer") },
@@ -17889,31 +17949,31 @@
     Winter: { draw: draw22("Winter"), anim: anim22("Winter") }
   };
   var TRANSITIONS34 = {
-    0: springToSummer27,
-    1: summerToAutumn27,
-    2: autumnToWinter27
+    0: springToSummer26,
+    1: summerToAutumn26,
+    2: autumnToWinter26
   };
 
   // src/textures/seasonal/bird/hen.ts
-  function clamp0133(x) {
+  function clamp0134(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother32 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function lerp37(a, b, t) {
+  var smoother33 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp38(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB26(a, b, t) {
-    return [lerp37(a[0], b[0], t), lerp37(a[1], b[1], t), lerp37(a[2], b[2], t)];
+    return [lerp38(a[0], b[0], t), lerp38(a[1], b[1], t), lerp38(a[2], b[2], t)];
   }
-  function rgb32(c) {
+  function rgb33(c) {
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba21(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0133(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0134(a)})`;
   }
-  function lerpP32(a, b, t) {
+  function lerpP33(a, b, t) {
     return {
       bodyLight: lerpRGB26(a.bodyLight, b.bodyLight, t),
       bodyMid: lerpRGB26(a.bodyMid, b.bodyMid, t),
@@ -17929,30 +17989,30 @@
       padDark: lerpRGB26(a.padDark, b.padDark, t),
       outline: lerpRGB26(a.outline, b.outline, t),
       light: lerpRGB26(a.light, b.light, t),
-      lightAmt: lerp37(a.lightAmt, b.lightAmt, t),
-      fluff: lerp37(a.fluff, b.fluff, t),
-      sheen: lerp37(a.sheen, b.sheen, t),
-      frostAmt: lerp37(a.frostAmt, b.frostAmt, t),
-      snowCapAmt: lerp37(a.snowCapAmt, b.snowCapAmt, t),
-      padSnowAmt: lerp37(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp37(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp37(a.fallenLeafAmt, b.fallenLeafAmt, t)
+      lightAmt: lerp38(a.lightAmt, b.lightAmt, t),
+      fluff: lerp38(a.fluff, b.fluff, t),
+      sheen: lerp38(a.sheen, b.sheen, t),
+      frostAmt: lerp38(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp38(a.snowCapAmt, b.snowCapAmt, t),
+      padSnowAmt: lerp38(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp38(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp38(a.fallenLeafAmt, b.fallenLeafAmt, t)
     };
   }
   function clampP22(p) {
     return {
       ...p,
-      lightAmt: clamp0133(p.lightAmt),
-      fluff: clamp0133(p.fluff),
-      sheen: clamp0133(p.sheen),
-      frostAmt: clamp0133(p.frostAmt),
-      snowCapAmt: clamp0133(p.snowCapAmt),
-      padSnowAmt: clamp0133(p.padSnowAmt),
-      blossomAmt: clamp0133(p.blossomAmt),
-      fallenLeafAmt: clamp0133(p.fallenLeafAmt)
+      lightAmt: clamp0134(p.lightAmt),
+      fluff: clamp0134(p.fluff),
+      sheen: clamp0134(p.sheen),
+      frostAmt: clamp0134(p.frostAmt),
+      snowCapAmt: clamp0134(p.snowCapAmt),
+      padSnowAmt: clamp0134(p.padSnowAmt),
+      blossomAmt: clamp0134(p.blossomAmt),
+      fallenLeafAmt: clamp0134(p.fallenLeafAmt)
     };
   }
-  var SP32 = {
+  var SP33 = {
     // Spring — soft fresh plumage, fresh nest; dewy lime pad + blossom; cool-bright.
     Spring: {
       bodyLight: [250, 248, 242],
@@ -18084,7 +18144,7 @@
     ctx.quadraticCurveTo(tx + 4.5, ty + 4.5, tx - 2, ty + 5);
     ctx.closePath();
   }
-  function paint32(ctx, raw, bob) {
+  function paint33(ctx, raw, bob) {
     const p = clampP22(raw);
     ctx.save();
     try {
@@ -18095,15 +18155,15 @@
       ctx.beginPath();
       ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb32(p.padDark);
+      ctx.fillStyle = rgb33(p.padDark);
       ctx.beginPath();
       ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb32(p.padGrass);
+      ctx.fillStyle = rgb33(p.padGrass);
       ctx.beginPath();
       ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = rgb32(p.padDark);
+      ctx.strokeStyle = rgb33(p.padDark);
       ctx.lineWidth = 1.1;
       for (let i = -7; i <= 7; i++) {
         const tx = i * 2.4;
@@ -18182,11 +18242,11 @@
       ctx.beginPath();
       ctx.ellipse(3, NEST_CY + 6, 16, 3.2, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb32(p.strawDark);
+      ctx.fillStyle = rgb33(p.strawDark);
       ctx.beginPath();
       ctx.ellipse(0, NEST_CY + 1.4, NEST_RX, NEST_RY + 1.2, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb32(p.straw);
+      ctx.fillStyle = rgb33(p.straw);
       ctx.beginPath();
       ctx.ellipse(0, NEST_CY, NEST_RX, NEST_RY, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -18195,7 +18255,7 @@
         const ang = i / 9 * Math.PI;
         const sx = Math.cos(ang) * NEST_RX * 0.96;
         const sy = NEST_CY + Math.sin(ang) * NEST_RY * 0.9;
-        ctx.strokeStyle = rgb32(i % 2 === 0 ? p.strawDark : p.straw);
+        ctx.strokeStyle = rgb33(i % 2 === 0 ? p.strawDark : p.straw);
         ctx.beginPath();
         ctx.moveTo(sx, sy);
         ctx.lineTo(sx + Math.cos(ang) * 2.6, sy + Math.sin(ang) * 1.6 - 1.2);
@@ -18211,11 +18271,11 @@
       });
       const eggX = -7.5;
       const eggY = NEST_CY + 1.2;
-      ctx.fillStyle = rgb32(p.outline);
+      ctx.fillStyle = rgb33(p.outline);
       ctx.beginPath();
       ctx.ellipse(eggX, eggY, 4.4, 5.4, -0.15, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb32(p.egg);
+      ctx.fillStyle = rgb33(p.egg);
       ctx.beginPath();
       ctx.ellipse(eggX, eggY - 0.2, 3.6, 4.6, -0.15, 0, Math.PI * 2);
       ctx.fill();
@@ -18228,12 +18288,12 @@
       ctx.ellipse(eggX - 1.3, eggY - 2, 1, 1.6, -0.3, 0, Math.PI * 2);
       ctx.fill();
       tailPath(ctx, bob, p.fluff);
-      ctx.fillStyle = rgb32(p.outline);
+      ctx.fillStyle = rgb33(p.outline);
       ctx.fill();
       ctx.save();
       tailPath(ctx, bob, p.fluff);
       ctx.clip();
-      ctx.fillStyle = rgb32(p.bodyMid);
+      ctx.fillStyle = rgb33(p.bodyMid);
       ctx.fillRect(8, BODY_CY3 + bob - 22, 16, 20);
       ctx.fillStyle = rgba21(p.wing, 0.7);
       ctx.beginPath();
@@ -18241,25 +18301,25 @@
       ctx.fill();
       ctx.restore();
       henBodyPath2(ctx, bob, p.fluff);
-      ctx.fillStyle = rgb32(p.outline);
+      ctx.fillStyle = rgb33(p.outline);
       ctx.fill();
       ctx.save();
       henBodyPath2(ctx, bob, p.fluff);
       ctx.clip();
       const cy = BODY_CY3 + bob;
-      ctx.fillStyle = rgb32(p.bodyMid);
+      ctx.fillStyle = rgb33(p.bodyMid);
       ctx.fillRect(-20, cy - 16, 40, 32);
       const litGrad = ctx.createLinearGradient(-14, cy - 12, 12, cy + 12);
-      litGrad.addColorStop(0, rgb32(p.bodyLight));
-      litGrad.addColorStop(0.5, rgb32(p.bodyMid));
-      litGrad.addColorStop(1, rgb32(p.bodyDark));
+      litGrad.addColorStop(0, rgb33(p.bodyLight));
+      litGrad.addColorStop(0.5, rgb33(p.bodyMid));
+      litGrad.addColorStop(1, rgb33(p.bodyDark));
       ctx.fillStyle = litGrad;
       ctx.globalAlpha = 0.92;
       ctx.beginPath();
       ctx.ellipse(-3, cy - 1, 14, 12, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
-      ctx.fillStyle = rgb32(p.wing);
+      ctx.fillStyle = rgb33(p.wing);
       ctx.beginPath();
       ctx.moveTo(8.5, cy - 5);
       ctx.quadraticCurveTo(13, cy - 1, 11, cy + 6);
@@ -18340,7 +18400,7 @@
       }
       const headX = -11;
       const headY = cy - 11;
-      ctx.fillStyle = rgb32(p.outline);
+      ctx.fillStyle = rgb33(p.outline);
       ctx.beginPath();
       ctx.moveTo(-5, cy - 7);
       ctx.quadraticCurveTo(-12, cy - 8, headX - 1, headY + 4);
@@ -18348,25 +18408,25 @@
       ctx.quadraticCurveTo(-4, cy - 3, -1, cy - 6);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb32(p.outline);
+      ctx.fillStyle = rgb33(p.outline);
       ctx.beginPath();
       ctx.ellipse(headX, headY, 6.2, 6, -0.1, 0, Math.PI * 2);
       ctx.fill();
       const headGrad = ctx.createLinearGradient(headX - 5, headY - 5, headX + 4, headY + 5);
-      headGrad.addColorStop(0, rgb32(p.bodyLight));
-      headGrad.addColorStop(1, rgb32(p.bodyMid));
+      headGrad.addColorStop(0, rgb33(p.bodyLight));
+      headGrad.addColorStop(1, rgb33(p.bodyMid));
       ctx.fillStyle = headGrad;
       ctx.beginPath();
       ctx.ellipse(headX, headY, 5, 4.8, -0.1, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb32(p.bodyMid);
+      ctx.fillStyle = rgb33(p.bodyMid);
       ctx.beginPath();
       ctx.moveTo(-5.5, cy - 7);
       ctx.quadraticCurveTo(-11, cy - 8, headX, headY + 3.5);
       ctx.quadraticCurveTo(-5, cy - 3.5, -2, cy - 6);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb32(p.comb);
+      ctx.fillStyle = rgb33(p.comb);
       ctx.beginPath();
       ctx.moveTo(headX - 2.5, headY - 4.6);
       ctx.quadraticCurveTo(headX - 2, headY - 8, headX, headY - 5.6);
@@ -18375,11 +18435,11 @@
       ctx.quadraticCurveTo(headX + 1, headY - 3.4, headX - 2.5, headY - 4.6);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb32(p.comb);
+      ctx.fillStyle = rgb33(p.comb);
       ctx.beginPath();
       ctx.ellipse(headX - 4.2, headY + 3.6, 1.4, 2.2, 0.2, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb32(p.beak);
+      ctx.fillStyle = rgb33(p.beak);
       ctx.beginPath();
       ctx.moveTo(headX - 4.4, headY - 0.4);
       ctx.lineTo(headX - 9.4, headY + 1.6);
@@ -18392,7 +18452,7 @@
       ctx.moveTo(headX - 8.6, headY + 1.5);
       ctx.lineTo(headX - 4.3, headY + 1.4);
       ctx.stroke();
-      ctx.fillStyle = rgb32(p.outline);
+      ctx.fillStyle = rgb33(p.outline);
       ctx.beginPath();
       ctx.arc(headX - 1.6, headY - 0.4, 1.25, 0, Math.PI * 2);
       ctx.fill();
@@ -18433,16 +18493,16 @@
       ctx.restore();
     }
   }
-  function bobAt32(t, amp = 0.8, w = 1.1) {
+  function bobAt33(t, amp = 0.8, w = 1.1) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw23(season) {
-    return (ctx) => paint32(ctx, SP32[season], 0);
+    return (ctx) => paint33(ctx, SP33[season], 0);
   }
   function anim23(season) {
     return (ctx, t) => {
-      const bob = bobAt32(t);
-      paint32(ctx, SP32[season], bob);
+      const bob = bobAt33(t);
+      paint33(ctx, SP33[season], bob);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
@@ -18452,7 +18512,7 @@
         if (blinkPhase > 0.92) {
           const k = (blinkPhase - 0.92) / 0.08;
           const lid = Math.sin(k * Math.PI);
-          ctx.fillStyle = rgb32(SP32[season].bodyMid);
+          ctx.fillStyle = rgb33(SP33[season].bodyMid);
           ctx.beginPath();
           ctx.ellipse(headX - 1.6, headY - 0.4, 1.5, 1.5 * lid, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -18466,14 +18526,14 @@
           ctx.fill();
         } else if (season === "Summer") {
           const prog = t * 0.35 % 1;
-          const sx = lerp37(-12, 8, prog);
+          const sx = lerp38(-12, 8, prog);
           ctx.fillStyle = "rgba(255,255,255,0.3)";
           ctx.beginPath();
           ctx.ellipse(sx, BODY_CY3 + bob - 6, 3, 2, -0.3, 0, Math.PI * 2);
           ctx.fill();
         } else if (season === "Autumn") {
           const sway = Math.sin(t * 1.4) * 1.8;
-          ctx.strokeStyle = rgb32(SP32.Autumn.strawDark);
+          ctx.strokeStyle = rgb33(SP33.Autumn.strawDark);
           ctx.lineWidth = 1.1;
           ctx.beginPath();
           ctx.moveTo(11, NEST_CY - 0.5);
@@ -18519,17 +18579,17 @@
       }
     };
   }
-  function makeTransition29(fromIdx) {
-    const from = SP32[SEASON_NAMES[fromIdx]];
-    const to = SP32[SEASON_NAMES[fromIdx + 1]];
+  function makeTransition30(fromIdx) {
+    const from = SP33[SEASON_NAMES[fromIdx]];
+    const to = SP33[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother32(clamp0133(pp));
-      paint32(ctx, lerpP32(from, to, k), 0);
+      const k = smoother33(clamp0134(pp));
+      paint33(ctx, lerpP33(from, to, k), 0);
     };
   }
-  var springToSummer28 = makeTransition29(0);
-  var summerToAutumn28 = makeTransition29(1);
-  var autumnToWinter28 = makeTransition29(2);
+  var springToSummer27 = makeTransition30(0);
+  var summerToAutumn27 = makeTransition30(1);
+  var autumnToWinter27 = makeTransition30(2);
   var VARIANTS35 = {
     Spring: { draw: draw23("Spring"), anim: anim23("Spring") },
     Summer: { draw: draw23("Summer"), anim: anim23("Summer") },
@@ -18537,35 +18597,35 @@
     Winter: { draw: draw23("Winter"), anim: anim23("Winter") }
   };
   var TRANSITIONS35 = {
-    0: springToSummer28,
-    1: summerToAutumn28,
-    2: autumnToWinter28
+    0: springToSummer27,
+    1: summerToAutumn27,
+    2: autumnToWinter27
   };
 
   // src/textures/seasonal/bird/turkey.ts
-  function clamp0134(x) {
+  function clamp0135(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
-  function lerp38(a, b, t) {
+  function lerp39(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB27(a, b, t) {
-    return [lerp38(a[0], b[0], t), lerp38(a[1], b[1], t), lerp38(a[2], b[2], t)];
+    return [lerp39(a[0], b[0], t), lerp39(a[1], b[1], t), lerp39(a[2], b[2], t)];
   }
-  function rgb33(c, a = 1) {
-    const r = Math.round(clamp0134(c[0] / 255) * 255);
-    const g = Math.round(clamp0134(c[1] / 255) * 255);
-    const b = Math.round(clamp0134(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0134(a)})`;
+  function rgb34(c, a = 1) {
+    const r = Math.round(clamp0135(c[0] / 255) * 255);
+    const g = Math.round(clamp0135(c[1] / 255) * 255);
+    const b = Math.round(clamp0135(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0135(a)})`;
   }
-  function smoother33(x) {
+  function smoother34(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt33(t, amp = 1, w = 1.5) {
+  function bobAt34(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP33 = {
+  var SP34 = {
     // Spring — bronze plumage, dewy lime pad + blossom, cool-bright light.
     Spring: {
       bodyLight: [150, 104, 54],
@@ -18684,7 +18744,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP33(a, b, t) {
+  function lerpP34(a, b, t) {
     return {
       bodyLight: lerpRGB27(a.bodyLight, b.bodyLight, t),
       bodyMid: lerpRGB27(a.bodyMid, b.bodyMid, t),
@@ -18700,45 +18760,45 @@
       soil: lerpRGB27(a.soil, b.soil, t),
       outline: lerpRGB27(a.outline, b.outline, t),
       lightWash: lerpRGB27(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp38(a.lightWashAmt, b.lightWashAmt, t),
-      irid: lerp38(a.irid, b.irid, t),
-      fluff: lerp38(a.fluff, b.fluff, t),
-      frostAmt: lerp38(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp38(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp38(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp38(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp38(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp38(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp39(a.lightWashAmt, b.lightWashAmt, t),
+      irid: lerp39(a.irid, b.irid, t),
+      fluff: lerp39(a.fluff, b.fluff, t),
+      frostAmt: lerp39(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp39(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp39(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp39(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp39(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp39(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP23(p) {
     return {
       ...p,
-      lightWashAmt: clamp0134(p.lightWashAmt),
-      irid: clamp0134(p.irid),
-      fluff: clamp0134(p.fluff),
-      frostAmt: clamp0134(p.frostAmt),
-      backSnowAmt: clamp0134(p.backSnowAmt),
-      padSnowAmt: clamp0134(p.padSnowAmt),
-      blossomAmt: clamp0134(p.blossomAmt),
-      fallenLeafAmt: clamp0134(p.fallenLeafAmt),
-      breathFogAmt: clamp0134(p.breathFogAmt)
+      lightWashAmt: clamp0135(p.lightWashAmt),
+      irid: clamp0135(p.irid),
+      fluff: clamp0135(p.fluff),
+      frostAmt: clamp0135(p.frostAmt),
+      backSnowAmt: clamp0135(p.backSnowAmt),
+      padSnowAmt: clamp0135(p.padSnowAmt),
+      blossomAmt: clamp0135(p.blossomAmt),
+      fallenLeafAmt: clamp0135(p.fallenLeafAmt),
+      breathFogAmt: clamp0135(p.breathFogAmt)
     };
   }
   function paintPad3(ctx, p) {
-    ctx.fillStyle = rgb33([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb34([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb33(p.soil);
+    ctx.fillStyle = rgb34(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb33(p.padGrass);
+    ctx.fillStyle = rgb34(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb33(p.padGrass);
+    ctx.strokeStyle = rgb34(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -18750,16 +18810,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb33([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb34([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb33([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb34([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb33([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb34([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -18768,14 +18828,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb33([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb34([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb33([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb34([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -18791,11 +18851,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb33(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb34(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb33([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb34([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -18806,14 +18866,14 @@
     }
   }
   function paintLeg2(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb33([196, 132, 96]);
+    ctx.strokeStyle = rgb34([196, 132, 96]);
     ctx.lineWidth = 2.2;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.strokeStyle = rgb33([176, 116, 84]);
+    ctx.strokeStyle = rgb34([176, 116, 84]);
     ctx.lineWidth = 1.6;
     for (const dx of [-2, 0, 2]) {
       ctx.beginPath();
@@ -18828,7 +18888,7 @@
     const half = (feathers - 1) / 2;
     const arc = Math.PI * 0.96 * (1 + p.fluff * 0.06) + fanSpread;
     const len = 18.5 + p.fluff * 1.2;
-    ctx.fillStyle = rgb33(p.outline);
+    ctx.fillStyle = rgb34(p.outline);
     ctx.beginPath();
     ctx.ellipse(cx, cy, len * 0.92, len * 0.84, 0, Math.PI, Math.PI * 2);
     ctx.fill();
@@ -18841,19 +18901,19 @@
       ctx.translate(cx, cy);
       ctx.rotate(ang + Math.PI / 2);
       const fl = len;
-      ctx.fillStyle = rgb33(p.tailDark);
+      ctx.fillStyle = rgb34(p.tailDark);
       ctx.beginPath();
       ctx.ellipse(0, -fl * 0.5, 2.6, fl * 0.5, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb33(p.tailMid);
+      ctx.fillStyle = rgb34(p.tailMid);
       ctx.beginPath();
       ctx.ellipse(0, -fl * 0.56, 2, fl * 0.42, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb33(p.tailLight, 0.92);
+      ctx.fillStyle = rgb34(p.tailLight, 0.92);
       ctx.beginPath();
       ctx.ellipse(-0.4, -fl * 0.62, 1.4, fl * 0.34, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb33(p.tailTip);
+      ctx.fillStyle = rgb34(p.tailTip);
       ctx.beginPath();
       ctx.ellipse(0, -fl * 0.9, 1.8, 2, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -18864,14 +18924,14 @@
     if (p.irid > 1e-3) {
       ctx.save();
       ctx.globalCompositeOperation = "soft-light";
-      ctx.fillStyle = rgb33(p.sheen, 0.18 + 0.3 * p.irid);
+      ctx.fillStyle = rgb34(p.sheen, 0.18 + 0.3 * p.irid);
       ctx.beginPath();
       ctx.ellipse(cx, cy - len * 0.42, len * 0.7, len * 0.36, 0, Math.PI, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb33([248, 252, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb34([248, 252, 255], 0.85 * p.backSnowAmt);
       for (let i = 0; i < feathers; i += 2) {
         const f = (i - half) / half;
         const ang = -Math.PI / 2 + f * (arc / 2);
@@ -18892,24 +18952,24 @@
     const vol = 1 + p.fluff * 0.12;
     const rx = 12.5 * vol;
     const ry = 10.5 * vol;
-    ctx.fillStyle = rgb33(p.outline);
+    ctx.fillStyle = rgb34(p.outline);
     ctx.beginPath();
     ctx.ellipse(bx, by, rx + 1.2, ry + 1.2, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb33(p.bodyDark);
+    ctx.fillStyle = rgb34(p.bodyDark);
     ctx.beginPath();
     ctx.ellipse(bx, by, rx, ry, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb33(p.bodyMid);
+    ctx.fillStyle = rgb34(p.bodyMid);
     ctx.beginPath();
     ctx.ellipse(bx - 1, by - 1, rx * 0.9, ry * 0.88, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb33(p.bodyLight);
+    ctx.fillStyle = rgb34(p.bodyLight);
     ctx.beginPath();
     ctx.ellipse(bx - 3, by - 3, rx * 0.6, ry * 0.58, -0.12, 0, Math.PI * 2);
     ctx.fill();
     if (p.fluff > 1e-3) {
-      ctx.fillStyle = rgb33(p.bodyMid, 0.9);
+      ctx.fillStyle = rgb34(p.bodyMid, 0.9);
       const lumps = 7;
       for (let i = 0; i < lumps; i++) {
         const a = Math.PI * 0.2 + i / (lumps - 1) * Math.PI * 0.9;
@@ -18923,26 +18983,26 @@
     if (p.irid > 1e-3) {
       ctx.save();
       ctx.globalCompositeOperation = "soft-light";
-      ctx.fillStyle = rgb33(p.sheen, 0.2 + 0.34 * p.irid);
+      ctx.fillStyle = rgb34(p.sheen, 0.2 + 0.34 * p.irid);
       ctx.beginPath();
       ctx.ellipse(bx - 2, by - 1, rx * 0.66, ry * 0.6, -0.2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
-    ctx.strokeStyle = rgb33(p.bodyDark, 0.6);
+    ctx.strokeStyle = rgb34(p.bodyDark, 0.6);
     ctx.lineWidth = 1.4;
     ctx.beginPath();
     ctx.moveTo(bx + 6, by - 3);
     ctx.quadraticCurveTo(bx + 9, by + 2, bx + 5, by + 7);
     ctx.stroke();
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb33([248, 252, 255], 0.9 * p.backSnowAmt);
+      ctx.fillStyle = rgb34([248, 252, 255], 0.9 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 1, by - ry * 0.74, rx * 0.6, 2.8, -0.12, 0, Math.PI * 2);
       ctx.fill();
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb33([255, 255, 255], 0.8 * p.frostAmt);
+      ctx.fillStyle = rgb34([255, 255, 255], 0.8 * p.frostAmt);
       const pts = [
         [-7, -2],
         [-2, 3],
@@ -18962,73 +19022,73 @@
     const ny = by - 5;
     const hx = nx - 4.5;
     const hy = ny - 7.5;
-    ctx.strokeStyle = rgb33(p.outline);
+    ctx.strokeStyle = rgb34(p.outline);
     ctx.lineWidth = 5.4;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(nx, ny);
     ctx.quadraticCurveTo(nx - 4, ny - 4, hx, hy + 1.5);
     ctx.stroke();
-    ctx.strokeStyle = rgb33(p.bodyMid);
+    ctx.strokeStyle = rgb34(p.bodyMid);
     ctx.lineWidth = 3.6;
     ctx.beginPath();
     ctx.moveTo(nx, ny);
     ctx.quadraticCurveTo(nx - 4, ny - 4, hx, hy + 1.5);
     ctx.stroke();
-    ctx.strokeStyle = rgb33(p.bodyLight, 0.7);
+    ctx.strokeStyle = rgb34(p.bodyLight, 0.7);
     ctx.lineWidth = 1.4;
     ctx.beginPath();
     ctx.moveTo(nx - 1.4, ny - 1);
     ctx.quadraticCurveTo(nx - 5, ny - 4.5, hx - 1, hy + 1.5);
     ctx.stroke();
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb33(p.wattle);
+    ctx.fillStyle = rgb34(p.wattle);
     ctx.beginPath();
     ctx.ellipse(nx - 2.2, ny - 1.5, 2.2, 3.4, -0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.beginPath();
     ctx.ellipse(nx - 3.4, ny + 1.5, 1.5, 2.2, -0.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb33([150, 30, 28], 0.5);
+    ctx.fillStyle = rgb34([150, 30, 28], 0.5);
     ctx.beginPath();
     ctx.ellipse(nx - 1.6, ny + 0.4, 1.1, 2.4, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb33(p.outline);
+    ctx.fillStyle = rgb34(p.outline);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 3.6, 3.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb33([198, 142, 108]);
+    ctx.fillStyle = rgb34([198, 142, 108]);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 3, 2.8, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb33([255, 255, 255], 0.18);
+    ctx.fillStyle = rgb34([255, 255, 255], 0.18);
     ctx.beginPath();
     ctx.ellipse(hx - 1, hy - 1, 1.3, 1.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb33(p.wattle);
+    ctx.fillStyle = rgb34(p.wattle);
     ctx.beginPath();
     ctx.moveTo(hx - 2.6, hy - 1.2);
     ctx.quadraticCurveTo(hx - 5.2, hy + 0.5, hx - 4.4, hy + 3.2);
     ctx.quadraticCurveTo(hx - 3.4, hy + 1.2, hx - 2.2, hy + 0.6);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb33(p.beak);
+    ctx.fillStyle = rgb34(p.beak);
     ctx.beginPath();
     ctx.moveTo(hx - 2.6, hy + 0.2);
     ctx.lineTo(hx - 5.6, hy + 1.4);
     ctx.lineTo(hx - 2.4, hy + 2.2);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb33([245, 245, 240]);
+    ctx.fillStyle = rgb34([245, 245, 240]);
     ctx.beginPath();
     ctx.arc(hx - 0.6, hy - 0.4, 1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb33([18, 16, 18]);
+    ctx.fillStyle = rgb34([18, 16, 18]);
     ctx.beginPath();
     ctx.arc(hx - 0.7, hy - 0.3, 0.55, 0, Math.PI * 2);
     ctx.fill();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb33([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb34([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 6.5, hy + 1.8, 3, 2, 0.1, 0, Math.PI * 2);
       ctx.fill();
@@ -19038,13 +19098,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb33(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb34(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint33(ctx, pIn, bob, fanSpread = 0) {
+  function paint34(ctx, pIn, bob, fanSpread = 0) {
     const p = clampP23(pIn);
     ctx.save();
     try {
@@ -19058,17 +19118,17 @@
     }
   }
   function draw24(season) {
-    return (ctx) => paint33(ctx, SP33[season], 0, 0);
+    return (ctx) => paint34(ctx, SP34[season], 0, 0);
   }
   function anim24(season) {
     return (ctx, t) => {
-      const p = clampP23(SP33[season]);
-      const bob = bobAt33(t);
+      const p = clampP23(SP34[season]);
+      const bob = bobAt34(t);
       const loop = t % 6 / 6;
       const shimmer = Math.sin(t * 1.5) * 0.5 + 0.5;
       const fanSpread = (1 - Math.cos(t * 1.5)) * 0.5 * 0.05;
       void shimmer;
-      paint33(ctx, SP33[season], bob, fanSpread);
+      paint34(ctx, SP34[season], bob, fanSpread);
       ctx.save();
       try {
         const bx = 1;
@@ -19081,29 +19141,29 @@
         const headDip = headGate * 1.6;
         if (headDip > 0.01) {
           const dhy = hy + headDip;
-          ctx.fillStyle = rgb33(p.outline);
+          ctx.fillStyle = rgb34(p.outline);
           ctx.beginPath();
           ctx.ellipse(hx, dhy, 3.6, 3.4, 0, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = rgb33([198, 142, 108]);
+          ctx.fillStyle = rgb34([198, 142, 108]);
           ctx.beginPath();
           ctx.ellipse(hx, dhy, 3, 2.8, 0, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = rgb33(p.beak);
+          ctx.fillStyle = rgb34(p.beak);
           ctx.beginPath();
           ctx.moveTo(hx - 2.6, dhy + 0.2);
           ctx.lineTo(hx - 5.6, dhy + 1.4);
           ctx.lineTo(hx - 2.4, dhy + 2.2);
           ctx.closePath();
           ctx.fill();
-          ctx.fillStyle = rgb33([18, 16, 18]);
+          ctx.fillStyle = rgb34([18, 16, 18]);
           ctx.beginPath();
           ctx.arc(hx - 0.7, dhy - 0.3, 0.55, 0, Math.PI * 2);
           ctx.fill();
         }
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb33([255, 255, 255], g);
+          ctx.fillStyle = rgb34([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -19115,7 +19175,7 @@
           const sx = bx + 4 - 12 + s * 24;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb33(p.sheen, 0.4);
+          ctx.fillStyle = rgb34(p.sheen, 0.4);
           ctx.beginPath();
           ctx.ellipse(sx, by - 11, 3.2, 8, 0.2, 0, Math.PI * 2);
           ctx.fill();
@@ -19126,7 +19186,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb33([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb34([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -19134,21 +19194,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb33([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb34([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - 3 - reach, hy + 1.8, 2.4 + breathe * 1.8, 1.6 + breathe * 1.1, 0.1, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb33([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb34([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb33([206, 224, 255], 0.1 + sheen2 * 0.12);
+          ctx.fillStyle = rgb34([206, 224, 255], 0.1 + sheen2 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 12, 10, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -19161,17 +19221,17 @@
       }
     };
   }
-  function makeTransition30(fromIdx) {
+  function makeTransition31(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother33(clamp0134(pp));
-      paint33(ctx, lerpP33(SP33[from], SP33[to], k), 0, 0);
+      const k = smoother34(clamp0135(pp));
+      paint34(ctx, lerpP34(SP34[from], SP34[to], k), 0, 0);
     };
   }
-  var springToSummer29 = makeTransition30(0);
-  var summerToAutumn29 = makeTransition30(1);
-  var autumnToWinter29 = makeTransition30(2);
+  var springToSummer28 = makeTransition31(0);
+  var summerToAutumn28 = makeTransition31(1);
+  var autumnToWinter28 = makeTransition31(2);
   var VARIANTS36 = {
     Spring: { draw: draw24("Spring"), anim: anim24("Spring") },
     Summer: { draw: draw24("Summer"), anim: anim24("Summer") },
@@ -19179,31 +19239,31 @@
     Winter: { draw: draw24("Winter"), anim: anim24("Winter") }
   };
   var TRANSITIONS36 = {
-    0: springToSummer29,
-    1: summerToAutumn29,
-    2: autumnToWinter29
+    0: springToSummer28,
+    1: summerToAutumn28,
+    2: autumnToWinter28
   };
 
   // src/textures/seasonal/bird/goose.ts
-  function clamp0135(x) {
+  function clamp0136(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother34 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function lerp39(a, b, t) {
+  var smoother35 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp40(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB28(a, b, t) {
-    return [lerp39(a[0], b[0], t), lerp39(a[1], b[1], t), lerp39(a[2], b[2], t)];
+    return [lerp40(a[0], b[0], t), lerp40(a[1], b[1], t), lerp40(a[2], b[2], t)];
   }
-  function rgb34(c) {
+  function rgb35(c) {
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba22(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0135(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0136(a)})`;
   }
-  function lerpP34(a, b, t) {
+  function lerpP35(a, b, t) {
     return {
       bodyLight: lerpRGB28(a.bodyLight, b.bodyLight, t),
       bodyMid: lerpRGB28(a.bodyMid, b.bodyMid, t),
@@ -19216,30 +19276,30 @@
       padDark: lerpRGB28(a.padDark, b.padDark, t),
       outline: lerpRGB28(a.outline, b.outline, t),
       light: lerpRGB28(a.light, b.light, t),
-      lightAmt: lerp39(a.lightAmt, b.lightAmt, t),
-      plumage: lerp39(a.plumage, b.plumage, t),
-      fluff: lerp39(a.fluff, b.fluff, t),
-      snowCapAmt: lerp39(a.snowCapAmt, b.snowCapAmt, t),
-      frostAmt: lerp39(a.frostAmt, b.frostAmt, t),
-      padSnowAmt: lerp39(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp39(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp39(a.fallenLeafAmt, b.fallenLeafAmt, t)
+      lightAmt: lerp40(a.lightAmt, b.lightAmt, t),
+      plumage: lerp40(a.plumage, b.plumage, t),
+      fluff: lerp40(a.fluff, b.fluff, t),
+      snowCapAmt: lerp40(a.snowCapAmt, b.snowCapAmt, t),
+      frostAmt: lerp40(a.frostAmt, b.frostAmt, t),
+      padSnowAmt: lerp40(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp40(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp40(a.fallenLeafAmt, b.fallenLeafAmt, t)
     };
   }
   function clampP24(p) {
     return {
       ...p,
-      lightAmt: clamp0135(p.lightAmt),
-      plumage: clamp0135(p.plumage),
-      fluff: clamp0135(p.fluff),
-      snowCapAmt: clamp0135(p.snowCapAmt),
-      frostAmt: clamp0135(p.frostAmt),
-      padSnowAmt: clamp0135(p.padSnowAmt),
-      blossomAmt: clamp0135(p.blossomAmt),
-      fallenLeafAmt: clamp0135(p.fallenLeafAmt)
+      lightAmt: clamp0136(p.lightAmt),
+      plumage: clamp0136(p.plumage),
+      fluff: clamp0136(p.fluff),
+      snowCapAmt: clamp0136(p.snowCapAmt),
+      frostAmt: clamp0136(p.frostAmt),
+      padSnowAmt: clamp0136(p.padSnowAmt),
+      blossomAmt: clamp0136(p.blossomAmt),
+      fallenLeafAmt: clamp0136(p.fallenLeafAmt)
     };
   }
-  var SP34 = {
+  var SP35 = {
     // Spring — clean white plumage; bright lime dewy pad + a blossom. Cool-bright.
     Spring: {
       bodyLight: [255, 255, 255],
@@ -19357,7 +19417,7 @@
     ctx.quadraticCurveTo(-13, -6 + bob, HEAD_X, HEAD_Y + bob);
     ctx.stroke();
   }
-  function paint34(ctx, raw, bob) {
+  function paint35(ctx, raw, bob) {
     const p = clampP24(raw);
     ctx.save();
     try {
@@ -19368,15 +19428,15 @@
       ctx.beginPath();
       ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb34(p.padDark);
+      ctx.fillStyle = rgb35(p.padDark);
       ctx.beginPath();
       ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb34(p.padGrass);
+      ctx.fillStyle = rgb35(p.padGrass);
       ctx.beginPath();
       ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = rgb34(p.padDark);
+      ctx.strokeStyle = rgb35(p.padDark);
       ctx.lineWidth = 1.1;
       for (let i = -7; i <= 7; i++) {
         const tx = i * 2.4;
@@ -19456,7 +19516,7 @@
       ctx.ellipse(3, 15.5 + bob * 0.5, 13, 3.2, 0, 0, Math.PI * 2);
       ctx.fill();
       const footY = 14 + bob * 0.4;
-      ctx.strokeStyle = rgb34(p.outline);
+      ctx.strokeStyle = rgb35(p.outline);
       ctx.lineWidth = 2.6;
       [-3.5, 4].forEach((fx) => {
         ctx.beginPath();
@@ -19464,7 +19524,7 @@
         ctx.lineTo(fx + 0.6, footY);
         ctx.stroke();
       });
-      ctx.fillStyle = rgb34(p.feet);
+      ctx.fillStyle = rgb35(p.feet);
       [-3.5, 4].forEach((fx) => {
         ctx.beginPath();
         ctx.moveTo(fx + 0.6, footY - 1.4);
@@ -19473,7 +19533,7 @@
         ctx.closePath();
         ctx.fill();
       });
-      ctx.strokeStyle = rgb34(p.feet);
+      ctx.strokeStyle = rgb35(p.feet);
       ctx.lineWidth = 2;
       [-3.5, 4].forEach((fx) => {
         ctx.beginPath();
@@ -19481,36 +19541,36 @@
         ctx.lineTo(fx + 0.6, footY - 0.5);
         ctx.stroke();
       });
-      ctx.fillStyle = rgb34(p.bodyShade);
+      ctx.fillStyle = rgb35(p.bodyShade);
       ctx.beginPath();
       ctx.moveTo(BODY_CX3 + 9, BODY_CY4 - 6 + bob);
       ctx.lineTo(TAIL_X + 3, TAIL_Y + bob);
       ctx.lineTo(BODY_CX3 + 10, BODY_CY4 + 2 + bob);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = rgb34(p.outline);
+      ctx.strokeStyle = rgb35(p.outline);
       ctx.lineWidth = 1;
       ctx.stroke();
-      neckStroke(ctx, bob, 8.6, rgb34(p.outline));
-      neckStroke(ctx, bob, 6.2, rgb34(p.bodyMid));
+      neckStroke(ctx, bob, 8.6, rgb35(p.outline));
+      neckStroke(ctx, bob, 6.2, rgb35(p.bodyMid));
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(NECK_BASE_X, NECK_BASE_Y + bob);
       ctx.quadraticCurveTo(-13, -6 + bob, HEAD_X, HEAD_Y + bob);
       ctx.lineWidth = 6.2;
-      ctx.strokeStyle = rgb34(p.bodyMid);
+      ctx.strokeStyle = rgb35(p.bodyMid);
       ctx.stroke();
       ctx.restore();
       neckStroke(ctx, bob, 2.2, rgba22(p.bodyLight, 0.85));
       bodyPath2(ctx, bob);
-      ctx.fillStyle = rgb34(p.outline);
+      ctx.fillStyle = rgb35(p.outline);
       ctx.save();
       ctx.lineWidth = 2.4;
-      ctx.strokeStyle = rgb34(p.outline);
+      ctx.strokeStyle = rgb35(p.outline);
       ctx.stroke();
       ctx.restore();
       bodyPath2(ctx, bob);
-      ctx.fillStyle = rgb34(p.bodyMid);
+      ctx.fillStyle = rgb35(p.bodyMid);
       ctx.fill();
       ctx.save();
       bodyPath2(ctx, bob);
@@ -19525,9 +19585,9 @@
         BODY_CX3 + BODY_RX3,
         BODY_CY4 + BODY_RY3 + bob
       );
-      bg.addColorStop(0, rgb34(p.bodyLight));
-      bg.addColorStop(0.5, rgb34(p.bodyMid));
-      bg.addColorStop(1, rgb34(p.bodyShade));
+      bg.addColorStop(0, rgb35(p.bodyLight));
+      bg.addColorStop(0.5, rgb35(p.bodyMid));
+      bg.addColorStop(1, rgb35(p.bodyShade));
       ctx.fillStyle = bg;
       ctx.globalAlpha = 0.85;
       ctx.beginPath();
@@ -19605,11 +19665,11 @@
       }
       const hx = HEAD_X;
       const hy = HEAD_Y + bob;
-      ctx.fillStyle = rgb34(p.outline);
+      ctx.fillStyle = rgb35(p.outline);
       ctx.beginPath();
       ctx.arc(hx, hy, HEAD_R2 + 0.9, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb34(p.bodyMid);
+      ctx.fillStyle = rgb35(p.bodyMid);
       ctx.beginPath();
       ctx.arc(hx, hy, HEAD_R2, 0, Math.PI * 2);
       ctx.fill();
@@ -19623,7 +19683,7 @@
       ctx.fill();
       const btx = BILL_TIP_X;
       const bty = BILL_TIP_Y + bob;
-      ctx.fillStyle = rgb34(p.bill);
+      ctx.fillStyle = rgb35(p.bill);
       ctx.beginPath();
       ctx.moveTo(hx - 2.4, hy - 1.2);
       ctx.quadraticCurveTo(btx + 2, bty - 1.5, btx, bty);
@@ -19631,14 +19691,14 @@
       ctx.quadraticCurveTo(hx - 3.5, hy + 2.4, hx - 2.4, hy - 1.2);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb34(p.billDark);
+      ctx.fillStyle = rgb35(p.billDark);
       ctx.beginPath();
       ctx.moveTo(hx - 2.4, hy + 0.8);
       ctx.quadraticCurveTo(btx + 2, bty + 1.6, btx + 1.5, bty + 2.6);
       ctx.quadraticCurveTo(hx - 3.5, hy + 2.4, hx - 2.4, hy + 0.8);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb34(p.billDark);
+      ctx.fillStyle = rgb35(p.billDark);
       ctx.beginPath();
       ctx.arc(hx - 5.5, hy - 0.2, 0.7, 0, Math.PI * 2);
       ctx.fill();
@@ -19649,7 +19709,7 @@
       ctx.quadraticCurveTo(btx + 2, bty - 1.5, btx, bty);
       ctx.lineTo(btx + 1.5, bty + 2.6);
       ctx.stroke();
-      ctx.fillStyle = rgb34(p.eye);
+      ctx.fillStyle = rgb35(p.eye);
       ctx.beginPath();
       ctx.arc(hx - 1.4, hy - 0.6, 1.05, 0, Math.PI * 2);
       ctx.fill();
@@ -19670,17 +19730,17 @@
       ctx.restore();
     }
   }
-  function bobAt34(t, amp = 0.9, w = 1.4) {
+  function bobAt35(t, amp = 0.9, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw25(season) {
-    return (ctx) => paint34(ctx, SP34[season], 0);
+    return (ctx) => paint35(ctx, SP35[season], 0);
   }
   function anim25(season) {
     return (ctx, t) => {
-      const breathe = bobAt34(t);
+      const breathe = bobAt35(t);
       const nod = 0.6 * (1 - Math.cos(t * 0.7)) * 0.5;
-      paint34(ctx, SP34[season], breathe + nod);
+      paint35(ctx, SP35[season], breathe + nod);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
@@ -19746,17 +19806,17 @@
       }
     };
   }
-  function makeTransition31(fromIdx) {
-    const from = SP34[SEASON_NAMES[fromIdx]];
-    const to = SP34[SEASON_NAMES[fromIdx + 1]];
+  function makeTransition32(fromIdx) {
+    const from = SP35[SEASON_NAMES[fromIdx]];
+    const to = SP35[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother34(clamp0135(pp));
-      paint34(ctx, lerpP34(from, to, k), 0);
+      const k = smoother35(clamp0136(pp));
+      paint35(ctx, lerpP35(from, to, k), 0);
     };
   }
-  var springToSummer30 = makeTransition31(0);
-  var summerToAutumn30 = makeTransition31(1);
-  var autumnToWinter30 = makeTransition31(2);
+  var springToSummer29 = makeTransition32(0);
+  var summerToAutumn29 = makeTransition32(1);
+  var autumnToWinter29 = makeTransition32(2);
   var VARIANTS37 = {
     Spring: { draw: draw25("Spring"), anim: anim25("Spring") },
     Summer: { draw: draw25("Summer"), anim: anim25("Summer") },
@@ -19764,35 +19824,35 @@
     Winter: { draw: draw25("Winter"), anim: anim25("Winter") }
   };
   var TRANSITIONS37 = {
-    0: springToSummer30,
-    1: summerToAutumn30,
-    2: autumnToWinter30
+    0: springToSummer29,
+    1: summerToAutumn29,
+    2: autumnToWinter29
   };
 
   // src/textures/seasonal/bird/pheasant.ts
-  function clamp0136(x) {
+  function clamp0137(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
-  function lerp40(a, b, t) {
+  function lerp41(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB29(a, b, t) {
-    return [lerp40(a[0], b[0], t), lerp40(a[1], b[1], t), lerp40(a[2], b[2], t)];
+    return [lerp41(a[0], b[0], t), lerp41(a[1], b[1], t), lerp41(a[2], b[2], t)];
   }
-  function rgb35(c, a = 1) {
-    const r = Math.round(clamp0136(c[0] / 255) * 255);
-    const g = Math.round(clamp0136(c[1] / 255) * 255);
-    const b = Math.round(clamp0136(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0136(a)})`;
+  function rgb36(c, a = 1) {
+    const r = Math.round(clamp0137(c[0] / 255) * 255);
+    const g = Math.round(clamp0137(c[1] / 255) * 255);
+    const b = Math.round(clamp0137(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0137(a)})`;
   }
-  function smoother35(x) {
+  function smoother36(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt35(t, amp = 1, w = 1.5) {
+  function bobAt36(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP35 = {
+  var SP36 = {
     // Spring — bright fresh plumage, dewy lime pad + blossom, cool-bright light.
     Spring: {
       bodyLight: [206, 130, 64],
@@ -19912,7 +19972,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP35(a, b, t) {
+  function lerpP36(a, b, t) {
     return {
       bodyLight: lerpRGB29(a.bodyLight, b.bodyLight, t),
       bodyMid: lerpRGB29(a.bodyMid, b.bodyMid, t),
@@ -19928,47 +19988,47 @@
       soil: lerpRGB29(a.soil, b.soil, t),
       outline: lerpRGB29(a.outline, b.outline, t),
       lightWash: lerpRGB29(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp40(a.lightWashAmt, b.lightWashAmt, t),
-      plumage: lerp40(a.plumage, b.plumage, t),
-      fluff: lerp40(a.fluff, b.fluff, t),
-      sheen: lerp40(a.sheen, b.sheen, t),
-      frostAmt: lerp40(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp40(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp40(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp40(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp40(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp40(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp41(a.lightWashAmt, b.lightWashAmt, t),
+      plumage: lerp41(a.plumage, b.plumage, t),
+      fluff: lerp41(a.fluff, b.fluff, t),
+      sheen: lerp41(a.sheen, b.sheen, t),
+      frostAmt: lerp41(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp41(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp41(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp41(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp41(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp41(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP25(p) {
     return {
       ...p,
-      lightWashAmt: clamp0136(p.lightWashAmt),
-      plumage: clamp0136(p.plumage),
-      fluff: clamp0136(p.fluff),
-      sheen: clamp0136(p.sheen),
-      frostAmt: clamp0136(p.frostAmt),
-      backSnowAmt: clamp0136(p.backSnowAmt),
-      padSnowAmt: clamp0136(p.padSnowAmt),
-      blossomAmt: clamp0136(p.blossomAmt),
-      fallenLeafAmt: clamp0136(p.fallenLeafAmt),
-      breathFogAmt: clamp0136(p.breathFogAmt)
+      lightWashAmt: clamp0137(p.lightWashAmt),
+      plumage: clamp0137(p.plumage),
+      fluff: clamp0137(p.fluff),
+      sheen: clamp0137(p.sheen),
+      frostAmt: clamp0137(p.frostAmt),
+      backSnowAmt: clamp0137(p.backSnowAmt),
+      padSnowAmt: clamp0137(p.padSnowAmt),
+      blossomAmt: clamp0137(p.blossomAmt),
+      fallenLeafAmt: clamp0137(p.fallenLeafAmt),
+      breathFogAmt: clamp0137(p.breathFogAmt)
     };
   }
   function paintPad4(ctx, p) {
-    ctx.fillStyle = rgb35([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb36([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35(p.soil);
+    ctx.fillStyle = rgb36(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35(p.padGrass);
+    ctx.fillStyle = rgb36(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb35(p.padGrass);
+    ctx.strokeStyle = rgb36(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -19980,16 +20040,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb35([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb36([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb35([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb36([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb35([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb36([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -19998,14 +20058,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb35([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb36([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb35([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb36([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -20021,11 +20081,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb35(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb36(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb35([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb36([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -20036,7 +20096,7 @@
     }
   }
   function paintLeg3(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb35(p.beakLeg);
+    ctx.strokeStyle = rgb36(p.beakLeg);
     ctx.lineWidth = 1.8;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -20062,25 +20122,25 @@
       [20, -8, 1.7]
     ];
     for (const [tx, ty, hw] of feathers) {
-      ctx.fillStyle = rgb35(p.outline);
+      ctx.fillStyle = rgb36(p.outline);
       ctx.beginPath();
       ctx.moveTo(rootX, rootY + hw + 1);
       ctx.quadraticCurveTo(bx + (tx + rootX) * 0.4, by + (ty - 2), tx, ty);
       ctx.quadraticCurveTo(bx + (tx + rootX) * 0.42, by + (ty + 2), rootX, rootY - hw - 1);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb35(p.tail);
+      ctx.fillStyle = rgb36(p.tail);
       ctx.beginPath();
       ctx.moveTo(rootX, rootY + hw);
       ctx.quadraticCurveTo(bx + (tx + rootX) * 0.4, by + (ty - 1.4), tx, ty);
       ctx.quadraticCurveTo(bx + (tx + rootX) * 0.42, by + (ty + 1.4), rootX, rootY - hw);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = rgb35(p.tailBar, 0.85);
+      ctx.strokeStyle = rgb36(p.tailBar, 0.85);
       ctx.lineWidth = 1.1;
       for (let s = 0.2; s < 0.95; s += 0.16) {
-        const cxp = lerp40(rootX, tx, s);
-        const cyp = lerp40(rootY, ty, s);
+        const cxp = lerp41(rootX, tx, s);
+        const cyp = lerp41(rootY, ty, s);
         const nx = ty - rootY;
         const ny = -(tx - rootX);
         const nlen = Math.hypot(nx, ny) || 1;
@@ -20093,7 +20153,7 @@
       }
     }
     if (p.backSnowAmt > 1e-3) {
-      ctx.strokeStyle = rgb35([248, 252, 255], 0.85 * p.backSnowAmt);
+      ctx.strokeStyle = rgb36([248, 252, 255], 0.85 * p.backSnowAmt);
       ctx.lineWidth = 1.6;
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -20115,23 +20175,23 @@
     ctx.save();
     ctx.translate(bx, by);
     ctx.rotate(-0.12);
-    ctx.fillStyle = rgb35(p.outline);
+    ctx.fillStyle = rgb36(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 0, rx + 1.2, ry + 1.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35(p.bodyMid);
+    ctx.fillStyle = rgb36(p.bodyMid);
     ctx.beginPath();
     ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35(p.bodyLight, 0.92);
+    ctx.fillStyle = rgb36(p.bodyLight, 0.92);
     ctx.beginPath();
     ctx.ellipse(-2.4, -2.4, rx * 0.72, ry * 0.66, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35(p.bodyDark, 0.55);
+    ctx.fillStyle = rgb36(p.bodyDark, 0.55);
     ctx.beginPath();
     ctx.ellipse(3, 3, rx * 0.66, ry * 0.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35(p.bodyDark, 0.7 + 0.2 * p.plumage);
+    ctx.fillStyle = rgb36(p.bodyDark, 0.7 + 0.2 * p.plumage);
     for (const [fx, fy] of [
       [-4, -1],
       [0, -3],
@@ -20148,11 +20208,11 @@
     }
     ctx.restore();
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb35([248, 252, 255], 0.9 * p.backSnowAmt);
+      ctx.fillStyle = rgb36([248, 252, 255], 0.9 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 0.5, by - ry + 1, rx * 0.78, 3, -0.12, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb35([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb36([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-4, -ry], [1, -ry - 0.6], [5, -ry + 0.6]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.4, 0, Math.PI * 2);
@@ -20160,7 +20220,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb35([255, 255, 255], 0.75 * p.frostAmt);
+      ctx.fillStyle = rgb36([255, 255, 255], 0.75 * p.frostAmt);
       for (const [fx, fy] of [
         [-6, -2],
         [-1, 3],
@@ -20178,14 +20238,14 @@
     const ny = by - 1;
     const hx = bx - 12.5;
     const hy = by - 5;
-    ctx.strokeStyle = rgb35(p.outline);
+    ctx.strokeStyle = rgb36(p.outline);
     ctx.lineWidth = 6;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(nx + 2, ny + 1);
     ctx.lineTo(hx + 1, hy + 3);
     ctx.stroke();
-    ctx.strokeStyle = rgb35(p.bodyMid);
+    ctx.strokeStyle = rgb36(p.bodyMid);
     ctx.lineWidth = 4.4;
     ctx.beginPath();
     ctx.moveTo(nx + 2, ny + 1);
@@ -20195,54 +20255,54 @@
     ctx.save();
     ctx.translate((nx + hx) * 0.5 + 1, (ny + hy) * 0.5 + 2);
     ctx.rotate(-0.5);
-    ctx.fillStyle = rgb35(p.ring);
+    ctx.fillStyle = rgb36(p.ring);
     ctx.beginPath();
     ctx.ellipse(0, 0, 3.4, 1.7, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35(p.outline, 0.3);
+    ctx.fillStyle = rgb36(p.outline, 0.3);
     ctx.beginPath();
     ctx.ellipse(0, 1, 3, 0.9, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb35(p.outline);
+    ctx.fillStyle = rgb36(p.outline);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 4.4, 4.1, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35(p.headGreen);
+    ctx.fillStyle = rgb36(p.headGreen);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 3.8, 3.5, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35(p.headHi, 0.4 + 0.4 * p.sheen);
+    ctx.fillStyle = rgb36(p.headHi, 0.4 + 0.4 * p.sheen);
     ctx.beginPath();
     ctx.ellipse(hx - 1.4, hy - 1.4, 1.8, 1.5, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35(p.wattle);
+    ctx.fillStyle = rgb36(p.wattle);
     ctx.beginPath();
     ctx.ellipse(hx - 1.6, hy + 0.6, 2.2, 1.7, -0.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35([250, 246, 220]);
+    ctx.fillStyle = rgb36([250, 246, 220]);
     ctx.beginPath();
     ctx.arc(hx - 1.4, hy - 0.2, 1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35([20, 16, 14]);
+    ctx.fillStyle = rgb36([20, 16, 14]);
     ctx.beginPath();
     ctx.arc(hx - 1.6, hy - 0.1, 0.6, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb35(p.beakLeg);
+    ctx.fillStyle = rgb36(p.beakLeg);
     ctx.beginPath();
     ctx.moveTo(hx - 3.4, hy + 0.2);
     ctx.lineTo(hx - 7, hy + 1.4);
     ctx.lineTo(hx - 3.4, hy + 1.8);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = rgb35(p.outline, 0.6);
+    ctx.strokeStyle = rgb36(p.outline, 0.6);
     ctx.lineWidth = 0.7;
     ctx.beginPath();
     ctx.moveTo(hx - 3.4, hy + 1);
     ctx.lineTo(hx - 6.6, hy + 1.5);
     ctx.stroke();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb35([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb36([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 9, hy + 1.6, 3, 2, 0.1, 0, Math.PI * 2);
       ctx.fill();
@@ -20252,13 +20312,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb35(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb36(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 2, 28, 28, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint35(ctx, pIn, bob) {
+  function paint36(ctx, pIn, bob) {
     const p = clampP25(pIn);
     ctx.save();
     try {
@@ -20272,15 +20332,15 @@
     }
   }
   function draw26(season) {
-    return (ctx) => paint35(ctx, SP35[season], 0);
+    return (ctx) => paint36(ctx, SP36[season], 0);
   }
   function anim26(season) {
     return (ctx, t) => {
-      const p = clampP25(SP35[season]);
-      const bob = bobAt35(t);
+      const p = clampP25(SP36[season]);
+      const bob = bobAt36(t);
       const headBob = (1 - Math.cos(t * 1.5)) * 0.5 * 0.8;
       const tailSway = Math.sin(t * 0.7) * 1.2;
-      paint35(ctx, SP35[season], bob);
+      paint36(ctx, SP36[season], bob);
       ctx.save();
       try {
         const bx = -1;
@@ -20290,21 +20350,21 @@
         if (Math.abs(tailSway) > 0.05) {
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb35([255, 240, 210], 0.18);
+          ctx.fillStyle = rgb36([255, 240, 210], 0.18);
           ctx.beginPath();
           ctx.ellipse(bx + 14 + tailSway, by - 12, 2.4, 5, 0.6, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         }
         if (headBob > 0.02) {
-          ctx.fillStyle = rgb35([0, 0, 0], 0.08);
+          ctx.fillStyle = rgb36([0, 0, 0], 0.08);
           ctx.beginPath();
           ctx.ellipse(hx, hy + 4 + headBob, 3.4, 1.2, 0, 0, Math.PI * 2);
           ctx.fill();
         }
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb35([255, 255, 255], g);
+          ctx.fillStyle = rgb36([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -20315,7 +20375,7 @@
           const s = 0.5 + 0.5 * Math.sin(t * 1.2);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb35([130, 220, 170], 0.3 + 0.3 * s);
+          ctx.fillStyle = rgb36([130, 220, 170], 0.3 + 0.3 * s);
           ctx.beginPath();
           ctx.ellipse(hx - 0.6, hy - 0.6 + headBob, 2.6, 2.4, -0.2, 0, Math.PI * 2);
           ctx.fill();
@@ -20326,7 +20386,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb35([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb36([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -20334,21 +20394,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb35([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb36([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - reach - 5, hy + 1.6, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.1, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb35([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb36([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb35([206, 224, 255], 0.1 + sheen2 * 0.12);
+          ctx.fillStyle = rgb36([206, 224, 255], 0.1 + sheen2 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 11, 8, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -20361,17 +20421,17 @@
       }
     };
   }
-  function makeTransition32(fromIdx) {
+  function makeTransition33(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother35(clamp0136(pp));
-      paint35(ctx, lerpP35(SP35[from], SP35[to], k), 0);
+      const k = smoother36(clamp0137(pp));
+      paint36(ctx, lerpP36(SP36[from], SP36[to], k), 0);
     };
   }
-  var springToSummer31 = makeTransition32(0);
-  var summerToAutumn31 = makeTransition32(1);
-  var autumnToWinter31 = makeTransition32(2);
+  var springToSummer30 = makeTransition33(0);
+  var summerToAutumn30 = makeTransition33(1);
+  var autumnToWinter30 = makeTransition33(2);
   var VARIANTS38 = {
     Spring: { draw: draw26("Spring"), anim: anim26("Spring") },
     Summer: { draw: draw26("Summer"), anim: anim26("Summer") },
@@ -20379,35 +20439,35 @@
     Winter: { draw: draw26("Winter"), anim: anim26("Winter") }
   };
   var TRANSITIONS38 = {
-    0: springToSummer31,
-    1: summerToAutumn31,
-    2: autumnToWinter31
+    0: springToSummer30,
+    1: summerToAutumn30,
+    2: autumnToWinter30
   };
 
   // src/textures/seasonal/bird/parrot.ts
-  function clamp0137(x) {
+  function clamp0138(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
-  function lerp41(a, b, t) {
+  function lerp42(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB30(a, b, t) {
-    return [lerp41(a[0], b[0], t), lerp41(a[1], b[1], t), lerp41(a[2], b[2], t)];
+    return [lerp42(a[0], b[0], t), lerp42(a[1], b[1], t), lerp42(a[2], b[2], t)];
   }
-  function rgb36(c, a = 1) {
-    const r = Math.round(clamp0137(c[0] / 255) * 255);
-    const g = Math.round(clamp0137(c[1] / 255) * 255);
-    const b = Math.round(clamp0137(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0137(a)})`;
+  function rgb37(c, a = 1) {
+    const r = Math.round(clamp0138(c[0] / 255) * 255);
+    const g = Math.round(clamp0138(c[1] / 255) * 255);
+    const b = Math.round(clamp0138(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0138(a)})`;
   }
-  function smoother36(x) {
+  function smoother37(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt36(t, amp = 0.95, w = 1.5) {
+  function bobAt37(t, amp = 0.95, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP36 = {
+  var SP37 = {
     // Spring — bright plumage, dewy lime pad + blossom, cool-bright light.
     Spring: {
       headLight: [236, 70, 60],
@@ -20519,7 +20579,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP36(a, b, t) {
+  function lerpP37(a, b, t) {
     return {
       headLight: lerpRGB30(a.headLight, b.headLight, t),
       headDark: lerpRGB30(a.headDark, b.headDark, t),
@@ -20534,29 +20594,29 @@
       soil: lerpRGB30(a.soil, b.soil, t),
       outline: lerpRGB30(a.outline, b.outline, t),
       lightWash: lerpRGB30(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp41(a.lightWashAmt, b.lightWashAmt, t),
-      saturation: lerp41(a.saturation, b.saturation, t),
-      fluff: lerp41(a.fluff, b.fluff, t),
-      frostAmt: lerp41(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp41(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp41(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp41(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp41(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp41(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp42(a.lightWashAmt, b.lightWashAmt, t),
+      saturation: lerp42(a.saturation, b.saturation, t),
+      fluff: lerp42(a.fluff, b.fluff, t),
+      frostAmt: lerp42(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp42(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp42(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp42(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp42(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp42(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP26(p) {
     return {
       ...p,
-      lightWashAmt: clamp0137(p.lightWashAmt),
-      saturation: clamp0137(p.saturation),
-      fluff: clamp0137(p.fluff),
-      frostAmt: clamp0137(p.frostAmt),
-      backSnowAmt: clamp0137(p.backSnowAmt),
-      padSnowAmt: clamp0137(p.padSnowAmt),
-      blossomAmt: clamp0137(p.blossomAmt),
-      fallenLeafAmt: clamp0137(p.fallenLeafAmt),
-      breathFogAmt: clamp0137(p.breathFogAmt)
+      lightWashAmt: clamp0138(p.lightWashAmt),
+      saturation: clamp0138(p.saturation),
+      fluff: clamp0138(p.fluff),
+      frostAmt: clamp0138(p.frostAmt),
+      backSnowAmt: clamp0138(p.backSnowAmt),
+      padSnowAmt: clamp0138(p.padSnowAmt),
+      blossomAmt: clamp0138(p.blossomAmt),
+      fallenLeafAmt: clamp0138(p.fallenLeafAmt),
+      breathFogAmt: clamp0138(p.breathFogAmt)
     };
   }
   var PERCH_Y = 13;
@@ -20564,19 +20624,19 @@
   var BODY_CX4 = 1;
   var BODY_CY5 = -1;
   function paintPad5(ctx, p) {
-    ctx.fillStyle = rgb36([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb37([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21.5, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.soil);
+    ctx.fillStyle = rgb37(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.padGrass);
+    ctx.fillStyle = rgb37(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb36(p.padGrass);
+    ctx.strokeStyle = rgb37(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -20588,16 +20648,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb36([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb37([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb36([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb37([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb36([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb37([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -20606,14 +20666,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb36([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb37([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb36([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb37([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -20629,11 +20689,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb36(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb37(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb36([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb37([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -20644,19 +20704,19 @@
     }
   }
   function paintPerch(ctx, p) {
-    ctx.fillStyle = rgb36(p.outline);
+    ctx.fillStyle = rgb37(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, PERCH_Y + 1, PERCH_HALF + 1.4, 3.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.perchDark);
+    ctx.fillStyle = rgb37(p.perchDark);
     ctx.beginPath();
     ctx.ellipse(0, PERCH_Y + 1, PERCH_HALF, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.perchLight);
+    ctx.fillStyle = rgb37(p.perchLight);
     ctx.beginPath();
     ctx.ellipse(0, PERCH_Y, PERCH_HALF, 2.1, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb36(p.perchDark, 0.7);
+    ctx.strokeStyle = rgb37(p.perchDark, 0.7);
     ctx.lineWidth = 0.7;
     for (const gx of [-9, -2, 6, 12]) {
       ctx.beginPath();
@@ -20664,26 +20724,26 @@
       ctx.lineTo(gx + 1, PERCH_Y + 1.2);
       ctx.stroke();
     }
-    ctx.fillStyle = rgb36(p.perchDark);
+    ctx.fillStyle = rgb37(p.perchDark);
     for (const ex of [-PERCH_HALF, PERCH_HALF]) {
       ctx.beginPath();
       ctx.ellipse(ex, PERCH_Y, 1.5, 2.1, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb36(p.perchLight, 0.5);
+      ctx.fillStyle = rgb37(p.perchLight, 0.5);
       ctx.beginPath();
       ctx.ellipse(ex, PERCH_Y - 0.3, 0.8, 1.2, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb36(p.perchDark);
+      ctx.fillStyle = rgb37(p.perchDark);
     }
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb36([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb37([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, PERCH_Y - 1.4, PERCH_HALF * 0.92, 1.5, 0, 0, Math.PI * 2);
       ctx.fill();
     }
   }
   function paintFoot(ctx, p, x, y) {
-    ctx.strokeStyle = rgb36([70, 58, 52]);
+    ctx.strokeStyle = rgb37([70, 58, 52]);
     ctx.lineWidth = 1.6;
     ctx.lineCap = "round";
     for (const dx of [-1.8, 0.2, 2]) {
@@ -20703,32 +20763,32 @@
     ctx.save();
     ctx.translate(cx + 5, cy + 4);
     ctx.rotate(0.5);
-    ctx.fillStyle = rgb36(p.outline);
+    ctx.fillStyle = rgb37(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 0, 4.4, 12.4 * puff, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.tailDark);
+    ctx.fillStyle = rgb37(p.tailDark);
     ctx.beginPath();
     ctx.ellipse(0, 0, 3.6, 11.4 * puff, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.tailLight);
+    ctx.fillStyle = rgb37(p.tailLight);
     ctx.beginPath();
     ctx.ellipse(-0.8, -1, 1.8, 9.6 * puff, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb36(p.outline);
+    ctx.fillStyle = rgb37(p.outline);
     ctx.beginPath();
     ctx.ellipse(cx + 3.4, cy + 1, 7.4 * puff, 9.6 * puff, 0.34, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.wingDark);
+    ctx.fillStyle = rgb37(p.wingDark);
     ctx.beginPath();
     ctx.ellipse(cx + 3.4, cy + 1, 6.6 * puff, 8.8 * puff, 0.34, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.wingLight);
+    ctx.fillStyle = rgb37(p.wingLight);
     ctx.beginPath();
     ctx.ellipse(cx + 2.2, cy - 0.6, 4.6 * puff, 6.8 * puff, 0.34, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb36(p.wingDark, 0.85);
+    ctx.strokeStyle = rgb37(p.wingDark, 0.85);
     ctx.lineWidth = 0.8;
     for (const k of [0, 1, 2]) {
       ctx.beginPath();
@@ -20736,37 +20796,37 @@
       ctx.quadraticCurveTo(cx + 4 + k * 1.6, cy + 1 + k, cx + 4.6 + k * 1.4, cy + 6 + k * 0.6);
       ctx.stroke();
     }
-    ctx.fillStyle = rgb36(p.outline);
+    ctx.fillStyle = rgb37(p.outline);
     ctx.beginPath();
     ctx.ellipse(cx - 2.4, cy + 2, 7.4 * puff, 9.4 * puff, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.headDark);
+    ctx.fillStyle = rgb37(p.headDark);
     ctx.beginPath();
     ctx.ellipse(cx - 2.4, cy + 2, 6.6 * puff, 8.6 * puff, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.headLight);
+    ctx.fillStyle = rgb37(p.headLight);
     ctx.beginPath();
     ctx.ellipse(cx - 3.6, cy + 0.4, 4.6 * puff, 6.4 * puff, -0.12, 0, Math.PI * 2);
     ctx.fill();
     const hx = cx - 5;
     const hy = cy - 7;
-    ctx.fillStyle = rgb36(p.outline);
+    ctx.fillStyle = rgb37(p.outline);
     ctx.beginPath();
     ctx.arc(hx, hy, 6.1 * puff, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.headDark);
+    ctx.fillStyle = rgb37(p.headDark);
     ctx.beginPath();
     ctx.arc(hx, hy, 5.4 * puff, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36(p.headLight);
+    ctx.fillStyle = rgb37(p.headLight);
     ctx.beginPath();
     ctx.arc(hx - 1.4, hy - 1.6, 3.8 * puff, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36([244, 238, 228]);
+    ctx.fillStyle = rgb37([244, 238, 228]);
     ctx.beginPath();
     ctx.ellipse(hx - 1.2, hy + 0.2, 3, 2.6, -0.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb36([200, 120, 110], 0.6);
+    ctx.strokeStyle = rgb37([200, 120, 110], 0.6);
     ctx.lineWidth = 0.5;
     for (const ly of [-0.6, 0.8]) {
       ctx.beginPath();
@@ -20774,21 +20834,21 @@
       ctx.lineTo(hx + 0.4, hy + ly + 0.3);
       ctx.stroke();
     }
-    ctx.fillStyle = rgb36([250, 248, 240]);
+    ctx.fillStyle = rgb37([250, 248, 240]);
     ctx.beginPath();
     ctx.arc(hx - 1.2, hy - 0.4, 1.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36([24, 20, 22]);
+    ctx.fillStyle = rgb37([24, 20, 22]);
     ctx.beginPath();
     ctx.arc(hx - 1, hy - 0.3, 0.85, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb36([255, 255, 255], 0.9);
+    ctx.fillStyle = rgb37([255, 255, 255], 0.9);
     ctx.beginPath();
     ctx.arc(hx - 1.4, hy - 0.7, 0.32, 0, Math.PI * 2);
     ctx.fill();
     const bxk = hx - 4.4;
     const byk = hy + 1.6;
-    ctx.fillStyle = rgb36(p.outline);
+    ctx.fillStyle = rgb37(p.outline);
     ctx.beginPath();
     ctx.moveTo(bxk + 3.2, byk - 2.6);
     ctx.quadraticCurveTo(bxk - 2.8, byk - 1.8, bxk - 2.6, byk + 2.2);
@@ -20796,7 +20856,7 @@
     ctx.quadraticCurveTo(bxk + 2.6, byk + 1.4, bxk + 3.6, byk - 0.6);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb36(p.beak);
+    ctx.fillStyle = rgb37(p.beak);
     ctx.beginPath();
     ctx.moveTo(bxk + 2.8, byk - 2);
     ctx.quadraticCurveTo(bxk - 2, byk - 1.2, bxk - 1.8, byk + 1.8);
@@ -20804,19 +20864,19 @@
     ctx.quadraticCurveTo(bxk + 2, byk + 1, bxk + 3, byk - 0.6);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb36(p.outline, 0.5);
+    ctx.fillStyle = rgb37(p.outline, 0.5);
     ctx.beginPath();
     ctx.moveTo(bxk - 1.4, byk + 1.2);
     ctx.quadraticCurveTo(bxk - 0.6, byk + 3, bxk + 0.8, byk + 2.2);
     ctx.lineTo(bxk + 0.2, byk + 1.2);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb36([60, 48, 44]);
+    ctx.fillStyle = rgb37([60, 48, 44]);
     ctx.beginPath();
     ctx.arc(bxk + 1.8, byk - 1, 0.5, 0, Math.PI * 2);
     ctx.fill();
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb36([248, 252, 255], 0.9 * p.backSnowAmt);
+      ctx.fillStyle = rgb37([248, 252, 255], 0.9 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 0.6, hy - 4.2, 4 * puff, 1.8, -0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -20825,7 +20885,7 @@
       ctx.fill();
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb36([255, 255, 255], 0.8 * p.frostAmt);
+      ctx.fillStyle = rgb37([255, 255, 255], 0.8 * p.frostAmt);
       const pts = [
         [cx - 4, cy - 2],
         [cx + 2, cy - 3],
@@ -20841,7 +20901,7 @@
       }
     }
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb36([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb37([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(bxk - 3.6, byk + 1.4, 3, 2, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -20851,7 +20911,7 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb36(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb37(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 2, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -20861,13 +20921,13 @@
     if (p.saturation <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb36([255, 246, 232], 0.06 * p.saturation);
+    ctx.fillStyle = rgb37([255, 246, 232], 0.06 * p.saturation);
     ctx.beginPath();
     ctx.ellipse(BODY_CX4 - 2, BODY_CY5, 12, 14, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint36(ctx, pIn, bob) {
+  function paint37(ctx, pIn, bob) {
     const p = clampP26(pIn);
     ctx.save();
     try {
@@ -20884,13 +20944,13 @@
     }
   }
   function draw27(season) {
-    return (ctx) => paint36(ctx, SP36[season], 0);
+    return (ctx) => paint37(ctx, SP37[season], 0);
   }
   function anim27(season) {
     return (ctx, t) => {
-      const p = clampP26(SP36[season]);
-      const bob = bobAt36(t);
-      paint36(ctx, SP36[season], bob);
+      const p = clampP26(SP37[season]);
+      const bob = bobAt37(t);
+      paint37(ctx, SP37[season], bob);
       ctx.save();
       try {
         const cx = BODY_CX4;
@@ -20904,7 +20964,7 @@
           ctx.save();
           ctx.translate(hx, hy);
           ctx.rotate(flick * 0.12);
-          ctx.fillStyle = rgb36(p.headLight, 0.55);
+          ctx.fillStyle = rgb37(p.headLight, 0.55);
           ctx.beginPath();
           ctx.arc(-1.4, -1.6, 3.6 * (1 + p.fluff * 0.18), 0, Math.PI * 2);
           ctx.fill();
@@ -20913,14 +20973,14 @@
         ctx.save();
         ctx.translate(cx + 5, cy + 4);
         ctx.rotate(0.5 + flick * 0.16);
-        ctx.fillStyle = rgb36(p.tailLight, 0.45 * flickGate);
+        ctx.fillStyle = rgb37(p.tailLight, 0.45 * flickGate);
         ctx.beginPath();
         ctx.ellipse(-0.8, -1, 1.6, 9.4, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb36([255, 255, 255], g);
+          ctx.fillStyle = rgb37([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -20932,7 +20992,7 @@
           const sx = cx - 8 + s * 16;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb36([255, 255, 255], 0.34);
+          ctx.fillStyle = rgb37([255, 255, 255], 0.34);
           ctx.beginPath();
           ctx.ellipse(sx, cy, 3, 8, 0.2, 0, Math.PI * 2);
           ctx.fill();
@@ -20943,7 +21003,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb36([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb37([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -20953,21 +21013,21 @@
           const byk = hy + 1.6;
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 3 + breathe * 3;
-          ctx.fillStyle = rgb36([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb37([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(bxk - reach, byk + 1.4, 2.4 + breathe * 1.8, 1.6 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb36([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb37([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb36([206, 224, 255], 0.1 + sheen2 * 0.12);
+          ctx.fillStyle = rgb37([206, 224, 255], 0.1 + sheen2 * 0.12);
           ctx.beginPath();
           ctx.ellipse(cx - 2, cy, 11, 13, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -20980,17 +21040,17 @@
       }
     };
   }
-  function makeTransition33(fromIdx) {
+  function makeTransition34(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother36(clamp0137(pp));
-      paint36(ctx, lerpP36(SP36[from], SP36[to], k), 0);
+      const k = smoother37(clamp0138(pp));
+      paint37(ctx, lerpP37(SP37[from], SP37[to], k), 0);
     };
   }
-  var springToSummer32 = makeTransition33(0);
-  var summerToAutumn32 = makeTransition33(1);
-  var autumnToWinter32 = makeTransition33(2);
+  var springToSummer31 = makeTransition34(0);
+  var summerToAutumn31 = makeTransition34(1);
+  var autumnToWinter31 = makeTransition34(2);
   var VARIANTS39 = {
     Spring: { draw: draw27("Spring"), anim: anim27("Spring") },
     Summer: { draw: draw27("Summer"), anim: anim27("Summer") },
@@ -20998,35 +21058,35 @@
     Winter: { draw: draw27("Winter"), anim: anim27("Winter") }
   };
   var TRANSITIONS39 = {
-    0: springToSummer32,
-    1: summerToAutumn32,
-    2: autumnToWinter32
+    0: springToSummer31,
+    1: summerToAutumn31,
+    2: autumnToWinter31
   };
 
   // src/textures/seasonal/bird/phoenix.ts
-  function clamp0138(x) {
+  function clamp0139(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
-  function lerp42(a, b, t) {
+  function lerp43(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB31(a, b, t) {
-    return [lerp42(a[0], b[0], t), lerp42(a[1], b[1], t), lerp42(a[2], b[2], t)];
+    return [lerp43(a[0], b[0], t), lerp43(a[1], b[1], t), lerp43(a[2], b[2], t)];
   }
-  function rgb37(c, a = 1) {
-    const r = Math.round(clamp0138(c[0] / 255) * 255);
-    const g = Math.round(clamp0138(c[1] / 255) * 255);
-    const b = Math.round(clamp0138(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0138(a)})`;
+  function rgb38(c, a = 1) {
+    const r = Math.round(clamp0139(c[0] / 255) * 255);
+    const g = Math.round(clamp0139(c[1] / 255) * 255);
+    const b = Math.round(clamp0139(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0139(a)})`;
   }
-  function smoother37(x) {
+  function smoother38(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt37(t, amp = 1, w = 1.5) {
+  function bobAt38(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP37 = {
+  var SP38 = {
     // Spring — fiery plumage; dewy bright-lime pad + blossom; a few ember sparks.
     Spring: {
       plumeLight: [255, 214, 96],
@@ -21123,7 +21183,7 @@
       steamAmt: 0.75
     }
   };
-  function lerpP37(a, b, t) {
+  function lerpP38(a, b, t) {
     return {
       plumeLight: lerpRGB31(a.plumeLight, b.plumeLight, t),
       plumeMid: lerpRGB31(a.plumeMid, b.plumeMid, t),
@@ -21135,43 +21195,43 @@
       soil: lerpRGB31(a.soil, b.soil, t),
       outline: lerpRGB31(a.outline, b.outline, t),
       lightWash: lerpRGB31(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp42(a.lightWashAmt, b.lightWashAmt, t),
-      fireWarmth: lerp42(a.fireWarmth, b.fireWarmth, t),
-      emberSparkAmt: lerp42(a.emberSparkAmt, b.emberSparkAmt, t),
-      blossomAmt: lerp42(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp42(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      padSnowAmt: lerp42(a.padSnowAmt, b.padSnowAmt, t),
-      meltRingAmt: lerp42(a.meltRingAmt, b.meltRingAmt, t),
-      steamAmt: lerp42(a.steamAmt, b.steamAmt, t)
+      lightWashAmt: lerp43(a.lightWashAmt, b.lightWashAmt, t),
+      fireWarmth: lerp43(a.fireWarmth, b.fireWarmth, t),
+      emberSparkAmt: lerp43(a.emberSparkAmt, b.emberSparkAmt, t),
+      blossomAmt: lerp43(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp43(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      padSnowAmt: lerp43(a.padSnowAmt, b.padSnowAmt, t),
+      meltRingAmt: lerp43(a.meltRingAmt, b.meltRingAmt, t),
+      steamAmt: lerp43(a.steamAmt, b.steamAmt, t)
     };
   }
   function clampP27(p) {
     return {
       ...p,
-      lightWashAmt: clamp0138(p.lightWashAmt),
-      fireWarmth: clamp0138(p.fireWarmth),
-      emberSparkAmt: clamp0138(p.emberSparkAmt),
-      blossomAmt: clamp0138(p.blossomAmt),
-      fallenLeafAmt: clamp0138(p.fallenLeafAmt),
-      padSnowAmt: clamp0138(p.padSnowAmt),
-      meltRingAmt: clamp0138(p.meltRingAmt),
-      steamAmt: clamp0138(p.steamAmt)
+      lightWashAmt: clamp0139(p.lightWashAmt),
+      fireWarmth: clamp0139(p.fireWarmth),
+      emberSparkAmt: clamp0139(p.emberSparkAmt),
+      blossomAmt: clamp0139(p.blossomAmt),
+      fallenLeafAmt: clamp0139(p.fallenLeafAmt),
+      padSnowAmt: clamp0139(p.padSnowAmt),
+      meltRingAmt: clamp0139(p.meltRingAmt),
+      steamAmt: clamp0139(p.steamAmt)
     };
   }
   function paintPad6(ctx, p) {
-    ctx.fillStyle = rgb37([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb38([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb37(p.soil);
+    ctx.fillStyle = rgb38(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb37(p.padGrass);
+    ctx.fillStyle = rgb38(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb37(p.padGrass);
+    ctx.strokeStyle = rgb38(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -21183,16 +21243,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb37([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb38([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb37([244, 250, 255], 0.88 * p.padSnowAmt);
+      ctx.fillStyle = rgb38([244, 250, 255], 0.88 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17.4, 4.8, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb37([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb38([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-13, 18.6], [13, 18.2], [-9, 20.4], [11, 20.6]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -21201,19 +21261,19 @@
     }
     if (p.meltRingAmt > 1e-3) {
       const a = p.meltRingAmt;
-      ctx.fillStyle = rgb37([54, 46, 50], 0.62 * a);
+      ctx.fillStyle = rgb38([54, 46, 50], 0.62 * a);
       ctx.beginPath();
       ctx.ellipse(0, 19.2, 11.5, 3.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb37([40, 34, 40], 0.55 * a);
+      ctx.fillStyle = rgb38([40, 34, 40], 0.55 * a);
       ctx.beginPath();
       ctx.ellipse(0, 19.4, 8.2, 2.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb37([255, 170, 80], 0.22 * a);
+      ctx.fillStyle = rgb38([255, 170, 80], 0.22 * a);
       ctx.beginPath();
       ctx.ellipse(-1.5, 18.8, 6, 1.7, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = rgb37([226, 238, 250], 0.5 * a);
+      ctx.strokeStyle = rgb38([226, 238, 250], 0.5 * a);
       ctx.lineWidth = 1.4;
       ctx.beginPath();
       ctx.ellipse(0, 19.2, 11.5, 3.6, 0, 0, Math.PI * 2);
@@ -21221,14 +21281,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [10, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb37([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb38([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb37([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb38([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -21244,11 +21304,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb37(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb38(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb37([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb38([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -21264,9 +21324,9 @@
     const r = 17;
     const g = ctx.createRadialGradient(cx, cy, 1, cx, cy, r);
     const a = 0.16 + 0.07 * p.fireWarmth;
-    g.addColorStop(0, rgb37(p.emberGlow, a));
-    g.addColorStop(0.55, rgb37(p.emberGlow, a * 0.45));
-    g.addColorStop(1, rgb37(p.emberGlow, 0));
+    g.addColorStop(0, rgb38(p.emberGlow, a));
+    g.addColorStop(0.55, rgb38(p.emberGlow, a * 0.45));
+    g.addColorStop(1, rgb38(p.emberGlow, 0));
     ctx.fillStyle = g;
     ctx.beginPath();
     ctx.ellipse(cx, cy, r, r * 0.92, 0, 0, Math.PI * 2);
@@ -21274,7 +21334,7 @@
     ctx.restore();
   }
   function paintLeg4(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb37(p.beakLeg);
+    ctx.strokeStyle = rgb38(p.beakLeg);
     ctx.lineWidth = 2.2;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -21306,14 +21366,14 @@
       const tipY = rootY - Math.cos(ang * 0.6) * len * 0.9 - len * 0.18;
       const ctrlX = rootX + dirX * len * 0.45 + f * 0.5;
       const ctrlY = rootY - len * 0.55;
-      ctx.fillStyle = rgb37(col);
+      ctx.fillStyle = rgb38(col);
       ctx.beginPath();
       ctx.moveTo(rootX - wid * 0.5, rootY);
       ctx.quadraticCurveTo(ctrlX - wid * 0.5, ctrlY, tipX, tipY);
       ctx.quadraticCurveTo(ctrlX + wid * 0.6, ctrlY + 1.5, rootX + wid * 0.5, rootY + 1);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = rgb37(p.plumeLight, 0.5);
+      ctx.strokeStyle = rgb38(p.plumeLight, 0.5);
       ctx.lineWidth = 1.1;
       ctx.beginPath();
       ctx.moveTo(rootX, rootY);
@@ -21328,32 +21388,32 @@
     paintLeg4(ctx, p, bx + 1.5, by + 7, 18.6);
     paintLeg4(ctx, p, bx - 2.5, by + 7, 19);
     paintTail3(ctx, p, bx, by, tailFlick);
-    ctx.fillStyle = rgb37(p.outline);
+    ctx.fillStyle = rgb38(p.outline);
     ctx.beginPath();
     ctx.ellipse(bx, by, 9.2, 10.4, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb37(p.plumeDeep);
+    ctx.fillStyle = rgb38(p.plumeDeep);
     ctx.beginPath();
     ctx.ellipse(bx, by + 0.4, 8.4, 9.6, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb37(p.plumeMid);
+    ctx.fillStyle = rgb38(p.plumeMid);
     ctx.beginPath();
     ctx.ellipse(bx - 0.6, by - 0.6, 7.6, 8.8, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb37(p.plumeLight);
+    ctx.fillStyle = rgb38(p.plumeLight);
     ctx.beginPath();
     ctx.ellipse(bx - 2.4, by - 3.2, 4.8, 5.4, -0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.save();
     ctx.translate(bx + 2.2, by - 0.5);
     ctx.rotate(-0.18);
-    ctx.fillStyle = rgb37(p.plumeDeep);
+    ctx.fillStyle = rgb38(p.plumeDeep);
     ctx.beginPath();
     ctx.ellipse(0, 0, 5.6, 7.2, 0, 0, Math.PI * 2);
     ctx.fill();
     for (let row = 0; row < 3; row++) {
       const col = row === 2 ? p.crest : p.plumeMid;
-      ctx.fillStyle = rgb37(col);
+      ctx.fillStyle = rgb38(col);
       for (let i = 0; i < 3; i++) {
         const fx = -2 + i * 2.2;
         const fy = -3 + row * 3.2;
@@ -21363,7 +21423,7 @@
       }
     }
     ctx.restore();
-    ctx.fillStyle = rgb37(p.plumeLight, 0.5);
+    ctx.fillStyle = rgb38(p.plumeLight, 0.5);
     for (const [fx, fy] of [[-4.2, -1], [-3.6, 2], [-3.2, 5]]) {
       ctx.beginPath();
       ctx.ellipse(bx + fx, by + fy, 1.8, 1.2, -0.3, 0, Math.PI * 2);
@@ -21371,7 +21431,7 @@
     }
     const hx = bx - 6.5;
     const hy = by - 8.5;
-    ctx.strokeStyle = rgb37(p.plumeMid);
+    ctx.strokeStyle = rgb38(p.plumeMid);
     ctx.lineWidth = 5.4;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -21379,15 +21439,15 @@
     ctx.quadraticCurveTo(bx - 5, by - 7, hx + 0.5, hy + 2.5);
     ctx.stroke();
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb37(p.outline);
+    ctx.fillStyle = rgb38(p.outline);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 4.6, 4.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb37(p.plumeMid);
+    ctx.fillStyle = rgb38(p.plumeMid);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 4, 3.8, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb37(p.plumeLight);
+    ctx.fillStyle = rgb38(p.plumeLight);
     ctx.beginPath();
     ctx.ellipse(hx - 1.4, hy - 1.4, 2.2, 2, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -21396,7 +21456,7 @@
       [hx + 2.6, hy - 2.6, 5, 0.15],
       [hx - 0.2, hy - 3.2, 4.5, -0.5]
     ]) {
-      ctx.fillStyle = rgb37(p.crest);
+      ctx.fillStyle = rgb38(p.crest);
       ctx.beginPath();
       ctx.moveTo(cx2 - 1.1, cy2 + 1);
       ctx.quadraticCurveTo(cx2 + Math.sin(ang) * len * 0.5, cy2 - len * 0.6, cx2 + Math.sin(ang) * len, cy2 - len);
@@ -21404,24 +21464,24 @@
       ctx.closePath();
       ctx.fill();
     }
-    ctx.fillStyle = rgb37(p.plumeLight, 0.7);
+    ctx.fillStyle = rgb38(p.plumeLight, 0.7);
     for (const [tx, ty] of [[hx + 1.2 + Math.sin(-0.2) * 6, hy - 3.4 - 6], [hx + 2.6 + Math.sin(0.15) * 5, hy - 2.6 - 5]]) {
       ctx.beginPath();
       ctx.arc(tx, ty, 1, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb37(p.beakLeg);
+    ctx.fillStyle = rgb38(p.beakLeg);
     ctx.beginPath();
     ctx.moveTo(hx - 3.4, hy + 0.4);
     ctx.lineTo(hx - 6.4, hy + 1.8);
     ctx.lineTo(hx - 3.2, hy + 2.4);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb37([28, 18, 14]);
+    ctx.fillStyle = rgb38([28, 18, 14]);
     ctx.beginPath();
     ctx.arc(hx - 1.2, hy - 0.2, 1.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb37([255, 236, 190], 0.9);
+    ctx.fillStyle = rgb38([255, 236, 190], 0.9);
     ctx.beginPath();
     ctx.arc(hx - 1.6, hy - 0.7, 0.45, 0, Math.PI * 2);
     ctx.fill();
@@ -21444,7 +21504,7 @@
       const ey = by - 2 - prog * 20;
       const ex = bx + sx + Math.sin(prog * Math.PI * 2 + phase * 6) * 2.4;
       const fade = Math.sin(prog * Math.PI);
-      ctx.fillStyle = rgb37([255, 196, 96], 0.85 * fade * p.emberSparkAmt);
+      ctx.fillStyle = rgb38([255, 196, 96], 0.85 * fade * p.emberSparkAmt);
       ctx.beginPath();
       ctx.arc(ex, ey, sz * (0.7 + 0.5 * fade), 0, Math.PI * 2);
       ctx.fill();
@@ -21465,7 +21525,7 @@
       const wy = 17 - prog * 16;
       const wx = sx + Math.sin(prog * Math.PI * 2 + phase * 5) * 3;
       const fade = Math.sin(prog * Math.PI);
-      ctx.fillStyle = rgb37([232, 240, 248], 0.34 * fade * p.steamAmt);
+      ctx.fillStyle = rgb38([232, 240, 248], 0.34 * fade * p.steamAmt);
       ctx.beginPath();
       ctx.ellipse(wx, wy, 2.6 + prog * 1.6, 3.4 + prog * 2.2, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -21476,13 +21536,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb37(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb38(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint37(ctx, pIn, bob, tailFlick = 0, emberRise = 0, steamDrift = 0) {
+  function paint38(ctx, pIn, bob, tailFlick = 0, emberRise = 0, steamDrift = 0) {
     const p = clampP27(pIn);
     ctx.save();
     try {
@@ -21498,22 +21558,22 @@
     }
   }
   function draw28(season) {
-    return (ctx) => paint37(ctx, SP37[season], 0, 0, 0.2, 0.2);
+    return (ctx) => paint38(ctx, SP38[season], 0, 0, 0.2, 0.2);
   }
   function anim28(season) {
     return (ctx, t) => {
-      const p = clampP27(SP37[season]);
-      const bob = bobAt37(t);
+      const p = clampP27(SP38[season]);
+      const bob = bobAt38(t);
       const flickAmp = 1.4 + 1.6 * p.fireWarmth + (season === "Summer" ? 1 : 0);
       const tailFlick = Math.sin(t * 2.3) * flickAmp + Math.sin(t * 3.7) * (0.5 * flickAmp);
       const emberRise = t / 2.6 % 1;
       const steamDrift = t / 3.4 % 1;
-      paint37(ctx, SP37[season], bob, tailFlick, emberRise, steamDrift);
+      paint38(ctx, SP38[season], bob, tailFlick, emberRise, steamDrift);
       ctx.save();
       try {
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb37([255, 255, 255], g);
+          ctx.fillStyle = rgb38([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-9, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -21526,7 +21586,7 @@
           const pr = t / 1.8 % 1;
           const ey = -10 + 4 - pr * 14;
           const fade = Math.sin(pr * Math.PI);
-          ctx.fillStyle = rgb37([255, 214, 120], 0.7 * fade);
+          ctx.fillStyle = rgb38([255, 214, 120], 0.7 * fade);
           ctx.beginPath();
           ctx.arc(-1 + Math.sin(pr * 6) * 2, ey, 1 + fade * 0.6, 0, Math.PI * 2);
           ctx.fill();
@@ -21537,7 +21597,7 @@
           ctx.save();
           ctx.translate(11 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb37([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb38([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -21546,7 +21606,7 @@
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 30;
           const fxx = 13 + Math.sin(prog * Math.PI * 2) * 3;
-          ctx.fillStyle = rgb37([255, 255, 255], 0.8 * (0.5 + 0.5 * Math.sin(prog * Math.PI)));
+          ctx.fillStyle = rgb38([255, 255, 255], 0.8 * (0.5 + 0.5 * Math.sin(prog * Math.PI)));
           ctx.beginPath();
           ctx.arc(fxx, fy, 1, 0, Math.PI * 2);
           ctx.fill();
@@ -21558,17 +21618,17 @@
       }
     };
   }
-  function makeTransition34(fromIdx) {
+  function makeTransition35(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother37(clamp0138(pp));
-      paint37(ctx, lerpP37(SP37[from], SP37[to], k), 0, 0, 0.2, 0.2);
+      const k = smoother38(clamp0139(pp));
+      paint38(ctx, lerpP38(SP38[from], SP38[to], k), 0, 0, 0.2, 0.2);
     };
   }
-  var springToSummer33 = makeTransition34(0);
-  var summerToAutumn33 = makeTransition34(1);
-  var autumnToWinter33 = makeTransition34(2);
+  var springToSummer32 = makeTransition35(0);
+  var summerToAutumn32 = makeTransition35(1);
+  var autumnToWinter32 = makeTransition35(2);
   var VARIANTS40 = {
     Spring: { draw: draw28("Spring"), anim: anim28("Spring") },
     Summer: { draw: draw28("Summer"), anim: anim28("Summer") },
@@ -21576,35 +21636,35 @@
     Winter: { draw: draw28("Winter"), anim: anim28("Winter") }
   };
   var TRANSITIONS40 = {
-    0: springToSummer33,
-    1: summerToAutumn33,
-    2: autumnToWinter33
+    0: springToSummer32,
+    1: summerToAutumn32,
+    2: autumnToWinter32
   };
 
   // src/textures/seasonal/bird/dodo.ts
-  function clamp0139(x) {
+  function clamp0140(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
-  function lerp43(a, b, t) {
+  function lerp44(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB32(a, b, t) {
-    return [lerp43(a[0], b[0], t), lerp43(a[1], b[1], t), lerp43(a[2], b[2], t)];
+    return [lerp44(a[0], b[0], t), lerp44(a[1], b[1], t), lerp44(a[2], b[2], t)];
   }
-  function rgb38(c, a = 1) {
-    const r = Math.round(clamp0139(c[0] / 255) * 255);
-    const g = Math.round(clamp0139(c[1] / 255) * 255);
-    const b = Math.round(clamp0139(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0139(a)})`;
+  function rgb39(c, a = 1) {
+    const r = Math.round(clamp0140(c[0] / 255) * 255);
+    const g = Math.round(clamp0140(c[1] / 255) * 255);
+    const b = Math.round(clamp0140(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0140(a)})`;
   }
-  function smoother38(x) {
+  function smoother39(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt38(t, amp = 1, w = 1.5) {
+  function bobAt39(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP38 = {
+  var SP39 = {
     // Spring — soft (lightly-desaturated) grey plumage, dewy lime pad + blossom.
     Spring: {
       bodyLight: [188, 192, 196],
@@ -21708,7 +21768,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP38(a, b, t) {
+  function lerpP39(a, b, t) {
     return {
       bodyLight: lerpRGB32(a.bodyLight, b.bodyLight, t),
       bodyMid: lerpRGB32(a.bodyMid, b.bodyMid, t),
@@ -21721,45 +21781,45 @@
       soil: lerpRGB32(a.soil, b.soil, t),
       outline: lerpRGB32(a.outline, b.outline, t),
       lightWash: lerpRGB32(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp43(a.lightWashAmt, b.lightWashAmt, t),
-      plumeVolume: lerp43(a.plumeVolume, b.plumeVolume, t),
-      sheenAmt: lerp43(a.sheenAmt, b.sheenAmt, t),
-      frostAmt: lerp43(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp43(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp43(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp43(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp43(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp43(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp44(a.lightWashAmt, b.lightWashAmt, t),
+      plumeVolume: lerp44(a.plumeVolume, b.plumeVolume, t),
+      sheenAmt: lerp44(a.sheenAmt, b.sheenAmt, t),
+      frostAmt: lerp44(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp44(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp44(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp44(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp44(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp44(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP28(p) {
     return {
       ...p,
-      lightWashAmt: clamp0139(p.lightWashAmt),
-      plumeVolume: clamp0139(p.plumeVolume),
-      sheenAmt: clamp0139(p.sheenAmt),
-      frostAmt: clamp0139(p.frostAmt),
-      backSnowAmt: clamp0139(p.backSnowAmt),
-      padSnowAmt: clamp0139(p.padSnowAmt),
-      blossomAmt: clamp0139(p.blossomAmt),
-      fallenLeafAmt: clamp0139(p.fallenLeafAmt),
-      breathFogAmt: clamp0139(p.breathFogAmt)
+      lightWashAmt: clamp0140(p.lightWashAmt),
+      plumeVolume: clamp0140(p.plumeVolume),
+      sheenAmt: clamp0140(p.sheenAmt),
+      frostAmt: clamp0140(p.frostAmt),
+      backSnowAmt: clamp0140(p.backSnowAmt),
+      padSnowAmt: clamp0140(p.padSnowAmt),
+      blossomAmt: clamp0140(p.blossomAmt),
+      fallenLeafAmt: clamp0140(p.fallenLeafAmt),
+      breathFogAmt: clamp0140(p.breathFogAmt)
     };
   }
   function paintPad7(ctx, p) {
-    ctx.fillStyle = rgb38([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb39([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb38(p.soil);
+    ctx.fillStyle = rgb39(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb38(p.padGrass);
+    ctx.fillStyle = rgb39(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb38(p.padGrass);
+    ctx.strokeStyle = rgb39(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -21771,16 +21831,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb38([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb39([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb38([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb39([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb38([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb39([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -21789,14 +21849,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb38([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb39([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb38([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb39([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -21812,11 +21872,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb38(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb39(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb38([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb39([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -21827,20 +21887,20 @@
     }
   }
   function paintLeg5(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb38(p.outline);
+    ctx.strokeStyle = rgb39(p.outline);
     ctx.lineWidth = 4.2;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.strokeStyle = rgb38(p.legs);
+    ctx.strokeStyle = rgb39(p.legs);
     ctx.lineWidth = 2.8;
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.strokeStyle = rgb38(p.legs);
+    ctx.strokeStyle = rgb39(p.legs);
     ctx.lineWidth = 1.8;
     for (const dx of [-2.6, -0.4, 2]) {
       ctx.beginPath();
@@ -21875,7 +21935,7 @@
     paintLeg5(ctx, p, bx - 3, by + 8, 19.4);
     paintLeg5(ctx, p, bx + 3.5, by + 8, 18.9);
     ctx.save();
-    ctx.strokeStyle = rgb38(p.bodyLight);
+    ctx.strokeStyle = rgb39(p.bodyLight);
     ctx.lineWidth = 2.2;
     ctx.lineCap = "round";
     for (const [ox, oy, curl] of [[0, -2, 0.8], [1.6, 0.4, 1], [0.6, 2.2, 0.6]]) {
@@ -21887,15 +21947,15 @@
     }
     ctx.lineCap = "butt";
     ctx.restore();
-    paintBody(ctx, p, bx, by, rgb38(p.outline), 1.16);
-    paintBody(ctx, p, bx, by, rgb38(p.bodyShadow), 1);
-    ctx.fillStyle = rgb38(p.bodyMid);
+    paintBody(ctx, p, bx, by, rgb39(p.outline), 1.16);
+    paintBody(ctx, p, bx, by, rgb39(p.bodyShadow), 1);
+    ctx.fillStyle = rgb39(p.bodyMid);
     ctx.beginPath();
     ctx.ellipse(bx, by, 11.2, 12, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.save();
     ctx.translate(-1.6, -2);
-    ctx.fillStyle = rgb38(p.bodyLight);
+    ctx.fillStyle = rgb39(p.bodyLight);
     ctx.beginPath();
     ctx.ellipse(bx, by, 8.4, 9.2, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -21903,21 +21963,21 @@
     ctx.save();
     ctx.translate(bx - 8.5, by + 1.5);
     ctx.rotate(0.5);
-    ctx.fillStyle = rgb38(p.bodyShadow);
+    ctx.fillStyle = rgb39(p.bodyShadow);
     ctx.beginPath();
     ctx.ellipse(0, 0, 3.6, 2.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb38(p.bodyMid);
+    ctx.fillStyle = rgb39(p.bodyMid);
     ctx.beginPath();
     ctx.ellipse(-0.4, -0.4, 2.8, 1.6, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb38([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb39([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 1, by - 9.6, 8 * (0.9 + p.plumeVolume * 0.25), 3.2, -0.08, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb38([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb39([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-4, -10.6], [1, -11.2], [5, -10]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.4 + p.plumeVolume * 0.4, 0, Math.PI * 2);
@@ -21925,7 +21985,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb38([255, 255, 255], 0.8 * p.frostAmt);
+      ctx.fillStyle = rgb39([255, 255, 255], 0.8 * p.frostAmt);
       const pts = [
         [-6, -2],
         [-2, 4],
@@ -21943,48 +22003,48 @@
     }
     const hx = bx - 7.5;
     const hy = by - 9.5;
-    ctx.strokeStyle = rgb38(p.outline);
+    ctx.strokeStyle = rgb39(p.outline);
     ctx.lineWidth = 7;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(bx - 3, by - 5);
     ctx.lineTo(hx + 1.5, hy + 3);
     ctx.stroke();
-    ctx.strokeStyle = rgb38(p.bodyMid);
+    ctx.strokeStyle = rgb39(p.bodyMid);
     ctx.lineWidth = 5;
     ctx.beginPath();
     ctx.moveTo(bx - 3, by - 5);
     ctx.lineTo(hx + 1.5, hy + 3);
     ctx.stroke();
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb38(p.outline);
+    ctx.fillStyle = rgb39(p.outline);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 6.2, 6.6, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb38(p.faceBare);
+    ctx.fillStyle = rgb39(p.faceBare);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 5.4, 5.8, -0.12, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb38([255, 255, 255], 0.12);
+    ctx.fillStyle = rgb39([255, 255, 255], 0.12);
     ctx.beginPath();
     ctx.ellipse(hx - 1.6, hy - 1.8, 2.4, 2.8, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb38([245, 245, 240]);
+    ctx.fillStyle = rgb39([245, 245, 240]);
     ctx.beginPath();
     ctx.arc(hx - 1.6, hy - 1, 1.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb38([22, 20, 22]);
+    ctx.fillStyle = rgb39([22, 20, 22]);
     ctx.beginPath();
     ctx.arc(hx - 1.8, hy - 0.8, 0.85, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb38([255, 255, 255], 0.9);
+    ctx.fillStyle = rgb39([255, 255, 255], 0.9);
     ctx.beginPath();
     ctx.arc(hx - 2.1, hy - 1.2, 0.3, 0, Math.PI * 2);
     ctx.fill();
     ctx.save();
     ctx.translate(hx - 3.5, hy + 2.6);
     ctx.rotate(0.5);
-    ctx.fillStyle = rgb38(p.outline);
+    ctx.fillStyle = rgb39(p.outline);
     ctx.beginPath();
     ctx.moveTo(2.4, -4);
     ctx.quadraticCurveTo(-6.5, -2.4, -8.6, 3.6);
@@ -21993,7 +22053,7 @@
     ctx.quadraticCurveTo(0.6, 2.2, 2.4, -1);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb38(p.beak);
+    ctx.fillStyle = rgb39(p.beak);
     ctx.beginPath();
     ctx.moveTo(2, -3.4);
     ctx.quadraticCurveTo(-6, -1.8, -7.9, 3.6);
@@ -22002,7 +22062,7 @@
     ctx.quadraticCurveTo(0.4, 1.9, 2, -0.8);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb38(p.beakDark);
+    ctx.fillStyle = rgb39(p.beakDark);
     ctx.beginPath();
     ctx.moveTo(-5.6, 6.6);
     ctx.quadraticCurveTo(-8.6, 6, -7.6, 3.4);
@@ -22010,14 +22070,14 @@
     ctx.quadraticCurveTo(-4.2, 5.2, -5.6, 6.6);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = rgb38([255, 255, 255], 0.32);
+    ctx.strokeStyle = rgb39([255, 255, 255], 0.32);
     ctx.lineWidth = 1;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(1.4, -2.6);
     ctx.quadraticCurveTo(-5, -1, -7, 3);
     ctx.stroke();
-    ctx.strokeStyle = rgb38(p.beakDark);
+    ctx.strokeStyle = rgb39(p.beakDark);
     ctx.lineWidth = 0.8;
     ctx.beginPath();
     ctx.moveTo(-1.4, -0.4);
@@ -22026,7 +22086,7 @@
     ctx.lineCap = "butt";
     ctx.restore();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb38([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb39([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 9, hy + 6, 3, 2.1, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -22036,13 +22096,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb38(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb39(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint38(ctx, pIn, bob) {
+  function paint39(ctx, pIn, bob) {
     const p = clampP28(pIn);
     ctx.save();
     try {
@@ -22056,18 +22116,18 @@
     }
   }
   function draw29(season) {
-    return (ctx) => paint38(ctx, SP38[season], 0);
+    return (ctx) => paint39(ctx, SP39[season], 0);
   }
   function anim29(season) {
     return (ctx, t) => {
-      const p = clampP28(SP38[season]);
-      const bob = bobAt38(t);
+      const p = clampP28(SP39[season]);
+      const bob = bobAt39(t);
       const loop = t % 5 / 5;
       const waddle = Math.sin(loop * Math.PI * 2) * (1 - bob / 1.2) * 1.4;
       const headDip = Math.max(0, Math.sin(loop * Math.PI * 4)) ** 2 * 1.3;
       ctx.save();
       ctx.translate(waddle * 0.5, 0);
-      paint38(ctx, SP38[season], bob);
+      paint39(ctx, SP39[season], bob);
       ctx.restore();
       ctx.save();
       try {
@@ -22076,18 +22136,18 @@
         const hx = bx - 7.5;
         const hy = by - 9.5 + headDip;
         if (headDip > 0.05) {
-          ctx.fillStyle = rgb38(p.faceBare);
+          ctx.fillStyle = rgb39(p.faceBare);
           ctx.beginPath();
           ctx.ellipse(hx, hy, 5.2, 5.6, -0.12, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = rgb38([22, 20, 22]);
+          ctx.fillStyle = rgb39([22, 20, 22]);
           ctx.beginPath();
           ctx.arc(hx - 1.8, hy - 0.8, 0.85, 0, Math.PI * 2);
           ctx.fill();
           ctx.save();
           ctx.translate(hx - 3.5, hy + 2.6);
           ctx.rotate(0.5);
-          ctx.fillStyle = rgb38(p.beak);
+          ctx.fillStyle = rgb39(p.beak);
           ctx.beginPath();
           ctx.moveTo(2, -3.4);
           ctx.quadraticCurveTo(-6, -1.8, -7.9, 3.6);
@@ -22100,7 +22160,7 @@
         }
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb38([255, 255, 255], g);
+          ctx.fillStyle = rgb39([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -22112,7 +22172,7 @@
           const sx = bx - 9 + s * 18;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb38([255, 255, 255], 0.3 + 0.15 * p.sheenAmt);
+          ctx.fillStyle = rgb39([255, 255, 255], 0.3 + 0.15 * p.sheenAmt);
           ctx.beginPath();
           ctx.ellipse(sx, by - 2, 3, 8, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -22123,7 +22183,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb38([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb39([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -22131,21 +22191,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb38([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb39([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - 6 - reach, hy + 6, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb38([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb39([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb38([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb39([206, 224, 255], 0.12 + sheen2 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 11.5, 12.5, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -22158,17 +22218,17 @@
       }
     };
   }
-  function makeTransition35(fromIdx) {
+  function makeTransition36(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother38(clamp0139(pp));
-      paint38(ctx, lerpP38(SP38[from], SP38[to], k), 0);
+      const k = smoother39(clamp0140(pp));
+      paint39(ctx, lerpP39(SP39[from], SP39[to], k), 0);
     };
   }
-  var springToSummer34 = makeTransition35(0);
-  var summerToAutumn34 = makeTransition35(1);
-  var autumnToWinter34 = makeTransition35(2);
+  var springToSummer33 = makeTransition36(0);
+  var summerToAutumn33 = makeTransition36(1);
+  var autumnToWinter33 = makeTransition36(2);
   var VARIANTS41 = {
     Spring: { draw: draw29("Spring"), anim: anim29("Spring") },
     Summer: { draw: draw29("Summer"), anim: anim29("Summer") },
@@ -22176,34 +22236,34 @@
     Winter: { draw: draw29("Winter"), anim: anim29("Winter") }
   };
   var TRANSITIONS41 = {
-    0: springToSummer34,
-    1: summerToAutumn34,
-    2: autumnToWinter34
+    0: springToSummer33,
+    1: summerToAutumn33,
+    2: autumnToWinter33
   };
 
   // src/textures/seasonal/herd/sheep.ts
-  function clamp0140(x) {
+  function clamp0141(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
-  function lerp44(a, b, t) {
+  function lerp45(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB33(a, b, t) {
-    return [lerp44(a[0], b[0], t), lerp44(a[1], b[1], t), lerp44(a[2], b[2], t)];
+    return [lerp45(a[0], b[0], t), lerp45(a[1], b[1], t), lerp45(a[2], b[2], t)];
   }
-  function rgb39(c, a = 1) {
-    const r = Math.round(clamp0140(c[0] / 255) * 255);
-    const g = Math.round(clamp0140(c[1] / 255) * 255);
-    const b = Math.round(clamp0140(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0140(a)})`;
+  function rgb40(c, a = 1) {
+    const r = Math.round(clamp0141(c[0] / 255) * 255);
+    const g = Math.round(clamp0141(c[1] / 255) * 255);
+    const b = Math.round(clamp0141(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0141(a)})`;
   }
-  function smoother39(x) {
+  function smoother40(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt39(t, amp = 1.1, w = 1.5) {
+  function bobAt40(t, amp = 1.1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP39 = {
+  var SP40 = {
     Spring: {
       fleeceLight: [248, 250, 248],
       fleeceShadow: [206, 212, 214],
@@ -22285,7 +22345,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP39(a, b, t) {
+  function lerpP40(a, b, t) {
     return {
       fleeceLight: lerpRGB33(a.fleeceLight, b.fleeceLight, t),
       fleeceShadow: lerpRGB33(a.fleeceShadow, b.fleeceShadow, t),
@@ -22294,43 +22354,43 @@
       soil: lerpRGB33(a.soil, b.soil, t),
       outline: lerpRGB33(a.outline, b.outline, t),
       lightWash: lerpRGB33(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp44(a.lightWashAmt, b.lightWashAmt, t),
-      fleeceVolume: lerp44(a.fleeceVolume, b.fleeceVolume, t),
-      frostAmt: lerp44(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp44(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp44(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp44(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp44(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp44(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp45(a.lightWashAmt, b.lightWashAmt, t),
+      fleeceVolume: lerp45(a.fleeceVolume, b.fleeceVolume, t),
+      frostAmt: lerp45(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp45(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp45(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp45(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp45(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp45(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP29(p) {
     return {
       ...p,
-      lightWashAmt: clamp0140(p.lightWashAmt),
-      fleeceVolume: clamp0140(p.fleeceVolume),
-      frostAmt: clamp0140(p.frostAmt),
-      backSnowAmt: clamp0140(p.backSnowAmt),
-      padSnowAmt: clamp0140(p.padSnowAmt),
-      blossomAmt: clamp0140(p.blossomAmt),
-      fallenLeafAmt: clamp0140(p.fallenLeafAmt),
-      breathFogAmt: clamp0140(p.breathFogAmt)
+      lightWashAmt: clamp0141(p.lightWashAmt),
+      fleeceVolume: clamp0141(p.fleeceVolume),
+      frostAmt: clamp0141(p.frostAmt),
+      backSnowAmt: clamp0141(p.backSnowAmt),
+      padSnowAmt: clamp0141(p.padSnowAmt),
+      blossomAmt: clamp0141(p.blossomAmt),
+      fallenLeafAmt: clamp0141(p.fallenLeafAmt),
+      breathFogAmt: clamp0141(p.breathFogAmt)
     };
   }
   function paintPad8(ctx, p) {
-    ctx.fillStyle = rgb39([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb40([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb39(p.soil);
+    ctx.fillStyle = rgb40(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb39(p.padGrass);
+    ctx.fillStyle = rgb40(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb39(p.padGrass);
+    ctx.strokeStyle = rgb40(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -22342,16 +22402,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb39([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb40([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb39([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb40([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb39([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb40([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -22360,14 +22420,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb39([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb40([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb39([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb40([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -22383,11 +22443,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb39(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb40(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb39([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb40([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -22398,14 +22458,14 @@
     }
   }
   function paintLeg6(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb39(p.faceDark);
+    ctx.strokeStyle = rgb40(p.faceDark);
     ctx.lineWidth = 3;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.fillStyle = rgb39([28, 24, 26]);
+    ctx.fillStyle = rgb40([28, 24, 26]);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 1.8, 1.2, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -22440,18 +22500,18 @@
     ctx.restore();
     paintLeg6(ctx, p, bx + 3.5, by + 6, 19.2);
     paintLeg6(ctx, p, bx - 4.5, by + 6, 19.4);
-    paintFleeceBody(ctx, p, bx, by, rgb39(p.outline), 1.18);
-    paintFleeceBody(ctx, p, bx, by, rgb39(p.fleeceShadow), 1);
+    paintFleeceBody(ctx, p, bx, by, rgb40(p.outline), 1.18);
+    paintFleeceBody(ctx, p, bx, by, rgb40(p.fleeceShadow), 1);
     ctx.save();
     ctx.translate(-1.4, -1.6);
-    paintFleeceBody(ctx, p, bx, by, rgb39(p.fleeceLight), 0.82);
+    paintFleeceBody(ctx, p, bx, by, rgb40(p.fleeceLight), 0.82);
     ctx.restore();
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb39([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb40([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 1, by - 7.6, 9 * (0.9 + p.fleeceVolume * 0.3), 3.4, -0.08, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb39([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb40([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-5, -8.4], [1, -9], [5, -8]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.6 + p.fleeceVolume * 0.4, 0, Math.PI * 2);
@@ -22459,7 +22519,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb39([255, 255, 255], 0.8 * p.frostAmt);
+      ctx.fillStyle = rgb40([255, 255, 255], 0.8 * p.frostAmt);
       const pts = [
         [-8, 0],
         [-3, 4],
@@ -22477,7 +22537,7 @@
     }
     const hx = bx - 11;
     const hy = by + 2;
-    ctx.fillStyle = rgb39(p.faceDark);
+    ctx.fillStyle = rgb40(p.faceDark);
     for (const side of [-1, 1]) {
       ctx.save();
       ctx.translate(hx + side * 2.6, hy - 4);
@@ -22487,50 +22547,50 @@
       ctx.fill();
       ctx.restore();
     }
-    ctx.fillStyle = rgb39(p.fleeceLight);
+    ctx.fillStyle = rgb40(p.fleeceLight);
     ctx.beginPath();
     ctx.ellipse(hx, hy - 4.4, 3.4, 2.4, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.save();
     ctx.translate(hx, hy);
     ctx.rotate(0.28);
-    ctx.fillStyle = rgb39(p.outline);
+    ctx.fillStyle = rgb40(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 0, 4.8, 5.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb39(p.faceDark);
+    ctx.fillStyle = rgb40(p.faceDark);
     ctx.beginPath();
     ctx.ellipse(0, 0, 4.1, 4.9, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb39([255, 255, 255], 0.12);
+    ctx.fillStyle = rgb40([255, 255, 255], 0.12);
     ctx.beginPath();
     ctx.ellipse(-1.4, -1.6, 2, 2.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb39([245, 245, 240]);
+    ctx.fillStyle = rgb40([245, 245, 240]);
     for (const ex of [-1.6, 1.6]) {
       ctx.beginPath();
       ctx.arc(ex, -1.2, 1.05, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb39([20, 18, 20]);
+    ctx.fillStyle = rgb40([20, 18, 20]);
     for (const ex of [-1.4, 1.8]) {
       ctx.beginPath();
       ctx.arc(ex, -1, 0.6, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb39([18, 16, 18]);
+    ctx.fillStyle = rgb40([18, 16, 18]);
     for (const ex of [-1.1, 1.1]) {
       ctx.beginPath();
       ctx.ellipse(ex, 3.2, 0.5, 0.7, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
-    ctx.fillStyle = rgb39(p.fleeceLight);
+    ctx.fillStyle = rgb40(p.fleeceLight);
     ctx.beginPath();
     ctx.arc(bx + 12.5, by - 1, 2.4 + p.fleeceVolume * 0.6, 0, Math.PI * 2);
     ctx.fill();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb39([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb40([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 6, hy + 3.4, 3.2, 2.2, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -22540,13 +22600,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb39(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb40(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint39(ctx, pIn, bob) {
+  function paint40(ctx, pIn, bob) {
     const p = clampP29(pIn);
     ctx.save();
     try {
@@ -22560,13 +22620,13 @@
     }
   }
   function draw30(season) {
-    return (ctx) => paint39(ctx, SP39[season], 0);
+    return (ctx) => paint40(ctx, SP40[season], 0);
   }
   function anim30(season) {
     return (ctx, t) => {
-      const p = clampP29(SP39[season]);
-      const bob = bobAt39(t);
-      paint39(ctx, SP39[season], bob);
+      const p = clampP29(SP40[season]);
+      const bob = bobAt40(t);
+      paint40(ctx, SP40[season], bob);
       ctx.save();
       try {
         const bx = -1;
@@ -22576,7 +22636,7 @@
         const loop = t % 5 / 5;
         const flickGate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 6;
         const flick = Math.sin(t * 9) * flickGate;
-        ctx.fillStyle = rgb39(p.faceDark);
+        ctx.fillStyle = rgb40(p.faceDark);
         ctx.save();
         ctx.translate(hx + 2.6, hy - 4);
         ctx.rotate(0.6 + flick * 0.5);
@@ -22584,13 +22644,13 @@
         ctx.ellipse(0, 0, 3.4, 1.7, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
-        ctx.fillStyle = rgb39(p.fleeceLight);
+        ctx.fillStyle = rgb40(p.fleeceLight);
         ctx.beginPath();
         ctx.arc(bx + 12.5 + flick * 1.4, by - 1, 2.4 + p.fleeceVolume * 0.6, 0, Math.PI * 2);
         ctx.fill();
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb39([255, 255, 255], g);
+          ctx.fillStyle = rgb40([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -22602,7 +22662,7 @@
           const sx = bx - 9 + s * 18;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb39([255, 255, 255], 0.35);
+          ctx.fillStyle = rgb40([255, 255, 255], 0.35);
           ctx.beginPath();
           ctx.ellipse(sx, by - 2, 3, 6, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -22613,7 +22673,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb39([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb40([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -22621,21 +22681,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb39([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb40([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - reach, hy + 3.4, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb39([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb40([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb39([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb40([206, 224, 255], 0.12 + sheen2 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13, 9, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -22648,17 +22708,17 @@
       }
     };
   }
-  function makeTransition36(fromIdx) {
+  function makeTransition37(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother39(clamp0140(pp));
-      paint39(ctx, lerpP39(SP39[from], SP39[to], k), 0);
+      const k = smoother40(clamp0141(pp));
+      paint40(ctx, lerpP40(SP40[from], SP40[to], k), 0);
     };
   }
-  var springToSummer35 = makeTransition36(0);
-  var summerToAutumn35 = makeTransition36(1);
-  var autumnToWinter35 = makeTransition36(2);
+  var springToSummer34 = makeTransition37(0);
+  var summerToAutumn34 = makeTransition37(1);
+  var autumnToWinter34 = makeTransition37(2);
   var VARIANTS42 = {
     Spring: { draw: draw30("Spring"), anim: anim30("Spring") },
     Summer: { draw: draw30("Summer"), anim: anim30("Summer") },
@@ -22666,35 +22726,35 @@
     Winter: { draw: draw30("Winter"), anim: anim30("Winter") }
   };
   var TRANSITIONS42 = {
-    0: springToSummer35,
-    1: summerToAutumn35,
-    2: autumnToWinter35
+    0: springToSummer34,
+    1: summerToAutumn34,
+    2: autumnToWinter34
   };
 
   // src/textures/seasonal/herd/pig.ts
-  function clamp0141(x) {
+  function clamp0142(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
-  function lerp45(a, b, t) {
+  function lerp46(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB34(a, b, t) {
-    return [lerp45(a[0], b[0], t), lerp45(a[1], b[1], t), lerp45(a[2], b[2], t)];
+    return [lerp46(a[0], b[0], t), lerp46(a[1], b[1], t), lerp46(a[2], b[2], t)];
   }
-  function rgb40(c, a = 1) {
-    const r = Math.round(clamp0141(c[0] / 255) * 255);
-    const g = Math.round(clamp0141(c[1] / 255) * 255);
-    const b = Math.round(clamp0141(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0141(a)})`;
+  function rgb41(c, a = 1) {
+    const r = Math.round(clamp0142(c[0] / 255) * 255);
+    const g = Math.round(clamp0142(c[1] / 255) * 255);
+    const b = Math.round(clamp0142(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0142(a)})`;
   }
-  function smoother40(x) {
+  function smoother41(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt40(t, amp = 1, w = 1.5) {
+  function bobAt41(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP40 = {
+  var SP41 = {
     // Spring — smooth pink, dewy lime pad + blossom, cool-bright light.
     Spring: {
       skinLight: [252, 200, 200],
@@ -22798,7 +22858,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP40(a, b, t) {
+  function lerpP41(a, b, t) {
     return {
       skinLight: lerpRGB34(a.skinLight, b.skinLight, t),
       skinMid: lerpRGB34(a.skinMid, b.skinMid, t),
@@ -22809,47 +22869,47 @@
       soil: lerpRGB34(a.soil, b.soil, t),
       outline: lerpRGB34(a.outline, b.outline, t),
       lightWash: lerpRGB34(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp45(a.lightWashAmt, b.lightWashAmt, t),
-      coatVolume: lerp45(a.coatVolume, b.coatVolume, t),
-      bristleAmt: lerp45(a.bristleAmt, b.bristleAmt, t),
-      glossAmt: lerp45(a.glossAmt, b.glossAmt, t),
-      frostAmt: lerp45(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp45(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp45(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp45(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp45(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp45(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp46(a.lightWashAmt, b.lightWashAmt, t),
+      coatVolume: lerp46(a.coatVolume, b.coatVolume, t),
+      bristleAmt: lerp46(a.bristleAmt, b.bristleAmt, t),
+      glossAmt: lerp46(a.glossAmt, b.glossAmt, t),
+      frostAmt: lerp46(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp46(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp46(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp46(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp46(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp46(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP30(p) {
     return {
       ...p,
-      lightWashAmt: clamp0141(p.lightWashAmt),
-      coatVolume: clamp0141(p.coatVolume),
-      bristleAmt: clamp0141(p.bristleAmt),
-      glossAmt: clamp0141(p.glossAmt),
-      frostAmt: clamp0141(p.frostAmt),
-      backSnowAmt: clamp0141(p.backSnowAmt),
-      padSnowAmt: clamp0141(p.padSnowAmt),
-      blossomAmt: clamp0141(p.blossomAmt),
-      fallenLeafAmt: clamp0141(p.fallenLeafAmt),
-      breathFogAmt: clamp0141(p.breathFogAmt)
+      lightWashAmt: clamp0142(p.lightWashAmt),
+      coatVolume: clamp0142(p.coatVolume),
+      bristleAmt: clamp0142(p.bristleAmt),
+      glossAmt: clamp0142(p.glossAmt),
+      frostAmt: clamp0142(p.frostAmt),
+      backSnowAmt: clamp0142(p.backSnowAmt),
+      padSnowAmt: clamp0142(p.padSnowAmt),
+      blossomAmt: clamp0142(p.blossomAmt),
+      fallenLeafAmt: clamp0142(p.fallenLeafAmt),
+      breathFogAmt: clamp0142(p.breathFogAmt)
     };
   }
   function paintPad9(ctx, p) {
-    ctx.fillStyle = rgb40([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb41([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb40(p.soil);
+    ctx.fillStyle = rgb41(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb40(p.padGrass);
+    ctx.fillStyle = rgb41(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb40(p.padGrass);
+    ctx.strokeStyle = rgb41(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -22861,16 +22921,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb40([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb41([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb40([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb41([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb40([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb41([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -22879,14 +22939,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb40([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb41([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb40([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb41([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -22902,11 +22962,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb40(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb41(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb40([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb41([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -22917,14 +22977,14 @@
     }
   }
   function paintLeg7(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb40(p.skinShadow);
+    ctx.strokeStyle = rgb41(p.skinShadow);
     ctx.lineWidth = 4.2;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.fillStyle = rgb40(p.hoof);
+    ctx.fillStyle = rgb41(p.hoof);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 2, 1.3, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -22949,22 +23009,22 @@
     paintLeg7(ctx, p, bx + 4, by + 7, 19.2);
     paintLeg7(ctx, p, bx - 8.5, by + 7, 19.4);
     drawCurlyTail(ctx, p, bx + 12.6, by - 2, 0);
-    paintBody2(ctx, p, bx, by, rgb40(p.outline), 1.06);
-    paintBody2(ctx, p, bx, by, rgb40(p.skinMid), 1);
+    paintBody2(ctx, p, bx, by, rgb41(p.outline), 1.06);
+    paintBody2(ctx, p, bx, by, rgb41(p.skinMid), 1);
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(bx, by, 13.4, 10.4, 0, 0, Math.PI * 2);
     ctx.clip();
-    ctx.fillStyle = rgb40(p.skinShadow, 0.7);
+    ctx.fillStyle = rgb41(p.skinShadow, 0.7);
     ctx.beginPath();
     ctx.ellipse(bx + 2, by + 5.5, 13, 7, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb40(p.skinLight);
+    ctx.fillStyle = rgb41(p.skinLight);
     ctx.beginPath();
     ctx.ellipse(bx - 2.4, by - 3.4, 9.6, 6.4, -0.12, 0, Math.PI * 2);
     ctx.fill();
     if (p.glossAmt > 1e-3) {
-      ctx.fillStyle = rgb40([255, 255, 255], 0.32 * p.glossAmt);
+      ctx.fillStyle = rgb41([255, 255, 255], 0.32 * p.glossAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 4, by - 5.2, 4.4, 2, -0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -22978,7 +23038,7 @@
         const sx = bx - 9 + u * 19;
         const top = by - 9.4 - Math.sin(u * Math.PI) * 1.4;
         const len = 1.8 + p.coatVolume * 2.2;
-        const pale = rgb40([238, 226, 224], 0.55 * p.bristleAmt);
+        const pale = rgb41([238, 226, 224], 0.55 * p.bristleAmt);
         ctx.strokeStyle = pale;
         ctx.lineWidth = 0.8;
         ctx.beginPath();
@@ -22989,11 +23049,11 @@
       ctx.lineCap = "butt";
     }
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb40([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb41([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 1, by - 8.4, 9.4, 3.2, -0.08, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb40([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb41([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-5, -9], [1, -9.6], [5, -8.6]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.5, 0, Math.PI * 2);
@@ -23001,7 +23061,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb40([255, 255, 255], 0.8 * p.frostAmt);
+      ctx.fillStyle = rgb41([255, 255, 255], 0.8 * p.frostAmt);
       const pts = [
         [-7, 0],
         [-2, 4],
@@ -23023,21 +23083,21 @@
       ctx.save();
       ctx.translate(hx + side * 3.2 - 1, hy - 7.4);
       ctx.rotate(side * 0.5 - 0.25);
-      ctx.fillStyle = rgb40(p.outline);
+      ctx.fillStyle = rgb41(p.outline);
       ctx.beginPath();
       ctx.moveTo(0, -0.4);
       ctx.lineTo(3.4, 1.2);
       ctx.lineTo(1, 5.4);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb40(p.skinMid);
+      ctx.fillStyle = rgb41(p.skinMid);
       ctx.beginPath();
       ctx.moveTo(0.2, 0.2);
       ctx.lineTo(2.8, 1.4);
       ctx.lineTo(1.1, 4.6);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb40(p.skinShadow, 0.7);
+      ctx.fillStyle = rgb41(p.skinShadow, 0.7);
       ctx.beginPath();
       ctx.moveTo(0.8, 1);
       ctx.lineTo(2.2, 1.7);
@@ -23049,43 +23109,43 @@
     ctx.save();
     ctx.translate(hx, hy);
     ctx.rotate(0.16);
-    ctx.fillStyle = rgb40(p.outline);
+    ctx.fillStyle = rgb41(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 0, 7.4, 6.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb40(p.skinMid);
+    ctx.fillStyle = rgb41(p.skinMid);
     ctx.beginPath();
     ctx.ellipse(0, 0, 6.6, 5.9, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb40(p.skinLight, 0.9);
+    ctx.fillStyle = rgb41(p.skinLight, 0.9);
     ctx.beginPath();
     ctx.ellipse(-1.8, -1.8, 3.2, 2.6, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb40([245, 245, 240]);
+    ctx.fillStyle = rgb41([245, 245, 240]);
     for (const ex of [-1.6, 1.8]) {
       ctx.beginPath();
       ctx.arc(ex, -1.6, 1, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb40([22, 18, 20]);
+    ctx.fillStyle = rgb41([22, 18, 20]);
     for (const ex of [-1.5, 1.9]) {
       ctx.beginPath();
       ctx.arc(ex, -1.4, 0.6, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb40(p.outline);
+    ctx.fillStyle = rgb41(p.outline);
     ctx.beginPath();
     ctx.ellipse(-0.6, 3.4, 4.6, 3.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb40(p.snout);
+    ctx.fillStyle = rgb41(p.snout);
     ctx.beginPath();
     ctx.ellipse(-0.6, 3.4, 3.9, 2.8, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb40(p.skinLight, 0.55);
+    ctx.fillStyle = rgb41(p.skinLight, 0.55);
     ctx.beginPath();
     ctx.ellipse(-1.4, 2.2, 2.2, 1, -0.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb40([90, 48, 56]);
+    ctx.fillStyle = rgb41([90, 48, 56]);
     for (const ex of [-2, 0.8]) {
       ctx.beginPath();
       ctx.ellipse(ex, 3.6, 0.7, 1.1, 0, 0, Math.PI * 2);
@@ -23093,7 +23153,7 @@
     }
     ctx.restore();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb40([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb41([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 5.6, hy + 3.8, 3.2, 2.2, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -23102,7 +23162,7 @@
   function drawCurlyTail(ctx, p, ox, oy, wiggle) {
     ctx.save();
     ctx.translate(ox, oy);
-    ctx.strokeStyle = rgb40(p.outline);
+    ctx.strokeStyle = rgb41(p.outline);
     ctx.lineWidth = 3;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -23110,7 +23170,7 @@
     ctx.quadraticCurveTo(3.4, -1.4 + wiggle, 2.6, 1.6 + wiggle);
     ctx.quadraticCurveTo(1.9, 4 + wiggle, 4, 3.4 + wiggle * 0.6);
     ctx.stroke();
-    ctx.strokeStyle = rgb40(p.skinMid);
+    ctx.strokeStyle = rgb41(p.skinMid);
     ctx.lineWidth = 1.8;
     ctx.beginPath();
     ctx.moveTo(0, 0);
@@ -23124,13 +23184,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb40(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb41(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint40(ctx, pIn, bob) {
+  function paint41(ctx, pIn, bob) {
     const p = clampP30(pIn);
     ctx.save();
     try {
@@ -23144,13 +23204,13 @@
     }
   }
   function draw31(season) {
-    return (ctx) => paint40(ctx, SP40[season], 0);
+    return (ctx) => paint41(ctx, SP41[season], 0);
   }
   function anim31(season) {
     return (ctx, t) => {
-      const p = clampP30(SP40[season]);
-      const bob = bobAt40(t);
-      paint40(ctx, SP40[season], bob);
+      const p = clampP30(SP41[season]);
+      const bob = bobAt41(t);
+      paint41(ctx, SP41[season], bob);
       ctx.save();
       try {
         const bx = 0;
@@ -23164,14 +23224,14 @@
         ctx.save();
         ctx.translate(hx + 3.2 - 1, hy - 7.4);
         ctx.rotate(0.5 - 0.25 + flick * 0.45);
-        ctx.fillStyle = rgb40(p.outline);
+        ctx.fillStyle = rgb41(p.outline);
         ctx.beginPath();
         ctx.moveTo(0, -0.4);
         ctx.lineTo(3.4, 1.2);
         ctx.lineTo(1, 5.4);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = rgb40(p.skinMid);
+        ctx.fillStyle = rgb41(p.skinMid);
         ctx.beginPath();
         ctx.moveTo(0.2, 0.2);
         ctx.lineTo(2.8, 1.4);
@@ -23184,11 +23244,11 @@
           ctx.save();
           ctx.translate(hx, hy + snoutDip);
           ctx.rotate(0.16);
-          ctx.fillStyle = rgb40(p.snout);
+          ctx.fillStyle = rgb41(p.snout);
           ctx.beginPath();
           ctx.ellipse(-0.6, 3.4, 3.9, 2.8, 0, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = rgb40([90, 48, 56]);
+          ctx.fillStyle = rgb41([90, 48, 56]);
           for (const ex of [-2, 0.8]) {
             ctx.beginPath();
             ctx.ellipse(ex, 3.6, 0.7, 1.1, 0, 0, Math.PI * 2);
@@ -23198,7 +23258,7 @@
         }
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb40([255, 255, 255], g);
+          ctx.fillStyle = rgb41([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -23210,7 +23270,7 @@
           const sx = bx - 8 + s * 16;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb40([255, 255, 255], 0.35);
+          ctx.fillStyle = rgb41([255, 255, 255], 0.35);
           ctx.beginPath();
           ctx.ellipse(sx, by - 4, 3, 5, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -23221,7 +23281,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb40([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb41([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -23229,21 +23289,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb40([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb41([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - 4.4 - reach, hy + 3.8, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb40([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb41([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb40([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb41([206, 224, 255], 0.12 + sheen2 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13.4, 10.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -23256,17 +23316,17 @@
       }
     };
   }
-  function makeTransition37(fromIdx) {
+  function makeTransition38(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother40(clamp0141(pp));
-      paint40(ctx, lerpP40(SP40[from], SP40[to], k), 0);
+      const k = smoother41(clamp0142(pp));
+      paint41(ctx, lerpP41(SP41[from], SP41[to], k), 0);
     };
   }
-  var springToSummer36 = makeTransition37(0);
-  var summerToAutumn36 = makeTransition37(1);
-  var autumnToWinter36 = makeTransition37(2);
+  var springToSummer35 = makeTransition38(0);
+  var summerToAutumn35 = makeTransition38(1);
+  var autumnToWinter35 = makeTransition38(2);
   var VARIANTS43 = {
     Spring: { draw: draw31("Spring"), anim: anim31("Spring") },
     Summer: { draw: draw31("Summer"), anim: anim31("Summer") },
@@ -23274,35 +23334,35 @@
     Winter: { draw: draw31("Winter"), anim: anim31("Winter") }
   };
   var TRANSITIONS43 = {
-    0: springToSummer36,
-    1: summerToAutumn36,
-    2: autumnToWinter36
+    0: springToSummer35,
+    1: summerToAutumn35,
+    2: autumnToWinter35
   };
 
   // src/textures/seasonal/herd/hog.ts
-  function clamp0142(x) {
+  function clamp0143(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
-  function lerp46(a, b, t) {
+  function lerp47(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB35(a, b, t) {
-    return [lerp46(a[0], b[0], t), lerp46(a[1], b[1], t), lerp46(a[2], b[2], t)];
+    return [lerp47(a[0], b[0], t), lerp47(a[1], b[1], t), lerp47(a[2], b[2], t)];
   }
-  function rgb41(c, a = 1) {
-    const r = Math.round(clamp0142(c[0] / 255) * 255);
-    const g = Math.round(clamp0142(c[1] / 255) * 255);
-    const b = Math.round(clamp0142(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0142(a)})`;
+  function rgb42(c, a = 1) {
+    const r = Math.round(clamp0143(c[0] / 255) * 255);
+    const g = Math.round(clamp0143(c[1] / 255) * 255);
+    const b = Math.round(clamp0143(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0143(a)})`;
   }
-  function smoother41(x) {
+  function smoother42(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt41(t, amp = 1.2, w = 1.2) {
+  function bobAt42(t, amp = 1.2, w = 1.2) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP41 = {
+  var SP42 = {
     // Spring — fresh pastel light; brown bristly coat (sleeker); dewy lime pad.
     Spring: {
       hideLight: [150, 108, 78],
@@ -23406,7 +23466,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP41(a, b, t) {
+  function lerpP42(a, b, t) {
     return {
       hideLight: lerpRGB35(a.hideLight, b.hideLight, t),
       hideMid: lerpRGB35(a.hideMid, b.hideMid, t),
@@ -23418,45 +23478,45 @@
       soil: lerpRGB35(a.soil, b.soil, t),
       outline: lerpRGB35(a.outline, b.outline, t),
       lightWash: lerpRGB35(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp46(a.lightWashAmt, b.lightWashAmt, t),
-      coatVolume: lerp46(a.coatVolume, b.coatVolume, t),
-      sheenAmt: lerp46(a.sheenAmt, b.sheenAmt, t),
-      frostAmt: lerp46(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp46(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp46(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp46(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp46(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp46(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp47(a.lightWashAmt, b.lightWashAmt, t),
+      coatVolume: lerp47(a.coatVolume, b.coatVolume, t),
+      sheenAmt: lerp47(a.sheenAmt, b.sheenAmt, t),
+      frostAmt: lerp47(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp47(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp47(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp47(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp47(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp47(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP31(p) {
     return {
       ...p,
-      lightWashAmt: clamp0142(p.lightWashAmt),
-      coatVolume: clamp0142(p.coatVolume),
-      sheenAmt: clamp0142(p.sheenAmt),
-      frostAmt: clamp0142(p.frostAmt),
-      backSnowAmt: clamp0142(p.backSnowAmt),
-      padSnowAmt: clamp0142(p.padSnowAmt),
-      blossomAmt: clamp0142(p.blossomAmt),
-      fallenLeafAmt: clamp0142(p.fallenLeafAmt),
-      breathFogAmt: clamp0142(p.breathFogAmt)
+      lightWashAmt: clamp0143(p.lightWashAmt),
+      coatVolume: clamp0143(p.coatVolume),
+      sheenAmt: clamp0143(p.sheenAmt),
+      frostAmt: clamp0143(p.frostAmt),
+      backSnowAmt: clamp0143(p.backSnowAmt),
+      padSnowAmt: clamp0143(p.padSnowAmt),
+      blossomAmt: clamp0143(p.blossomAmt),
+      fallenLeafAmt: clamp0143(p.fallenLeafAmt),
+      breathFogAmt: clamp0143(p.breathFogAmt)
     };
   }
   function paintPad10(ctx, p) {
-    ctx.fillStyle = rgb41([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb42([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb41(p.soil);
+    ctx.fillStyle = rgb42(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb41(p.padGrass);
+    ctx.fillStyle = rgb42(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb41(p.padGrass);
+    ctx.strokeStyle = rgb42(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -23468,16 +23528,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb41([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb42([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb41([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb42([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb41([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb42([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -23486,14 +23546,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb41([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb42([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb41([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb42([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -23509,11 +23569,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb41(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb42(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb41([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb42([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -23524,14 +23584,14 @@
     }
   }
   function paintLeg8(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb41(p.hideShadow);
+    ctx.strokeStyle = rgb42(p.hideShadow);
     ctx.lineWidth = 4.2;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.fillStyle = rgb41([30, 22, 18]);
+    ctx.fillStyle = rgb42([30, 22, 18]);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 2.1, 1.3, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -23554,31 +23614,31 @@
     paintLeg8(ctx, p, bx + 5, by + 6, 19.3);
     paintLeg8(ctx, p, bx - 3, by + 6, 19.5);
     bodyPath3(ctx, bx, by, rx + 1.2, ry + 1.2);
-    ctx.fillStyle = rgb41(p.outline);
+    ctx.fillStyle = rgb42(p.outline);
     ctx.fill();
     bodyPath3(ctx, bx, by, rx, ry);
-    ctx.fillStyle = rgb41(p.hideMid);
+    ctx.fillStyle = rgb42(p.hideMid);
     ctx.fill();
     ctx.save();
     bodyPath3(ctx, bx, by, rx, ry);
     ctx.clip();
-    ctx.fillStyle = rgb41(p.hideShadow, 0.8);
+    ctx.fillStyle = rgb42(p.hideShadow, 0.8);
     ctx.beginPath();
     ctx.ellipse(bx, by + 5, rx, ry * 0.7, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb41(p.hideLight);
+    ctx.fillStyle = rgb42(p.hideLight);
     ctx.beginPath();
     ctx.ellipse(bx - 2.5, by - 3.2, rx * 0.78, ry * 0.6, -0.08, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     const bristleLen = 2.2 + p.coatVolume * 3.4;
     const bristleN = Math.round(9 + p.coatVolume * 5);
-    ctx.strokeStyle = rgb41(p.bristle);
+    ctx.strokeStyle = rgb42(p.bristle);
     ctx.lineWidth = 1.1;
     ctx.lineCap = "round";
     for (let i = 0; i < bristleN; i++) {
       const f = i / (bristleN - 1);
-      const ang = lerp46(-2.5, -0.55, f);
+      const ang = lerp47(-2.5, -0.55, f);
       const sx = bx + Math.cos(ang) * rx * 0.96;
       const sy = by + Math.sin(ang) * ry * 0.96;
       const jitter = (i % 2 === 0 ? 1 : 0.7) * bristleLen;
@@ -23593,18 +23653,18 @@
       bodyPath3(ctx, bx, by, rx, ry);
       ctx.clip();
       ctx.globalCompositeOperation = "soft-light";
-      ctx.fillStyle = rgb41([255, 240, 210], 0.4 * p.sheenAmt);
+      ctx.fillStyle = rgb42([255, 240, 210], 0.4 * p.sheenAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 2, by - 4, rx * 0.7, ry * 0.42, -0.1, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb41([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb42([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 1, by - 7.4, rx * 0.7, 3.2, -0.06, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb41([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb42([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-6, -8], [0, -8.6], [6, -7.8]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.6, 0, Math.PI * 2);
@@ -23612,7 +23672,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb41([255, 255, 255], 0.75 * p.frostAmt);
+      ctx.fillStyle = rgb42([255, 255, 255], 0.75 * p.frostAmt);
       const pts = [
         [-9, -1],
         [-3, 3],
@@ -23628,7 +23688,7 @@
         ctx.fill();
       }
     }
-    ctx.strokeStyle = rgb41(p.hideShadow);
+    ctx.strokeStyle = rgb42(p.hideShadow);
     ctx.lineWidth = 1.6;
     ctx.beginPath();
     ctx.moveTo(bx + rx - 0.5, by - 2);
@@ -23641,66 +23701,66 @@
       ctx.save();
       ctx.translate(hx + side * 3.2, hy - 5.5);
       ctx.rotate(side * 0.5 - 0.15);
-      ctx.fillStyle = rgb41(p.outline);
+      ctx.fillStyle = rgb42(p.outline);
       ctx.beginPath();
       ctx.moveTo(-2.4, 2.2);
       ctx.quadraticCurveTo(-1.2, -3.2, 1.2, -2.6);
       ctx.quadraticCurveTo(2.4, -0.2, 2.2, 2.4);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb41(p.hideMid);
+      ctx.fillStyle = rgb42(p.hideMid);
       ctx.beginPath();
       ctx.moveTo(-1.8, 1.8);
       ctx.quadraticCurveTo(-0.9, -2.4, 0.9, -1.9);
       ctx.quadraticCurveTo(1.8, -0.1, 1.6, 1.9);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb41(p.snout, 0.7);
+      ctx.fillStyle = rgb42(p.snout, 0.7);
       ctx.beginPath();
       ctx.ellipse(0, 0.4, 0.8, 1.4, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
-    ctx.fillStyle = rgb41(p.outline);
+    ctx.fillStyle = rgb42(p.outline);
     ctx.beginPath();
     ctx.ellipse(hx + 1, hy, 8.2, 7.4, 0.08, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb41(p.hideMid);
+    ctx.fillStyle = rgb42(p.hideMid);
     ctx.beginPath();
     ctx.ellipse(hx + 1, hy, 7.4, 6.6, 0.08, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb41(p.hideLight, 0.85);
+    ctx.fillStyle = rgb42(p.hideLight, 0.85);
     ctx.beginPath();
     ctx.ellipse(hx - 1.4, hy - 2.4, 4, 3.4, -0.1, 0, Math.PI * 2);
     ctx.fill();
     const snx = hx - 6;
     const sny = hy + 2.6;
-    ctx.fillStyle = rgb41(p.hideMid);
+    ctx.fillStyle = rgb42(p.hideMid);
     ctx.beginPath();
     ctx.moveTo(hx - 1, hy - 1.5);
     ctx.quadraticCurveTo(snx - 1, sny - 4, snx - 2.5, sny);
     ctx.quadraticCurveTo(snx - 1, sny + 4.5, hx - 1, hy + 4.5);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb41(p.outline);
+    ctx.fillStyle = rgb42(p.outline);
     ctx.beginPath();
     ctx.ellipse(snx - 2, sny, 3.6, 4.4, -0.15, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb41(p.snout);
+    ctx.fillStyle = rgb42(p.snout);
     ctx.beginPath();
     ctx.ellipse(snx - 2, sny, 3, 3.8, -0.15, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb41([40, 24, 28]);
+    ctx.fillStyle = rgb42([40, 24, 28]);
     for (const ny of [-1.2, 1.4]) {
       ctx.beginPath();
       ctx.ellipse(snx - 2.6, sny + ny, 0.7, 1, -0.15, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb41([255, 235, 232], 0.3);
+    ctx.fillStyle = rgb42([255, 235, 232], 0.3);
     ctx.beginPath();
     ctx.ellipse(snx - 3.4, sny - 1.6, 1.1, 1.4, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb41(p.tusk);
+    ctx.strokeStyle = rgb42(p.tusk);
     ctx.lineWidth = 1.5;
     ctx.lineCap = "round";
     for (const side of [0, 1]) {
@@ -23712,16 +23772,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb41([245, 242, 236]);
+    ctx.fillStyle = rgb42([245, 242, 236]);
     ctx.beginPath();
     ctx.arc(hx + 0.6, hy - 1.4, 1.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb41([22, 16, 16]);
+    ctx.fillStyle = rgb42([22, 16, 16]);
     ctx.beginPath();
     ctx.arc(hx + 0.9, hy - 1.3, 0.65, 0, Math.PI * 2);
     ctx.fill();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb41([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb42([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(snx - 6, sny + 0.6, 3.2, 2.2, 0.1, 0, Math.PI * 2);
       ctx.fill();
@@ -23731,13 +23791,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb41(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb42(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint41(ctx, pIn, bob) {
+  function paint42(ctx, pIn, bob) {
     const p = clampP31(pIn);
     ctx.save();
     try {
@@ -23752,13 +23812,13 @@
     }
   }
   function draw32(season) {
-    return (ctx) => paint41(ctx, SP41[season], 0);
+    return (ctx) => paint42(ctx, SP42[season], 0);
   }
   function anim32(season) {
     return (ctx, t) => {
-      const p = clampP31(SP41[season]);
-      const bob = bobAt41(t);
-      paint41(ctx, SP41[season], bob);
+      const p = clampP31(SP42[season]);
+      const bob = bobAt42(t);
+      paint42(ctx, SP42[season], bob);
       ctx.save();
       try {
         const bx = 1;
@@ -23774,7 +23834,7 @@
         ctx.save();
         ctx.translate(hx + 3.2, hy - 5.5);
         ctx.rotate(0.35 + flick * 0.5);
-        ctx.fillStyle = rgb41(p.hideMid);
+        ctx.fillStyle = rgb42(p.hideMid);
         ctx.beginPath();
         ctx.moveTo(-1.8, 1.8);
         ctx.quadraticCurveTo(-0.9, -2.4, 0.9, -1.9);
@@ -23783,11 +23843,11 @@
         ctx.fill();
         ctx.restore();
         if (snoutDip > 0.02) {
-          ctx.fillStyle = rgb41(p.snout);
+          ctx.fillStyle = rgb42(p.snout);
           ctx.beginPath();
           ctx.ellipse(snx - 2, sny + snoutDip, 3, 3.8, -0.15, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = rgb41([40, 24, 28]);
+          ctx.fillStyle = rgb42([40, 24, 28]);
           for (const ny of [-1.2, 1.4]) {
             ctx.beginPath();
             ctx.ellipse(snx - 2.6, sny + snoutDip + ny, 0.7, 1, -0.15, 0, Math.PI * 2);
@@ -23796,7 +23856,7 @@
         }
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb41([255, 255, 255], g);
+          ctx.fillStyle = rgb42([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -23808,7 +23868,7 @@
           const sx = bx - 9 + s * 18;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb41([255, 244, 214], 0.32);
+          ctx.fillStyle = rgb42([255, 244, 214], 0.32);
           ctx.beginPath();
           ctx.ellipse(sx, by - 3, 3.2, 5.4, 0.2, 0, Math.PI * 2);
           ctx.fill();
@@ -23819,7 +23879,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb41([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb42([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -23827,21 +23887,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.2);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb41([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb42([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(snx - reach, sny + 0.6, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.1, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb41([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb42([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb41([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb42([206, 224, 255], 0.12 + sheen2 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 14.5, 9.6, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -23854,17 +23914,17 @@
       }
     };
   }
-  function makeTransition38(fromIdx) {
+  function makeTransition39(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother41(clamp0142(pp));
-      paint41(ctx, lerpP41(SP41[from], SP41[to], k), 0);
+      const k = smoother42(clamp0143(pp));
+      paint42(ctx, lerpP42(SP42[from], SP42[to], k), 0);
     };
   }
-  var springToSummer37 = makeTransition38(0);
-  var summerToAutumn37 = makeTransition38(1);
-  var autumnToWinter37 = makeTransition38(2);
+  var springToSummer36 = makeTransition39(0);
+  var summerToAutumn36 = makeTransition39(1);
+  var autumnToWinter36 = makeTransition39(2);
   var VARIANTS44 = {
     Spring: { draw: draw32("Spring"), anim: anim32("Spring") },
     Summer: { draw: draw32("Summer"), anim: anim32("Summer") },
@@ -23872,34 +23932,34 @@
     Winter: { draw: draw32("Winter"), anim: anim32("Winter") }
   };
   var TRANSITIONS44 = {
-    0: springToSummer37,
-    1: summerToAutumn37,
-    2: autumnToWinter37
+    0: springToSummer36,
+    1: summerToAutumn36,
+    2: autumnToWinter36
   };
 
   // src/textures/seasonal/herd/boar.ts
-  function clamp0143(x) {
+  function clamp0144(x) {
     return x < 0 || Number.isNaN(x) ? 0 : x > 1 ? 1 : x;
   }
-  function lerp47(a, b, t) {
+  function lerp48(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB36(a, b, t) {
-    return [lerp47(a[0], b[0], t), lerp47(a[1], b[1], t), lerp47(a[2], b[2], t)];
+    return [lerp48(a[0], b[0], t), lerp48(a[1], b[1], t), lerp48(a[2], b[2], t)];
   }
-  function rgb42(c, a = 1) {
-    const r = Math.round(clamp0143(c[0] / 255) * 255);
-    const g = Math.round(clamp0143(c[1] / 255) * 255);
-    const b = Math.round(clamp0143(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0143(a)})`;
+  function rgb43(c, a = 1) {
+    const r = Math.round(clamp0144(c[0] / 255) * 255);
+    const g = Math.round(clamp0144(c[1] / 255) * 255);
+    const b = Math.round(clamp0144(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0144(a)})`;
   }
-  function smoother42(x) {
+  function smoother43(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt42(t, amp = 1, w = 1.4) {
+  function bobAt43(t, amp = 1, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP42 = {
+  var SP43 = {
     // Spring — dark bristly coat (lightly cooler), dewy lime pad + blossom.
     Spring: {
       coatLight: [102, 86, 72],
@@ -24002,7 +24062,7 @@
       breathFogAmt: 0.72
     }
   };
-  function lerpP42(a, b, t) {
+  function lerpP43(a, b, t) {
     return {
       coatLight: lerpRGB36(a.coatLight, b.coatLight, t),
       coatMid: lerpRGB36(a.coatMid, b.coatMid, t),
@@ -24015,43 +24075,43 @@
       soil: lerpRGB36(a.soil, b.soil, t),
       outline: lerpRGB36(a.outline, b.outline, t),
       lightWash: lerpRGB36(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp47(a.lightWashAmt, b.lightWashAmt, t),
-      coatVolume: lerp47(a.coatVolume, b.coatVolume, t),
-      frostAmt: lerp47(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp47(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp47(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp47(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp47(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp47(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp48(a.lightWashAmt, b.lightWashAmt, t),
+      coatVolume: lerp48(a.coatVolume, b.coatVolume, t),
+      frostAmt: lerp48(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp48(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp48(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp48(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp48(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp48(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP32(p) {
     return {
       ...p,
-      lightWashAmt: clamp0143(p.lightWashAmt),
-      coatVolume: clamp0143(p.coatVolume),
-      frostAmt: clamp0143(p.frostAmt),
-      backSnowAmt: clamp0143(p.backSnowAmt),
-      padSnowAmt: clamp0143(p.padSnowAmt),
-      blossomAmt: clamp0143(p.blossomAmt),
-      fallenLeafAmt: clamp0143(p.fallenLeafAmt),
-      breathFogAmt: clamp0143(p.breathFogAmt)
+      lightWashAmt: clamp0144(p.lightWashAmt),
+      coatVolume: clamp0144(p.coatVolume),
+      frostAmt: clamp0144(p.frostAmt),
+      backSnowAmt: clamp0144(p.backSnowAmt),
+      padSnowAmt: clamp0144(p.padSnowAmt),
+      blossomAmt: clamp0144(p.blossomAmt),
+      fallenLeafAmt: clamp0144(p.fallenLeafAmt),
+      breathFogAmt: clamp0144(p.breathFogAmt)
     };
   }
   function paintPad11(ctx, p) {
-    ctx.fillStyle = rgb42([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb43([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb42(p.soil);
+    ctx.fillStyle = rgb43(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb42(p.padGrass);
+    ctx.fillStyle = rgb43(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb42(p.padGrass);
+    ctx.strokeStyle = rgb43(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -24063,16 +24123,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb42([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb43([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb42([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb43([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb42([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb43([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -24081,14 +24141,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb42([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb43([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb42([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb43([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -24104,11 +24164,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb42(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb43(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb42([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb43([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -24119,14 +24179,14 @@
     }
   }
   function paintLeg9(ctx, p, x, topY, baseY, width = 3.4) {
-    ctx.strokeStyle = rgb42(p.coatShadow);
+    ctx.strokeStyle = rgb43(p.coatShadow);
     ctx.lineWidth = width;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.fillStyle = rgb42(p.hoof);
+    ctx.fillStyle = rgb43(p.hoof);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 1.9, 1.3, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -24147,12 +24207,12 @@
   function paintBristleRidge(ctx, p, cx, cy, vol, twitch) {
     const h = 8.5 + vol * 1;
     const n = 11;
-    ctx.strokeStyle = rgb42(p.bristle);
+    ctx.strokeStyle = rgb43(p.bristle);
     ctx.lineWidth = 1.5;
     ctx.lineCap = "round";
     for (let i = 0; i < n; i++) {
       const f = i / (n - 1);
-      const bx = cx + lerp47(13, -10, f);
+      const bx = cx + lerp48(13, -10, f);
       const back = -h - 1.4 - Math.sin(f * Math.PI) * 2.6;
       const by = cy + back;
       const len = 3 + vol * 2.2 + Math.sin(f * Math.PI) * 1.4;
@@ -24175,29 +24235,29 @@
     ctx.restore();
     paintLeg9(ctx, p, cx + 10.5, cy + 6, 18.9, 3.8);
     paintLeg9(ctx, p, cx - 6, cy + 6, 19.3, 3.8);
-    ctx.fillStyle = rgb42(p.outline);
+    ctx.fillStyle = rgb43(p.outline);
     bodyPath4(ctx, cx, cy, vol + 0.35);
     ctx.fill();
-    ctx.fillStyle = rgb42(p.coatMid);
+    ctx.fillStyle = rgb43(p.coatMid);
     bodyPath4(ctx, cx, cy, vol);
     ctx.fill();
     ctx.save();
     bodyPath4(ctx, cx, cy, vol);
     ctx.clip();
-    ctx.fillStyle = rgb42(p.coatShadow);
+    ctx.fillStyle = rgb43(p.coatShadow);
     ctx.beginPath();
     ctx.ellipse(cx + 2, cy + 6, 14, 6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb42(p.coatLight);
+    ctx.fillStyle = rgb43(p.coatLight);
     ctx.beginPath();
     ctx.ellipse(cx - 3, cy - 5, 10, 4.4, -0.25, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb42([255, 255, 255], 0.08);
+    ctx.fillStyle = rgb43([255, 255, 255], 0.08);
     ctx.beginPath();
     ctx.ellipse(cx - 4, cy - 6, 4.5, 2, -0.3, 0, Math.PI * 2);
     ctx.fill();
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb42([255, 255, 255], 0.75 * p.frostAmt);
+      ctx.fillStyle = rgb43([255, 255, 255], 0.75 * p.frostAmt);
       const pts = [
         [-8, -4],
         [-2, -6],
@@ -24216,11 +24276,11 @@
     ctx.restore();
     paintBristleRidge(ctx, p, cx, cy, vol, twitch);
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb42([235, 246, 255], 0.7 * p.frostAmt);
+      ctx.fillStyle = rgb43([235, 246, 255], 0.7 * p.frostAmt);
       const h = 8.5 + vol * 1;
       for (let i = 0; i < 6; i++) {
         const f = i / 5;
-        const bx = cx + lerp47(11, -8, f);
+        const bx = cx + lerp48(11, -8, f);
         const len = 3 + vol * 2.2 + Math.sin(f * Math.PI) * 1.4;
         const by = cy - h - 1.4 - Math.sin(f * Math.PI) * 2.6 - len;
         ctx.beginPath();
@@ -24230,18 +24290,18 @@
     }
     if (p.backSnowAmt > 1e-3) {
       const h = 8.5 + vol * 1;
-      ctx.fillStyle = rgb42([248, 252, 255], 0.9 * p.backSnowAmt);
+      ctx.fillStyle = rgb43([248, 252, 255], 0.9 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(cx - 3, cy - h - 0.5, 8.5, 3, -0.18, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb42([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb43([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-6, -1.2], [-1, -1.6], [4, -0.8]]) {
         ctx.beginPath();
         ctx.arc(cx + dx, cy - h - 0.5 + dy, 1.5, 0, Math.PI * 2);
         ctx.fill();
       }
     }
-    ctx.strokeStyle = rgb42(p.coatShadow);
+    ctx.strokeStyle = rgb43(p.coatShadow);
     ctx.lineWidth = 1.6;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -24255,7 +24315,7 @@
     ctx.rotate(-toss * 0.14);
     const hx = 0;
     const hy = 0;
-    ctx.fillStyle = rgb42(p.coatShadow);
+    ctx.fillStyle = rgb43(p.coatShadow);
     ctx.save();
     ctx.translate(hx + 1.5, hy - 5.5);
     ctx.rotate(-0.5);
@@ -24263,34 +24323,34 @@
     ctx.ellipse(0, 0, 2.6, 3.6, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb42(p.outline);
+    ctx.fillStyle = rgb43(p.outline);
     ctx.beginPath();
     ctx.ellipse(hx - 1, hy - 0.5, 7.2, 6.4, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb42(p.coatMid);
+    ctx.fillStyle = rgb43(p.coatMid);
     ctx.beginPath();
     ctx.ellipse(hx - 1, hy - 0.5, 6.4, 5.7, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb42(p.coatShadow);
+    ctx.fillStyle = rgb43(p.coatShadow);
     ctx.beginPath();
     ctx.ellipse(hx + 1.5, hy + 2, 4, 3, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.save();
     ctx.translate(hx - 4.5, hy + 2.5);
     ctx.rotate(0.32);
-    ctx.fillStyle = rgb42(p.outline);
+    ctx.fillStyle = rgb43(p.outline);
     ctx.beginPath();
     ctx.ellipse(-3.4, 0, 6.2, 3.5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb42(p.snout);
+    ctx.fillStyle = rgb43(p.snout);
     ctx.beginPath();
     ctx.ellipse(-3.4, 0, 5.4, 2.9, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb42(p.coatShadow);
+    ctx.fillStyle = rgb43(p.coatShadow);
     ctx.beginPath();
     ctx.ellipse(-8.2, 0, 2, 2.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb42([16, 12, 14]);
+    ctx.fillStyle = rgb43([16, 12, 14]);
     for (const ny of [-0.9, 0.9]) {
       ctx.beginPath();
       ctx.ellipse(-8.4, ny, 0.5, 0.7, 0, 0, Math.PI * 2);
@@ -24298,14 +24358,14 @@
     }
     ctx.restore();
     for (const side of [1, 0.6]) {
-      ctx.strokeStyle = rgb42(p.outline);
+      ctx.strokeStyle = rgb43(p.outline);
       ctx.lineWidth = 2.6 * side;
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(hx - 6.5, hy + 4 + (1 - side) * 1.5);
       ctx.quadraticCurveTo(hx - 9.5, hy + 2.5, hx - 9.8 - side, hy - 1.5 - side);
       ctx.stroke();
-      ctx.strokeStyle = rgb42(p.tusk);
+      ctx.strokeStyle = rgb43(p.tusk);
       ctx.lineWidth = 1.7 * side;
       ctx.beginPath();
       ctx.moveTo(hx - 6.5, hy + 4 + (1 - side) * 1.5);
@@ -24313,21 +24373,21 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb42([245, 244, 238]);
+    ctx.fillStyle = rgb43([245, 244, 238]);
     ctx.beginPath();
     ctx.arc(hx + 0.4, hy - 1.4, 1.15, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb42([18, 14, 16]);
+    ctx.fillStyle = rgb43([18, 14, 16]);
     ctx.beginPath();
     ctx.arc(hx + 0.6, hy - 1.3, 0.7, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb42([255, 255, 255], 0.8);
+    ctx.fillStyle = rgb43([255, 255, 255], 0.8);
     ctx.beginPath();
     ctx.arc(hx + 0.2, hy - 1.7, 0.28, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb42([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb43([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(cx - 20, cy + 3.5, 3.2, 2.2, 0.1, 0, Math.PI * 2);
       ctx.fill();
@@ -24337,13 +24397,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb42(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb43(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint42(ctx, pIn, bob, twitch = 0, toss = 0) {
+  function paint43(ctx, pIn, bob, twitch = 0, toss = 0) {
     const p = clampP32(pIn);
     ctx.save();
     try {
@@ -24357,24 +24417,24 @@
     }
   }
   function draw33(season) {
-    return (ctx) => paint42(ctx, SP42[season], 0);
+    return (ctx) => paint43(ctx, SP43[season], 0);
   }
   function anim33(season) {
     return (ctx, t) => {
-      const p = clampP32(SP42[season]);
-      const bob = bobAt42(t);
+      const p = clampP32(SP43[season]);
+      const bob = bobAt43(t);
       const loop = t % 5.5 / 5.5;
       const gate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 5;
       const twitch = Math.sin(t * 11) * gate;
       const toss = gate;
-      paint42(ctx, SP42[season], bob, twitch, toss);
+      paint43(ctx, SP43[season], bob, twitch, toss);
       ctx.save();
       try {
         const cx = 1;
         const cy = 3 - bob;
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb42([255, 255, 255], g);
+          ctx.fillStyle = rgb43([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -24386,7 +24446,7 @@
           const sx = cx - 11 + s * 22;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb42([255, 255, 255], 0.32);
+          ctx.fillStyle = rgb43([255, 255, 255], 0.32);
           ctx.beginPath();
           ctx.ellipse(sx, cy - 4, 3, 6, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -24397,7 +24457,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb42([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb43([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -24405,21 +24465,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 2 + breathe * 3;
-          ctx.fillStyle = rgb42([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb43([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(cx - 20 - reach, cy + 3.5, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.1, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb42([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb43([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb42([206, 224, 255], 0.1 + sheen2 * 0.12);
+          ctx.fillStyle = rgb43([206, 224, 255], 0.1 + sheen2 * 0.12);
           ctx.beginPath();
           ctx.ellipse(cx, cy - 1, 14, 9, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -24432,17 +24492,17 @@
       }
     };
   }
-  function makeTransition39(fromIdx) {
+  function makeTransition40(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother42(clamp0143(pp));
-      paint42(ctx, lerpP42(SP42[from], SP42[to], k), 0);
+      const k = smoother43(clamp0144(pp));
+      paint43(ctx, lerpP43(SP43[from], SP43[to], k), 0);
     };
   }
-  var springToSummer38 = makeTransition39(0);
-  var summerToAutumn38 = makeTransition39(1);
-  var autumnToWinter38 = makeTransition39(2);
+  var springToSummer37 = makeTransition40(0);
+  var summerToAutumn37 = makeTransition40(1);
+  var autumnToWinter37 = makeTransition40(2);
   var VARIANTS45 = {
     Spring: { draw: draw33("Spring"), anim: anim33("Spring") },
     Summer: { draw: draw33("Summer"), anim: anim33("Summer") },
@@ -24450,34 +24510,34 @@
     Winter: { draw: draw33("Winter"), anim: anim33("Winter") }
   };
   var TRANSITIONS45 = {
-    0: springToSummer38,
-    1: summerToAutumn38,
-    2: autumnToWinter38
+    0: springToSummer37,
+    1: summerToAutumn37,
+    2: autumnToWinter37
   };
 
   // src/textures/seasonal/herd/warthog.ts
-  function clamp0144(x) {
+  function clamp0145(x) {
     return x < 0 || Number.isNaN(x) ? 0 : x > 1 ? 1 : x;
   }
-  function lerp48(a, b, t) {
+  function lerp49(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB37(a, b, t) {
-    return [lerp48(a[0], b[0], t), lerp48(a[1], b[1], t), lerp48(a[2], b[2], t)];
+    return [lerp49(a[0], b[0], t), lerp49(a[1], b[1], t), lerp49(a[2], b[2], t)];
   }
-  function rgb43(c, a = 1) {
-    const r = Math.round(clamp0144(c[0] / 255) * 255);
-    const g = Math.round(clamp0144(c[1] / 255) * 255);
-    const b = Math.round(clamp0144(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0144(a)})`;
+  function rgb44(c, a = 1) {
+    const r = Math.round(clamp0145(c[0] / 255) * 255);
+    const g = Math.round(clamp0145(c[1] / 255) * 255);
+    const b = Math.round(clamp0145(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0145(a)})`;
   }
-  function smoother43(x) {
+  function smoother44(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt43(t, amp = 1, w = 1.5) {
+  function bobAt44(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP43 = {
+  var SP44 = {
     // Spring — grey coat, dewy lime pad + blossom; cool-bright light.
     Spring: {
       hideLight: [158, 154, 150],
@@ -24571,7 +24631,7 @@
       breathFogAmt: 0.75
     }
   };
-  function lerpP43(a, b, t) {
+  function lerpP44(a, b, t) {
     return {
       hideLight: lerpRGB37(a.hideLight, b.hideLight, t),
       hideMid: lerpRGB37(a.hideMid, b.hideMid, t),
@@ -24582,43 +24642,43 @@
       soil: lerpRGB37(a.soil, b.soil, t),
       outline: lerpRGB37(a.outline, b.outline, t),
       lightWash: lerpRGB37(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp48(a.lightWashAmt, b.lightWashAmt, t),
-      coatVolume: lerp48(a.coatVolume, b.coatVolume, t),
-      frostAmt: lerp48(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp48(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp48(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp48(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp48(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp48(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp49(a.lightWashAmt, b.lightWashAmt, t),
+      coatVolume: lerp49(a.coatVolume, b.coatVolume, t),
+      frostAmt: lerp49(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp49(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp49(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp49(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp49(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp49(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP33(p) {
     return {
       ...p,
-      lightWashAmt: clamp0144(p.lightWashAmt),
-      coatVolume: clamp0144(p.coatVolume),
-      frostAmt: clamp0144(p.frostAmt),
-      backSnowAmt: clamp0144(p.backSnowAmt),
-      padSnowAmt: clamp0144(p.padSnowAmt),
-      blossomAmt: clamp0144(p.blossomAmt),
-      fallenLeafAmt: clamp0144(p.fallenLeafAmt),
-      breathFogAmt: clamp0144(p.breathFogAmt)
+      lightWashAmt: clamp0145(p.lightWashAmt),
+      coatVolume: clamp0145(p.coatVolume),
+      frostAmt: clamp0145(p.frostAmt),
+      backSnowAmt: clamp0145(p.backSnowAmt),
+      padSnowAmt: clamp0145(p.padSnowAmt),
+      blossomAmt: clamp0145(p.blossomAmt),
+      fallenLeafAmt: clamp0145(p.fallenLeafAmt),
+      breathFogAmt: clamp0145(p.breathFogAmt)
     };
   }
   function paintPad12(ctx, p) {
-    ctx.fillStyle = rgb43([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb44([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb43(p.soil);
+    ctx.fillStyle = rgb44(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb43(p.padGrass);
+    ctx.fillStyle = rgb44(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb43(p.padGrass);
+    ctx.strokeStyle = rgb44(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -24630,16 +24690,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb43([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb44([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb43([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb44([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb43([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb44([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -24648,14 +24708,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb43([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb44([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb43([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb44([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -24671,11 +24731,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb43(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb44(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb43([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb44([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -24686,14 +24746,14 @@
     }
   }
   function paintLeg10(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb43(p.hideShadow);
+    ctx.strokeStyle = rgb44(p.hideShadow);
     ctx.lineWidth = 2.2;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.fillStyle = rgb43([26, 22, 22]);
+    ctx.fillStyle = rgb44([26, 22, 22]);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 1.5, 1.1, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -24729,7 +24789,7 @@
     ctx.restore();
     paintLeg10(ctx, p, bx + 4, by + 5, 19.2);
     paintLeg10(ctx, p, bx - 3, by + 5, 19.4);
-    ctx.strokeStyle = rgb43(p.hideShadow);
+    ctx.strokeStyle = rgb44(p.hideShadow);
     ctx.lineWidth = 1.6;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -24737,16 +24797,16 @@
     ctx.quadraticCurveTo(bx + 16, by - 3, bx + 15, by - 8);
     ctx.stroke();
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb43(p.maneDark);
+    ctx.fillStyle = rgb44(p.maneDark);
     ctx.beginPath();
     ctx.arc(bx + 15, by - 8.5, 1.8 + p.coatVolume * 0.7, 0, Math.PI * 2);
     ctx.fill();
-    paintHideBody(ctx, bx, by, rgb43(p.outline), 1.12);
-    paintHideBody(ctx, bx, by, rgb43(p.hideShadow), 1);
-    paintHideBody(ctx, bx, by, rgb43(p.hideMid), 0.94);
+    paintHideBody(ctx, bx, by, rgb44(p.outline), 1.12);
+    paintHideBody(ctx, bx, by, rgb44(p.hideShadow), 1);
+    paintHideBody(ctx, bx, by, rgb44(p.hideMid), 0.94);
     ctx.save();
     ctx.translate(-1.2, -1.8);
-    paintHideBody(ctx, bx, by, rgb43(p.hideLight), 0.7);
+    paintHideBody(ctx, bx, by, rgb44(p.hideLight), 0.7);
     ctx.restore();
     const manePts = [
       [bx - 9.5, by - 4.5],
@@ -24757,13 +24817,13 @@
       [bx + 7.5, by - 5.6],
       [bx + 10.5, by - 4]
     ];
-    paintMane(ctx, p, manePts, rgb43(p.maneDark), 1);
+    paintMane(ctx, p, manePts, rgb44(p.maneDark), 1);
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb43([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb44([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx + 1, by - 6.4, 9 * (0.9 + p.coatVolume * 0.25), 3, -0.08, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb43([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb44([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-5, -7.4], [1, -8], [6, -7]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.5 + p.coatVolume * 0.4, 0, Math.PI * 2);
@@ -24771,7 +24831,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb43([255, 255, 255], 0.78 * p.frostAmt);
+      ctx.fillStyle = rgb44([255, 255, 255], 0.78 * p.frostAmt);
       const pts = [
         [-7, 1],
         [-2, 4],
@@ -24789,7 +24849,7 @@
     }
     const hx = bx - 12;
     const hy = by + 2;
-    ctx.fillStyle = rgb43(p.hideShadow);
+    ctx.fillStyle = rgb44(p.hideShadow);
     for (const side of [-1, 1]) {
       ctx.save();
       ctx.translate(hx + 1.5 + side * 2.2, hy - 5);
@@ -24802,42 +24862,42 @@
     ctx.save();
     ctx.translate(hx, hy);
     ctx.rotate(0.22);
-    ctx.fillStyle = rgb43(p.outline);
+    ctx.fillStyle = rgb44(p.outline);
     ctx.beginPath();
     ctx.ellipse(-1.2, 0.6, 6.6, 5.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb43(p.hideMid);
+    ctx.fillStyle = rgb44(p.hideMid);
     ctx.beginPath();
     ctx.ellipse(-1.2, 0.6, 5.9, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb43(p.hideLight, 0.85);
+    ctx.fillStyle = rgb44(p.hideLight, 0.85);
     ctx.beginPath();
     ctx.ellipse(-2.6, -1.4, 3, 2.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb43(p.hideShadow);
+    ctx.fillStyle = rgb44(p.hideShadow);
     ctx.beginPath();
     ctx.ellipse(-5.4, 2.6, 2.8, 2.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb43([22, 18, 18]);
+    ctx.fillStyle = rgb44([22, 18, 18]);
     for (const ex of [-0.9, 0.9]) {
       ctx.beginPath();
       ctx.ellipse(-5.4 + ex, 2.8, 0.55, 0.8, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb43(p.hideLight);
+    ctx.fillStyle = rgb44(p.hideLight);
     for (const [wx, wy] of [[-3.6, 1.2], [-1, -0.2]]) {
       ctx.beginPath();
       ctx.ellipse(wx, wy, 1.4, 1, -0.3, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = rgb43(p.outline, 0.6);
+      ctx.strokeStyle = rgb44(p.outline, 0.6);
       ctx.lineWidth = 0.5;
       ctx.stroke();
     }
-    ctx.fillStyle = rgb43([245, 244, 238]);
+    ctx.fillStyle = rgb44([245, 244, 238]);
     ctx.beginPath();
     ctx.arc(0.4, -1.6, 1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb43([20, 18, 18]);
+    ctx.fillStyle = rgb44([20, 18, 18]);
     ctx.beginPath();
     ctx.arc(0.6, -1.5, 0.58, 0, Math.PI * 2);
     ctx.fill();
@@ -24847,13 +24907,13 @@
     ctx.rotate(0.22);
     ctx.lineCap = "round";
     const drawTusk = (baseX, baseY, dir, len, width) => {
-      ctx.strokeStyle = rgb43(p.outline);
+      ctx.strokeStyle = rgb44(p.outline);
       ctx.lineWidth = width + 1;
       ctx.beginPath();
       ctx.moveTo(baseX, baseY);
       ctx.quadraticCurveTo(baseX + dir * 1.6, baseY - len * 0.5, baseX + dir * 1, baseY - len);
       ctx.stroke();
-      ctx.strokeStyle = rgb43(p.tusk);
+      ctx.strokeStyle = rgb44(p.tusk);
       ctx.lineWidth = width;
       ctx.beginPath();
       ctx.moveTo(baseX, baseY);
@@ -24869,7 +24929,7 @@
     ctx.lineCap = "butt";
     ctx.restore();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb43([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb44([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 7, hy + 4, 3.2, 2.2, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -24879,13 +24939,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb43(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb44(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint43(ctx, pIn, bob) {
+  function paint44(ctx, pIn, bob) {
     const p = clampP33(pIn);
     ctx.save();
     try {
@@ -24899,13 +24959,13 @@
     }
   }
   function draw34(season) {
-    return (ctx) => paint43(ctx, SP43[season], 0);
+    return (ctx) => paint44(ctx, SP44[season], 0);
   }
   function anim34(season) {
     return (ctx, t) => {
-      const p = clampP33(SP43[season]);
-      const bob = bobAt43(t);
-      paint43(ctx, SP43[season], bob);
+      const p = clampP33(SP44[season]);
+      const bob = bobAt44(t);
+      paint44(ctx, SP44[season], bob);
       ctx.save();
       try {
         const bx = 0;
@@ -24915,7 +24975,7 @@
         const loop = t % 5 / 5;
         const flickGate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 6;
         const flick = Math.sin(t * 9) * flickGate;
-        ctx.fillStyle = rgb43(p.maneDark);
+        ctx.fillStyle = rgb44(p.maneDark);
         const spikeH = 3.2 + p.coatVolume * 3.4;
         for (const sx of [bx - 3, bx + 0.5]) {
           ctx.save();
@@ -24929,7 +24989,7 @@
           ctx.fill();
           ctx.restore();
         }
-        ctx.fillStyle = rgb43(p.hideShadow);
+        ctx.fillStyle = rgb44(p.hideShadow);
         ctx.save();
         ctx.translate(hx + 3.7, hy - 5);
         ctx.rotate(0.5 + flick * 0.5);
@@ -24939,7 +24999,7 @@
         ctx.restore();
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb43([255, 255, 255], g);
+          ctx.fillStyle = rgb44([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -24951,7 +25011,7 @@
           const sx = bx - 10 + s * 20;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb43([255, 255, 255], 0.32);
+          ctx.fillStyle = rgb44([255, 255, 255], 0.32);
           ctx.beginPath();
           ctx.ellipse(sx, by - 1, 3, 5, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -24962,7 +25022,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb43([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb44([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -24970,21 +25030,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb43([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb44([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - 3 - reach, hy + 4, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb43([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb44([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb43([206, 224, 255], 0.1 + sheen2 * 0.12);
+          ctx.fillStyle = rgb44([206, 224, 255], 0.1 + sheen2 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13, 7.6, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -24997,17 +25057,17 @@
       }
     };
   }
-  function makeTransition40(fromIdx) {
+  function makeTransition41(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother43(clamp0144(pp));
-      paint43(ctx, lerpP43(SP43[from], SP43[to], k), 0);
+      const k = smoother44(clamp0145(pp));
+      paint44(ctx, lerpP44(SP44[from], SP44[to], k), 0);
     };
   }
-  var springToSummer39 = makeTransition40(0);
-  var summerToAutumn39 = makeTransition40(1);
-  var autumnToWinter39 = makeTransition40(2);
+  var springToSummer38 = makeTransition41(0);
+  var summerToAutumn38 = makeTransition41(1);
+  var autumnToWinter38 = makeTransition41(2);
   var VARIANTS46 = {
     Spring: { draw: draw34("Spring"), anim: anim34("Spring") },
     Summer: { draw: draw34("Summer"), anim: anim34("Summer") },
@@ -25015,34 +25075,34 @@
     Winter: { draw: draw34("Winter"), anim: anim34("Winter") }
   };
   var TRANSITIONS46 = {
-    0: springToSummer39,
-    1: summerToAutumn39,
-    2: autumnToWinter39
+    0: springToSummer38,
+    1: summerToAutumn38,
+    2: autumnToWinter38
   };
 
   // src/textures/seasonal/herd/alpaca.ts
-  function clamp0145(x) {
+  function clamp0146(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
-  function lerp49(a, b, t) {
+  function lerp50(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB38(a, b, t) {
-    return [lerp49(a[0], b[0], t), lerp49(a[1], b[1], t), lerp49(a[2], b[2], t)];
+    return [lerp50(a[0], b[0], t), lerp50(a[1], b[1], t), lerp50(a[2], b[2], t)];
   }
-  function rgb44(c, a = 1) {
-    const r = Math.round(clamp0145(c[0] / 255) * 255);
-    const g = Math.round(clamp0145(c[1] / 255) * 255);
-    const b = Math.round(clamp0145(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0145(a)})`;
+  function rgb45(c, a = 1) {
+    const r = Math.round(clamp0146(c[0] / 255) * 255);
+    const g = Math.round(clamp0146(c[1] / 255) * 255);
+    const b = Math.round(clamp0146(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0146(a)})`;
   }
-  function smoother44(x) {
+  function smoother45(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt44(t, amp = 1.1, w = 1.5) {
+  function bobAt45(t, amp = 1.1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP44 = {
+  var SP45 = {
     Spring: {
       fleeceLight: [248, 238, 214],
       // light recently-shorn cream
@@ -25132,7 +25192,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP44(a, b, t) {
+  function lerpP45(a, b, t) {
     return {
       fleeceLight: lerpRGB38(a.fleeceLight, b.fleeceLight, t),
       fleeceShadow: lerpRGB38(a.fleeceShadow, b.fleeceShadow, t),
@@ -25142,43 +25202,43 @@
       soil: lerpRGB38(a.soil, b.soil, t),
       outline: lerpRGB38(a.outline, b.outline, t),
       lightWash: lerpRGB38(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp49(a.lightWashAmt, b.lightWashAmt, t),
-      fleeceVolume: lerp49(a.fleeceVolume, b.fleeceVolume, t),
-      frostAmt: lerp49(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp49(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp49(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp49(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp49(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp49(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp50(a.lightWashAmt, b.lightWashAmt, t),
+      fleeceVolume: lerp50(a.fleeceVolume, b.fleeceVolume, t),
+      frostAmt: lerp50(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp50(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp50(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp50(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp50(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp50(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP34(p) {
     return {
       ...p,
-      lightWashAmt: clamp0145(p.lightWashAmt),
-      fleeceVolume: clamp0145(p.fleeceVolume),
-      frostAmt: clamp0145(p.frostAmt),
-      backSnowAmt: clamp0145(p.backSnowAmt),
-      padSnowAmt: clamp0145(p.padSnowAmt),
-      blossomAmt: clamp0145(p.blossomAmt),
-      fallenLeafAmt: clamp0145(p.fallenLeafAmt),
-      breathFogAmt: clamp0145(p.breathFogAmt)
+      lightWashAmt: clamp0146(p.lightWashAmt),
+      fleeceVolume: clamp0146(p.fleeceVolume),
+      frostAmt: clamp0146(p.frostAmt),
+      backSnowAmt: clamp0146(p.backSnowAmt),
+      padSnowAmt: clamp0146(p.padSnowAmt),
+      blossomAmt: clamp0146(p.blossomAmt),
+      fallenLeafAmt: clamp0146(p.fallenLeafAmt),
+      breathFogAmt: clamp0146(p.breathFogAmt)
     };
   }
   function paintPad13(ctx, p) {
-    ctx.fillStyle = rgb44([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb45([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb44(p.soil);
+    ctx.fillStyle = rgb45(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb44(p.padGrass);
+    ctx.fillStyle = rgb45(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb44(p.padGrass);
+    ctx.strokeStyle = rgb45(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -25190,16 +25250,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb44([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb45([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb44([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb45([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb44([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb45([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -25208,14 +25268,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb44([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb45([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb44([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb45([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -25231,11 +25291,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb44(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb45(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb44([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb45([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -25248,14 +25308,14 @@
   function paintLeg11(ctx, p, x, topY, baseY, dim = false) {
     ctx.save();
     if (dim) ctx.globalAlpha = 0.85;
-    ctx.strokeStyle = rgb44(p.faceDark);
+    ctx.strokeStyle = rgb45(p.faceDark);
     ctx.lineWidth = 2.2;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.fillStyle = rgb44([54, 40, 30]);
+    ctx.fillStyle = rgb45([54, 40, 30]);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 1.6, 1.1, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -25287,20 +25347,20 @@
     ctx.rotate(swing);
     const neckTopX = -2.4;
     const neckTopY = -16;
-    ctx.strokeStyle = rgb44(p.outline);
+    ctx.strokeStyle = rgb45(p.outline);
     ctx.lineCap = "round";
     ctx.lineWidth = 8 + p.fleeceVolume * 2.4;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.quadraticCurveTo(-3.2, -8, neckTopX, neckTopY);
     ctx.stroke();
-    ctx.strokeStyle = rgb44(p.fleeceShadow);
+    ctx.strokeStyle = rgb45(p.fleeceShadow);
     ctx.lineWidth = 6.4 + p.fleeceVolume * 2.4;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.quadraticCurveTo(-3.2, -8, neckTopX, neckTopY);
     ctx.stroke();
-    ctx.strokeStyle = rgb44(p.fleeceLight);
+    ctx.strokeStyle = rgb45(p.fleeceLight);
     ctx.lineWidth = 4 + p.fleeceVolume * 2;
     ctx.beginPath();
     ctx.moveTo(-1, -1);
@@ -25314,55 +25374,55 @@
       ctx.translate(hx + side * 2.2, hy - 3);
       const flick = side === 1 ? earFlick : 0;
       ctx.rotate(side * 0.34 + flick * 0.5);
-      ctx.fillStyle = rgb44(p.outline);
+      ctx.fillStyle = rgb45(p.outline);
       ctx.beginPath();
       ctx.ellipse(0, -2.6, 1.8, 3.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb44(p.faceLight);
+      ctx.fillStyle = rgb45(p.faceLight);
       ctx.beginPath();
       ctx.ellipse(0, -2.6, 1.2, 2.8, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb44(p.faceDark);
+      ctx.fillStyle = rgb45(p.faceDark);
       ctx.beginPath();
       ctx.ellipse(0, -1.6, 0.6, 1.4, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
-    ctx.fillStyle = rgb44(p.outline);
+    ctx.fillStyle = rgb45(p.outline);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 4.4, 4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb44(p.faceLight);
+    ctx.fillStyle = rgb45(p.faceLight);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 3.7, 3.3, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb44(p.fleeceLight);
+    ctx.fillStyle = rgb45(p.fleeceLight);
     for (const [tx, ty, tr] of [[-1.4, -3.6, 1.9], [1.2, -4, 1.7], [-0.2, -4.6, 1.5]]) {
       ctx.beginPath();
       ctx.arc(hx + tx, hy + ty, tr, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb44(p.faceDark);
+    ctx.fillStyle = rgb45(p.faceDark);
     ctx.beginPath();
     ctx.ellipse(hx - 2.4, hy + 2.2, 2.4, 1.8, -0.3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb44([255, 255, 255], 0.12);
+    ctx.fillStyle = rgb45([255, 255, 255], 0.12);
     ctx.beginPath();
     ctx.ellipse(hx - 1.4, hy - 1.2, 1.6, 1.9, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb44([36, 28, 24]);
+    ctx.fillStyle = rgb45([36, 28, 24]);
     for (const [ex, ey] of [[-2.1, -0.2], [0.6, -0.4]]) {
       ctx.beginPath();
       ctx.arc(hx + ex, hy + ey, 0.78, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb44([255, 255, 255], 0.85);
+    ctx.fillStyle = rgb45([255, 255, 255], 0.85);
     for (const [ex, ey] of [[-2.3, -0.45], [0.4, -0.65]]) {
       ctx.beginPath();
       ctx.arc(hx + ex, hy + ey, 0.3, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb44([24, 18, 16]);
+    ctx.fillStyle = rgb45([24, 18, 16]);
     for (const ex of [-3.2, -2]) {
       ctx.beginPath();
       ctx.ellipse(hx + ex, hy + 2.8, 0.42, 0.55, 0, 0, Math.PI * 2);
@@ -25377,22 +25437,22 @@
     paintLeg11(ctx, p, bx - 5.5, by + 5, 18.9, true);
     paintLeg11(ctx, p, bx + 3, by + 5, 19.2);
     paintLeg11(ctx, p, bx - 3, by + 5, 19.4);
-    paintFleeceBody2(ctx, p, bx, by, rgb44(p.outline), 1.18);
-    paintFleeceBody2(ctx, p, bx, by, rgb44(p.fleeceShadow), 1);
+    paintFleeceBody2(ctx, p, bx, by, rgb45(p.outline), 1.18);
+    paintFleeceBody2(ctx, p, bx, by, rgb45(p.fleeceShadow), 1);
     ctx.save();
     ctx.translate(-1.4, -1.6);
-    paintFleeceBody2(ctx, p, bx, by, rgb44(p.fleeceLight), 0.82);
+    paintFleeceBody2(ctx, p, bx, by, rgb45(p.fleeceLight), 0.82);
     ctx.restore();
-    ctx.fillStyle = rgb44(p.fleeceLight);
+    ctx.fillStyle = rgb45(p.fleeceLight);
     ctx.beginPath();
     ctx.arc(bx + 11, by - 2, 2.2 + p.fleeceVolume * 0.6, 0, Math.PI * 2);
     ctx.fill();
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb44([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb45([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 1, by - 7, 8 * (0.9 + p.fleeceVolume * 0.3), 3.1, -0.08, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb44([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb45([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-4, -7.8], [1, -8.2], [5, -7.2]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.5 + p.fleeceVolume * 0.4, 0, Math.PI * 2);
@@ -25400,7 +25460,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb44([255, 255, 255], 0.8 * p.frostAmt);
+      ctx.fillStyle = rgb45([255, 255, 255], 0.8 * p.frostAmt);
       const pts = [
         [-7, 0],
         [-3, 4],
@@ -25420,7 +25480,7 @@
     const neckBaseY = by - 4;
     paintNeckHead(ctx, p, neckBaseX, neckBaseY, neckSwing, earFlick);
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb44([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb45([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(neckBaseX - 8, neckBaseY - 17, 3, 2.1, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -25430,13 +25490,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb44(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb45(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 2, 26, 27, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint44(ctx, pIn, bob, neckSwing = 0, earFlick = 0) {
+  function paint45(ctx, pIn, bob, neckSwing = 0, earFlick = 0) {
     const p = clampP34(pIn);
     ctx.save();
     try {
@@ -25450,17 +25510,17 @@
     }
   }
   function draw35(season) {
-    return (ctx) => paint44(ctx, SP44[season], 0);
+    return (ctx) => paint45(ctx, SP45[season], 0);
   }
   function anim35(season) {
     return (ctx, t) => {
-      const p = clampP34(SP44[season]);
-      const bob = bobAt44(t);
+      const p = clampP34(SP45[season]);
+      const bob = bobAt45(t);
       const neckSwing = 0.06 * (1 - Math.cos(t * 0.9)) * 0.5 * Math.sin(t * 0.45);
       const loop = t % 5 / 5;
       const flickGate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 6;
       const earFlick = Math.sin(t * 9) * flickGate;
-      paint44(ctx, SP44[season], bob, neckSwing, earFlick);
+      paint45(ctx, SP45[season], bob, neckSwing, earFlick);
       ctx.save();
       try {
         const bx = 1;
@@ -25471,7 +25531,7 @@
         const headY = neckBaseY - 19;
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb44([255, 255, 255], g);
+          ctx.fillStyle = rgb45([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -25483,7 +25543,7 @@
           const sx = bx - 8 + s * 16;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb44([255, 255, 255], 0.32);
+          ctx.fillStyle = rgb45([255, 255, 255], 0.32);
           ctx.beginPath();
           ctx.ellipse(sx, by - 1, 3, 5.5, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -25494,7 +25554,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb44([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb45([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -25502,21 +25562,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb44([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb45([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(headX - reach, headY + 2, 2.4 + breathe * 1.7, 1.7 + breathe * 1.1, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb44([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb45([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb44([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb45([206, 224, 255], 0.12 + sheen2 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 11.5, 8.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -25529,17 +25589,17 @@
       }
     };
   }
-  function makeTransition41(fromIdx) {
+  function makeTransition42(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother44(clamp0145(pp));
-      paint44(ctx, lerpP44(SP44[from], SP44[to], k), 0);
+      const k = smoother45(clamp0146(pp));
+      paint45(ctx, lerpP45(SP45[from], SP45[to], k), 0);
     };
   }
-  var springToSummer40 = makeTransition41(0);
-  var summerToAutumn40 = makeTransition41(1);
-  var autumnToWinter40 = makeTransition41(2);
+  var springToSummer39 = makeTransition42(0);
+  var summerToAutumn39 = makeTransition42(1);
+  var autumnToWinter39 = makeTransition42(2);
   var VARIANTS47 = {
     Spring: { draw: draw35("Spring"), anim: anim35("Spring") },
     Summer: { draw: draw35("Summer"), anim: anim35("Summer") },
@@ -25547,35 +25607,35 @@
     Winter: { draw: draw35("Winter"), anim: anim35("Winter") }
   };
   var TRANSITIONS47 = {
-    0: springToSummer40,
-    1: summerToAutumn40,
-    2: autumnToWinter40
+    0: springToSummer39,
+    1: summerToAutumn39,
+    2: autumnToWinter39
   };
 
   // src/textures/seasonal/herd/goat.ts
-  function clamp0146(x) {
+  function clamp0147(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
-  function lerp50(a, b, t) {
+  function lerp51(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB39(a, b, t) {
-    return [lerp50(a[0], b[0], t), lerp50(a[1], b[1], t), lerp50(a[2], b[2], t)];
+    return [lerp51(a[0], b[0], t), lerp51(a[1], b[1], t), lerp51(a[2], b[2], t)];
   }
-  function rgb45(c, a = 1) {
-    const r = Math.round(clamp0146(c[0] / 255) * 255);
-    const g = Math.round(clamp0146(c[1] / 255) * 255);
-    const b = Math.round(clamp0146(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0146(a)})`;
+  function rgb46(c, a = 1) {
+    const r = Math.round(clamp0147(c[0] / 255) * 255);
+    const g = Math.round(clamp0147(c[1] / 255) * 255);
+    const b = Math.round(clamp0147(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0147(a)})`;
   }
-  function smoother45(x) {
+  function smoother46(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt45(t, amp = 1, w = 1.5) {
+  function bobAt46(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP45 = {
+  var SP46 = {
     // Spring — shedding patchy-thin coat; dewy lime pad + blossom; cool-bright.
     Spring: {
       coatLight: [248, 246, 238],
@@ -25683,7 +25743,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP45(a, b, t) {
+  function lerpP46(a, b, t) {
     return {
       coatLight: lerpRGB39(a.coatLight, b.coatLight, t),
       coatShadow: lerpRGB39(a.coatShadow, b.coatShadow, t),
@@ -25695,47 +25755,47 @@
       soil: lerpRGB39(a.soil, b.soil, t),
       outline: lerpRGB39(a.outline, b.outline, t),
       lightWash: lerpRGB39(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp50(a.lightWashAmt, b.lightWashAmt, t),
-      coatVolume: lerp50(a.coatVolume, b.coatVolume, t),
-      coatPatchy: lerp50(a.coatPatchy, b.coatPatchy, t),
-      coatSheen: lerp50(a.coatSheen, b.coatSheen, t),
-      frostAmt: lerp50(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp50(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp50(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp50(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp50(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp50(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp51(a.lightWashAmt, b.lightWashAmt, t),
+      coatVolume: lerp51(a.coatVolume, b.coatVolume, t),
+      coatPatchy: lerp51(a.coatPatchy, b.coatPatchy, t),
+      coatSheen: lerp51(a.coatSheen, b.coatSheen, t),
+      frostAmt: lerp51(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp51(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp51(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp51(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp51(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp51(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP35(p) {
     return {
       ...p,
-      lightWashAmt: clamp0146(p.lightWashAmt),
-      coatVolume: clamp0146(p.coatVolume),
-      coatPatchy: clamp0146(p.coatPatchy),
-      coatSheen: clamp0146(p.coatSheen),
-      frostAmt: clamp0146(p.frostAmt),
-      backSnowAmt: clamp0146(p.backSnowAmt),
-      padSnowAmt: clamp0146(p.padSnowAmt),
-      blossomAmt: clamp0146(p.blossomAmt),
-      fallenLeafAmt: clamp0146(p.fallenLeafAmt),
-      breathFogAmt: clamp0146(p.breathFogAmt)
+      lightWashAmt: clamp0147(p.lightWashAmt),
+      coatVolume: clamp0147(p.coatVolume),
+      coatPatchy: clamp0147(p.coatPatchy),
+      coatSheen: clamp0147(p.coatSheen),
+      frostAmt: clamp0147(p.frostAmt),
+      backSnowAmt: clamp0147(p.backSnowAmt),
+      padSnowAmt: clamp0147(p.padSnowAmt),
+      blossomAmt: clamp0147(p.blossomAmt),
+      fallenLeafAmt: clamp0147(p.fallenLeafAmt),
+      breathFogAmt: clamp0147(p.breathFogAmt)
     };
   }
   function paintPad14(ctx, p) {
-    ctx.fillStyle = rgb45([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb46([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb45(p.soil);
+    ctx.fillStyle = rgb46(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb45(p.padGrass);
+    ctx.fillStyle = rgb46(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb45(p.padGrass);
+    ctx.strokeStyle = rgb46(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -25747,16 +25807,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb45([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb46([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb45([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb46([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb45([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb46([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -25765,14 +25825,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb45([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb46([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb45([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb46([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -25788,11 +25848,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb45(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb46(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb45([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb46([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -25803,20 +25863,20 @@
     }
   }
   function paintLeg12(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb45(p.coatShadow);
+    ctx.strokeStyle = rgb46(p.coatShadow);
     ctx.lineWidth = 2.4;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY - 2.4);
     ctx.stroke();
-    ctx.strokeStyle = rgb45(p.hoofDark);
+    ctx.strokeStyle = rgb46(p.hoofDark);
     ctx.lineWidth = 2.2;
     ctx.beginPath();
     ctx.moveTo(x, baseY - 3);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.fillStyle = rgb45([30, 26, 28]);
+    ctx.fillStyle = rgb46([30, 26, 28]);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 1.6, 1.1, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -25834,13 +25894,13 @@
   function paintCoatShag(ctx, p, cx, cy) {
     if (p.coatVolume <= 0.34) return;
     const amt = (p.coatVolume - 0.34) / 0.66;
-    ctx.fillStyle = rgb45(p.coatShadow, 0.9);
+    ctx.fillStyle = rgb46(p.coatShadow, 0.9);
     const rx = 12.5 * (0.9 + p.coatVolume * 0.22);
     const ry = 8 * (0.9 + p.coatVolume * 0.22);
     const tufts = 9;
     for (let i = 0; i < tufts; i++) {
       const f = i / (tufts - 1);
-      const ang = lerp50(Math.PI * 0.18, Math.PI * 0.92, f);
+      const ang = lerp51(Math.PI * 0.18, Math.PI * 0.92, f);
       const lx = cx + Math.cos(ang) * rx * 0.96;
       const ly = cy + Math.sin(ang) * ry * 0.96;
       const drop = (2 + amt * 3.2) * (0.6 + 0.4 * Math.sin(i * 1.7));
@@ -25863,33 +25923,33 @@
     paintLeg12(ctx, p, bx + 4.5, by + 5.5, 19.3);
     paintLeg12(ctx, p, bx - 3.5, by + 5.5, 19.6);
     paintCoatShag(ctx, p, bx, by + 1);
-    paintBody3(ctx, p, bx, by, rgb45(p.outline), 1.1);
-    paintBody3(ctx, p, bx, by, rgb45(p.coatShadow), 1);
+    paintBody3(ctx, p, bx, by, rgb46(p.outline), 1.1);
+    paintBody3(ctx, p, bx, by, rgb46(p.coatShadow), 1);
     ctx.save();
     ctx.translate(-1.2, -1.4);
-    paintBody3(ctx, p, bx, by, rgb45(p.coatLight), 0.82);
+    paintBody3(ctx, p, bx, by, rgb46(p.coatLight), 0.82);
     ctx.restore();
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(bx, by, 12.5 * (0.9 + p.coatVolume * 0.22), 8 * (0.9 + p.coatVolume * 0.22), -0.06, 0, Math.PI * 2);
     ctx.clip();
-    ctx.fillStyle = rgb45(p.saddleTan, 0.92);
+    ctx.fillStyle = rgb46(p.saddleTan, 0.92);
     ctx.beginPath();
     ctx.ellipse(bx + 4.5, by - 1.5, 7.5, 5.5, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb45(p.saddleTan, 0.7);
+    ctx.fillStyle = rgb46(p.saddleTan, 0.7);
     ctx.beginPath();
     ctx.ellipse(bx - 6, by + 3, 4, 3, 0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     if (p.coatPatchy > 1e-3) {
-      ctx.fillStyle = rgb45(p.coatLight, 0.55 * p.coatPatchy);
+      ctx.fillStyle = rgb46(p.coatLight, 0.55 * p.coatPatchy);
       for (const [dx, dy] of [[-6, -5], [2, -6], [6, -3], [-2, -2], [8, 1]]) {
         ctx.beginPath();
         ctx.ellipse(bx + dx, by + dy, 1.8, 1.1, 0.3, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.strokeStyle = rgb45(p.coatShadow, 0.4 * p.coatPatchy);
+      ctx.strokeStyle = rgb46(p.coatShadow, 0.4 * p.coatPatchy);
       ctx.lineWidth = 0.8;
       for (const [wx, wy] of [[-4, -8], [5, -9]]) {
         ctx.beginPath();
@@ -25899,11 +25959,11 @@
       }
     }
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb45([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb46([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx + 1, by - 6.6, 9.5 * (0.9 + p.coatVolume * 0.2), 3.2, -0.08, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb45([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb46([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-4, -7.4], [2, -8], [6, -7]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.5 + p.coatVolume * 0.4, 0, Math.PI * 2);
@@ -25911,7 +25971,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb45([255, 255, 255], 0.8 * p.frostAmt);
+      ctx.fillStyle = rgb46([255, 255, 255], 0.8 * p.frostAmt);
       const pts = [
         [-8, 0],
         [-3, 4],
@@ -25927,14 +25987,14 @@
         ctx.fill();
       }
     }
-    ctx.strokeStyle = rgb45(p.coatShadow);
+    ctx.strokeStyle = rgb46(p.coatShadow);
     ctx.lineWidth = 2.6;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(bx + 11, by - 2);
     ctx.lineTo(bx + 13.5, by - 5);
     ctx.stroke();
-    ctx.strokeStyle = rgb45(p.coatLight);
+    ctx.strokeStyle = rgb46(p.coatLight);
     ctx.lineWidth = 1.2;
     ctx.beginPath();
     ctx.moveTo(bx + 11, by - 2);
@@ -25947,15 +26007,15 @@
       ctx.save();
       ctx.translate(hx + side * 3.4, hy - 3.2);
       ctx.rotate(side * 0.5 - 0.1);
-      ctx.fillStyle = rgb45(p.outline);
+      ctx.fillStyle = rgb46(p.outline);
       ctx.beginPath();
       ctx.ellipse(0, 0, 1.9, 3.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb45(p.coatLight);
+      ctx.fillStyle = rgb46(p.coatLight);
       ctx.beginPath();
       ctx.ellipse(0, 0, 1.4, 3, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb45(p.saddleTan, 0.6);
+      ctx.fillStyle = rgb46(p.saddleTan, 0.6);
       ctx.beginPath();
       ctx.ellipse(0, 0.4, 0.7, 1.8, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -25964,20 +26024,20 @@
     for (const side of [-1, 1]) {
       const baseX = hx + side * 1.6;
       const baseY = hy - 4.2;
-      ctx.strokeStyle = rgb45(p.outline);
+      ctx.strokeStyle = rgb46(p.outline);
       ctx.lineWidth = 3;
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(baseX, baseY);
       ctx.quadraticCurveTo(baseX + side * 0.5 + 2.2, baseY - 6.5, baseX + 4.5, baseY - 4.5);
       ctx.stroke();
-      ctx.strokeStyle = rgb45(p.horn);
+      ctx.strokeStyle = rgb46(p.horn);
       ctx.lineWidth = 1.8;
       ctx.beginPath();
       ctx.moveTo(baseX, baseY);
       ctx.quadraticCurveTo(baseX + side * 0.5 + 2.2, baseY - 6.5, baseX + 4.5, baseY - 4.5);
       ctx.stroke();
-      ctx.strokeStyle = rgb45([255, 255, 255], 0.3);
+      ctx.strokeStyle = rgb46([255, 255, 255], 0.3);
       ctx.lineWidth = 0.7;
       ctx.beginPath();
       ctx.moveTo(baseX, baseY - 0.4);
@@ -25985,46 +26045,46 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb45(p.coatLight);
+    ctx.fillStyle = rgb46(p.coatLight);
     ctx.beginPath();
     ctx.ellipse(hx, hy - 3.8, 2.4, 1.8, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.save();
     ctx.translate(hx, hy);
     ctx.rotate(0.34);
-    ctx.fillStyle = rgb45(p.outline);
+    ctx.fillStyle = rgb46(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 0.4, 4.2, 5.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb45(p.coatLight);
+    ctx.fillStyle = rgb46(p.coatLight);
     ctx.beginPath();
     ctx.ellipse(0, 0.4, 3.6, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb45(p.saddleTan, 0.45);
+    ctx.fillStyle = rgb46(p.saddleTan, 0.45);
     ctx.beginPath();
     ctx.ellipse(0.4, -1.6, 1.8, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb45(p.hoofDark);
+    ctx.fillStyle = rgb46(p.hoofDark);
     ctx.beginPath();
     ctx.ellipse(0.2, 4.2, 1.9, 1.5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb45([255, 255, 255], 0.16);
+    ctx.fillStyle = rgb46([255, 255, 255], 0.16);
     ctx.beginPath();
     ctx.ellipse(-1.4, -1.4, 1.6, 2.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb45([245, 245, 240]);
+    ctx.fillStyle = rgb46([245, 245, 240]);
     for (const ex of [-1.7, 1.5]) {
       ctx.beginPath();
       ctx.arc(ex, -0.6, 1, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb45([26, 22, 24]);
+    ctx.fillStyle = rgb46([26, 22, 24]);
     for (const ex of [-1.6, 1.6]) {
       ctx.beginPath();
       ctx.ellipse(ex, -0.4, 0.5, 0.7, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb45([16, 14, 16]);
+    ctx.fillStyle = rgb46([16, 14, 16]);
     for (const ex of [-0.7, 1]) {
       ctx.beginPath();
       ctx.ellipse(ex, 4.2, 0.4, 0.6, 0, 0, Math.PI * 2);
@@ -26034,7 +26094,7 @@
     {
       const cxb = hx - 1.6;
       const cyb = hy + 5.6;
-      ctx.fillStyle = rgb45(p.outline);
+      ctx.fillStyle = rgb46(p.outline);
       ctx.beginPath();
       ctx.moveTo(cxb - 1.8, cyb - 1.6);
       ctx.lineTo(cxb - 2.4, cyb + 4.2);
@@ -26043,7 +26103,7 @@
       ctx.lineTo(cxb + 1.6, cyb - 1.6);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb45(p.beard);
+      ctx.fillStyle = rgb46(p.beard);
       ctx.beginPath();
       ctx.moveTo(cxb - 1.3, cyb - 1.4);
       ctx.lineTo(cxb - 1.8, cyb + 3.6);
@@ -26054,7 +26114,7 @@
       ctx.fill();
     }
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb45([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb46([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 4.4, hy + 4.6, 3, 2, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -26064,13 +26124,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb45(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb46(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint45(ctx, pIn, bob) {
+  function paint46(ctx, pIn, bob) {
     const p = clampP35(pIn);
     ctx.save();
     try {
@@ -26084,13 +26144,13 @@
     }
   }
   function draw36(season) {
-    return (ctx) => paint45(ctx, SP45[season], 0);
+    return (ctx) => paint46(ctx, SP46[season], 0);
   }
   function anim36(season) {
     return (ctx, t) => {
-      const p = clampP35(SP45[season]);
-      const bob = bobAt45(t);
-      paint45(ctx, SP45[season], bob);
+      const p = clampP35(SP46[season]);
+      const bob = bobAt46(t);
+      paint46(ctx, SP46[season], bob);
       ctx.save();
       try {
         const bx = 1;
@@ -26103,11 +26163,11 @@
         ctx.save();
         ctx.translate(hx - 3.4, hy - 3.2);
         ctx.rotate(-0.6 + flick * 0.5);
-        ctx.fillStyle = rgb45(p.outline);
+        ctx.fillStyle = rgb46(p.outline);
         ctx.beginPath();
         ctx.ellipse(0, 0, 1.9, 3.6, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb45(p.coatLight);
+        ctx.fillStyle = rgb46(p.coatLight);
         ctx.beginPath();
         ctx.ellipse(0, 0, 1.4, 3, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -26115,7 +26175,7 @@
         const beardSway = flickGate * 0.9 + Math.sin(t * 1.5) * 0.18 * flickGate;
         const cxb = hx - 1.6 + beardSway;
         const cyb = hy + 5.6;
-        ctx.fillStyle = rgb45(p.beard);
+        ctx.fillStyle = rgb46(p.beard);
         ctx.beginPath();
         ctx.moveTo(cxb - 1.3, cyb - 1.4);
         ctx.lineTo(cxb - 1.8 + beardSway, cyb + 3.6);
@@ -26126,7 +26186,7 @@
         ctx.fill();
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb45([255, 255, 255], g);
+          ctx.fillStyle = rgb46([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -26138,7 +26198,7 @@
           const sx = bx - 9 + s * 18;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb45([255, 255, 255], 0.3 + 0.2 * p.coatSheen);
+          ctx.fillStyle = rgb46([255, 255, 255], 0.3 + 0.2 * p.coatSheen);
           ctx.beginPath();
           ctx.ellipse(sx, by - 2, 3, 6, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -26149,7 +26209,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb45([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb46([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -26157,21 +26217,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 3 + breathe * 3;
-          ctx.fillStyle = rgb45([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb46([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - reach, hy + 4.6, 2.4 + breathe * 1.6, 1.6 + breathe * 1, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb45([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb46([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb45([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb46([206, 224, 255], 0.12 + sheen2 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 12.5, 8, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -26184,17 +26244,17 @@
       }
     };
   }
-  function makeTransition42(fromIdx) {
+  function makeTransition43(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother45(clamp0146(pp));
-      paint45(ctx, lerpP45(SP45[from], SP45[to], k), 0);
+      const k = smoother46(clamp0147(pp));
+      paint46(ctx, lerpP46(SP46[from], SP46[to], k), 0);
     };
   }
-  var springToSummer41 = makeTransition42(0);
-  var summerToAutumn41 = makeTransition42(1);
-  var autumnToWinter41 = makeTransition42(2);
+  var springToSummer40 = makeTransition43(0);
+  var summerToAutumn40 = makeTransition43(1);
+  var autumnToWinter40 = makeTransition43(2);
   var VARIANTS48 = {
     Spring: { draw: draw36("Spring"), anim: anim36("Spring") },
     Summer: { draw: draw36("Summer"), anim: anim36("Summer") },
@@ -26202,34 +26262,34 @@
     Winter: { draw: draw36("Winter"), anim: anim36("Winter") }
   };
   var TRANSITIONS48 = {
-    0: springToSummer41,
-    1: summerToAutumn41,
-    2: autumnToWinter41
+    0: springToSummer40,
+    1: summerToAutumn40,
+    2: autumnToWinter40
   };
 
   // src/textures/seasonal/herd/ram.ts
-  function clamp0147(x) {
+  function clamp0148(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
-  function lerp51(a, b, t) {
+  function lerp52(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB40(a, b, t) {
-    return [lerp51(a[0], b[0], t), lerp51(a[1], b[1], t), lerp51(a[2], b[2], t)];
+    return [lerp52(a[0], b[0], t), lerp52(a[1], b[1], t), lerp52(a[2], b[2], t)];
   }
-  function rgb46(c, a = 1) {
-    const r = Math.round(clamp0147(c[0] / 255) * 255);
-    const g = Math.round(clamp0147(c[1] / 255) * 255);
-    const b = Math.round(clamp0147(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0147(a)})`;
+  function rgb47(c, a = 1) {
+    const r = Math.round(clamp0148(c[0] / 255) * 255);
+    const g = Math.round(clamp0148(c[1] / 255) * 255);
+    const b = Math.round(clamp0148(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0148(a)})`;
   }
-  function smoother46(x) {
+  function smoother47(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt46(t, amp = 1.1, w = 1.5) {
+  function bobAt47(t, amp = 1.1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP46 = {
+  var SP47 = {
     Spring: {
       fleeceLight: [248, 244, 232],
       // cream
@@ -26332,7 +26392,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP46(a, b, t) {
+  function lerpP47(a, b, t) {
     return {
       fleeceLight: lerpRGB40(a.fleeceLight, b.fleeceLight, t),
       fleeceShadow: lerpRGB40(a.fleeceShadow, b.fleeceShadow, t),
@@ -26345,43 +26405,43 @@
       soil: lerpRGB40(a.soil, b.soil, t),
       outline: lerpRGB40(a.outline, b.outline, t),
       lightWash: lerpRGB40(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp51(a.lightWashAmt, b.lightWashAmt, t),
-      fleeceVolume: lerp51(a.fleeceVolume, b.fleeceVolume, t),
-      frostAmt: lerp51(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp51(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp51(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp51(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp51(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp51(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp52(a.lightWashAmt, b.lightWashAmt, t),
+      fleeceVolume: lerp52(a.fleeceVolume, b.fleeceVolume, t),
+      frostAmt: lerp52(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp52(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp52(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp52(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp52(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp52(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP36(p) {
     return {
       ...p,
-      lightWashAmt: clamp0147(p.lightWashAmt),
-      fleeceVolume: clamp0147(p.fleeceVolume),
-      frostAmt: clamp0147(p.frostAmt),
-      backSnowAmt: clamp0147(p.backSnowAmt),
-      padSnowAmt: clamp0147(p.padSnowAmt),
-      blossomAmt: clamp0147(p.blossomAmt),
-      fallenLeafAmt: clamp0147(p.fallenLeafAmt),
-      breathFogAmt: clamp0147(p.breathFogAmt)
+      lightWashAmt: clamp0148(p.lightWashAmt),
+      fleeceVolume: clamp0148(p.fleeceVolume),
+      frostAmt: clamp0148(p.frostAmt),
+      backSnowAmt: clamp0148(p.backSnowAmt),
+      padSnowAmt: clamp0148(p.padSnowAmt),
+      blossomAmt: clamp0148(p.blossomAmt),
+      fallenLeafAmt: clamp0148(p.fallenLeafAmt),
+      breathFogAmt: clamp0148(p.breathFogAmt)
     };
   }
   function paintPad15(ctx, p) {
-    ctx.fillStyle = rgb46([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb47([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb46(p.soil);
+    ctx.fillStyle = rgb47(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb46(p.padGrass);
+    ctx.fillStyle = rgb47(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb46(p.padGrass);
+    ctx.strokeStyle = rgb47(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -26393,16 +26453,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb46([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb47([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb46([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb47([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb46([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb47([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -26411,14 +26471,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb46([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb47([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb46([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb47([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -26434,11 +26494,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb46(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb47(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb46([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb47([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -26449,14 +26509,14 @@
     }
   }
   function paintLeg13(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb46(p.legDark);
+    ctx.strokeStyle = rgb47(p.legDark);
     ctx.lineWidth = 3.4;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.fillStyle = rgb46([30, 26, 26]);
+    ctx.fillStyle = rgb47([30, 26, 26]);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 1.9, 1.2, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -26496,26 +26556,26 @@
       const thick = 2.9 * (1 - f * 0.55);
       discs.push({ x: cx, y: cy, r: thick });
     }
-    ctx.fillStyle = rgb46(p.outline);
+    ctx.fillStyle = rgb47(p.outline);
     for (const d of discs) {
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.r + 0.9, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb46(p.hornLight);
+    ctx.fillStyle = rgb47(p.hornLight);
     for (const d of discs) {
       ctx.beginPath();
       ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb46(p.hornShade);
+    ctx.fillStyle = rgb47(p.hornShade);
     for (let i = 0; i < discs.length; i++) {
       const d = discs[i];
       ctx.beginPath();
       ctx.arc(d.x + 0.8, d.y + 0.8, d.r * 0.5, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.strokeStyle = rgb46(p.hornShade, 0.7);
+    ctx.strokeStyle = rgb47(p.hornShade, 0.7);
     ctx.lineWidth = 0.7;
     for (let i = 2; i < discs.length - 1; i += 2) {
       const d = discs[i];
@@ -26525,7 +26585,7 @@
       ctx.stroke();
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb46([255, 255, 255], 0.8 * p.frostAmt);
+      ctx.fillStyle = rgb47([255, 255, 255], 0.8 * p.frostAmt);
       for (let i = 0; i < discs.length; i += 3) {
         const d = discs[i];
         ctx.beginPath();
@@ -26544,18 +26604,18 @@
     ctx.restore();
     paintLeg13(ctx, p, bx + 3.6, by + 7, 19.2);
     paintLeg13(ctx, p, bx - 4.6, by + 7, 19.4);
-    paintFleeceBody3(ctx, p, bx, by, rgb46(p.outline), 1.18);
-    paintFleeceBody3(ctx, p, bx, by, rgb46(p.fleeceShadow), 1);
+    paintFleeceBody3(ctx, p, bx, by, rgb47(p.outline), 1.18);
+    paintFleeceBody3(ctx, p, bx, by, rgb47(p.fleeceShadow), 1);
     ctx.save();
     ctx.translate(-1.4, -1.6);
-    paintFleeceBody3(ctx, p, bx, by, rgb46(p.fleeceLight), 0.82);
+    paintFleeceBody3(ctx, p, bx, by, rgb47(p.fleeceLight), 0.82);
     ctx.restore();
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb46([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb47([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 1, by - 8, 9.4 * (0.9 + p.fleeceVolume * 0.3), 3.6, -0.08, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb46([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb47([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-5, -8.8], [1, -9.4], [5, -8.4]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.6 + p.fleeceVolume * 0.4, 0, Math.PI * 2);
@@ -26563,7 +26623,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb46([255, 255, 255], 0.8 * p.frostAmt);
+      ctx.fillStyle = rgb47([255, 255, 255], 0.8 * p.frostAmt);
       const pts = [
         [-8, 0],
         [-3, 4],
@@ -26581,7 +26641,7 @@
     }
     const hx = bx - 11;
     const hy = by + 3;
-    ctx.fillStyle = rgb46(p.faceShade);
+    ctx.fillStyle = rgb47(p.faceShade);
     for (const sideE of [-1, 1]) {
       ctx.save();
       ctx.translate(hx + sideE * 4.4, hy - 1.5);
@@ -26591,7 +26651,7 @@
       ctx.fill();
       ctx.restore();
     }
-    ctx.fillStyle = rgb46(p.fleeceLight);
+    ctx.fillStyle = rgb47(p.fleeceLight);
     ctx.beginPath();
     ctx.ellipse(hx, hy - 5, 3.2, 2.3, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -26600,51 +26660,51 @@
     ctx.save();
     ctx.translate(hx, hy);
     ctx.rotate(0.22);
-    ctx.fillStyle = rgb46(p.outline);
+    ctx.fillStyle = rgb47(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 0, 6, 5.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb46(p.faceCoat);
+    ctx.fillStyle = rgb47(p.faceCoat);
     ctx.beginPath();
     ctx.ellipse(0, 0, 5.3, 4.9, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb46(p.faceShade);
+    ctx.fillStyle = rgb47(p.faceShade);
     ctx.beginPath();
     ctx.ellipse(1.8, 0.6, 3.4, 4.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb46(p.fleeceLight, 0.55);
+    ctx.fillStyle = rgb47(p.fleeceLight, 0.55);
     ctx.beginPath();
     ctx.ellipse(-0.6, 1.4, 2, 3.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb46([255, 255, 255], 0.14);
+    ctx.fillStyle = rgb47([255, 255, 255], 0.14);
     ctx.beginPath();
     ctx.ellipse(-2, -1.8, 2, 2.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb46([245, 244, 236]);
+    ctx.fillStyle = rgb47([245, 244, 236]);
     for (const ex of [-2, 2]) {
       ctx.beginPath();
       ctx.arc(ex, -1.3, 1.1, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb46([26, 22, 22]);
+    ctx.fillStyle = rgb47([26, 22, 22]);
     for (const ex of [-1.8, 2.2]) {
       ctx.beginPath();
       ctx.ellipse(ex, -1.1, 0.7, 0.5, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb46([24, 20, 20]);
+    ctx.fillStyle = rgb47([24, 20, 20]);
     for (const ex of [-1, 1]) {
       ctx.beginPath();
       ctx.ellipse(ex, 3.6, 0.5, 0.8, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
-    ctx.fillStyle = rgb46(p.fleeceLight);
+    ctx.fillStyle = rgb47(p.fleeceLight);
     ctx.beginPath();
     ctx.arc(bx + 13, by - 1, 2.5 + p.fleeceVolume * 0.6, 0, Math.PI * 2);
     ctx.fill();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb46([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb47([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 6.5, hy + 4, 3.4, 2.3, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -26654,13 +26714,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb46(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb47(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint46(ctx, pIn, bob) {
+  function paint47(ctx, pIn, bob) {
     const p = clampP36(pIn);
     ctx.save();
     try {
@@ -26674,16 +26734,16 @@
     }
   }
   function draw37(season) {
-    return (ctx) => paint46(ctx, SP46[season], 0);
+    return (ctx) => paint47(ctx, SP47[season], 0);
   }
   function anim37(season) {
     return (ctx, t) => {
-      const p = clampP36(SP46[season]);
-      const bob = bobAt46(t);
+      const p = clampP36(SP47[season]);
+      const bob = bobAt47(t);
       const loop = t % 6 / 6;
       const dipGate = Math.max(0, Math.sin(loop * Math.PI)) ** 2;
       const headDip = dipGate * 1.4;
-      paint46(ctx, SP46[season], bob);
+      paint47(ctx, SP47[season], bob);
       ctx.save();
       try {
         const bx = -1;
@@ -26696,31 +26756,31 @@
           ctx.save();
           ctx.translate(hx, hy);
           ctx.rotate(0.22);
-          ctx.fillStyle = rgb46(p.outline);
+          ctx.fillStyle = rgb47(p.outline);
           ctx.beginPath();
           ctx.ellipse(0, 0, 6, 5.6, 0, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = rgb46(p.faceCoat);
+          ctx.fillStyle = rgb47(p.faceCoat);
           ctx.beginPath();
           ctx.ellipse(0, 0, 5.3, 4.9, 0, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = rgb46(p.faceShade);
+          ctx.fillStyle = rgb47(p.faceShade);
           ctx.beginPath();
           ctx.ellipse(1.8, 0.6, 3.4, 4.4, 0, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = rgb46([245, 244, 236]);
+          ctx.fillStyle = rgb47([245, 244, 236]);
           for (const ex of [-2, 2]) {
             ctx.beginPath();
             ctx.arc(ex, -1.3, 1.1, 0, Math.PI * 2);
             ctx.fill();
           }
-          ctx.fillStyle = rgb46([26, 22, 22]);
+          ctx.fillStyle = rgb47([26, 22, 22]);
           for (const ex of [-1.8, 2.2]) {
             ctx.beginPath();
             ctx.ellipse(ex, -1.1, 0.7, 0.5, 0, 0, Math.PI * 2);
             ctx.fill();
           }
-          ctx.fillStyle = rgb46([24, 20, 20]);
+          ctx.fillStyle = rgb47([24, 20, 20]);
           for (const ex of [-1, 1]) {
             ctx.beginPath();
             ctx.ellipse(ex, 3.6, 0.5, 0.8, 0, 0, Math.PI * 2);
@@ -26728,7 +26788,7 @@
           }
           ctx.restore();
         }
-        ctx.fillStyle = rgb46(p.faceShade);
+        ctx.fillStyle = rgb47(p.faceShade);
         ctx.save();
         ctx.translate(hx + 4.4, hy - 1.5);
         ctx.rotate(0.6 + flick * 0.5);
@@ -26736,13 +26796,13 @@
         ctx.ellipse(0, 0, 3.2, 1.6, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
-        ctx.fillStyle = rgb46(p.fleeceLight);
+        ctx.fillStyle = rgb47(p.fleeceLight);
         ctx.beginPath();
         ctx.arc(bx + 13 + flick * 1.4, by - 1, 2.5 + p.fleeceVolume * 0.6, 0, Math.PI * 2);
         ctx.fill();
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb46([255, 255, 255], g);
+          ctx.fillStyle = rgb47([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -26754,7 +26814,7 @@
           const sx = bx - 9 + s * 18;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb46([255, 255, 255], 0.35);
+          ctx.fillStyle = rgb47([255, 255, 255], 0.35);
           ctx.beginPath();
           ctx.ellipse(sx, by - 2, 3, 6, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -26765,7 +26825,7 @@
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb46([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb47([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -26773,21 +26833,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb46([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb47([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - 2 - reach, hy + 4, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb46([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb47([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb46([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb47([206, 224, 255], 0.12 + sheen2 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13.6, 9.8, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -26800,17 +26860,17 @@
       }
     };
   }
-  function makeTransition43(fromIdx) {
+  function makeTransition44(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother46(clamp0147(pp));
-      paint46(ctx, lerpP46(SP46[from], SP46[to], k), 0);
+      const k = smoother47(clamp0148(pp));
+      paint47(ctx, lerpP47(SP47[from], SP47[to], k), 0);
     };
   }
-  var springToSummer42 = makeTransition43(0);
-  var summerToAutumn42 = makeTransition43(1);
-  var autumnToWinter42 = makeTransition43(2);
+  var springToSummer41 = makeTransition44(0);
+  var summerToAutumn41 = makeTransition44(1);
+  var autumnToWinter41 = makeTransition44(2);
   var VARIANTS49 = {
     Spring: { draw: draw37("Spring"), anim: anim37("Spring") },
     Summer: { draw: draw37("Summer"), anim: anim37("Summer") },
@@ -26818,34 +26878,34 @@
     Winter: { draw: draw37("Winter"), anim: anim37("Winter") }
   };
   var TRANSITIONS49 = {
-    0: springToSummer42,
-    1: summerToAutumn42,
-    2: autumnToWinter42
+    0: springToSummer41,
+    1: summerToAutumn41,
+    2: autumnToWinter41
   };
 
   // src/textures/seasonal/cattle/cow.ts
-  function clamp0148(x) {
+  function clamp0149(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  function lerp52(a, b, t) {
+  function lerp53(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB41(a, b, t) {
-    return [lerp52(a[0], b[0], t), lerp52(a[1], b[1], t), lerp52(a[2], b[2], t)];
+    return [lerp53(a[0], b[0], t), lerp53(a[1], b[1], t), lerp53(a[2], b[2], t)];
   }
-  function rgb47(c, a = 1) {
-    const r = Math.round(clamp0148(c[0] / 255) * 255);
-    const g = Math.round(clamp0148(c[1] / 255) * 255);
-    const b = Math.round(clamp0148(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0148(a)})`;
+  function rgb48(c, a = 1) {
+    const r = Math.round(clamp0149(c[0] / 255) * 255);
+    const g = Math.round(clamp0149(c[1] / 255) * 255);
+    const b = Math.round(clamp0149(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0149(a)})`;
   }
-  var smoother47 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt47(t, amp = 1, w = 1.35) {
+  var smoother48 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt48(t, amp = 1, w = 1.35) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP47 = {
+  var SP48 = {
     // Spring — sleek coat, dewy lime pad + blossom, cool-bright light.
     Spring: {
       hideLight: [250, 250, 248],
@@ -26939,7 +26999,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP47(a, b, t) {
+  function lerpP48(a, b, t) {
     return {
       hideLight: lerpRGB41(a.hideLight, b.hideLight, t),
       hideShadow: lerpRGB41(a.hideShadow, b.hideShadow, t),
@@ -26950,43 +27010,43 @@
       soil: lerpRGB41(a.soil, b.soil, t),
       outline: lerpRGB41(a.outline, b.outline, t),
       lightWash: lerpRGB41(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp52(a.lightWashAmt, b.lightWashAmt, t),
-      coatVolume: lerp52(a.coatVolume, b.coatVolume, t),
-      frostAmt: lerp52(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp52(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp52(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp52(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp52(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp52(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp53(a.lightWashAmt, b.lightWashAmt, t),
+      coatVolume: lerp53(a.coatVolume, b.coatVolume, t),
+      frostAmt: lerp53(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp53(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp53(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp53(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp53(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp53(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP37(p) {
     return {
       ...p,
-      lightWashAmt: clamp0148(p.lightWashAmt),
-      coatVolume: clamp0148(p.coatVolume),
-      frostAmt: clamp0148(p.frostAmt),
-      backSnowAmt: clamp0148(p.backSnowAmt),
-      padSnowAmt: clamp0148(p.padSnowAmt),
-      blossomAmt: clamp0148(p.blossomAmt),
-      fallenLeafAmt: clamp0148(p.fallenLeafAmt),
-      breathFogAmt: clamp0148(p.breathFogAmt)
+      lightWashAmt: clamp0149(p.lightWashAmt),
+      coatVolume: clamp0149(p.coatVolume),
+      frostAmt: clamp0149(p.frostAmt),
+      backSnowAmt: clamp0149(p.backSnowAmt),
+      padSnowAmt: clamp0149(p.padSnowAmt),
+      blossomAmt: clamp0149(p.blossomAmt),
+      fallenLeafAmt: clamp0149(p.fallenLeafAmt),
+      breathFogAmt: clamp0149(p.breathFogAmt)
     };
   }
   function paintPad16(ctx, p) {
-    ctx.fillStyle = rgb47([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb48([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb47(p.soil);
+    ctx.fillStyle = rgb48(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb47(p.padGrass);
+    ctx.fillStyle = rgb48(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb47(p.padGrass);
+    ctx.strokeStyle = rgb48(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -26998,16 +27058,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb47([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb48([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb47([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb48([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb47([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb48([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -27016,14 +27076,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-13, 18.5], [10, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb47([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb48([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb47([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb48([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -27039,11 +27099,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb47(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb48(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb47([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb48([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -27054,20 +27114,20 @@
     }
   }
   function paintLeg14(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb47(p.outline);
+    ctx.strokeStyle = rgb48(p.outline);
     ctx.lineWidth = 4.4;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.strokeStyle = rgb47(p.hideShadow);
+    ctx.strokeStyle = rgb48(p.hideShadow);
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY - 1);
     ctx.stroke();
-    ctx.fillStyle = rgb47(p.hornDark);
+    ctx.fillStyle = rgb48(p.hornDark);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 2, 1.4, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -27090,7 +27150,7 @@
     ctx.restore();
     paintLeg14(ctx, p, bx + 4, by + 6.5, 19.4);
     paintLeg14(ctx, p, bx - 9.5, by + 6.5, 19.6);
-    ctx.fillStyle = rgb47(p.outline);
+    ctx.fillStyle = rgb48(p.outline);
     bodyPath5(ctx, bx, by, vol);
     ctx.save();
     ctx.translate(bx, by);
@@ -27099,18 +27159,18 @@
     bodyPath5(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb47(p.hideShadow);
+    ctx.fillStyle = rgb48(p.hideShadow);
     bodyPath5(ctx, bx, by, vol);
     ctx.fill();
     ctx.save();
-    ctx.fillStyle = rgb47(p.hideLight);
+    ctx.fillStyle = rgb48(p.hideLight);
     ctx.translate(-1.4, -1.6);
     bodyPath5(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
     if (vol > 0.55) {
       const fr = (vol - 0.55) / 0.45;
-      ctx.fillStyle = rgb47(p.hideShadow, 0.9);
+      ctx.fillStyle = rgb48(p.hideShadow, 0.9);
       const rx = 13.5 * (0.97 + vol * 0.12);
       const ry = 8.8 * (0.97 + vol * 0.14);
       for (let i = 0; i < 9; i++) {
@@ -27125,7 +27185,7 @@
     ctx.save();
     bodyPath5(ctx, bx, by, vol);
     ctx.clip();
-    ctx.fillStyle = rgb47(p.patch);
+    ctx.fillStyle = rgb48(p.patch);
     const patches = [
       [bx - 7, by - 3, 5.2, 4.4, -0.3],
       [bx + 5.5, by - 1.5, 5.8, 5.2, 0.25],
@@ -27147,17 +27207,17 @@
       ctx.fill();
       ctx.restore();
     }
-    ctx.fillStyle = rgb47([255, 255, 255], 0.08);
+    ctx.fillStyle = rgb48([255, 255, 255], 0.08);
     ctx.beginPath();
     ctx.ellipse(bx - 3, by - 4, 9, 3, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb47([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb48([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx, by - 7.4, 10 * (0.9 + vol * 0.2), 3.2, -0.06, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb47([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb48([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-6, -8.2], [0, -8.8], [6, -8]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.5 + vol * 0.4, 0, Math.PI * 2);
@@ -27165,7 +27225,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb47([255, 255, 255], 0.8 * p.frostAmt);
+      ctx.fillStyle = rgb48([255, 255, 255], 0.8 * p.frostAmt);
       const pts = [
         [-8, 0],
         [-3, 4],
@@ -27181,27 +27241,27 @@
         ctx.fill();
       }
     }
-    ctx.strokeStyle = rgb47(p.outline);
+    ctx.strokeStyle = rgb48(p.outline);
     ctx.lineWidth = 1.8;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(bx + 13, by - 2);
     ctx.quadraticCurveTo(bx + 17, by + 3, bx + 15.5, by + 9);
     ctx.stroke();
-    ctx.strokeStyle = rgb47(p.hideShadow);
+    ctx.strokeStyle = rgb48(p.hideShadow);
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(bx + 13, by - 2);
     ctx.quadraticCurveTo(bx + 17, by + 3, bx + 15.5, by + 9);
     ctx.stroke();
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb47(p.patch);
+    ctx.fillStyle = rgb48(p.patch);
     ctx.beginPath();
     ctx.ellipse(bx + 15.5, by + 10, 1.6, 2.6, 0.15, 0, Math.PI * 2);
     ctx.fill();
     const hx = bx - 14;
     const hy = by + 3 + headDip;
-    ctx.strokeStyle = rgb47(p.hornDark);
+    ctx.strokeStyle = rgb48(p.hornDark);
     ctx.lineWidth = 1.8;
     ctx.lineCap = "round";
     for (const side of [-1, 1]) {
@@ -27215,15 +27275,15 @@
       ctx.save();
       ctx.translate(hx + side * 5.6, hy - 3.2);
       ctx.rotate(side * 0.7);
-      ctx.fillStyle = rgb47(p.outline);
+      ctx.fillStyle = rgb48(p.outline);
       ctx.beginPath();
       ctx.ellipse(0, 0, 3.4, 1.9, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb47(p.hideLight);
+      ctx.fillStyle = rgb48(p.hideLight);
       ctx.beginPath();
       ctx.ellipse(0, 0, 2.8, 1.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb47(p.muzzle);
+      ctx.fillStyle = rgb48(p.muzzle);
       ctx.beginPath();
       ctx.ellipse(side * -0.3, 0.1, 1.5, 0.8, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -27232,15 +27292,15 @@
     ctx.save();
     ctx.translate(hx, hy);
     ctx.rotate(0.22);
-    ctx.fillStyle = rgb47(p.outline);
+    ctx.fillStyle = rgb48(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 0, 5.4, 6.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb47(p.hideShadow);
+    ctx.fillStyle = rgb48(p.hideShadow);
     ctx.beginPath();
     ctx.ellipse(0, 0, 4.7, 5.7, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb47(p.hideLight);
+    ctx.fillStyle = rgb48(p.hideLight);
     ctx.beginPath();
     ctx.ellipse(-0.6, -0.8, 4.1, 5, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -27248,36 +27308,36 @@
     ctx.beginPath();
     ctx.ellipse(0, 0, 4.7, 5.7, 0, 0, Math.PI * 2);
     ctx.clip();
-    ctx.fillStyle = rgb47(p.patch);
+    ctx.fillStyle = rgb48(p.patch);
     ctx.beginPath();
     ctx.ellipse(1.8, -2.2, 2.6, 2.4, 0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb47([245, 245, 240]);
+    ctx.fillStyle = rgb48([245, 245, 240]);
     for (const ex of [-1.8, 1.8]) {
       ctx.beginPath();
       ctx.arc(ex, -1, 1.05, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb47([20, 18, 20]);
+    ctx.fillStyle = rgb48([20, 18, 20]);
     for (const ex of [-1.6, 2]) {
       ctx.beginPath();
       ctx.arc(ex, -0.8, 0.6, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb47(p.outline);
+    ctx.fillStyle = rgb48(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 3.6, 4, 2.9, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb47(p.muzzle);
+    ctx.fillStyle = rgb48(p.muzzle);
     ctx.beginPath();
     ctx.ellipse(0, 3.4, 3.4, 2.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb47([255, 255, 255], 0.18);
+    ctx.fillStyle = rgb48([255, 255, 255], 0.18);
     ctx.beginPath();
     ctx.ellipse(-1.2, 2.4, 1.4, 0.9, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb47([150, 70, 84]);
+    ctx.fillStyle = rgb48([150, 70, 84]);
     for (const ex of [-1.2, 1.2]) {
       ctx.beginPath();
       ctx.ellipse(ex, 3.9, 0.55, 0.8, 0, 0, Math.PI * 2);
@@ -27285,7 +27345,7 @@
     }
     ctx.restore();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb47([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb48([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 5.5, hy + 4.4, 3.2, 2.2, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -27295,13 +27355,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb47(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb48(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint47(ctx, pIn, bob, headDip = 0) {
+  function paint48(ctx, pIn, bob, headDip = 0) {
     const p = clampP37(pIn);
     ctx.save();
     try {
@@ -27316,15 +27376,15 @@
     }
   }
   function draw38(season) {
-    return (ctx) => paint47(ctx, SP47[season], 0);
+    return (ctx) => paint48(ctx, SP48[season], 0);
   }
   function anim38(season) {
     return (ctx, t) => {
-      const p = clampP37(SP47[season]);
-      const bob = bobAt47(t);
+      const p = clampP37(SP48[season]);
+      const bob = bobAt48(t);
       const dipLoop = t % 6 / 6;
       const dip = 0.9 * (1 - Math.cos(dipLoop * Math.PI * 2)) * 0.5;
-      paint47(ctx, SP47[season], bob, dip);
+      paint48(ctx, SP48[season], bob, dip);
       ctx.save();
       try {
         const bx = 1;
@@ -27337,21 +27397,21 @@
         ctx.save();
         ctx.translate(hx - 5.6, hy - 3.2);
         ctx.rotate(-0.7 + flick * 0.6);
-        ctx.fillStyle = rgb47(p.outline);
+        ctx.fillStyle = rgb48(p.outline);
         ctx.beginPath();
         ctx.ellipse(0, 0, 3.4, 1.9, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb47(p.hideLight);
+        ctx.fillStyle = rgb48(p.hideLight);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.8, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb47(p.muzzle);
+        ctx.fillStyle = rgb48(p.muzzle);
         ctx.beginPath();
         ctx.ellipse(0.3, 0.1, 1.5, 0.8, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
         const swish = Math.sin(t * 7) * flickGate * 3.2;
-        ctx.strokeStyle = rgb47(p.outline);
+        ctx.strokeStyle = rgb48(p.outline);
         ctx.lineWidth = 1.8;
         ctx.lineCap = "round";
         ctx.beginPath();
@@ -27359,13 +27419,13 @@
         ctx.quadraticCurveTo(bx + 17 + swish, by + 3, bx + 15.5 + swish, by + 9);
         ctx.stroke();
         ctx.lineCap = "butt";
-        ctx.fillStyle = rgb47(p.patch);
+        ctx.fillStyle = rgb48(p.patch);
         ctx.beginPath();
         ctx.ellipse(bx + 15.5 + swish, by + 10, 1.6, 2.6, 0.15, 0, Math.PI * 2);
         ctx.fill();
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb47([255, 255, 255], g);
+          ctx.fillStyle = rgb48([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -27377,7 +27437,7 @@
           const sx = bx - 10 + s * 20;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb47([255, 255, 255], 0.32);
+          ctx.fillStyle = rgb48([255, 255, 255], 0.32);
           ctx.beginPath();
           ctx.ellipse(sx, by - 2, 3, 6, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -27388,7 +27448,7 @@
           ctx.save();
           ctx.translate(11 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb47([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb48([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -27396,21 +27456,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.35);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb47([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb48([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - reach - 1, hy + 4.4, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 7 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb47([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb48([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb47([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb48([206, 224, 255], 0.12 + sheen2 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 14, 9, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -27423,17 +27483,17 @@
       }
     };
   }
-  function makeTransition44(fromIdx) {
+  function makeTransition45(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother47(clamp0148(pp));
-      paint47(ctx, lerpP47(SP47[from], SP47[to], k), 0);
+      const k = smoother48(clamp0149(pp));
+      paint48(ctx, lerpP48(SP48[from], SP48[to], k), 0);
     };
   }
-  var springToSummer43 = makeTransition44(0);
-  var summerToAutumn43 = makeTransition44(1);
-  var autumnToWinter43 = makeTransition44(2);
+  var springToSummer42 = makeTransition45(0);
+  var summerToAutumn42 = makeTransition45(1);
+  var autumnToWinter42 = makeTransition45(2);
   var VARIANTS50 = {
     Spring: { draw: draw38("Spring"), anim: anim38("Spring") },
     Summer: { draw: draw38("Summer"), anim: anim38("Summer") },
@@ -27441,34 +27501,34 @@
     Winter: { draw: draw38("Winter"), anim: anim38("Winter") }
   };
   var TRANSITIONS50 = {
-    0: springToSummer43,
-    1: summerToAutumn43,
-    2: autumnToWinter43
+    0: springToSummer42,
+    1: summerToAutumn42,
+    2: autumnToWinter42
   };
 
   // src/textures/seasonal/cattle/longhorn.ts
-  function clamp0149(x) {
+  function clamp0150(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  function lerp53(a, b, t) {
+  function lerp54(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB42(a, b, t) {
-    return [lerp53(a[0], b[0], t), lerp53(a[1], b[1], t), lerp53(a[2], b[2], t)];
+    return [lerp54(a[0], b[0], t), lerp54(a[1], b[1], t), lerp54(a[2], b[2], t)];
   }
-  function rgb48(c, a = 1) {
-    const r = Math.round(clamp0149(c[0] / 255) * 255);
-    const g = Math.round(clamp0149(c[1] / 255) * 255);
-    const b = Math.round(clamp0149(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0149(a)})`;
+  function rgb49(c, a = 1) {
+    const r = Math.round(clamp0150(c[0] / 255) * 255);
+    const g = Math.round(clamp0150(c[1] / 255) * 255);
+    const b = Math.round(clamp0150(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0150(a)})`;
   }
-  var smoother48 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt48(t, amp = 1, w = 1.35) {
+  var smoother49 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt49(t, amp = 1, w = 1.35) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP48 = {
+  var SP49 = {
     // Spring — sleek tan coat, dewy lime pad + blossom, cool-bright light.
     Spring: {
       hideLight: [214, 162, 100],
@@ -27575,7 +27635,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP48(a, b, t) {
+  function lerpP49(a, b, t) {
     return {
       hideLight: lerpRGB42(a.hideLight, b.hideLight, t),
       hideMid: lerpRGB42(a.hideMid, b.hideMid, t),
@@ -27588,45 +27648,45 @@
       soil: lerpRGB42(a.soil, b.soil, t),
       outline: lerpRGB42(a.outline, b.outline, t),
       lightWash: lerpRGB42(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp53(a.lightWashAmt, b.lightWashAmt, t),
-      coatVolume: lerp53(a.coatVolume, b.coatVolume, t),
-      frostAmt: lerp53(a.frostAmt, b.frostAmt, t),
-      hornFrostAmt: lerp53(a.hornFrostAmt, b.hornFrostAmt, t),
-      backSnowAmt: lerp53(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp53(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp53(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp53(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp53(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp54(a.lightWashAmt, b.lightWashAmt, t),
+      coatVolume: lerp54(a.coatVolume, b.coatVolume, t),
+      frostAmt: lerp54(a.frostAmt, b.frostAmt, t),
+      hornFrostAmt: lerp54(a.hornFrostAmt, b.hornFrostAmt, t),
+      backSnowAmt: lerp54(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp54(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp54(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp54(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp54(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP38(p) {
     return {
       ...p,
-      lightWashAmt: clamp0149(p.lightWashAmt),
-      coatVolume: clamp0149(p.coatVolume),
-      frostAmt: clamp0149(p.frostAmt),
-      hornFrostAmt: clamp0149(p.hornFrostAmt),
-      backSnowAmt: clamp0149(p.backSnowAmt),
-      padSnowAmt: clamp0149(p.padSnowAmt),
-      blossomAmt: clamp0149(p.blossomAmt),
-      fallenLeafAmt: clamp0149(p.fallenLeafAmt),
-      breathFogAmt: clamp0149(p.breathFogAmt)
+      lightWashAmt: clamp0150(p.lightWashAmt),
+      coatVolume: clamp0150(p.coatVolume),
+      frostAmt: clamp0150(p.frostAmt),
+      hornFrostAmt: clamp0150(p.hornFrostAmt),
+      backSnowAmt: clamp0150(p.backSnowAmt),
+      padSnowAmt: clamp0150(p.padSnowAmt),
+      blossomAmt: clamp0150(p.blossomAmt),
+      fallenLeafAmt: clamp0150(p.fallenLeafAmt),
+      breathFogAmt: clamp0150(p.breathFogAmt)
     };
   }
   function paintPad17(ctx, p) {
-    ctx.fillStyle = rgb48([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb49([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb48(p.soil);
+    ctx.fillStyle = rgb49(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb48(p.padGrass);
+    ctx.fillStyle = rgb49(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb48(p.padGrass);
+    ctx.strokeStyle = rgb49(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -27638,16 +27698,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb48([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb49([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb48([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb49([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb48([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb49([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -27656,14 +27716,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-13, 18.5], [10, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb48([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb49([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb48([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb49([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -27679,11 +27739,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb48(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb49(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb48([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb49([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -27694,20 +27754,20 @@
     }
   }
   function paintLeg15(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb48(p.outline);
+    ctx.strokeStyle = rgb49(p.outline);
     ctx.lineWidth = 4.4;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.strokeStyle = rgb48(p.hideShadow);
+    ctx.strokeStyle = rgb49(p.hideShadow);
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY - 1);
     ctx.stroke();
-    ctx.fillStyle = rgb48(p.hornDark);
+    ctx.fillStyle = rgb49(p.hornDark);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 2, 1.4, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -27727,27 +27787,27 @@
       const cy = hy - 5.6;
       const x1 = hx + side * 17.5;
       const y1 = hy - 8.6;
-      ctx.strokeStyle = rgb48(p.outline);
+      ctx.strokeStyle = rgb49(p.outline);
       ctx.lineWidth = 3.4;
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(x0, y0);
       ctx.quadraticCurveTo(cx, cy, x1, y1);
       ctx.stroke();
-      ctx.strokeStyle = rgb48(p.hornDark);
+      ctx.strokeStyle = rgb49(p.hornDark);
       ctx.lineWidth = 2.4;
       ctx.beginPath();
       ctx.moveTo(x0, y0);
       ctx.quadraticCurveTo(cx, cy, x1, y1);
       ctx.stroke();
-      ctx.strokeStyle = rgb48(p.hornLight);
+      ctx.strokeStyle = rgb49(p.hornLight);
       ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(x0, y0 - 0.7);
       ctx.quadraticCurveTo(cx, cy - 0.9, x1, y1 - 0.4);
       ctx.stroke();
       if (p.hornFrostAmt > 1e-3) {
-        ctx.fillStyle = rgb48([236, 246, 255], 0.85 * p.hornFrostAmt);
+        ctx.fillStyle = rgb49([236, 246, 255], 0.85 * p.hornFrostAmt);
         for (let k = 0; k <= 5; k++) {
           const tt = k / 5;
           const bxp = (1 - tt) * (1 - tt) * x0 + 2 * (1 - tt) * tt * cx + tt * tt * x1;
@@ -27771,7 +27831,7 @@
     ctx.restore();
     paintLeg15(ctx, p, bx + 4, by + 6.5, 19.4);
     paintLeg15(ctx, p, bx - 9.5, by + 6.5, 19.6);
-    ctx.fillStyle = rgb48(p.outline);
+    ctx.fillStyle = rgb49(p.outline);
     ctx.save();
     ctx.translate(bx, by);
     ctx.scale(1.1, 1.14);
@@ -27779,17 +27839,17 @@
     bodyPath6(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb48(p.hideShadow);
+    ctx.fillStyle = rgb49(p.hideShadow);
     bodyPath6(ctx, bx, by, vol);
     ctx.fill();
-    ctx.fillStyle = rgb48(p.hideMid);
+    ctx.fillStyle = rgb49(p.hideMid);
     ctx.save();
     ctx.translate(-0.6, -0.8);
     bodyPath6(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
     ctx.save();
-    ctx.fillStyle = rgb48(p.hideLight);
+    ctx.fillStyle = rgb49(p.hideLight);
     ctx.translate(-1.6, -1.8);
     ctx.scale(0.84, 0.78);
     ctx.translate(bx * 0.16, by * 0.22);
@@ -27798,7 +27858,7 @@
     ctx.restore();
     if (vol > 0.55) {
       const fr = (vol - 0.55) / 0.45;
-      ctx.fillStyle = rgb48(p.hideShadow, 0.9);
+      ctx.fillStyle = rgb49(p.hideShadow, 0.9);
       const rx = 13.5 * (0.97 + vol * 0.1);
       const ry = 8.6 * (0.97 + vol * 0.12);
       for (let i = 0; i < 9; i++) {
@@ -27813,21 +27873,21 @@
     ctx.save();
     bodyPath6(ctx, bx, by, vol);
     ctx.clip();
-    ctx.fillStyle = rgb48(p.hideShadow, 0.5);
+    ctx.fillStyle = rgb49(p.hideShadow, 0.5);
     ctx.beginPath();
     ctx.ellipse(bx, by + 5.5, 12, 4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb48([255, 255, 255], 0.08);
+    ctx.fillStyle = rgb49([255, 255, 255], 0.08);
     ctx.beginPath();
     ctx.ellipse(bx - 3, by - 4, 9, 3, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb48([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb49([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx, by - 7.2, 10 * (0.9 + vol * 0.2), 3.2, -0.06, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb48([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb49([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-6, -8], [0, -8.6], [6, -7.8]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.5 + vol * 0.4, 0, Math.PI * 2);
@@ -27835,7 +27895,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb48([255, 255, 255], 0.8 * p.frostAmt);
+      ctx.fillStyle = rgb49([255, 255, 255], 0.8 * p.frostAmt);
       const pts = [
         [-8, 0],
         [-3, 4],
@@ -27851,21 +27911,21 @@
         ctx.fill();
       }
     }
-    ctx.strokeStyle = rgb48(p.outline);
+    ctx.strokeStyle = rgb49(p.outline);
     ctx.lineWidth = 1.8;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(bx + 13, by - 2);
     ctx.quadraticCurveTo(bx + 17, by + 3, bx + 15.5, by + 9);
     ctx.stroke();
-    ctx.strokeStyle = rgb48(p.hideMid);
+    ctx.strokeStyle = rgb49(p.hideMid);
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(bx + 13, by - 2);
     ctx.quadraticCurveTo(bx + 17, by + 3, bx + 15.5, by + 9);
     ctx.stroke();
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb48(p.hornDark);
+    ctx.fillStyle = rgb49(p.hornDark);
     ctx.beginPath();
     ctx.ellipse(bx + 15.5, by + 10, 1.6, 2.6, 0.15, 0, Math.PI * 2);
     ctx.fill();
@@ -27876,15 +27936,15 @@
       ctx.save();
       ctx.translate(hx + side * 5.4, hy - 1.6);
       ctx.rotate(side * 0.85);
-      ctx.fillStyle = rgb48(p.outline);
+      ctx.fillStyle = rgb49(p.outline);
       ctx.beginPath();
       ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb48(p.hideMid);
+      ctx.fillStyle = rgb49(p.hideMid);
       ctx.beginPath();
       ctx.ellipse(0, 0, 2.6, 1.3, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb48(p.hideShadow);
+      ctx.fillStyle = rgb49(p.hideShadow);
       ctx.beginPath();
       ctx.ellipse(side * -0.3, 0.1, 1.4, 0.7, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -27893,15 +27953,15 @@
     ctx.save();
     ctx.translate(hx, hy);
     ctx.rotate(0.22);
-    ctx.fillStyle = rgb48(p.outline);
+    ctx.fillStyle = rgb49(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 0, 5.2, 6.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb48(p.hideShadow);
+    ctx.fillStyle = rgb49(p.hideShadow);
     ctx.beginPath();
     ctx.ellipse(0, 0, 4.6, 5.7, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb48(p.hideMid);
+    ctx.fillStyle = rgb49(p.hideMid);
     ctx.beginPath();
     ctx.ellipse(-0.5, -0.6, 4.2, 5.2, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -27909,7 +27969,7 @@
     ctx.beginPath();
     ctx.ellipse(0, 0, 4.6, 5.7, 0, 0, Math.PI * 2);
     ctx.clip();
-    ctx.fillStyle = rgb48(p.blaze);
+    ctx.fillStyle = rgb49(p.blaze);
     ctx.beginPath();
     ctx.moveTo(-1.3, -5.4);
     ctx.quadraticCurveTo(-2, 0, -1.4, 4.4);
@@ -27918,36 +27978,36 @@
     ctx.quadraticCurveTo(0, -6.2, -1.3, -5.4);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb48(p.hideLight, 0.55);
+    ctx.fillStyle = rgb49(p.hideLight, 0.55);
     ctx.beginPath();
     ctx.ellipse(-2.6, -1.6, 1.8, 2.6, 0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb48([245, 243, 238]);
+    ctx.fillStyle = rgb49([245, 243, 238]);
     for (const ex of [-2.4, 2.4]) {
       ctx.beginPath();
       ctx.arc(ex, -1.2, 1, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb48([22, 18, 18]);
+    ctx.fillStyle = rgb49([22, 18, 18]);
     for (const ex of [-2.2, 2.6]) {
       ctx.beginPath();
       ctx.arc(ex, -1, 0.58, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.fillStyle = rgb48(p.outline);
+    ctx.fillStyle = rgb49(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 3.8, 3.8, 2.8, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb48(p.muzzle);
+    ctx.fillStyle = rgb49(p.muzzle);
     ctx.beginPath();
     ctx.ellipse(0, 3.6, 3.2, 2.3, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb48([255, 255, 255], 0.12);
+    ctx.fillStyle = rgb49([255, 255, 255], 0.12);
     ctx.beginPath();
     ctx.ellipse(-1.1, 2.6, 1.3, 0.8, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb48([18, 14, 14]);
+    ctx.fillStyle = rgb49([18, 14, 14]);
     for (const ex of [-1.1, 1.1]) {
       ctx.beginPath();
       ctx.ellipse(ex, 4, 0.55, 0.8, 0, 0, Math.PI * 2);
@@ -27955,7 +28015,7 @@
     }
     ctx.restore();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb48([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb49([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 5.5, hy + 4.6, 3.2, 2.2, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -27965,13 +28025,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb48(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb49(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint48(ctx, pIn, bob, headDip = 0) {
+  function paint49(ctx, pIn, bob, headDip = 0) {
     const p = clampP38(pIn);
     ctx.save();
     try {
@@ -27986,15 +28046,15 @@
     }
   }
   function draw39(season) {
-    return (ctx) => paint48(ctx, SP48[season], 0);
+    return (ctx) => paint49(ctx, SP49[season], 0);
   }
   function anim39(season) {
     return (ctx, t) => {
-      const p = clampP38(SP48[season]);
-      const bob = bobAt48(t);
+      const p = clampP38(SP49[season]);
+      const bob = bobAt49(t);
       const dipLoop = t % 6 / 6;
       const dip = 0.9 * (1 - Math.cos(dipLoop * Math.PI * 2)) * 0.5;
-      paint48(ctx, SP48[season], bob, dip);
+      paint49(ctx, SP49[season], bob, dip);
       ctx.save();
       try {
         const bx = 1;
@@ -28007,21 +28067,21 @@
         ctx.save();
         ctx.translate(hx - 5.4, hy - 1.6);
         ctx.rotate(-0.85 + flick * 0.6);
-        ctx.fillStyle = rgb48(p.outline);
+        ctx.fillStyle = rgb49(p.outline);
         ctx.beginPath();
         ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb48(p.hideMid);
+        ctx.fillStyle = rgb49(p.hideMid);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.3, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb48(p.hideShadow);
+        ctx.fillStyle = rgb49(p.hideShadow);
         ctx.beginPath();
         ctx.ellipse(0.3, 0.1, 1.4, 0.7, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
         const swish = Math.sin(t * 7) * flickGate * 3.2;
-        ctx.strokeStyle = rgb48(p.outline);
+        ctx.strokeStyle = rgb49(p.outline);
         ctx.lineWidth = 1.8;
         ctx.lineCap = "round";
         ctx.beginPath();
@@ -28029,13 +28089,13 @@
         ctx.quadraticCurveTo(bx + 17 + swish, by + 3, bx + 15.5 + swish, by + 9);
         ctx.stroke();
         ctx.lineCap = "butt";
-        ctx.fillStyle = rgb48(p.hornDark);
+        ctx.fillStyle = rgb49(p.hornDark);
         ctx.beginPath();
         ctx.ellipse(bx + 15.5 + swish, by + 10, 1.6, 2.6, 0.15, 0, Math.PI * 2);
         ctx.fill();
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb48([255, 255, 255], g);
+          ctx.fillStyle = rgb49([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -28047,7 +28107,7 @@
           const sx = bx - 10 + s * 20;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb48([255, 248, 224], 0.32);
+          ctx.fillStyle = rgb49([255, 248, 224], 0.32);
           ctx.beginPath();
           ctx.ellipse(sx, by - 2, 3, 6, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -28058,7 +28118,7 @@
           ctx.save();
           ctx.translate(11 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb48([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb49([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -28066,21 +28126,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.35);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb48([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb49([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - reach - 1, hy + 4.6, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 7 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb48([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb49([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb48([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb49([206, 224, 255], 0.12 + sheen2 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 14, 9, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -28093,17 +28153,17 @@
       }
     };
   }
-  function makeTransition45(fromIdx) {
+  function makeTransition46(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother48(clamp0149(pp));
-      paint48(ctx, lerpP48(SP48[from], SP48[to], k), 0);
+      const k = smoother49(clamp0150(pp));
+      paint49(ctx, lerpP49(SP49[from], SP49[to], k), 0);
     };
   }
-  var springToSummer44 = makeTransition45(0);
-  var summerToAutumn44 = makeTransition45(1);
-  var autumnToWinter44 = makeTransition45(2);
+  var springToSummer43 = makeTransition46(0);
+  var summerToAutumn43 = makeTransition46(1);
+  var autumnToWinter43 = makeTransition46(2);
   var VARIANTS51 = {
     Spring: { draw: draw39("Spring"), anim: anim39("Spring") },
     Summer: { draw: draw39("Summer"), anim: anim39("Summer") },
@@ -28111,34 +28171,34 @@
     Winter: { draw: draw39("Winter"), anim: anim39("Winter") }
   };
   var TRANSITIONS51 = {
-    0: springToSummer44,
-    1: summerToAutumn44,
-    2: autumnToWinter44
+    0: springToSummer43,
+    1: summerToAutumn43,
+    2: autumnToWinter43
   };
 
   // src/textures/seasonal/cattle/triceratops.ts
-  function clamp0150(x) {
+  function clamp0151(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  function lerp54(a, b, t) {
+  function lerp55(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB43(a, b, t) {
-    return [lerp54(a[0], b[0], t), lerp54(a[1], b[1], t), lerp54(a[2], b[2], t)];
+    return [lerp55(a[0], b[0], t), lerp55(a[1], b[1], t), lerp55(a[2], b[2], t)];
   }
-  function rgb49(c, a = 1) {
-    const r = Math.round(clamp0150(c[0] / 255) * 255);
-    const g = Math.round(clamp0150(c[1] / 255) * 255);
-    const b = Math.round(clamp0150(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0150(a)})`;
+  function rgb50(c, a = 1) {
+    const r = Math.round(clamp0151(c[0] / 255) * 255);
+    const g = Math.round(clamp0151(c[1] / 255) * 255);
+    const b = Math.round(clamp0151(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0151(a)})`;
   }
-  var smoother49 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt49(t, amp = 1, w = 1.15) {
+  var smoother50 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt50(t, amp = 1, w = 1.15) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP49 = {
+  var SP50 = {
     // Spring — fresh green hide; dewy lime pad + blossom; cool-bright light.
     Spring: {
       hideLight: [142, 200, 96],
@@ -28237,7 +28297,7 @@
       breathFogAmt: 0.8
     }
   };
-  function lerpP49(a, b, t) {
+  function lerpP50(a, b, t) {
     return {
       hideLight: lerpRGB43(a.hideLight, b.hideLight, t),
       hideMid: lerpRGB43(a.hideMid, b.hideMid, t),
@@ -28250,43 +28310,43 @@
       soil: lerpRGB43(a.soil, b.soil, t),
       outline: lerpRGB43(a.outline, b.outline, t),
       lightWash: lerpRGB43(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp54(a.lightWashAmt, b.lightWashAmt, t),
-      hideSheen: lerp54(a.hideSheen, b.hideSheen, t),
-      frostAmt: lerp54(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp54(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp54(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp54(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp54(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp54(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp55(a.lightWashAmt, b.lightWashAmt, t),
+      hideSheen: lerp55(a.hideSheen, b.hideSheen, t),
+      frostAmt: lerp55(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp55(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp55(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp55(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp55(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp55(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP39(p) {
     return {
       ...p,
-      lightWashAmt: clamp0150(p.lightWashAmt),
-      hideSheen: clamp0150(p.hideSheen),
-      frostAmt: clamp0150(p.frostAmt),
-      backSnowAmt: clamp0150(p.backSnowAmt),
-      padSnowAmt: clamp0150(p.padSnowAmt),
-      blossomAmt: clamp0150(p.blossomAmt),
-      fallenLeafAmt: clamp0150(p.fallenLeafAmt),
-      breathFogAmt: clamp0150(p.breathFogAmt)
+      lightWashAmt: clamp0151(p.lightWashAmt),
+      hideSheen: clamp0151(p.hideSheen),
+      frostAmt: clamp0151(p.frostAmt),
+      backSnowAmt: clamp0151(p.backSnowAmt),
+      padSnowAmt: clamp0151(p.padSnowAmt),
+      blossomAmt: clamp0151(p.blossomAmt),
+      fallenLeafAmt: clamp0151(p.fallenLeafAmt),
+      breathFogAmt: clamp0151(p.breathFogAmt)
     };
   }
-  function drawPad3(ctx, p) {
-    ctx.fillStyle = rgb49(p.soil, 0.4);
+  function drawPad4(ctx, p) {
+    ctx.fillStyle = rgb50(p.soil, 0.4);
     ctx.beginPath();
     ctx.ellipse(3, 21.6, 16, 4.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb49(p.soil);
+    ctx.fillStyle = rgb50(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb49(p.padGrass);
+    ctx.fillStyle = rgb50(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb49(p.soil);
+    ctx.strokeStyle = rgb50(p.soil);
     ctx.lineWidth = 1.1;
     for (let i = -7; i <= 7; i++) {
       const tx = i * 2.4;
@@ -28297,15 +28357,15 @@
       ctx.stroke();
     }
     if (p.padSnowAmt > 0.01) {
-      ctx.fillStyle = rgb49([244, 250, 255], 0.92 * p.padSnowAmt);
+      ctx.fillStyle = rgb50([244, 250, 255], 0.92 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb49([210, 226, 244], 0.5 * p.padSnowAmt);
+      ctx.fillStyle = rgb50([210, 226, 244], 0.5 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb49([255, 255, 255], 0.8 * p.padSnowAmt);
+      ctx.fillStyle = rgb50([255, 255, 255], 0.8 * p.padSnowAmt);
       [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -28316,14 +28376,14 @@
       const a = p.blossomAmt;
       const spots = [[-13, 18.5], [12, 17.8], [-4, 21]];
       spots.forEach(([bx, by], idx) => {
-        ctx.fillStyle = rgb49(idx === 1 ? [255, 232, 246] : [255, 250, 252], 0.95 * a);
+        ctx.fillStyle = rgb50(idx === 1 ? [255, 232, 246] : [255, 250, 252], 0.95 * a);
         for (let k = 0; k < 5; k++) {
           const ang = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.ellipse(bx + Math.cos(ang) * 1.5, by + Math.sin(ang) * 1, 1.1, 0.8, ang, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb49([255, 214, 90], a);
+        ctx.fillStyle = rgb50([255, 214, 90], a);
         ctx.beginPath();
         ctx.arc(bx, by, 0.9, 0, Math.PI * 2);
         ctx.fill();
@@ -28339,11 +28399,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb49(col, a);
+        ctx.fillStyle = rgb50(col, a);
         ctx.beginPath();
         ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb49([90, 44, 16], a);
+        ctx.strokeStyle = rgb50([90, 44, 16], a);
         ctx.lineWidth = 0.7;
         ctx.beginPath();
         ctx.moveTo(-3, 0);
@@ -28363,33 +28423,33 @@
     ctx.quadraticCurveTo(-12, 11 + bob, -10, 5 + bob);
     ctx.closePath();
   }
-  function paint49(ctx, raw, bob, headSway = 0, tailSwish = 0) {
+  function paint50(ctx, raw, bob, headSway = 0, tailSwish = 0) {
     const p = clampP39(raw);
     ctx.save();
     try {
       ctx.globalAlpha = 1;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
-      drawPad3(ctx, p);
-      ctx.fillStyle = rgb49(p.outline, 0.26);
+      drawPad4(ctx, p);
+      ctx.fillStyle = rgb50(p.outline, 0.26);
       ctx.beginPath();
       ctx.ellipse(2.5, 16.5, 15, 3.2, 0, 0, Math.PI * 2);
       ctx.fill();
       {
         const tx = tailSwish;
-        ctx.strokeStyle = rgb49(p.outline);
+        ctx.strokeStyle = rgb50(p.outline);
         ctx.lineWidth = 8.5;
         ctx.beginPath();
         ctx.moveTo(13, 6 + bob);
         ctx.quadraticCurveTo(20, 7 + bob, 21 + tx, 11 + bob);
         ctx.stroke();
-        ctx.strokeStyle = rgb49(p.hideMid);
+        ctx.strokeStyle = rgb50(p.hideMid);
         ctx.lineWidth = 6;
         ctx.beginPath();
         ctx.moveTo(13, 6 + bob);
         ctx.quadraticCurveTo(20, 7 + bob, 21 + tx, 11 + bob);
         ctx.stroke();
-        ctx.strokeStyle = rgb49(p.hideLight, 0.6);
+        ctx.strokeStyle = rgb50(p.hideLight, 0.6);
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(13, 4.5 + bob);
@@ -28397,19 +28457,19 @@
         ctx.stroke();
       }
       const drawLeg = (x, top, len, w, far) => {
-        ctx.strokeStyle = rgb49(p.outline);
+        ctx.strokeStyle = rgb50(p.outline);
         ctx.lineWidth = w + 2;
         ctx.beginPath();
         ctx.moveTo(x, top + bob);
         ctx.lineTo(x, top + len);
         ctx.stroke();
-        ctx.strokeStyle = far ? rgb49(p.hideShadow) : rgb49(p.hideMid);
+        ctx.strokeStyle = far ? rgb50(p.hideShadow) : rgb50(p.hideMid);
         ctx.lineWidth = w;
         ctx.beginPath();
         ctx.moveTo(x, top + bob);
         ctx.lineTo(x, top + len);
         ctx.stroke();
-        ctx.fillStyle = rgb49(p.hornDark, far ? 0.7 : 1);
+        ctx.fillStyle = rgb50(p.hornDark, far ? 0.7 : 1);
         ctx.beginPath();
         ctx.ellipse(x, top + len, w * 0.62, 1.8, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -28419,7 +28479,7 @@
       {
         ctx.save();
         ctx.translate(-4 + headSway * 0.5, bob);
-        ctx.fillStyle = rgb49(p.outline);
+        ctx.fillStyle = rgb50(p.outline);
         ctx.beginPath();
         ctx.moveTo(-1, 7);
         ctx.quadraticCurveTo(-13, 4, -11, -9);
@@ -28428,7 +28488,7 @@
         ctx.quadraticCurveTo(8, 4, 2, 7);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = rgb49(p.frill);
+        ctx.fillStyle = rgb50(p.frill);
         ctx.beginPath();
         ctx.moveTo(-0.5, 5.6);
         ctx.quadraticCurveTo(-11, 3, -9.2, -8);
@@ -28437,7 +28497,7 @@
         ctx.quadraticCurveTo(6.6, 3, 1.6, 5.6);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = rgb49(p.frillRim);
+        ctx.fillStyle = rgb50(p.frillRim);
         const bumps = [
           [-8.6, -7.4],
           [-5.4, -11],
@@ -28450,7 +28510,7 @@
           ctx.arc(bx, by, 1.6, 0, Math.PI * 2);
           ctx.fill();
         });
-        ctx.strokeStyle = rgb49(p.hideShadow, 0.55);
+        ctx.strokeStyle = rgb50(p.hideShadow, 0.55);
         ctx.lineWidth = 1;
         [-7.5, -3.5, 0.5, 4.5].forEach((ex, i) => {
           ctx.beginPath();
@@ -28461,45 +28521,45 @@
         ctx.restore();
       }
       bodyPath7(ctx, bob);
-      ctx.fillStyle = rgb49(p.outline);
+      ctx.fillStyle = rgb50(p.outline);
       ctx.fill();
       ctx.save();
       bodyPath7(ctx, bob);
       ctx.clip();
-      ctx.fillStyle = rgb49(p.hideMid);
+      ctx.fillStyle = rgb50(p.hideMid);
       ctx.fillRect(-14, -8 + bob, 34, 28);
       const litGrad = ctx.createLinearGradient(-8, -6 + bob, 10, 14 + bob);
-      litGrad.addColorStop(0, rgb49(p.hideLight));
-      litGrad.addColorStop(0.5, rgb49(p.hideMid));
-      litGrad.addColorStop(1, rgb49(p.hideShadow));
+      litGrad.addColorStop(0, rgb50(p.hideLight));
+      litGrad.addColorStop(0.5, rgb50(p.hideMid));
+      litGrad.addColorStop(1, rgb50(p.hideShadow));
       ctx.fillStyle = litGrad;
       ctx.globalAlpha = 0.9;
       ctx.beginPath();
       ctx.ellipse(1, 2 + bob, 16, 11, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
-      ctx.fillStyle = rgb49(p.hideShadow, 0.7);
+      ctx.fillStyle = rgb50(p.hideShadow, 0.7);
       ctx.beginPath();
       ctx.ellipse(0, 12 + bob, 13, 4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb49(p.hideShadow, 0.5);
+      ctx.fillStyle = rgb50(p.hideShadow, 0.5);
       [-6, -1, 4, 9].forEach((rx, i) => {
         ctx.beginPath();
         ctx.arc(rx, -4 + i * 0.5 + bob, 1.4, 0, Math.PI * 2);
         ctx.fill();
       });
       if (p.hideSheen > 0.02) {
-        ctx.fillStyle = rgb49([255, 255, 255], 0.12 + 0.32 * p.hideSheen);
+        ctx.fillStyle = rgb50([255, 255, 255], 0.12 + 0.32 * p.hideSheen);
         ctx.beginPath();
         ctx.ellipse(-3, -1 + bob, 5.5, 3.4, -0.3, 0, Math.PI * 2);
         ctx.fill();
       }
       if (p.frostAmt > 0.02) {
-        ctx.fillStyle = rgb49([222, 238, 252], 0.24 * p.frostAmt);
+        ctx.fillStyle = rgb50([222, 238, 252], 0.24 * p.frostAmt);
         ctx.beginPath();
         ctx.ellipse(1, -3 + bob, 15, 6, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb49([240, 248, 255], 0.7 * p.frostAmt);
+        ctx.fillStyle = rgb50([240, 248, 255], 0.7 * p.frostAmt);
         [[-7, -4], [-1, -5], [5, -4], [10, -2], [2, -1]].forEach(([sx, sy]) => {
           ctx.beginPath();
           ctx.arc(sx, sy + bob, 0.7, 0, Math.PI * 2);
@@ -28511,7 +28571,7 @@
       drawLeg(6, 11.5, 4.8, 6, false);
       if (p.backSnowAmt > 0.02) {
         const a = p.backSnowAmt;
-        ctx.fillStyle = rgb49([246, 251, 255], 0.95 * a);
+        ctx.fillStyle = rgb50([246, 251, 255], 0.95 * a);
         ctx.beginPath();
         ctx.moveTo(-8, 1 + bob);
         ctx.quadraticCurveTo(-3, -7 + bob, 5, -6 + bob);
@@ -28520,13 +28580,13 @@
         ctx.quadraticCurveTo(-3, -3.5 + bob, -8, 1 + bob);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = rgb49([214, 230, 246], 0.5 * a);
+        ctx.fillStyle = rgb50([214, 230, 246], 0.5 * a);
         ctx.beginPath();
         ctx.ellipse(2, -4 + bob, 9, 1.8, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.save();
         ctx.translate(-4 + headSway * 0.5, bob);
-        ctx.fillStyle = rgb49([246, 251, 255], 0.95 * a);
+        ctx.fillStyle = rgb50([246, 251, 255], 0.95 * a);
         ctx.beginPath();
         ctx.moveTo(-9.2, -8);
         ctx.quadraticCurveTo(-5.6, -14, 1, -12.6);
@@ -28541,7 +28601,7 @@
         ctx.save();
         ctx.translate(-12 + headSway, 5 + bob);
         ctx.rotate(0.12);
-        ctx.fillStyle = rgb49(p.outline);
+        ctx.fillStyle = rgb50(p.outline);
         ctx.beginPath();
         ctx.moveTo(8, -5);
         ctx.quadraticCurveTo(2, -7, -4, -3);
@@ -28550,7 +28610,7 @@
         ctx.quadraticCurveTo(6, 5, 8, 1);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = rgb49(p.hideMid);
+        ctx.fillStyle = rgb50(p.hideMid);
         ctx.beginPath();
         ctx.moveTo(7, -3.6);
         ctx.quadraticCurveTo(2, -5.4, -3.4, -1.8);
@@ -28559,11 +28619,11 @@
         ctx.quadraticCurveTo(5, 3.8, 6.6, 0.2);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = rgb49(p.hideLight, 0.8);
+        ctx.fillStyle = rgb50(p.hideLight, 0.8);
         ctx.beginPath();
         ctx.ellipse(0, -1.4, 4.2, 2.2, -0.2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb49(p.beak);
+        ctx.fillStyle = rgb50(p.beak);
         ctx.beginPath();
         ctx.moveTo(-3.4, -1.6);
         ctx.quadraticCurveTo(-9.4, -0.4, -8.6, 2.6);
@@ -28571,14 +28631,14 @@
         ctx.quadraticCurveTo(-4.4, 0.8, -3.4, -1.6);
         ctx.closePath();
         ctx.fill();
-        ctx.strokeStyle = rgb49(p.hornDark, 0.7);
+        ctx.strokeStyle = rgb50(p.hornDark, 0.7);
         ctx.lineWidth = 0.8;
         ctx.beginPath();
         ctx.moveTo(-7.6, 1);
         ctx.lineTo(-3.6, 0.8);
         ctx.stroke();
-        ctx.fillStyle = rgb49(p.beak);
-        ctx.strokeStyle = rgb49(p.hornDark, 0.6);
+        ctx.fillStyle = rgb50(p.beak);
+        ctx.strokeStyle = rgb50(p.hornDark, 0.6);
         ctx.lineWidth = 0.8;
         ctx.beginPath();
         ctx.moveTo(-3.6, -2.2);
@@ -28588,14 +28648,14 @@
         ctx.fill();
         ctx.stroke();
         const brow = (sx, dx, dy, _len) => {
-          ctx.fillStyle = rgb49(p.beak);
+          ctx.fillStyle = rgb50(p.beak);
           ctx.beginPath();
           ctx.moveTo(sx, -3.4);
           ctx.quadraticCurveTo(sx + dx * 0.5, -3.4 + dy * 0.55, sx + dx, -3.4 + dy);
           ctx.quadraticCurveTo(sx + dx + 1.1, -3.4 + dy + 1.2, sx + 1.8, -2.6);
           ctx.closePath();
           ctx.fill();
-          ctx.strokeStyle = rgb49(p.hornDark, 0.55);
+          ctx.strokeStyle = rgb50(p.hornDark, 0.55);
           ctx.lineWidth = 0.7;
           ctx.beginPath();
           ctx.moveTo(sx + 0.6, -3.2);
@@ -28604,17 +28664,17 @@
         };
         brow(1.8, -3.4, -9.6, 0);
         brow(5.4, -2.4, -10.6, 0);
-        ctx.fillStyle = rgb49(p.hornDark);
+        ctx.fillStyle = rgb50(p.hornDark);
         ctx.beginPath();
         ctx.arc(1.6, -0.6, 1.15, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb49([255, 255, 255], 0.85);
+        ctx.fillStyle = rgb50([255, 255, 255], 0.85);
         ctx.beginPath();
         ctx.arc(1.2, -1, 0.42, 0, Math.PI * 2);
         ctx.fill();
         if (p.breathFogAmt > 0.02) {
           const a = p.breathFogAmt;
-          ctx.fillStyle = rgb49([255, 255, 255], 0.34 * a);
+          ctx.fillStyle = rgb50([255, 255, 255], 0.34 * a);
           [[-10.5, 2.4, 2], [-12.6, 1.2, 1.5], [-12.4, 3.4, 1.3]].forEach(([fx, fy, fr]) => {
             ctx.beginPath();
             ctx.arc(fx, fy, fr, 0, Math.PI * 2);
@@ -28626,8 +28686,8 @@
       if (p.lightWashAmt > 1e-3) {
         ctx.globalAlpha = 1;
         const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 48);
-        lg.addColorStop(0, rgb49(p.lightWash, p.lightWashAmt));
-        lg.addColorStop(1, rgb49(p.lightWash, p.lightWashAmt * 0.25));
+        lg.addColorStop(0, rgb50(p.lightWash, p.lightWashAmt));
+        lg.addColorStop(1, rgb50(p.lightWash, p.lightWashAmt * 0.25));
         ctx.fillStyle = lg;
         ctx.fillRect(-24, -24, 48, 48);
       }
@@ -28637,14 +28697,14 @@
     }
   }
   function draw40(season) {
-    return (ctx) => paint49(ctx, SP49[season], 0, 0, 0);
+    return (ctx) => paint50(ctx, SP50[season], 0, 0, 0);
   }
   function anim40(season) {
     return (ctx, t) => {
-      const bob = bobAt49(t, 1, 1.15);
+      const bob = bobAt50(t, 1, 1.15);
       const headSway = (1 - Math.cos(t * 0.85)) * 0.5 * 1.4;
       const tailSwish = (1 - Math.cos(t * 0.7)) * 0.5 * 3;
-      paint49(ctx, SP49[season], bob, headSway, tailSwish);
+      paint50(ctx, SP50[season], bob, headSway, tailSwish);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
@@ -28657,7 +28717,7 @@
           ctx.fill();
         } else if (season === "Summer") {
           const prog = t * 0.45 % 1;
-          const gx = lerp54(-6, 8, prog);
+          const gx = lerp55(-6, 8, prog);
           ctx.fillStyle = "rgba(255,255,255,0.7)";
           ctx.beginPath();
           ctx.ellipse(gx, -2 + bob, 2, 3.4, -0.4, 0, Math.PI * 2);
@@ -28701,17 +28761,17 @@
       }
     };
   }
-  function makeTransition46(fromIdx) {
-    const from = SP49[SEASON_NAMES[fromIdx]];
-    const to = SP49[SEASON_NAMES[fromIdx + 1]];
+  function makeTransition47(fromIdx) {
+    const from = SP50[SEASON_NAMES[fromIdx]];
+    const to = SP50[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother49(clamp0150(pp));
-      paint49(ctx, lerpP49(from, to, k), 0, 0, 0);
+      const k = smoother50(clamp0151(pp));
+      paint50(ctx, lerpP50(from, to, k), 0, 0, 0);
     };
   }
-  var springToSummer45 = makeTransition46(0);
-  var summerToAutumn45 = makeTransition46(1);
-  var autumnToWinter45 = makeTransition46(2);
+  var springToSummer44 = makeTransition47(0);
+  var summerToAutumn44 = makeTransition47(1);
+  var autumnToWinter44 = makeTransition47(2);
   var VARIANTS52 = {
     Spring: { draw: draw40("Spring"), anim: anim40("Spring") },
     Summer: { draw: draw40("Summer"), anim: anim40("Summer") },
@@ -28719,34 +28779,34 @@
     Winter: { draw: draw40("Winter"), anim: anim40("Winter") }
   };
   var TRANSITIONS52 = {
-    0: springToSummer45,
-    1: summerToAutumn45,
-    2: autumnToWinter45
+    0: springToSummer44,
+    1: summerToAutumn44,
+    2: autumnToWinter44
   };
 
   // src/textures/seasonal/mount/horse.ts
-  function clamp0151(x) {
+  function clamp0152(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  function lerp55(a, b, t) {
+  function lerp56(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB44(a, b, t) {
-    return [lerp55(a[0], b[0], t), lerp55(a[1], b[1], t), lerp55(a[2], b[2], t)];
+    return [lerp56(a[0], b[0], t), lerp56(a[1], b[1], t), lerp56(a[2], b[2], t)];
   }
-  function rgb50(c, a = 1) {
-    const r = Math.round(clamp0151(c[0] / 255) * 255);
-    const g = Math.round(clamp0151(c[1] / 255) * 255);
-    const b = Math.round(clamp0151(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0151(a)})`;
+  function rgb51(c, a = 1) {
+    const r = Math.round(clamp0152(c[0] / 255) * 255);
+    const g = Math.round(clamp0152(c[1] / 255) * 255);
+    const b = Math.round(clamp0152(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0152(a)})`;
   }
-  var smoother50 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt50(t, amp = 1, w = 1.35) {
+  var smoother51 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt51(t, amp = 1, w = 1.35) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP50 = {
+  var SP51 = {
     // Spring — sleek brown coat, dewy lime pad + blossom, cool-bright light.
     Spring: {
       coatLight: [168, 116, 70],
@@ -28853,7 +28913,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP50(a, b, t) {
+  function lerpP51(a, b, t) {
     return {
       coatLight: lerpRGB44(a.coatLight, b.coatLight, t),
       coatMid: lerpRGB44(a.coatMid, b.coatMid, t),
@@ -28866,45 +28926,45 @@
       soil: lerpRGB44(a.soil, b.soil, t),
       outline: lerpRGB44(a.outline, b.outline, t),
       lightWash: lerpRGB44(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp55(a.lightWashAmt, b.lightWashAmt, t),
-      coatVolume: lerp55(a.coatVolume, b.coatVolume, t),
-      gloss: lerp55(a.gloss, b.gloss, t),
-      frostAmt: lerp55(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp55(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp55(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp55(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp55(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp55(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp56(a.lightWashAmt, b.lightWashAmt, t),
+      coatVolume: lerp56(a.coatVolume, b.coatVolume, t),
+      gloss: lerp56(a.gloss, b.gloss, t),
+      frostAmt: lerp56(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp56(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp56(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp56(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp56(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp56(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP40(p) {
     return {
       ...p,
-      lightWashAmt: clamp0151(p.lightWashAmt),
-      coatVolume: clamp0151(p.coatVolume),
-      gloss: clamp0151(p.gloss),
-      frostAmt: clamp0151(p.frostAmt),
-      backSnowAmt: clamp0151(p.backSnowAmt),
-      padSnowAmt: clamp0151(p.padSnowAmt),
-      blossomAmt: clamp0151(p.blossomAmt),
-      fallenLeafAmt: clamp0151(p.fallenLeafAmt),
-      breathFogAmt: clamp0151(p.breathFogAmt)
+      lightWashAmt: clamp0152(p.lightWashAmt),
+      coatVolume: clamp0152(p.coatVolume),
+      gloss: clamp0152(p.gloss),
+      frostAmt: clamp0152(p.frostAmt),
+      backSnowAmt: clamp0152(p.backSnowAmt),
+      padSnowAmt: clamp0152(p.padSnowAmt),
+      blossomAmt: clamp0152(p.blossomAmt),
+      fallenLeafAmt: clamp0152(p.fallenLeafAmt),
+      breathFogAmt: clamp0152(p.breathFogAmt)
     };
   }
   function paintPad18(ctx, p) {
-    ctx.fillStyle = rgb50([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb51([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb50(p.soil);
+    ctx.fillStyle = rgb51(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb50(p.padGrass);
+    ctx.fillStyle = rgb51(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb50(p.padGrass);
+    ctx.strokeStyle = rgb51(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -28916,16 +28976,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb50([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb51([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb50([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb51([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb50([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb51([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -28934,14 +28994,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-13, 18.5], [10, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb50([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb51([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb50([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb51([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -28957,11 +29017,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb50(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb51(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb50([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb51([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -28972,20 +29032,20 @@
     }
   }
   function paintLeg16(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb50(p.outline);
+    ctx.strokeStyle = rgb51(p.outline);
     ctx.lineWidth = 3.4;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.strokeStyle = rgb50(p.coatShadow);
+    ctx.strokeStyle = rgb51(p.coatShadow);
     ctx.lineWidth = 2.2;
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY - 1.4);
     ctx.stroke();
-    ctx.fillStyle = rgb50(p.hoofDark);
+    ctx.fillStyle = rgb51(p.hoofDark);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 1.8, 1.3, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -29011,20 +29071,20 @@
     {
       const tx0 = bx + 11;
       const ty0 = by - 4;
-      ctx.strokeStyle = rgb50(p.maneShade);
+      ctx.strokeStyle = rgb51(p.maneShade);
       ctx.lineWidth = 4.4 * (0.9 + vol * 0.25);
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(tx0, ty0);
       ctx.quadraticCurveTo(tx0 + 5 + tailSway, by + 4, tx0 + 3.5 + tailSway * 1.6, by + 13);
       ctx.stroke();
-      ctx.strokeStyle = rgb50(p.mane);
+      ctx.strokeStyle = rgb51(p.mane);
       ctx.lineWidth = 2.6 * (0.9 + vol * 0.25);
       ctx.beginPath();
       ctx.moveTo(tx0, ty0);
       ctx.quadraticCurveTo(tx0 + 5 + tailSway, by + 4, tx0 + 3.5 + tailSway * 1.6, by + 13);
       ctx.stroke();
-      ctx.strokeStyle = rgb50(p.maneShade, 0.8);
+      ctx.strokeStyle = rgb51(p.maneShade, 0.8);
       ctx.lineWidth = 1.1;
       for (const off of [-1.6, 0, 1.8]) {
         ctx.beginPath();
@@ -29034,7 +29094,7 @@
       }
       ctx.lineCap = "butt";
     }
-    ctx.fillStyle = rgb50(p.outline);
+    ctx.fillStyle = rgb51(p.outline);
     ctx.save();
     ctx.translate(bx, by);
     ctx.scale(1.1, 1.14);
@@ -29042,17 +29102,17 @@
     bodyPath8(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb50(p.coatShadow);
+    ctx.fillStyle = rgb51(p.coatShadow);
     bodyPath8(ctx, bx, by, vol);
     ctx.fill();
-    ctx.fillStyle = rgb50(p.coatMid);
+    ctx.fillStyle = rgb51(p.coatMid);
     ctx.save();
     ctx.translate(-0.4, -0.4);
     bodyPath8(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
     ctx.save();
-    ctx.fillStyle = rgb50(p.coatLight);
+    ctx.fillStyle = rgb51(p.coatLight);
     ctx.translate(-1.6, -1.8);
     bodyPath8(ctx, bx, by, vol * 0.7);
     ctx.fill();
@@ -29061,7 +29121,7 @@
       ctx.save();
       bodyPath8(ctx, bx, by, vol);
       ctx.clip();
-      ctx.fillStyle = rgb50([255, 255, 255], 0.12 + 0.18 * p.gloss);
+      ctx.fillStyle = rgb51([255, 255, 255], 0.12 + 0.18 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(bx - 2, by - 4.4, 9, 2.4, -0.12, 0, Math.PI * 2);
       ctx.fill();
@@ -29069,7 +29129,7 @@
     }
     if (vol > 0.55) {
       const fr = (vol - 0.55) / 0.45;
-      ctx.fillStyle = rgb50(p.coatShadow, 0.9);
+      ctx.fillStyle = rgb51(p.coatShadow, 0.9);
       const rx = 12.5 * (0.97 + vol * 0.12);
       const ry = 7.8 * (0.97 + vol * 0.14);
       for (let i = 0; i < 9; i++) {
@@ -29082,11 +29142,11 @@
       }
     }
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb50([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb51([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx, by - 6.6, 9 * (0.9 + vol * 0.2), 3, -0.08, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb50([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb51([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-5, -7.4], [1, -8], [6, -7]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.4 + vol * 0.4, 0, Math.PI * 2);
@@ -29094,7 +29154,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb50([255, 255, 255], 0.75 * p.frostAmt);
+      ctx.fillStyle = rgb51([255, 255, 255], 0.75 * p.frostAmt);
       const pts = [
         [-7, 0],
         [-2, 4],
@@ -29114,7 +29174,7 @@
     const neckTopY = by - 6;
     const hx = bx - 16;
     const hy = by - 1 - headToss;
-    ctx.fillStyle = rgb50(p.outline);
+    ctx.fillStyle = rgb51(p.outline);
     ctx.beginPath();
     ctx.moveTo(bx - 3, by - 6);
     ctx.quadraticCurveTo(neckTopX - 1, neckTopY - 1, hx + 2.5, hy - 3.5);
@@ -29122,7 +29182,7 @@
     ctx.quadraticCurveTo(neckTopX + 3, by + 1, bx - 1, by + 3);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb50(p.coatMid);
+    ctx.fillStyle = rgb51(p.coatMid);
     ctx.beginPath();
     ctx.moveTo(bx - 3, by - 5.6);
     ctx.quadraticCurveTo(neckTopX - 0.6, neckTopY - 0.4, hx + 2.6, hy - 3);
@@ -29130,7 +29190,7 @@
     ctx.quadraticCurveTo(neckTopX + 3, by + 0.6, bx - 1, by + 2.4);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = rgb50(p.coatLight, 0.8);
+    ctx.strokeStyle = rgb51(p.coatLight, 0.8);
     ctx.lineWidth = 1.6;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -29139,7 +29199,7 @@
     ctx.stroke();
     ctx.lineCap = "butt";
     {
-      ctx.strokeStyle = rgb50(p.maneShade);
+      ctx.strokeStyle = rgb51(p.maneShade);
       ctx.lineWidth = 3 * (0.9 + vol * 0.2);
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -29156,7 +29216,7 @@
       for (let i = 0; i < strands2.length; i++) {
         const [sx, sy, ph] = strands2[i];
         const sway = maneSway * (0.4 + ph);
-        ctx.strokeStyle = rgb50(i % 2 ? p.mane : p.maneShade, 0.92);
+        ctx.strokeStyle = rgb51(i % 2 ? p.mane : p.maneShade, 0.92);
         ctx.beginPath();
         ctx.moveTo(sx, sy);
         ctx.quadraticCurveTo(sx - 1.4 + sway, sy + 2.4, sx - 0.8 + sway * 1.6, sy + 5.2);
@@ -29168,21 +29228,21 @@
       ctx.save();
       ctx.translate(hx + 1.4 + side * 1.6, hy - 5.2);
       ctx.rotate(-0.15 + side * 0.34);
-      ctx.fillStyle = rgb50(p.outline);
+      ctx.fillStyle = rgb51(p.outline);
       ctx.beginPath();
       ctx.moveTo(0, 2.2);
       ctx.quadraticCurveTo(-1, -2.6, 0.2, -3.4);
       ctx.quadraticCurveTo(1.4, -2.4, 1.2, 2);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb50(p.coatMid);
+      ctx.fillStyle = rgb51(p.coatMid);
       ctx.beginPath();
       ctx.moveTo(0.2, 1.8);
       ctx.quadraticCurveTo(-0.5, -2, 0.3, -2.8);
       ctx.quadraticCurveTo(1, -2, 0.9, 1.6);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb50(p.muzzle, 0.8);
+      ctx.fillStyle = rgb51(p.muzzle, 0.8);
       ctx.beginPath();
       ctx.ellipse(0.4, -0.2, 0.5, 1.2, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -29191,48 +29251,48 @@
     ctx.save();
     ctx.translate(hx, hy);
     ctx.rotate(0.34);
-    ctx.fillStyle = rgb50(p.outline);
+    ctx.fillStyle = rgb51(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 0, 4.2, 6.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb50(p.coatShadow);
+    ctx.fillStyle = rgb51(p.coatShadow);
     ctx.beginPath();
     ctx.ellipse(0, 0, 3.5, 5.5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb50(p.coatMid);
+    ctx.fillStyle = rgb51(p.coatMid);
     ctx.beginPath();
     ctx.ellipse(-0.4, -0.4, 3.1, 5.1, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb50(p.coatLight);
+    ctx.fillStyle = rgb51(p.coatLight);
     ctx.beginPath();
     ctx.ellipse(-0.8, -0.9, 2.3, 3.8, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb50(p.maneShade);
+    ctx.fillStyle = rgb51(p.maneShade);
     ctx.beginPath();
     ctx.moveTo(-1.4, -5);
     ctx.quadraticCurveTo(0.4, -6.2, 1.4, -4.6);
     ctx.quadraticCurveTo(0.2, -3.4, -1, -3.6);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb50(p.hoofDark);
+    ctx.fillStyle = rgb51(p.hoofDark);
     ctx.beginPath();
     ctx.ellipse(1.4, -1.6, 1, 1.3, 0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb50([255, 255, 255], 0.5);
+    ctx.fillStyle = rgb51([255, 255, 255], 0.5);
     ctx.beginPath();
     ctx.arc(1.1, -2, 0.4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb50(p.muzzle);
+    ctx.fillStyle = rgb51(p.muzzle);
     ctx.beginPath();
     ctx.ellipse(0.4, 4.4, 2.4, 2, 0.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb50(p.hoofDark, 0.85);
+    ctx.fillStyle = rgb51(p.hoofDark, 0.85);
     ctx.beginPath();
     ctx.ellipse(0.9, 4.8, 0.6, 0.9, 0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb50([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb51([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 4.4, hy + 4.6, 3, 2, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -29242,13 +29302,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb50(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb51(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint50(ctx, pIn, bob, maneSway = 0, tailSway = 0, headToss = 0) {
+  function paint51(ctx, pIn, bob, maneSway = 0, tailSway = 0, headToss = 0) {
     const p = clampP40(pIn);
     ctx.save();
     try {
@@ -29263,17 +29323,17 @@
     }
   }
   function draw41(season) {
-    return (ctx) => paint50(ctx, SP50[season], 0);
+    return (ctx) => paint51(ctx, SP51[season], 0);
   }
   function anim41(season) {
     return (ctx, t) => {
-      const p = clampP40(SP50[season]);
-      const bob = bobAt50(t);
+      const p = clampP40(SP51[season]);
+      const bob = bobAt51(t);
       const maneSway = Math.sin(t * 1.6) * 0.7;
       const tailSway = Math.sin(t * 1.15 + 0.6) * 1.6;
       const tossLoop = t % 6 / 6;
       const headToss = 1.4 * (1 - Math.cos(tossLoop * Math.PI * 2)) * 0.5;
-      paint50(ctx, SP50[season], bob, maneSway, tailSway, headToss);
+      paint51(ctx, SP51[season], bob, maneSway, tailSway, headToss);
       ctx.save();
       try {
         const bx = 2;
@@ -29286,14 +29346,14 @@
         ctx.save();
         ctx.translate(hx + 1.4 - 1.6, hy - 5.2);
         ctx.rotate(-0.15 - 0.34 + flick * 0.5);
-        ctx.fillStyle = rgb50(p.outline);
+        ctx.fillStyle = rgb51(p.outline);
         ctx.beginPath();
         ctx.moveTo(0, 2.2);
         ctx.quadraticCurveTo(-1, -2.6, 0.2, -3.4);
         ctx.quadraticCurveTo(1.4, -2.4, 1.2, 2);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = rgb50(p.coatMid);
+        ctx.fillStyle = rgb51(p.coatMid);
         ctx.beginPath();
         ctx.moveTo(0.2, 1.8);
         ctx.quadraticCurveTo(-0.5, -2, 0.3, -2.8);
@@ -29303,7 +29363,7 @@
         ctx.restore();
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb50([255, 255, 255], g);
+          ctx.fillStyle = rgb51([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -29315,7 +29375,7 @@
           const sx = bx - 9 + s * 18;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb50([255, 255, 255], 0.34);
+          ctx.fillStyle = rgb51([255, 255, 255], 0.34);
           ctx.beginPath();
           ctx.ellipse(sx, by - 2, 2.8, 5.4, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -29326,7 +29386,7 @@
           ctx.save();
           ctx.translate(11 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb50([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb51([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -29334,21 +29394,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.35);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb50([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb51([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - reach + 0.5, hy + 4.6, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 7 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb50([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb51([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb50([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb51([206, 224, 255], 0.12 + sheen2 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13, 8, -0.06, 0, Math.PI * 2);
           ctx.fill();
@@ -29361,17 +29421,17 @@
       }
     };
   }
-  function makeTransition47(fromIdx) {
+  function makeTransition48(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother50(clamp0151(pp));
-      paint50(ctx, lerpP50(SP50[from], SP50[to], k), 0);
+      const k = smoother51(clamp0152(pp));
+      paint51(ctx, lerpP51(SP51[from], SP51[to], k), 0);
     };
   }
-  var springToSummer46 = makeTransition47(0);
-  var summerToAutumn46 = makeTransition47(1);
-  var autumnToWinter46 = makeTransition47(2);
+  var springToSummer45 = makeTransition48(0);
+  var summerToAutumn45 = makeTransition48(1);
+  var autumnToWinter45 = makeTransition48(2);
   var VARIANTS53 = {
     Spring: { draw: draw41("Spring"), anim: anim41("Spring") },
     Summer: { draw: draw41("Summer"), anim: anim41("Summer") },
@@ -29379,34 +29439,34 @@
     Winter: { draw: draw41("Winter"), anim: anim41("Winter") }
   };
   var TRANSITIONS53 = {
-    0: springToSummer46,
-    1: summerToAutumn46,
-    2: autumnToWinter46
+    0: springToSummer45,
+    1: summerToAutumn45,
+    2: autumnToWinter45
   };
 
   // src/textures/seasonal/mount/donkey.ts
-  function clamp0152(x) {
+  function clamp0153(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  function lerp56(a, b, t) {
+  function lerp57(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB45(a, b, t) {
-    return [lerp56(a[0], b[0], t), lerp56(a[1], b[1], t), lerp56(a[2], b[2], t)];
+    return [lerp57(a[0], b[0], t), lerp57(a[1], b[1], t), lerp57(a[2], b[2], t)];
   }
-  function rgb51(c, a = 1) {
-    const r = Math.round(clamp0152(c[0] / 255) * 255);
-    const g = Math.round(clamp0152(c[1] / 255) * 255);
-    const b = Math.round(clamp0152(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0152(a)})`;
+  function rgb52(c, a = 1) {
+    const r = Math.round(clamp0153(c[0] / 255) * 255);
+    const g = Math.round(clamp0153(c[1] / 255) * 255);
+    const b = Math.round(clamp0153(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0153(a)})`;
   }
-  var smoother51 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt51(t, amp = 1, w = 1.35) {
+  var smoother52 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt52(t, amp = 1, w = 1.35) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP51 = {
+  var SP52 = {
     // Spring — sleek grey coat, dewy lime pad + blossom, cool-bright light.
     Spring: {
       coatLight: [176, 176, 180],
@@ -29513,7 +29573,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP51(a, b, t) {
+  function lerpP52(a, b, t) {
     return {
       coatLight: lerpRGB45(a.coatLight, b.coatLight, t),
       coatMid: lerpRGB45(a.coatMid, b.coatMid, t),
@@ -29526,45 +29586,45 @@
       soil: lerpRGB45(a.soil, b.soil, t),
       outline: lerpRGB45(a.outline, b.outline, t),
       lightWash: lerpRGB45(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp56(a.lightWashAmt, b.lightWashAmt, t),
-      coatVolume: lerp56(a.coatVolume, b.coatVolume, t),
-      gloss: lerp56(a.gloss, b.gloss, t),
-      frostAmt: lerp56(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp56(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp56(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp56(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp56(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp56(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp57(a.lightWashAmt, b.lightWashAmt, t),
+      coatVolume: lerp57(a.coatVolume, b.coatVolume, t),
+      gloss: lerp57(a.gloss, b.gloss, t),
+      frostAmt: lerp57(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp57(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp57(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp57(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp57(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp57(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP41(p) {
     return {
       ...p,
-      lightWashAmt: clamp0152(p.lightWashAmt),
-      coatVolume: clamp0152(p.coatVolume),
-      gloss: clamp0152(p.gloss),
-      frostAmt: clamp0152(p.frostAmt),
-      backSnowAmt: clamp0152(p.backSnowAmt),
-      padSnowAmt: clamp0152(p.padSnowAmt),
-      blossomAmt: clamp0152(p.blossomAmt),
-      fallenLeafAmt: clamp0152(p.fallenLeafAmt),
-      breathFogAmt: clamp0152(p.breathFogAmt)
+      lightWashAmt: clamp0153(p.lightWashAmt),
+      coatVolume: clamp0153(p.coatVolume),
+      gloss: clamp0153(p.gloss),
+      frostAmt: clamp0153(p.frostAmt),
+      backSnowAmt: clamp0153(p.backSnowAmt),
+      padSnowAmt: clamp0153(p.padSnowAmt),
+      blossomAmt: clamp0153(p.blossomAmt),
+      fallenLeafAmt: clamp0153(p.fallenLeafAmt),
+      breathFogAmt: clamp0153(p.breathFogAmt)
     };
   }
   function paintPad19(ctx, p) {
-    ctx.fillStyle = rgb51([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb52([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb51(p.soil);
+    ctx.fillStyle = rgb52(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb51(p.padGrass);
+    ctx.fillStyle = rgb52(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb51(p.padGrass);
+    ctx.strokeStyle = rgb52(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -29576,16 +29636,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb51([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb52([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb51([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb52([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb51([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb52([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -29594,14 +29654,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-13, 18.5], [10, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb51([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb52([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb51([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb52([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -29617,11 +29677,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb51(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb52(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb51([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb52([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -29632,20 +29692,20 @@
     }
   }
   function paintLeg17(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb51(p.outline);
+    ctx.strokeStyle = rgb52(p.outline);
     ctx.lineWidth = 3.2;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.strokeStyle = rgb51(p.coatShadow);
+    ctx.strokeStyle = rgb52(p.coatShadow);
     ctx.lineWidth = 2;
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY - 1.4);
     ctx.stroke();
-    ctx.fillStyle = rgb51(p.hoofDark);
+    ctx.fillStyle = rgb52(p.hoofDark);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 1.7, 1.3, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -29673,18 +29733,18 @@
       const ty0 = by - 3.5;
       const tipX = tx0 + 3 + tailSway * 1.6;
       const tipY = by + 12.5;
-      ctx.strokeStyle = rgb51(p.coatShadow);
+      ctx.strokeStyle = rgb52(p.coatShadow);
       ctx.lineWidth = 2.6 * (0.9 + vol * 0.2);
       ctx.lineCap = "round";
       ctx.beginPath();
       ctx.moveTo(tx0, ty0);
       ctx.quadraticCurveTo(tx0 + 4 + tailSway, by + 4, tipX, tipY - 2);
       ctx.stroke();
-      ctx.fillStyle = rgb51(p.maneShade);
+      ctx.fillStyle = rgb52(p.maneShade);
       ctx.beginPath();
       ctx.ellipse(tipX, tipY, 2.2, 3.2, 0.1 + tailSway * 0.08, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = rgb51(p.mane, 0.9);
+      ctx.strokeStyle = rgb52(p.mane, 0.9);
       ctx.lineWidth = 1;
       for (const off of [-1.4, 0, 1.6]) {
         ctx.beginPath();
@@ -29694,7 +29754,7 @@
       }
       ctx.lineCap = "butt";
     }
-    ctx.fillStyle = rgb51(p.outline);
+    ctx.fillStyle = rgb52(p.outline);
     ctx.save();
     ctx.translate(bx, by);
     ctx.scale(1.1, 1.14);
@@ -29702,17 +29762,17 @@
     bodyPath9(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb51(p.coatShadow);
+    ctx.fillStyle = rgb52(p.coatShadow);
     bodyPath9(ctx, bx, by, vol);
     ctx.fill();
-    ctx.fillStyle = rgb51(p.coatMid);
+    ctx.fillStyle = rgb52(p.coatMid);
     ctx.save();
     ctx.translate(-0.4, -0.4);
     bodyPath9(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
     ctx.save();
-    ctx.fillStyle = rgb51(p.coatLight);
+    ctx.fillStyle = rgb52(p.coatLight);
     ctx.translate(-1.6, -1.8);
     bodyPath9(ctx, bx, by, vol * 0.7);
     ctx.fill();
@@ -29720,12 +29780,12 @@
     ctx.save();
     bodyPath9(ctx, bx, by, vol);
     ctx.clip();
-    ctx.fillStyle = rgb51(p.belly, 0.92);
+    ctx.fillStyle = rgb52(p.belly, 0.92);
     ctx.beginPath();
     ctx.ellipse(bx - 1, by + 4.4, 9.5, 4.2, -0.04, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = rgb51(p.mane, 0.85);
+    ctx.strokeStyle = rgb52(p.mane, 0.85);
     ctx.lineWidth = 1.8;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -29737,7 +29797,7 @@
       ctx.save();
       bodyPath9(ctx, bx, by, vol);
       ctx.clip();
-      ctx.fillStyle = rgb51([255, 255, 255], 0.12 + 0.18 * p.gloss);
+      ctx.fillStyle = rgb52([255, 255, 255], 0.12 + 0.18 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(bx - 2, by - 4.6, 8.6, 2.4, -0.1, 0, Math.PI * 2);
       ctx.fill();
@@ -29745,7 +29805,7 @@
     }
     if (vol > 0.55) {
       const fr = (vol - 0.55) / 0.45;
-      ctx.fillStyle = rgb51(p.coatShadow, 0.9);
+      ctx.fillStyle = rgb52(p.coatShadow, 0.9);
       const rx = 12 * (0.97 + vol * 0.12);
       const ry = 8.2 * (0.97 + vol * 0.14);
       for (let i = 0; i < 9; i++) {
@@ -29758,11 +29818,11 @@
       }
     }
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb51([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb52([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx, by - 7, 8.6 * (0.9 + vol * 0.2), 3, -0.06, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb51([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb52([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-5, -7.6], [1, -8.2], [6, -7.2]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.4 + vol * 0.4, 0, Math.PI * 2);
@@ -29770,7 +29830,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb51([255, 255, 255], 0.75 * p.frostAmt);
+      ctx.fillStyle = rgb52([255, 255, 255], 0.75 * p.frostAmt);
       const pts = [
         [-7, 0],
         [-2, 4],
@@ -29790,7 +29850,7 @@
     const neckTopY = by - 5;
     const hx = bx - 15;
     const hy = by - 1 - headToss;
-    ctx.fillStyle = rgb51(p.outline);
+    ctx.fillStyle = rgb52(p.outline);
     ctx.beginPath();
     ctx.moveTo(bx - 3, by - 6);
     ctx.quadraticCurveTo(neckTopX - 1, neckTopY - 1, hx + 2.5, hy - 3.5);
@@ -29798,7 +29858,7 @@
     ctx.quadraticCurveTo(neckTopX + 3, by + 1, bx - 1, by + 3);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb51(p.coatMid);
+    ctx.fillStyle = rgb52(p.coatMid);
     ctx.beginPath();
     ctx.moveTo(bx - 3, by - 5.6);
     ctx.quadraticCurveTo(neckTopX - 0.6, neckTopY - 0.4, hx + 2.6, hy - 3);
@@ -29806,7 +29866,7 @@
     ctx.quadraticCurveTo(neckTopX + 3, by + 0.6, bx - 1, by + 2.4);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = rgb51(p.coatLight, 0.8);
+    ctx.strokeStyle = rgb52(p.coatLight, 0.8);
     ctx.lineWidth = 1.6;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -29815,7 +29875,7 @@
     ctx.stroke();
     ctx.lineCap = "butt";
     {
-      ctx.strokeStyle = rgb51(p.maneShade);
+      ctx.strokeStyle = rgb52(p.maneShade);
       ctx.lineWidth = 3.2 * (0.9 + vol * 0.2);
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -29832,7 +29892,7 @@
       for (let i = 0; i < tufts.length; i++) {
         const [sx, sy, ph] = tufts[i];
         const sw = earSwivel * 0.25 * (0.4 + ph);
-        ctx.strokeStyle = rgb51(i % 2 ? p.mane : p.maneShade, 0.95);
+        ctx.strokeStyle = rgb52(i % 2 ? p.mane : p.maneShade, 0.95);
         ctx.beginPath();
         ctx.moveTo(sx, sy);
         ctx.quadraticCurveTo(sx + 0.4 + sw, sy - 1.8, sx + 0.9 + sw, sy - 3.4);
@@ -29844,21 +29904,21 @@
       ctx.save();
       ctx.translate(hx + 1.2 + side * 1.7, hy - 5.6);
       ctx.rotate(-0.06 + side * 0.22 + earSwivel * (side > 0 ? 0 : 1));
-      ctx.fillStyle = rgb51(p.outline);
+      ctx.fillStyle = rgb52(p.outline);
       ctx.beginPath();
       ctx.moveTo(0, 3.2);
       ctx.quadraticCurveTo(-1.4, -4.6, 0.3, -7.2);
       ctx.quadraticCurveTo(1.9, -4.4, 1.5, 3);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb51(p.coatMid);
+      ctx.fillStyle = rgb52(p.coatMid);
       ctx.beginPath();
       ctx.moveTo(0.2, 2.8);
       ctx.quadraticCurveTo(-0.8, -4, 0.4, -6.2);
       ctx.quadraticCurveTo(1.4, -4, 1.1, 2.6);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb51(p.belly, 0.9);
+      ctx.fillStyle = rgb52(p.belly, 0.9);
       ctx.beginPath();
       ctx.ellipse(0.5, -1.4, 0.55, 3, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -29867,48 +29927,48 @@
     ctx.save();
     ctx.translate(hx, hy);
     ctx.rotate(0.34);
-    ctx.fillStyle = rgb51(p.outline);
+    ctx.fillStyle = rgb52(p.outline);
     ctx.beginPath();
     ctx.ellipse(0, 0, 4.4, 6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb51(p.coatShadow);
+    ctx.fillStyle = rgb52(p.coatShadow);
     ctx.beginPath();
     ctx.ellipse(0, 0, 3.7, 5.3, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb51(p.coatMid);
+    ctx.fillStyle = rgb52(p.coatMid);
     ctx.beginPath();
     ctx.ellipse(-0.4, -0.4, 3.3, 4.9, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb51(p.coatLight);
+    ctx.fillStyle = rgb52(p.coatLight);
     ctx.beginPath();
     ctx.ellipse(-0.9, -0.9, 2.4, 3.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb51(p.maneShade);
+    ctx.fillStyle = rgb52(p.maneShade);
     ctx.beginPath();
     ctx.moveTo(-1.4, -4.8);
     ctx.quadraticCurveTo(0.4, -6, 1.4, -4.4);
     ctx.quadraticCurveTo(0.2, -3.4, -1, -3.6);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb51(p.hoofDark);
+    ctx.fillStyle = rgb52(p.hoofDark);
     ctx.beginPath();
     ctx.ellipse(1.4, -1.6, 1, 1.3, 0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb51([255, 255, 255], 0.5);
+    ctx.fillStyle = rgb52([255, 255, 255], 0.5);
     ctx.beginPath();
     ctx.arc(1.1, -2, 0.4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb51(p.belly);
+    ctx.fillStyle = rgb52(p.belly);
     ctx.beginPath();
     ctx.ellipse(0.4, 4.3, 2.7, 2.3, 0.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb51(p.hoofDark, 0.85);
+    ctx.fillStyle = rgb52(p.hoofDark, 0.85);
     ctx.beginPath();
     ctx.ellipse(0.9, 4.7, 0.6, 0.9, 0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb51([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb52([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 4.6, hy + 4.6, 3, 2, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -29918,13 +29978,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb51(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb52(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint51(ctx, pIn, bob, earSwivel = 0, tailSway = 0, headToss = 0) {
+  function paint52(ctx, pIn, bob, earSwivel = 0, tailSway = 0, headToss = 0) {
     const p = clampP41(pIn);
     ctx.save();
     try {
@@ -29939,19 +29999,19 @@
     }
   }
   function draw42(season) {
-    return (ctx) => paint51(ctx, SP51[season], 0);
+    return (ctx) => paint52(ctx, SP52[season], 0);
   }
   function anim42(season) {
     return (ctx, t) => {
-      const p = clampP41(SP51[season]);
-      const bob = bobAt51(t);
+      const p = clampP41(SP52[season]);
+      const bob = bobAt52(t);
       const tailSway = Math.sin(t * 1.1 + 0.4) * 1.4;
       const swishLoop = t % 6 / 6;
       const swishGate = Math.max(0, Math.sin(swishLoop * Math.PI * 2)) ** 4;
       const tailSwish = Math.sin(t * 5) * swishGate * 2;
       const tossLoop = t % 6 / 6;
       const headToss = 1.2 * (1 - Math.cos(tossLoop * Math.PI * 2)) * 0.5;
-      paint51(ctx, SP51[season], bob, 0, tailSway + tailSwish, headToss);
+      paint52(ctx, SP52[season], bob, 0, tailSway + tailSwish, headToss);
       ctx.save();
       try {
         const bx = 2;
@@ -29964,28 +30024,28 @@
         ctx.save();
         ctx.translate(hx + 1.2 - 1.7, hy - 5.6);
         ctx.rotate(-0.06 - 0.22 + earSwivel);
-        ctx.fillStyle = rgb51(p.outline);
+        ctx.fillStyle = rgb52(p.outline);
         ctx.beginPath();
         ctx.moveTo(0, 3.2);
         ctx.quadraticCurveTo(-1.4, -4.6, 0.3, -7.2);
         ctx.quadraticCurveTo(1.9, -4.4, 1.5, 3);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = rgb51(p.coatMid);
+        ctx.fillStyle = rgb52(p.coatMid);
         ctx.beginPath();
         ctx.moveTo(0.2, 2.8);
         ctx.quadraticCurveTo(-0.8, -4, 0.4, -6.2);
         ctx.quadraticCurveTo(1.4, -4, 1.1, 2.6);
         ctx.closePath();
         ctx.fill();
-        ctx.fillStyle = rgb51(p.belly, 0.9);
+        ctx.fillStyle = rgb52(p.belly, 0.9);
         ctx.beginPath();
         ctx.ellipse(0.5, -1.4, 0.55, 3, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb51([255, 255, 255], g);
+          ctx.fillStyle = rgb52([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -29997,7 +30057,7 @@
           const sx = bx - 9 + s * 18;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb51([255, 255, 255], 0.34);
+          ctx.fillStyle = rgb52([255, 255, 255], 0.34);
           ctx.beginPath();
           ctx.ellipse(sx, by - 2, 2.8, 5.4, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -30008,7 +30068,7 @@
           ctx.save();
           ctx.translate(11 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb51([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb52([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -30016,21 +30076,21 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.35);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb51([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb52([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - reach + 0.5, hy + 4.6, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 7 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb51([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb52([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb51([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb52([206, 224, 255], 0.12 + sheen2 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 12.5, 8.2, -0.05, 0, Math.PI * 2);
           ctx.fill();
@@ -30043,17 +30103,17 @@
       }
     };
   }
-  function makeTransition48(fromIdx) {
+  function makeTransition49(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother51(clamp0152(pp));
-      paint51(ctx, lerpP51(SP51[from], SP51[to], k), 0);
+      const k = smoother52(clamp0153(pp));
+      paint52(ctx, lerpP52(SP52[from], SP52[to], k), 0);
     };
   }
-  var springToSummer47 = makeTransition48(0);
-  var summerToAutumn47 = makeTransition48(1);
-  var autumnToWinter47 = makeTransition48(2);
+  var springToSummer46 = makeTransition49(0);
+  var summerToAutumn46 = makeTransition49(1);
+  var autumnToWinter46 = makeTransition49(2);
   var VARIANTS54 = {
     Spring: { draw: draw42("Spring"), anim: anim42("Spring") },
     Summer: { draw: draw42("Summer"), anim: anim42("Summer") },
@@ -30061,34 +30121,34 @@
     Winter: { draw: draw42("Winter"), anim: anim42("Winter") }
   };
   var TRANSITIONS54 = {
-    0: springToSummer47,
-    1: summerToAutumn47,
-    2: autumnToWinter47
+    0: springToSummer46,
+    1: summerToAutumn46,
+    2: autumnToWinter46
   };
 
   // src/textures/seasonal/mount/moose.ts
-  function clamp0153(x) {
+  function clamp0154(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  function lerp57(a, b, t) {
+  function lerp58(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB46(a, b, t) {
-    return [lerp57(a[0], b[0], t), lerp57(a[1], b[1], t), lerp57(a[2], b[2], t)];
+    return [lerp58(a[0], b[0], t), lerp58(a[1], b[1], t), lerp58(a[2], b[2], t)];
   }
-  function rgb52(c, a = 1) {
-    const r = Math.round(clamp0153(c[0] / 255) * 255);
-    const g = Math.round(clamp0153(c[1] / 255) * 255);
-    const b = Math.round(clamp0153(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0153(a)})`;
+  function rgb53(c, a = 1) {
+    const r = Math.round(clamp0154(c[0] / 255) * 255);
+    const g = Math.round(clamp0154(c[1] / 255) * 255);
+    const b = Math.round(clamp0154(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0154(a)})`;
   }
-  var smoother52 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt52(t, amp = 1.1, w = 1.15) {
+  var smoother53 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt53(t, amp = 1.1, w = 1.15) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP52 = {
+  var SP53 = {
     // Spring — sleek coat, soft VELVET antlers, dewy lime pad + blossom, cool light.
     Spring: {
       coatLight: [110, 78, 52],
@@ -30219,7 +30279,7 @@
       breathFogAmt: 0.7
     }
   };
-  function lerpP52(a, b, t) {
+  function lerpP53(a, b, t) {
     return {
       coatLight: lerpRGB46(a.coatLight, b.coatLight, t),
       coatMid: lerpRGB46(a.coatMid, b.coatMid, t),
@@ -30234,49 +30294,49 @@
       soil: lerpRGB46(a.soil, b.soil, t),
       outline: lerpRGB46(a.outline, b.outline, t),
       lightWash: lerpRGB46(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp57(a.lightWashAmt, b.lightWashAmt, t),
-      coatVolume: lerp57(a.coatVolume, b.coatVolume, t),
-      gloss: lerp57(a.gloss, b.gloss, t),
-      velvetAmt: lerp57(a.velvetAmt, b.velvetAmt, t),
-      antlerSnowAmt: lerp57(a.antlerSnowAmt, b.antlerSnowAmt, t),
-      frostAmt: lerp57(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp57(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp57(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp57(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp57(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp57(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp58(a.lightWashAmt, b.lightWashAmt, t),
+      coatVolume: lerp58(a.coatVolume, b.coatVolume, t),
+      gloss: lerp58(a.gloss, b.gloss, t),
+      velvetAmt: lerp58(a.velvetAmt, b.velvetAmt, t),
+      antlerSnowAmt: lerp58(a.antlerSnowAmt, b.antlerSnowAmt, t),
+      frostAmt: lerp58(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp58(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp58(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp58(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp58(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp58(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP42(p) {
     return {
       ...p,
-      lightWashAmt: clamp0153(p.lightWashAmt),
-      coatVolume: clamp0153(p.coatVolume),
-      gloss: clamp0153(p.gloss),
-      velvetAmt: clamp0153(p.velvetAmt),
-      antlerSnowAmt: clamp0153(p.antlerSnowAmt),
-      frostAmt: clamp0153(p.frostAmt),
-      backSnowAmt: clamp0153(p.backSnowAmt),
-      padSnowAmt: clamp0153(p.padSnowAmt),
-      blossomAmt: clamp0153(p.blossomAmt),
-      fallenLeafAmt: clamp0153(p.fallenLeafAmt),
-      breathFogAmt: clamp0153(p.breathFogAmt)
+      lightWashAmt: clamp0154(p.lightWashAmt),
+      coatVolume: clamp0154(p.coatVolume),
+      gloss: clamp0154(p.gloss),
+      velvetAmt: clamp0154(p.velvetAmt),
+      antlerSnowAmt: clamp0154(p.antlerSnowAmt),
+      frostAmt: clamp0154(p.frostAmt),
+      backSnowAmt: clamp0154(p.backSnowAmt),
+      padSnowAmt: clamp0154(p.padSnowAmt),
+      blossomAmt: clamp0154(p.blossomAmt),
+      fallenLeafAmt: clamp0154(p.fallenLeafAmt),
+      breathFogAmt: clamp0154(p.breathFogAmt)
     };
   }
   function paintPad20(ctx, p) {
-    ctx.fillStyle = rgb52([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb53([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb52(p.soil);
+    ctx.fillStyle = rgb53(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb52(p.padGrass);
+    ctx.fillStyle = rgb53(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb52(p.padGrass);
+    ctx.strokeStyle = rgb53(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -30288,16 +30348,16 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb52([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb53([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb52([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.fillStyle = rgb53([244, 250, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb52([255, 255, 255], 0.7 * p.padSnowAmt);
+      ctx.fillStyle = rgb53([255, 255, 255], 0.7 * p.padSnowAmt);
       for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -30306,14 +30366,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-13, 18.5], [10, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb52([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb53([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb52([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb53([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -30329,11 +30389,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb52(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb53(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb52([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb53([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -30344,20 +30404,20 @@
     }
   }
   function paintLeg18(ctx, p, x, topY, baseY) {
-    ctx.strokeStyle = rgb52(p.outline);
+    ctx.strokeStyle = rgb53(p.outline);
     ctx.lineWidth = 3.6;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.strokeStyle = rgb52(p.mane);
+    ctx.strokeStyle = rgb53(p.mane);
     ctx.lineWidth = 2.3;
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY - 1.4);
     ctx.stroke();
-    ctx.fillStyle = rgb52(p.hoofDark);
+    ctx.fillStyle = rgb53(p.hoofDark);
     ctx.beginPath();
     ctx.ellipse(x, baseY, 2, 1.4, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -30375,7 +30435,7 @@
     ctx.scale(side, 1);
     const palmX = 9.5;
     const palmY = -7.5;
-    ctx.strokeStyle = rgb52(p.outline, 0.95);
+    ctx.strokeStyle = rgb53(p.outline, 0.95);
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     ctx.lineWidth = 4.4 + velvet * 1;
@@ -30401,7 +30461,7 @@
       ctx.quadraticCurveTo(palmX - 1, palmY + 4.6, palmX - 4.5, palmY + 2.2);
       ctx.closePath();
     };
-    ctx.fillStyle = rgb52(p.outline, 0.95);
+    ctx.fillStyle = rgb53(p.outline, 0.95);
     ctx.save();
     ctx.translate(palmX, palmY);
     ctx.scale(1.16, 1.18);
@@ -30409,23 +30469,23 @@
     palmPath();
     ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = rgb52(p.antlerShade);
+    ctx.strokeStyle = rgb53(p.antlerShade);
     ctx.lineWidth = 3 + velvet * 0.8;
     ctx.beginPath();
     ctx.moveTo(0, 0);
     ctx.quadraticCurveTo(4.5, -3.5, palmX, palmY);
     ctx.stroke();
-    ctx.strokeStyle = rgb52(p.antler);
+    ctx.strokeStyle = rgb53(p.antler);
     ctx.lineWidth = 1.7 + velvet * 0.5;
     ctx.beginPath();
     ctx.moveTo(0.4, 0);
     ctx.quadraticCurveTo(4.8, -3.6, palmX, palmY - 0.4);
     ctx.stroke();
-    ctx.fillStyle = rgb52(p.antlerShade);
+    ctx.fillStyle = rgb53(p.antlerShade);
     palmPath();
     ctx.fill();
     ctx.save();
-    ctx.fillStyle = rgb52(p.antler);
+    ctx.fillStyle = rgb53(p.antler);
     ctx.translate(-1.2, -1.4);
     ctx.scale(0.92, 0.92);
     ctx.translate(palmX, palmY);
@@ -30433,7 +30493,7 @@
     palmPath();
     ctx.fill();
     ctx.restore();
-    ctx.strokeStyle = rgb52(p.antlerShade, 0.85);
+    ctx.strokeStyle = rgb53(p.antlerShade, 0.85);
     ctx.lineWidth = 1;
     for (const [fx, fy] of fingers) {
       ctx.beginPath();
@@ -30442,7 +30502,7 @@
       ctx.stroke();
     }
     if (velvet > 0.02) {
-      ctx.fillStyle = rgb52([214, 196, 156], 0.5 * velvet);
+      ctx.fillStyle = rgb53([214, 196, 156], 0.5 * velvet);
       for (const [fx, fy] of fingers) {
         ctx.beginPath();
         ctx.arc(palmX + fx - 5.5, palmY + fy + 4, 1.5, 0, Math.PI * 2);
@@ -30451,13 +30511,13 @@
       ctx.save();
       palmPath();
       ctx.clip();
-      ctx.fillStyle = rgb52([236, 222, 188], 0.28 * velvet);
+      ctx.fillStyle = rgb53([236, 222, 188], 0.28 * velvet);
       ctx.beginPath();
       ctx.ellipse(palmX, palmY - 1, 8, 4, -0.1, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     } else {
-      ctx.fillStyle = rgb52([255, 255, 255], 0.3);
+      ctx.fillStyle = rgb53([255, 255, 255], 0.3);
       ctx.beginPath();
       ctx.ellipse(palmX - 1, palmY - 2, 2.2, 1.2, -0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -30466,12 +30526,12 @@
       ctx.save();
       palmPath();
       ctx.clip();
-      ctx.fillStyle = rgb52([248, 252, 255], 0.92 * snow);
+      ctx.fillStyle = rgb53([248, 252, 255], 0.92 * snow);
       ctx.beginPath();
       ctx.ellipse(palmX + 1, palmY - 2.4, 8.4, 3.4, -0.08, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-      ctx.fillStyle = rgb52([255, 255, 255], 0.85 * snow);
+      ctx.fillStyle = rgb53([255, 255, 255], 0.85 * snow);
       for (const [fx, fy] of fingers) {
         ctx.beginPath();
         ctx.arc(palmX + fx - 5.5, palmY + fy + 3, 1.3, 0, Math.PI * 2);
@@ -30492,7 +30552,7 @@
     ctx.restore();
     paintLeg18(ctx, p, bx + 5.5, by + 6, 19.6);
     paintLeg18(ctx, p, bx - 6.5, by + 6, 19.8);
-    ctx.fillStyle = rgb52(p.outline);
+    ctx.fillStyle = rgb53(p.outline);
     ctx.save();
     ctx.translate(bx, by);
     ctx.scale(1.1, 1.14);
@@ -30500,17 +30560,17 @@
     bodyPath10(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb52(p.coatShadow);
+    ctx.fillStyle = rgb53(p.coatShadow);
     bodyPath10(ctx, bx, by, vol);
     ctx.fill();
-    ctx.fillStyle = rgb52(p.coatMid);
+    ctx.fillStyle = rgb53(p.coatMid);
     ctx.save();
     ctx.translate(-0.4, -0.4);
     bodyPath10(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
     ctx.save();
-    ctx.fillStyle = rgb52(p.coatLight);
+    ctx.fillStyle = rgb53(p.coatLight);
     ctx.translate(-1.6, -1.8);
     bodyPath10(ctx, bx, by, vol * 0.7);
     ctx.fill();
@@ -30518,19 +30578,19 @@
     {
       const humpX = bx - 4.5;
       const humpY = by - 7.4;
-      ctx.fillStyle = rgb52(p.outline);
+      ctx.fillStyle = rgb53(p.outline);
       ctx.beginPath();
       ctx.ellipse(humpX, humpY, 7.4, 5.4, -0.35, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb52(p.coatShadow);
+      ctx.fillStyle = rgb53(p.coatShadow);
       ctx.beginPath();
       ctx.ellipse(humpX, humpY, 6.4, 4.6, -0.35, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb52(p.coatMid);
+      ctx.fillStyle = rgb53(p.coatMid);
       ctx.beginPath();
       ctx.ellipse(humpX - 0.6, humpY - 0.8, 5.6, 3.9, -0.35, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb52(p.coatLight);
+      ctx.fillStyle = rgb53(p.coatLight);
       ctx.beginPath();
       ctx.ellipse(humpX - 1.4, humpY - 1.6, 4, 2.6, -0.35, 0, Math.PI * 2);
       ctx.fill();
@@ -30539,7 +30599,7 @@
       ctx.save();
       bodyPath10(ctx, bx, by, vol);
       ctx.clip();
-      ctx.fillStyle = rgb52([255, 255, 255], 0.1 + 0.16 * p.gloss);
+      ctx.fillStyle = rgb53([255, 255, 255], 0.1 + 0.16 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(bx - 1, by - 4.6, 9, 2.4, -0.1, 0, Math.PI * 2);
       ctx.fill();
@@ -30547,7 +30607,7 @@
     }
     if (vol > 0.55) {
       const fr = (vol - 0.55) / 0.45;
-      ctx.fillStyle = rgb52(p.coatShadow, 0.9);
+      ctx.fillStyle = rgb53(p.coatShadow, 0.9);
       const rx = 13 * (0.97 + vol * 0.12);
       const ry = 8.6 * (0.97 + vol * 0.14);
       for (let i = 0; i < 10; i++) {
@@ -30560,11 +30620,11 @@
       }
     }
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb52([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb53([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 2, by - 8.2, 9.5 * (0.9 + vol * 0.2), 3.2, -0.18, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb52([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb53([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-7, -9.4], [-1, -9], [5, -7.8]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.5 + vol * 0.4, 0, Math.PI * 2);
@@ -30572,7 +30632,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb52([255, 255, 255], 0.7 * p.frostAmt);
+      ctx.fillStyle = rgb53([255, 255, 255], 0.7 * p.frostAmt);
       const pts = [
         [-7, 0],
         [-2, 4],
@@ -30592,7 +30652,7 @@
     const neckTopY = by - 4;
     const hx = bx - 16;
     const hy = by + 1;
-    ctx.fillStyle = rgb52(p.outline);
+    ctx.fillStyle = rgb53(p.outline);
     ctx.beginPath();
     ctx.moveTo(bx - 2, by - 7);
     ctx.quadraticCurveTo(neckTopX - 1, neckTopY - 2, hx + 3, hy - 4.5);
@@ -30600,7 +30660,7 @@
     ctx.quadraticCurveTo(neckTopX + 3, by + 2, bx, by + 4);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb52(p.coatMid);
+    ctx.fillStyle = rgb53(p.coatMid);
     ctx.beginPath();
     ctx.moveTo(bx - 2, by - 6.6);
     ctx.quadraticCurveTo(neckTopX - 0.6, neckTopY - 1.4, hx + 3.1, hy - 4);
@@ -30608,7 +30668,7 @@
     ctx.quadraticCurveTo(neckTopX + 3, by + 1.6, bx, by + 3.4);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = rgb52(p.coatLight, 0.7);
+    ctx.strokeStyle = rgb53(p.coatLight, 0.7);
     ctx.lineWidth = 1.6;
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -30616,7 +30676,7 @@
     ctx.quadraticCurveTo(neckTopX + 3, by + 1.4, bx, by + 3);
     ctx.stroke();
     ctx.lineCap = "butt";
-    ctx.strokeStyle = rgb52(p.maneShade);
+    ctx.strokeStyle = rgb53(p.maneShade);
     ctx.lineWidth = 2.6 * (0.9 + vol * 0.2);
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -30633,15 +30693,15 @@
       ctx.save();
       ctx.translate(side * 3, -3.6);
       ctx.rotate(-0.1 + side * 0.5);
-      ctx.fillStyle = rgb52(p.outline);
+      ctx.fillStyle = rgb53(p.outline);
       ctx.beginPath();
       ctx.ellipse(0, 0, 1.5, 2.8, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb52(p.coatMid);
+      ctx.fillStyle = rgb53(p.coatMid);
       ctx.beginPath();
       ctx.ellipse(0, 0.2, 1, 2.2, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb52(p.muzzle, 0.8);
+      ctx.fillStyle = rgb53(p.muzzle, 0.8);
       ctx.beginPath();
       ctx.ellipse(0, 0.2, 0.5, 1.3, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -30649,43 +30709,43 @@
     }
     ctx.save();
     ctx.rotate(0.28);
-    ctx.fillStyle = rgb52(p.outline);
+    ctx.fillStyle = rgb53(p.outline);
     ctx.beginPath();
     ctx.ellipse(-1, 2, 4.6, 7.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb52(p.coatShadow);
+    ctx.fillStyle = rgb53(p.coatShadow);
     ctx.beginPath();
     ctx.ellipse(-1, 2, 3.9, 6.5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb52(p.coatMid);
+    ctx.fillStyle = rgb53(p.coatMid);
     ctx.beginPath();
     ctx.ellipse(-1.4, 1.4, 3.4, 6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb52(p.coatLight);
+    ctx.fillStyle = rgb53(p.coatLight);
     ctx.beginPath();
     ctx.ellipse(-1.8, 0.6, 2.4, 4.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb52(p.outline);
+    ctx.fillStyle = rgb53(p.outline);
     ctx.beginPath();
     ctx.ellipse(-1.2, 8.4, 3.6, 3.2, -0.15, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb52(p.muzzle);
+    ctx.fillStyle = rgb53(p.muzzle);
     ctx.beginPath();
     ctx.ellipse(-1.4, 8, 2.9, 2.6, -0.15, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb52(p.coatShadow, 0.6);
+    ctx.fillStyle = rgb53(p.coatShadow, 0.6);
     ctx.beginPath();
     ctx.ellipse(-0.6, 9.2, 2.2, 1.5, -0.15, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb52(p.hoofDark, 0.85);
+    ctx.fillStyle = rgb53(p.hoofDark, 0.85);
     ctx.beginPath();
     ctx.ellipse(-1.8, 8.6, 0.7, 1, 0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb52(p.hoofDark);
+    ctx.fillStyle = rgb53(p.hoofDark);
     ctx.beginPath();
     ctx.ellipse(0.6, 1.6, 1, 1.3, 0.2, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb52([255, 255, 255], 0.5);
+    ctx.fillStyle = rgb53([255, 255, 255], 0.5);
     ctx.beginPath();
     ctx.arc(0.3, 1.1, 0.4, 0, Math.PI * 2);
     ctx.fill();
@@ -30693,21 +30753,21 @@
     {
       const dlx = -2.4;
       const dly = 8;
-      ctx.fillStyle = rgb52(p.outline);
+      ctx.fillStyle = rgb53(p.outline);
       ctx.beginPath();
       ctx.moveTo(dlx - 1.6, dly);
       ctx.quadraticCurveTo(dlx - 2.6, dly + 6.5, dlx - 0.4, dly + 8.4);
       ctx.quadraticCurveTo(dlx + 1.8, dly + 6.5, dlx + 1.4, dly);
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb52(p.maneShade);
+      ctx.fillStyle = rgb53(p.maneShade);
       ctx.beginPath();
       ctx.moveTo(dlx - 1.1, dly);
       ctx.quadraticCurveTo(dlx - 2, dly + 6, dlx - 0.4, dly + 7.6);
       ctx.quadraticCurveTo(dlx + 1.3, dly + 6, dlx + 1, dly);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = rgb52(p.mane, 0.7);
+      ctx.strokeStyle = rgb53(p.mane, 0.7);
       ctx.lineWidth = 0.9;
       ctx.beginPath();
       ctx.moveTo(dlx - 1, dly + 1);
@@ -30716,7 +30776,7 @@
     }
     ctx.restore();
     if (p.breathFogAmt > 1e-3) {
-      ctx.fillStyle = rgb52([235, 244, 255], 0.4 * p.breathFogAmt);
+      ctx.fillStyle = rgb53([235, 244, 255], 0.4 * p.breathFogAmt);
       ctx.beginPath();
       ctx.ellipse(hx - 5.6, hy + 8.6, 3, 2, 0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -30726,13 +30786,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb52(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb53(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint52(ctx, pIn, bob, headSway = 0) {
+  function paint53(ctx, pIn, bob, headSway = 0) {
     const p = clampP42(pIn);
     ctx.save();
     try {
@@ -30747,14 +30807,14 @@
     }
   }
   function draw43(season) {
-    return (ctx) => paint52(ctx, SP52[season], 0);
+    return (ctx) => paint53(ctx, SP53[season], 0);
   }
   function anim43(season) {
     return (ctx, t) => {
-      const p = clampP42(SP52[season]);
-      const bob = bobAt52(t);
+      const p = clampP42(SP53[season]);
+      const bob = bobAt53(t);
       const headSway = Math.sin(t * 0.85) * 0.05;
-      paint52(ctx, SP52[season], bob, headSway);
+      paint53(ctx, SP53[season], bob, headSway);
       ctx.save();
       try {
         const bx = 2;
@@ -30769,18 +30829,18 @@
         ctx.rotate(headSway);
         ctx.translate(-3, -3.6);
         ctx.rotate(-0.1 - 0.5 + flick * 0.5);
-        ctx.fillStyle = rgb52(p.outline);
+        ctx.fillStyle = rgb53(p.outline);
         ctx.beginPath();
         ctx.ellipse(0, 0, 1.5, 2.8, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb52(p.coatMid);
+        ctx.fillStyle = rgb53(p.coatMid);
         ctx.beginPath();
         ctx.ellipse(0, 0.2, 1, 2.2, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
         if (season === "Spring") {
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb52([255, 255, 255], g);
+          ctx.fillStyle = rgb53([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(hx - 8, hy - 12, 0.9 + g * 0.7, 0, Math.PI * 2);
           ctx.fill();
@@ -30795,7 +30855,7 @@
           const sx = bx - 9 + s * 18;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb52([255, 255, 255], 0.32);
+          ctx.fillStyle = rgb53([255, 255, 255], 0.32);
           ctx.beginPath();
           ctx.ellipse(sx, by - 2, 2.8, 5.6, 0.3, 0, Math.PI * 2);
           ctx.fill();
@@ -30806,7 +30866,7 @@
           ctx.save();
           ctx.translate(11 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb52([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb53([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -30814,19 +30874,19 @@
         } else {
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.15);
           const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb52([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb53([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(hx - reach - 1.6, hy + 8.6, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const prog = (t / 3.4 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 7 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb52([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb53([255, 255, 255], 0.85);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
           const tw = 0.4 + 0.5 * Math.abs(Math.sin(t * 2));
-          ctx.fillStyle = rgb52([255, 255, 255], tw * p.antlerSnowAmt);
+          ctx.fillStyle = rgb53([255, 255, 255], tw * p.antlerSnowAmt);
           for (const [gx, gy] of [[hx - 7, hy - 13], [hx + 8, hy - 13], [hx - 3, hy - 14]]) {
             ctx.beginPath();
             ctx.arc(gx, gy, 0.8, 0, Math.PI * 2);
@@ -30835,7 +30895,7 @@
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb52([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb53([206, 224, 255], 0.12 + sheen2 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13, 8.6, -0.04, 0, Math.PI * 2);
           ctx.fill();
@@ -30848,17 +30908,17 @@
       }
     };
   }
-  function makeTransition49(fromIdx) {
+  function makeTransition50(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother52(clamp0153(pp));
-      paint52(ctx, lerpP52(SP52[from], SP52[to], k), 0);
+      const k = smoother53(clamp0154(pp));
+      paint53(ctx, lerpP53(SP53[from], SP53[to], k), 0);
     };
   }
-  var springToSummer48 = makeTransition49(0);
-  var summerToAutumn48 = makeTransition49(1);
-  var autumnToWinter48 = makeTransition49(2);
+  var springToSummer47 = makeTransition50(0);
+  var summerToAutumn47 = makeTransition50(1);
+  var autumnToWinter47 = makeTransition50(2);
   var VARIANTS55 = {
     Spring: { draw: draw43("Spring"), anim: anim43("Spring") },
     Summer: { draw: draw43("Summer"), anim: anim43("Summer") },
@@ -30866,34 +30926,34 @@
     Winter: { draw: draw43("Winter"), anim: anim43("Winter") }
   };
   var TRANSITIONS55 = {
-    0: springToSummer48,
-    1: summerToAutumn48,
-    2: autumnToWinter48
+    0: springToSummer47,
+    1: summerToAutumn47,
+    2: autumnToWinter47
   };
 
   // src/textures/seasonal/mount/mammoth.ts
-  function clamp0154(x) {
+  function clamp0155(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  function lerp58(a, b, t) {
+  function lerp59(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB47(a, b, t) {
-    return [lerp58(a[0], b[0], t), lerp58(a[1], b[1], t), lerp58(a[2], b[2], t)];
+    return [lerp59(a[0], b[0], t), lerp59(a[1], b[1], t), lerp59(a[2], b[2], t)];
   }
-  function rgb53(c, a = 1) {
-    const r = Math.round(clamp0154(c[0] / 255) * 255);
-    const g = Math.round(clamp0154(c[1] / 255) * 255);
-    const b = Math.round(clamp0154(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0154(a)})`;
+  function rgb54(c, a = 1) {
+    const r = Math.round(clamp0155(c[0] / 255) * 255);
+    const g = Math.round(clamp0155(c[1] / 255) * 255);
+    const b = Math.round(clamp0155(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0155(a)})`;
   }
-  var smoother53 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt53(t, amp = 1.1, w = 1.05) {
+  var smoother54 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt54(t, amp = 1.1, w = 1.05) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
-  var SP53 = {
+  var SP54 = {
     // Spring — patchy SHEDDING coat (tufts loose), dewy lime pad + blossom, cool light.
     Spring: {
       coatLight: [176, 110, 70],
@@ -31008,7 +31068,7 @@
       breathFogAmt: 0.72
     }
   };
-  function lerpP53(a, b, t) {
+  function lerpP54(a, b, t) {
     return {
       coatLight: lerpRGB47(a.coatLight, b.coatLight, t),
       coatMid: lerpRGB47(a.coatMid, b.coatMid, t),
@@ -31021,47 +31081,47 @@
       soil: lerpRGB47(a.soil, b.soil, t),
       outline: lerpRGB47(a.outline, b.outline, t),
       lightWash: lerpRGB47(a.lightWash, b.lightWash, t),
-      lightWashAmt: lerp58(a.lightWashAmt, b.lightWashAmt, t),
-      coatVolume: lerp58(a.coatVolume, b.coatVolume, t),
-      shedAmt: lerp58(a.shedAmt, b.shedAmt, t),
-      gloss: lerp58(a.gloss, b.gloss, t),
-      frostAmt: lerp58(a.frostAmt, b.frostAmt, t),
-      backSnowAmt: lerp58(a.backSnowAmt, b.backSnowAmt, t),
-      padSnowAmt: lerp58(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp58(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp58(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      breathFogAmt: lerp58(a.breathFogAmt, b.breathFogAmt, t)
+      lightWashAmt: lerp59(a.lightWashAmt, b.lightWashAmt, t),
+      coatVolume: lerp59(a.coatVolume, b.coatVolume, t),
+      shedAmt: lerp59(a.shedAmt, b.shedAmt, t),
+      gloss: lerp59(a.gloss, b.gloss, t),
+      frostAmt: lerp59(a.frostAmt, b.frostAmt, t),
+      backSnowAmt: lerp59(a.backSnowAmt, b.backSnowAmt, t),
+      padSnowAmt: lerp59(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp59(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp59(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      breathFogAmt: lerp59(a.breathFogAmt, b.breathFogAmt, t)
     };
   }
   function clampP43(p) {
     return {
       ...p,
-      lightWashAmt: clamp0154(p.lightWashAmt),
-      coatVolume: clamp0154(p.coatVolume),
-      shedAmt: clamp0154(p.shedAmt),
-      gloss: clamp0154(p.gloss),
-      frostAmt: clamp0154(p.frostAmt),
-      backSnowAmt: clamp0154(p.backSnowAmt),
-      padSnowAmt: clamp0154(p.padSnowAmt),
-      blossomAmt: clamp0154(p.blossomAmt),
-      fallenLeafAmt: clamp0154(p.fallenLeafAmt),
-      breathFogAmt: clamp0154(p.breathFogAmt)
+      lightWashAmt: clamp0155(p.lightWashAmt),
+      coatVolume: clamp0155(p.coatVolume),
+      shedAmt: clamp0155(p.shedAmt),
+      gloss: clamp0155(p.gloss),
+      frostAmt: clamp0155(p.frostAmt),
+      backSnowAmt: clamp0155(p.backSnowAmt),
+      padSnowAmt: clamp0155(p.padSnowAmt),
+      blossomAmt: clamp0155(p.blossomAmt),
+      fallenLeafAmt: clamp0155(p.fallenLeafAmt),
+      breathFogAmt: clamp0155(p.breathFogAmt)
     };
   }
   function paintPad21(ctx, p) {
-    ctx.fillStyle = rgb53([0, 0, 0], 0.18);
+    ctx.fillStyle = rgb54([0, 0, 0], 0.18);
     ctx.beginPath();
     ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb53(p.soil);
+    ctx.fillStyle = rgb54(p.soil);
     ctx.beginPath();
     ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb53(p.padGrass);
+    ctx.fillStyle = rgb54(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = rgb53(p.padGrass);
+    ctx.strokeStyle = rgb54(p.padGrass);
     ctx.lineWidth = 1.4;
     ctx.lineCap = "round";
     for (let i = -16; i <= 16; i += 4) {
@@ -31073,20 +31133,20 @@
       ctx.stroke();
     }
     ctx.lineCap = "butt";
-    ctx.fillStyle = rgb53([255, 255, 255], 0.1);
+    ctx.fillStyle = rgb54([255, 255, 255], 0.1);
     ctx.beginPath();
     ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
     ctx.fill();
     if (p.padSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb53([244, 250, 255], 0.88 * p.padSnowAmt);
+      ctx.fillStyle = rgb54([244, 250, 255], 0.88 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(0, 18.2, 17.4, 5.2 * (0.7 + 0.3 * p.padSnowAmt), 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb53([255, 255, 255], 0.6 * p.padSnowAmt);
+      ctx.fillStyle = rgb54([255, 255, 255], 0.6 * p.padSnowAmt);
       ctx.beginPath();
       ctx.ellipse(-2, 17.2, 12, 2.8, -0.04, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb53([255, 255, 255], 0.75 * p.padSnowAmt);
+      ctx.fillStyle = rgb54([255, 255, 255], 0.75 * p.padSnowAmt);
       for (const [sx, sy] of [[-10, 19], [6, 20], [12, 18], [0, 17]]) {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -31095,14 +31155,14 @@
     }
     if (p.blossomAmt > 1e-3) {
       for (const [bx, by] of [[-13, 18.5], [10, 20], [0, 21], [14, 19]]) {
-        ctx.fillStyle = rgb53([255, 250, 252], 0.9 * p.blossomAmt);
+        ctx.fillStyle = rgb54([255, 250, 252], 0.9 * p.blossomAmt);
         for (let k = 0; k < 5; k++) {
           const a = k / 5 * Math.PI * 2;
           ctx.beginPath();
           ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb53([252, 214, 110], p.blossomAmt);
+        ctx.fillStyle = rgb54([252, 214, 110], p.blossomAmt);
         ctx.beginPath();
         ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -31118,11 +31178,11 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb53(col, p.fallenLeafAmt);
+        ctx.fillStyle = rgb54(col, p.fallenLeafAmt);
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
         ctx.fill();
-        ctx.strokeStyle = rgb53([110, 60, 26], p.fallenLeafAmt);
+        ctx.strokeStyle = rgb54([110, 60, 26], p.fallenLeafAmt);
         ctx.lineWidth = 0.6;
         ctx.beginPath();
         ctx.moveTo(-2.4, 0);
@@ -31134,26 +31194,26 @@
   }
   function paintLeg19(ctx, p, x, topY, baseY, vol) {
     const w = 4.6 * (0.95 + vol * 0.18);
-    ctx.strokeStyle = rgb53(p.outline);
+    ctx.strokeStyle = rgb54(p.outline);
     ctx.lineWidth = w + 1.4;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY);
     ctx.stroke();
-    ctx.strokeStyle = rgb53(p.coatShadow);
+    ctx.strokeStyle = rgb54(p.coatShadow);
     ctx.lineWidth = w;
     ctx.beginPath();
     ctx.moveTo(x, topY);
     ctx.lineTo(x, baseY - 1.2);
     ctx.stroke();
-    ctx.strokeStyle = rgb53(p.coatMid);
+    ctx.strokeStyle = rgb54(p.coatMid);
     ctx.lineWidth = w * 0.6;
     ctx.beginPath();
     ctx.moveTo(x - w * 0.18, topY + 1);
     ctx.lineTo(x - w * 0.18, baseY - 2);
     ctx.stroke();
-    ctx.fillStyle = rgb53(p.darkPart);
+    ctx.fillStyle = rgb54(p.darkPart);
     ctx.beginPath();
     ctx.ellipse(x, baseY, w * 0.6, 1.6, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -31170,7 +31230,7 @@
     const fr = (vol - 0.3) / 0.7;
     const rx = 13.5 * (0.97 + vol * 0.14);
     const ry = 9.2 * (0.97 + vol * 0.16);
-    ctx.fillStyle = rgb53(col, 0.9);
+    ctx.fillStyle = rgb54(col, 0.9);
     for (let i = 0; i < 14; i++) {
       const a = Math.PI * 0.12 + i / 13 * Math.PI * 1;
       const lx = cx + Math.cos(a) * rx * 1.02;
@@ -31194,20 +31254,20 @@
     ctx.restore();
     paintLeg19(ctx, p, bx + 6, by + 7, 19.8, vol);
     paintLeg19(ctx, p, bx - 8, by + 7, 20, vol);
-    ctx.strokeStyle = rgb53(p.coatShadow);
+    ctx.strokeStyle = rgb54(p.coatShadow);
     ctx.lineWidth = 2.2;
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(bx + 12.5, by + 1);
     ctx.quadraticCurveTo(bx + 14.5, by + 5, bx + 13.5, by + 9);
     ctx.stroke();
-    ctx.fillStyle = rgb53(p.darkPart, 0.9);
+    ctx.fillStyle = rgb54(p.darkPart, 0.9);
     ctx.beginPath();
     ctx.arc(bx + 13.5, by + 9.6, 1.3, 0, Math.PI * 2);
     ctx.fill();
     ctx.lineCap = "butt";
     paintShag(ctx, bx, by, vol, p.coatShadow);
-    ctx.fillStyle = rgb53(p.outline);
+    ctx.fillStyle = rgb54(p.outline);
     ctx.save();
     ctx.translate(bx, by);
     ctx.scale(1.09, 1.12);
@@ -31215,17 +31275,17 @@
     bodyPath11(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
-    ctx.fillStyle = rgb53(p.coatShadow);
+    ctx.fillStyle = rgb54(p.coatShadow);
     bodyPath11(ctx, bx, by, vol);
     ctx.fill();
-    ctx.fillStyle = rgb53(p.coatMid);
+    ctx.fillStyle = rgb54(p.coatMid);
     ctx.save();
     ctx.translate(-0.5, -0.5);
     bodyPath11(ctx, bx, by, vol);
     ctx.fill();
     ctx.restore();
     ctx.save();
-    ctx.fillStyle = rgb53(p.coatLight);
+    ctx.fillStyle = rgb54(p.coatLight);
     ctx.translate(-1.8, -2);
     bodyPath11(ctx, bx, by, vol * 0.7);
     ctx.fill();
@@ -31234,7 +31294,7 @@
       ctx.save();
       bodyPath11(ctx, bx, by, vol);
       ctx.clip();
-      ctx.strokeStyle = rgb53(p.coatShadow, 0.55 + 0.3 * vol);
+      ctx.strokeStyle = rgb54(p.coatShadow, 0.55 + 0.3 * vol);
       ctx.lineWidth = 1;
       ctx.lineCap = "round";
       const n = 5 + Math.round(vol * 6);
@@ -31252,14 +31312,14 @@
       ctx.save();
       bodyPath11(ctx, bx, by, vol);
       ctx.clip();
-      ctx.fillStyle = rgb53([255, 255, 255], 0.1 + 0.16 * p.gloss);
+      ctx.fillStyle = rgb54([255, 255, 255], 0.1 + 0.16 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(bx - 2, by - 5.2, 10, 2.6, -0.1, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
     if (p.shedAmt > 1e-3) {
-      ctx.fillStyle = rgb53(p.coatLight, 0.85 * p.shedAmt);
+      ctx.fillStyle = rgb54(p.coatLight, 0.85 * p.shedAmt);
       const tufts = [
         [bx - 8, by - 7, 0.3],
         [bx - 1, by - 8.4, -0.2],
@@ -31278,11 +31338,11 @@
       }
     }
     if (p.backSnowAmt > 1e-3) {
-      ctx.fillStyle = rgb53([248, 252, 255], 0.92 * p.backSnowAmt);
+      ctx.fillStyle = rgb54([248, 252, 255], 0.92 * p.backSnowAmt);
       ctx.beginPath();
       ctx.ellipse(bx - 1, by - 7.6, 10 * (0.9 + vol * 0.2), 3.2, -0.06, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb53([255, 255, 255], 0.85 * p.backSnowAmt);
+      ctx.fillStyle = rgb54([255, 255, 255], 0.85 * p.backSnowAmt);
       for (const [dx, dy] of [[-6, -8.4], [0, -9], [6, -8]]) {
         ctx.beginPath();
         ctx.arc(bx + dx, by + dy, 1.4 + vol * 0.4, 0, Math.PI * 2);
@@ -31290,7 +31350,7 @@
       }
     }
     if (p.frostAmt > 1e-3) {
-      ctx.fillStyle = rgb53([255, 255, 255], 0.72 * p.frostAmt);
+      ctx.fillStyle = rgb54([255, 255, 255], 0.72 * p.frostAmt);
       const pts = [
         [-8, 0],
         [-2, 4],
@@ -31309,30 +31369,30 @@
     }
     const hx = bx - 13;
     const hy = by - 4;
-    ctx.fillStyle = rgb53(p.outline);
+    ctx.fillStyle = rgb54(p.outline);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 7.6, 8.8, -0.05, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb53(p.coatShadow);
+    ctx.fillStyle = rgb54(p.coatShadow);
     ctx.beginPath();
     ctx.ellipse(hx, hy, 6.8, 8, -0.05, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb53(p.coatMid);
+    ctx.fillStyle = rgb54(p.coatMid);
     ctx.beginPath();
     ctx.ellipse(hx - 0.5, hy - 0.6, 6.2, 7.4, -0.05, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb53(p.coatLight);
+    ctx.fillStyle = rgb54(p.coatLight);
     ctx.beginPath();
     ctx.ellipse(hx - 1.8, hy - 2.6, 4, 4.8, -0.05, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb53(p.coatMid);
+    ctx.fillStyle = rgb54(p.coatMid);
     ctx.beginPath();
     ctx.moveTo(hx - 3.4, hy - 6.4);
     ctx.quadraticCurveTo(hx - 1, hy - 10.4, hx + 1.4, hy - 6);
     ctx.quadraticCurveTo(hx - 1, hy - 7.2, hx - 3.4, hy - 6.4);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = rgb53(p.coatShadow, 0.8);
+    ctx.strokeStyle = rgb54(p.coatShadow, 0.8);
     ctx.lineWidth = 0.9;
     ctx.lineCap = "round";
     for (const ox of [-2.4, -0.6, 1.2]) {
@@ -31346,26 +31406,26 @@
       ctx.save();
       ctx.translate(hx + 4.2, hy - 0.4);
       ctx.rotate(0.25 + earFlick * 0.4);
-      ctx.fillStyle = rgb53(p.outline);
+      ctx.fillStyle = rgb54(p.outline);
       ctx.beginPath();
       ctx.ellipse(0, 0, 2.4, 3, 0.2, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb53(p.coatShadow);
+      ctx.fillStyle = rgb54(p.coatShadow);
       ctx.beginPath();
       ctx.ellipse(-0.2, 0, 1.8, 2.4, 0.2, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     }
-    ctx.fillStyle = rgb53(p.darkPart);
+    ctx.fillStyle = rgb54(p.darkPart);
     ctx.beginPath();
     ctx.ellipse(hx - 2.4, hy - 1.2, 1, 1.2, 0.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb53([255, 255, 255], 0.5);
+    ctx.fillStyle = rgb54([255, 255, 255], 0.5);
     ctx.beginPath();
     ctx.arc(hx - 2.7, hy - 1.6, 0.4, 0, Math.PI * 2);
     ctx.fill();
     const drawTusk = (rootX, rootY, spread, dim) => {
-      ctx.strokeStyle = rgb53(p.outline, dim);
+      ctx.strokeStyle = rgb54(p.outline, dim);
       ctx.lineWidth = 3.6;
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -31373,14 +31433,14 @@
       ctx.quadraticCurveTo(rootX - 3 - spread, rootY + 9, rootX - 1 - spread, rootY + 15);
       ctx.quadraticCurveTo(rootX + 1 - spread, rootY + 19, rootX + 5 - spread * 0.5, rootY + 18);
       ctx.stroke();
-      ctx.strokeStyle = rgb53(p.tuskShade, dim);
+      ctx.strokeStyle = rgb54(p.tuskShade, dim);
       ctx.lineWidth = 2.6;
       ctx.beginPath();
       ctx.moveTo(rootX, rootY);
       ctx.quadraticCurveTo(rootX - 3 - spread, rootY + 9, rootX - 1 - spread, rootY + 15);
       ctx.quadraticCurveTo(rootX + 1 - spread, rootY + 19, rootX + 5 - spread * 0.5, rootY + 18);
       ctx.stroke();
-      ctx.strokeStyle = rgb53(p.tuskLight, dim);
+      ctx.strokeStyle = rgb54(p.tuskLight, dim);
       ctx.lineWidth = 1.4;
       ctx.beginPath();
       ctx.moveTo(rootX - 0.6, rootY + 1);
@@ -31396,7 +31456,7 @@
       const tipY = hy + 16 + trunkSway * 0.4;
       const midX = hx - 5 + trunkSway * 0.6;
       const midY = hy + 11;
-      ctx.strokeStyle = rgb53(p.outline);
+      ctx.strokeStyle = rgb54(p.outline);
       ctx.lineWidth = 5.2;
       ctx.lineCap = "round";
       ctx.beginPath();
@@ -31404,25 +31464,25 @@
       ctx.quadraticCurveTo(midX, midY, tipX, tipY);
       ctx.quadraticCurveTo(tipX + 2.6, tipY + 2.6, tipX + 3.8 + trunkSway * 0.5, tipY - 0.4);
       ctx.stroke();
-      ctx.strokeStyle = rgb53(p.trunkShade);
+      ctx.strokeStyle = rgb54(p.trunkShade);
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(t0x, t0y);
       ctx.quadraticCurveTo(midX, midY, tipX, tipY);
       ctx.quadraticCurveTo(tipX + 2.6, tipY + 2.6, tipX + 3.8 + trunkSway * 0.5, tipY - 0.4);
       ctx.stroke();
-      ctx.strokeStyle = rgb53(p.coatLight, 0.85);
+      ctx.strokeStyle = rgb54(p.coatLight, 0.85);
       ctx.lineWidth = 1.8;
       ctx.beginPath();
       ctx.moveTo(t0x - 1.2, t0y + 1);
       ctx.quadraticCurveTo(midX - 1.6, midY, tipX - 1, tipY - 1);
       ctx.stroke();
-      ctx.strokeStyle = rgb53(p.outline, 0.5);
+      ctx.strokeStyle = rgb54(p.outline, 0.5);
       ctx.lineWidth = 0.9;
       for (let i = 1; i <= 3; i++) {
         const tt = i / 4;
-        const rxp = lerp58(t0x, tipX, tt) + tt * (1 - tt) * (midX - (t0x + tipX) / 2) * 2;
-        const ryp = lerp58(t0y, tipY, tt) + tt * (1 - tt) * (midY - (t0y + tipY) / 2) * 2;
+        const rxp = lerp59(t0x, tipX, tt) + tt * (1 - tt) * (midX - (t0x + tipX) / 2) * 2;
+        const ryp = lerp59(t0y, tipY, tt) + tt * (1 - tt) * (midY - (t0y + tipY) / 2) * 2;
         ctx.beginPath();
         ctx.moveTo(rxp - 2, ryp);
         ctx.lineTo(rxp + 2, ryp);
@@ -31430,7 +31490,7 @@
       }
       ctx.lineCap = "butt";
       if (p.breathFogAmt > 1e-3) {
-        ctx.fillStyle = rgb53([235, 244, 255], 0.4 * p.breathFogAmt);
+        ctx.fillStyle = rgb54([235, 244, 255], 0.4 * p.breathFogAmt);
         ctx.beginPath();
         ctx.ellipse(tipX + 5.4 + trunkSway * 0.5, tipY - 1.4, 3, 2, 0.2, 0, Math.PI * 2);
         ctx.fill();
@@ -31441,13 +31501,13 @@
     if (p.lightWashAmt <= 1e-3) return;
     ctx.save();
     ctx.globalCompositeOperation = "soft-light";
-    ctx.fillStyle = rgb53(p.lightWash, p.lightWashAmt);
+    ctx.fillStyle = rgb54(p.lightWash, p.lightWashAmt);
     ctx.beginPath();
     ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
-  function paint53(ctx, pIn, bob, trunkSway = 0, earFlick = 0) {
+  function paint54(ctx, pIn, bob, trunkSway = 0, earFlick = 0) {
     const p = clampP43(pIn);
     ctx.save();
     try {
@@ -31462,17 +31522,17 @@
     }
   }
   function draw44(season) {
-    return (ctx) => paint53(ctx, SP53[season], 0);
+    return (ctx) => paint54(ctx, SP54[season], 0);
   }
   function anim44(season) {
     return (ctx, t) => {
-      const p = clampP43(SP53[season]);
-      const bob = bobAt53(t);
+      const p = clampP43(SP54[season]);
+      const bob = bobAt54(t);
       const trunkSway = Math.sin(t * 0.9) * 1.5;
       const loop = t % 5 / 5;
       const flickGate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 6;
       const earFlick = Math.sin(t * 9) * flickGate;
-      paint53(ctx, SP53[season], bob, trunkSway, earFlick);
+      paint54(ctx, SP54[season], bob, trunkSway, earFlick);
       ctx.save();
       try {
         const bx = 3;
@@ -31486,14 +31546,14 @@
           ctx.save();
           ctx.translate(tx, ty);
           ctx.rotate(prog * 3);
-          ctx.fillStyle = rgb53(p.coatLight, (1 - prog) * 0.8);
+          ctx.fillStyle = rgb54(p.coatLight, (1 - prog) * 0.8);
           ctx.beginPath();
           ctx.ellipse(-1, 0, 1.6, 1, 0, 0, Math.PI * 2);
           ctx.ellipse(1.1, -0.3, 1.2, 0.8, 0, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
           const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-          ctx.fillStyle = rgb53([255, 255, 255], g);
+          ctx.fillStyle = rgb54([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-9, 18.4, 1.1 + g, 0, Math.PI * 2);
           ctx.fill();
@@ -31505,7 +31565,7 @@
           const sx = bx - 10 + s * 20;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb53([255, 255, 255], 0.32);
+          ctx.fillStyle = rgb54([255, 255, 255], 0.32);
           ctx.beginPath();
           ctx.ellipse(sx, by - 2, 3, 6, 0.28, 0, Math.PI * 2);
           ctx.fill();
@@ -31516,7 +31576,7 @@
           ctx.save();
           ctx.translate(11 + dx, 20.5);
           ctx.rotate(0.7 + a);
-          ctx.fillStyle = rgb53([212, 150, 52], p.fallenLeafAmt);
+          ctx.fillStyle = rgb54([212, 150, 52], p.fallenLeafAmt);
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -31527,12 +31587,12 @@
           const tipY = hy + 16 + trunkSway2 * 0.4;
           const breathe = 0.5 + 0.5 * Math.sin(t * 1.2);
           const reach = 4 + breathe * 3.5;
-          ctx.fillStyle = rgb53([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          ctx.fillStyle = rgb54([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
           ctx.beginPath();
           ctx.ellipse(tipX + 5 + reach * 0.4, tipY - 1.4, 2.8 + breathe * 1.8, 2 + breathe * 1.2, 0.2, 0, Math.PI * 2);
           ctx.fill();
           const flakes = [[8, 0], [-6, 0.45]];
-          ctx.fillStyle = rgb53([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb54([255, 255, 255], 0.85);
           for (const [fx, ph] of flakes) {
             const prog = ((t / 3.4 + ph) % 1 + 1) % 1;
             const fy = -20 + prog * 38;
@@ -31546,7 +31606,7 @@
           const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb53([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb54([206, 224, 255], 0.12 + sheen2 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 14, 9, -0.05, 0, Math.PI * 2);
           ctx.fill();
@@ -31559,17 +31619,17 @@
       }
     };
   }
-  function makeTransition50(fromIdx) {
+  function makeTransition51(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother53(clamp0154(pp));
-      paint53(ctx, lerpP53(SP53[from], SP53[to], k), 0);
+      const k = smoother54(clamp0155(pp));
+      paint54(ctx, lerpP54(SP54[from], SP54[to], k), 0);
     };
   }
-  var springToSummer49 = makeTransition50(0);
-  var summerToAutumn49 = makeTransition50(1);
-  var autumnToWinter49 = makeTransition50(2);
+  var springToSummer48 = makeTransition51(0);
+  var summerToAutumn48 = makeTransition51(1);
+  var autumnToWinter48 = makeTransition51(2);
   var VARIANTS56 = {
     Spring: { draw: draw44("Spring"), anim: anim44("Spring") },
     Summer: { draw: draw44("Summer"), anim: anim44("Summer") },
@@ -31577,31 +31637,31 @@
     Winter: { draw: draw44("Winter"), anim: anim44("Winter") }
   };
   var TRANSITIONS56 = {
-    0: springToSummer49,
-    1: summerToAutumn49,
-    2: autumnToWinter49
+    0: springToSummer48,
+    1: summerToAutumn48,
+    2: autumnToWinter48
   };
 
   // src/textures/seasonal/fish/clam.ts
-  function clamp0155(x) {
+  function clamp0156(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother54 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function lerp59(a, b, t) {
+  var smoother55 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp60(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB48(a, b, t) {
-    return [lerp59(a[0], b[0], t), lerp59(a[1], b[1], t), lerp59(a[2], b[2], t)];
+    return [lerp60(a[0], b[0], t), lerp60(a[1], b[1], t), lerp60(a[2], b[2], t)];
   }
-  function rgb54(c) {
+  function rgb55(c) {
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba23(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0155(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0156(a)})`;
   }
-  function lerpP54(a, b, t) {
+  function lerpP55(a, b, t) {
     return {
       shellLight: lerpRGB48(a.shellLight, b.shellLight, t),
       shellMid: lerpRGB48(a.shellMid, b.shellMid, t),
@@ -31612,34 +31672,34 @@
       ice: lerpRGB48(a.ice, b.ice, t),
       outline: lerpRGB48(a.outline, b.outline, t),
       light: lerpRGB48(a.light, b.light, t),
-      lightAmt: lerp59(a.lightAmt, b.lightAmt, t),
-      openAmt: lerp59(a.openAmt, b.openAmt, t),
-      gloss: lerp59(a.gloss, b.gloss, t),
-      frostAmt: lerp59(a.frostAmt, b.frostAmt, t),
-      snowCapAmt: lerp59(a.snowCapAmt, b.snowCapAmt, t),
-      iceAmt: lerp59(a.iceAmt, b.iceAmt, t),
-      blossomAmt: lerp59(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp59(a.fallenLeafAmt, b.fallenLeafAmt, t)
+      lightAmt: lerp60(a.lightAmt, b.lightAmt, t),
+      openAmt: lerp60(a.openAmt, b.openAmt, t),
+      gloss: lerp60(a.gloss, b.gloss, t),
+      frostAmt: lerp60(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp60(a.snowCapAmt, b.snowCapAmt, t),
+      iceAmt: lerp60(a.iceAmt, b.iceAmt, t),
+      blossomAmt: lerp60(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp60(a.fallenLeafAmt, b.fallenLeafAmt, t)
     };
   }
   function clampP44(p) {
     return {
       ...p,
-      lightAmt: clamp0155(p.lightAmt),
-      openAmt: clamp0155(p.openAmt),
-      gloss: clamp0155(p.gloss),
-      frostAmt: clamp0155(p.frostAmt),
-      snowCapAmt: clamp0155(p.snowCapAmt),
-      iceAmt: clamp0155(p.iceAmt),
-      blossomAmt: clamp0155(p.blossomAmt),
-      fallenLeafAmt: clamp0155(p.fallenLeafAmt)
+      lightAmt: clamp0156(p.lightAmt),
+      openAmt: clamp0156(p.openAmt),
+      gloss: clamp0156(p.gloss),
+      frostAmt: clamp0156(p.frostAmt),
+      snowCapAmt: clamp0156(p.snowCapAmt),
+      iceAmt: clamp0156(p.iceAmt),
+      blossomAmt: clamp0156(p.blossomAmt),
+      fallenLeafAmt: clamp0156(p.fallenLeafAmt)
     };
   }
   var TAN_LIGHT = [230, 206, 162];
   var TAN_MID = [205, 174, 124];
   var TAN_DARK = [156, 122, 78];
   var CREAM = [244, 232, 214];
-  var SP54 = {
+  var SP55 = {
     // Spring — fresh bright-blue dewy water + a tiny floating blossom petal.
     Spring: {
       shellLight: TAN_LIGHT,
@@ -31756,7 +31816,7 @@
       ctx.stroke();
     }
   }
-  function paint54(ctx, raw, bob) {
+  function paint55(ctx, raw, bob) {
     const p = clampP44(raw);
     ctx.save();
     try {
@@ -31767,13 +31827,13 @@
       ctx.beginPath();
       ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb54(p.waterDeep);
+      ctx.fillStyle = rgb55(p.waterDeep);
       ctx.beginPath();
       ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
       const waterGrad = ctx.createLinearGradient(0, 14, 0, 24);
-      waterGrad.addColorStop(0, rgb54(p.water));
-      waterGrad.addColorStop(1, rgb54(p.waterDeep));
+      waterGrad.addColorStop(0, rgb55(p.water));
+      waterGrad.addColorStop(1, rgb55(p.waterDeep));
       ctx.fillStyle = waterGrad;
       ctx.beginPath();
       ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
@@ -31872,23 +31932,23 @@
       const upperTilt = baseTilt - 0.34 - p.openAmt * 0.22;
       ctx.save();
       valvePath(ctx, lowerTilt, span);
-      ctx.fillStyle = rgb54(p.outline);
+      ctx.fillStyle = rgb55(p.outline);
       ctx.fill();
       ctx.restore();
       ctx.save();
       valvePath(ctx, lowerTilt, span * 0.97);
       ctx.clip();
-      ctx.fillStyle = rgb54(p.shellDark);
+      ctx.fillStyle = rgb55(p.shellDark);
       ctx.fillRect(-SHELL_R - 4, -SHELL_R - 4, (SHELL_R + 4) * 2, (SHELL_R + 4) * 2);
       const lg = ctx.createLinearGradient(-SHELL_R, -SHELL_R, SHELL_R, SHELL_R);
-      lg.addColorStop(0, rgb54(p.shellMid));
-      lg.addColorStop(1, rgb54(p.shellDark));
+      lg.addColorStop(0, rgb55(p.shellMid));
+      lg.addColorStop(1, rgb55(p.shellDark));
       ctx.fillStyle = lg;
       ctx.fillRect(-SHELL_R - 4, -SHELL_R - 4, (SHELL_R + 4) * 2, (SHELL_R + 4) * 2);
       valveRibs(ctx, lowerTilt, span, p.shellDark, p.shellMid);
       ctx.restore();
       ctx.save();
-      ctx.fillStyle = rgb54(p.bodyCream);
+      ctx.fillStyle = rgb55(p.bodyCream);
       ctx.beginPath();
       const bodyA = baseTilt;
       const bdx = Math.cos(bodyA);
@@ -31904,18 +31964,18 @@
       ctx.restore();
       ctx.save();
       valvePath(ctx, upperTilt, span);
-      ctx.fillStyle = rgb54(p.outline);
+      ctx.fillStyle = rgb55(p.outline);
       ctx.fill();
       ctx.restore();
       ctx.save();
       valvePath(ctx, upperTilt, span * 0.97);
       ctx.clip();
-      ctx.fillStyle = rgb54(p.shellMid);
+      ctx.fillStyle = rgb55(p.shellMid);
       ctx.fillRect(-SHELL_R - 4, -SHELL_R - 4, (SHELL_R + 4) * 2, (SHELL_R + 4) * 2);
       const ug = ctx.createLinearGradient(-SHELL_R, -SHELL_R, SHELL_R * 0.4, SHELL_R);
-      ug.addColorStop(0, rgb54(p.shellLight));
-      ug.addColorStop(0.55, rgb54(p.shellMid));
-      ug.addColorStop(1, rgb54(p.shellDark));
+      ug.addColorStop(0, rgb55(p.shellLight));
+      ug.addColorStop(0.55, rgb55(p.shellMid));
+      ug.addColorStop(1, rgb55(p.shellDark));
       ctx.fillStyle = ug;
       ctx.globalAlpha = 0.95;
       ctx.fillRect(-SHELL_R - 4, -SHELL_R - 4, (SHELL_R + 4) * 2, (SHELL_R + 4) * 2);
@@ -31978,21 +32038,21 @@
       ctx.restore();
     }
   }
-  function bobAt54(t, amp = 0.7, w = 1.4) {
+  function bobAt55(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function breatheAt(t, amp = 0.12, w = 1) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw45(season) {
-    return (ctx) => paint54(ctx, SP54[season], 0);
+    return (ctx) => paint55(ctx, SP55[season], 0);
   }
   function anim45(season) {
     return (ctx, t) => {
-      const bob = bobAt54(t);
-      const sp = SP54[season];
-      const breathing = { ...sp, openAmt: clamp0155(sp.openAmt + breatheAt(t)) };
-      paint54(ctx, breathing, bob);
+      const bob = bobAt55(t);
+      const sp = SP55[season];
+      const breathing = { ...sp, openAmt: clamp0156(sp.openAmt + breatheAt(t)) };
+      paint55(ctx, breathing, bob);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
@@ -32068,17 +32128,17 @@
       }
     };
   }
-  function makeTransition51(fromIdx) {
-    const from = SP54[SEASON_NAMES[fromIdx]];
-    const to = SP54[SEASON_NAMES[fromIdx + 1]];
+  function makeTransition52(fromIdx) {
+    const from = SP55[SEASON_NAMES[fromIdx]];
+    const to = SP55[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother54(clamp0155(pp));
-      paint54(ctx, lerpP54(from, to, k), 0);
+      const k = smoother55(clamp0156(pp));
+      paint55(ctx, lerpP55(from, to, k), 0);
     };
   }
-  var springToSummer50 = makeTransition51(0);
-  var summerToAutumn50 = makeTransition51(1);
-  var autumnToWinter50 = makeTransition51(2);
+  var springToSummer49 = makeTransition52(0);
+  var summerToAutumn49 = makeTransition52(1);
+  var autumnToWinter49 = makeTransition52(2);
   var VARIANTS57 = {
     Spring: { draw: draw45("Spring"), anim: anim45("Spring") },
     Summer: { draw: draw45("Summer"), anim: anim45("Summer") },
@@ -32086,31 +32146,31 @@
     Winter: { draw: draw45("Winter"), anim: anim45("Winter") }
   };
   var TRANSITIONS57 = {
-    0: springToSummer50,
-    1: summerToAutumn50,
-    2: autumnToWinter50
+    0: springToSummer49,
+    1: summerToAutumn49,
+    2: autumnToWinter49
   };
 
   // src/textures/seasonal/fish/oyster.ts
-  function clamp0156(x) {
+  function clamp0157(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother55 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function lerp60(a, b, t) {
+  var smoother56 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp61(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB49(a, b, t) {
-    return [lerp60(a[0], b[0], t), lerp60(a[1], b[1], t), lerp60(a[2], b[2], t)];
+    return [lerp61(a[0], b[0], t), lerp61(a[1], b[1], t), lerp61(a[2], b[2], t)];
   }
-  function rgb55(c) {
+  function rgb56(c) {
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba24(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0156(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0157(a)})`;
   }
-  function lerpP55(a, b, t) {
+  function lerpP56(a, b, t) {
     return {
       shellLight: lerpRGB49(a.shellLight, b.shellLight, t),
       shellMid: lerpRGB49(a.shellMid, b.shellMid, t),
@@ -32124,27 +32184,27 @@
       soil: lerpRGB49(a.soil, b.soil, t),
       outline: lerpRGB49(a.outline, b.outline, t),
       light: lerpRGB49(a.light, b.light, t),
-      lightAmt: lerp60(a.lightAmt, b.lightAmt, t),
-      waterSat: lerp60(a.waterSat, b.waterSat, t),
-      pearlGloss: lerp60(a.pearlGloss, b.pearlGloss, t),
-      frostAmt: lerp60(a.frostAmt, b.frostAmt, t),
-      iceAmt: lerp60(a.iceAmt, b.iceAmt, t),
-      padSnowAmt: lerp60(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp60(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp60(a.fallenLeafAmt, b.fallenLeafAmt, t)
+      lightAmt: lerp61(a.lightAmt, b.lightAmt, t),
+      waterSat: lerp61(a.waterSat, b.waterSat, t),
+      pearlGloss: lerp61(a.pearlGloss, b.pearlGloss, t),
+      frostAmt: lerp61(a.frostAmt, b.frostAmt, t),
+      iceAmt: lerp61(a.iceAmt, b.iceAmt, t),
+      padSnowAmt: lerp61(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp61(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp61(a.fallenLeafAmt, b.fallenLeafAmt, t)
     };
   }
   function clampP45(p) {
     return {
       ...p,
-      lightAmt: clamp0156(p.lightAmt),
-      waterSat: clamp0156(p.waterSat),
-      pearlGloss: clamp0156(p.pearlGloss),
-      frostAmt: clamp0156(p.frostAmt),
-      iceAmt: clamp0156(p.iceAmt),
-      padSnowAmt: clamp0156(p.padSnowAmt),
-      blossomAmt: clamp0156(p.blossomAmt),
-      fallenLeafAmt: clamp0156(p.fallenLeafAmt)
+      lightAmt: clamp0157(p.lightAmt),
+      waterSat: clamp0157(p.waterSat),
+      pearlGloss: clamp0157(p.pearlGloss),
+      frostAmt: clamp0157(p.frostAmt),
+      iceAmt: clamp0157(p.iceAmt),
+      padSnowAmt: clamp0157(p.padSnowAmt),
+      blossomAmt: clamp0157(p.blossomAmt),
+      fallenLeafAmt: clamp0157(p.fallenLeafAmt)
     };
   }
   var SHELL_LIGHT = [196, 200, 206];
@@ -32153,7 +32213,7 @@
   var PEARL_LIGHT = [250, 248, 244];
   var PEARL_MID = [226, 224, 222];
   var PEARL_DARK = [184, 184, 190];
-  var SP55 = {
+  var SP56 = {
     // Spring — grey shell + pearl; fresh bright-blue water + a tiny blossom petal.
     Spring: {
       shellLight: SHELL_LIGHT,
@@ -32297,7 +32357,7 @@
       ctx.stroke();
     });
   }
-  function paint55(ctx, raw, bob) {
+  function paint56(ctx, raw, bob) {
     const p = clampP45(raw);
     ctx.save();
     try {
@@ -32308,12 +32368,12 @@
       ctx.beginPath();
       ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb55(p.waterDark);
+      ctx.fillStyle = rgb56(p.waterDark);
       ctx.beginPath();
       ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
       const surf = lerpRGB49(p.waterDark, p.water, 0.4 + 0.6 * p.waterSat);
-      ctx.fillStyle = rgb55(surf);
+      ctx.fillStyle = rgb56(surf);
       ctx.beginPath();
       ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -32409,15 +32469,15 @@
       ctx.fill();
       const cy = SHELL_CY + bob;
       topValvePath(ctx, bob);
-      ctx.fillStyle = rgb55(p.outline);
+      ctx.fillStyle = rgb56(p.outline);
       ctx.fill();
       ctx.save();
       topValvePath(ctx, bob);
       ctx.clip();
       const topGrad = ctx.createLinearGradient(-SHELL_HALF, cy - 18, SHELL_HALF, cy - 2);
-      topGrad.addColorStop(0, rgb55(p.shellLight));
-      topGrad.addColorStop(0.5, rgb55(p.shellMid));
-      topGrad.addColorStop(1, rgb55(p.shellDark));
+      topGrad.addColorStop(0, rgb56(p.shellLight));
+      topGrad.addColorStop(0.5, rgb56(p.shellMid));
+      topGrad.addColorStop(1, rgb56(p.shellDark));
       ctx.fillStyle = topGrad;
       ctx.fillRect(-SHELL_HALF - 3, cy - 20, (SHELL_HALF + 3) * 2, 22);
       ctx.strokeStyle = rgba24(p.shellDark, 0.6);
@@ -32433,7 +32493,7 @@
       ctx.ellipse(0, cy - 8.5, SHELL_HALF * 0.7, 2.6, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
-      ctx.fillStyle = rgb55(p.mantle);
+      ctx.fillStyle = rgb56(p.mantle);
       ctx.beginPath();
       ctx.ellipse(0, cy - 1.5, SHELL_HALF * 0.72, 4.4, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -32444,7 +32504,7 @@
       const pearlX = 0.5;
       const pearlY = cy - 2.6;
       const pearlR = 4.6;
-      ctx.fillStyle = rgb55(p.outline);
+      ctx.fillStyle = rgb56(p.outline);
       ctx.beginPath();
       ctx.arc(pearlX, pearlY, pearlR + 0.7, 0, Math.PI * 2);
       ctx.fill();
@@ -32456,9 +32516,9 @@
         pearlY,
         pearlR
       );
-      pGrad.addColorStop(0, rgb55(p.pearlLight));
-      pGrad.addColorStop(0.55, rgb55(p.pearlMid));
-      pGrad.addColorStop(1, rgb55(p.pearlDark));
+      pGrad.addColorStop(0, rgb56(p.pearlLight));
+      pGrad.addColorStop(0.55, rgb56(p.pearlMid));
+      pGrad.addColorStop(1, rgb56(p.pearlDark));
       ctx.fillStyle = pGrad;
       ctx.beginPath();
       ctx.arc(pearlX, pearlY, pearlR, 0, Math.PI * 2);
@@ -32474,17 +32534,17 @@
         ctx.fill();
       }
       bottomValvePath(ctx, bob);
-      ctx.fillStyle = rgb55(p.outline);
+      ctx.fillStyle = rgb56(p.outline);
       ctx.fill();
       ctx.save();
       bottomValvePath(ctx, bob);
       ctx.clip();
-      ctx.fillStyle = rgb55(p.shellMid);
+      ctx.fillStyle = rgb56(p.shellMid);
       ctx.fillRect(-SHELL_HALF - 3, cy - 8, (SHELL_HALF + 3) * 2, 18);
       const cupGrad = ctx.createLinearGradient(-SHELL_HALF, cy - 6, SHELL_HALF, cy + 8);
-      cupGrad.addColorStop(0, rgb55(p.shellLight));
-      cupGrad.addColorStop(0.5, rgb55(p.shellMid));
-      cupGrad.addColorStop(1, rgb55(p.shellDark));
+      cupGrad.addColorStop(0, rgb56(p.shellLight));
+      cupGrad.addColorStop(0.5, rgb56(p.shellMid));
+      cupGrad.addColorStop(1, rgb56(p.shellDark));
       ctx.globalAlpha = 0.92;
       ctx.beginPath();
       ctx.ellipse(-1.5, cy + 1.5, SHELL_HALF + 1, 8, 0, 0, Math.PI * 2);
@@ -32534,11 +32594,11 @@
       ctx.restore();
     }
   }
-  function bobAt55(t, amp = 0.7, w = 1.4) {
+  function bobAt56(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw46(season) {
-    return (ctx) => paint55(ctx, SP55[season], 0);
+    return (ctx) => paint56(ctx, SP56[season], 0);
   }
   function rippleShimmer(ctx, t, iceAmt) {
     const live = 1 - iceAmt;
@@ -32559,9 +32619,9 @@
   }
   function anim46(season) {
     return (ctx, t) => {
-      const bob = bobAt55(t);
-      const p = clampP45(SP55[season]);
-      paint55(ctx, SP55[season], bob);
+      const bob = bobAt56(t);
+      const p = clampP45(SP56[season]);
+      paint56(ctx, SP56[season], bob);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
@@ -32643,17 +32703,17 @@
       }
     };
   }
-  function makeTransition52(fromIdx) {
-    const from = SP55[SEASON_NAMES[fromIdx]];
-    const to = SP55[SEASON_NAMES[fromIdx + 1]];
+  function makeTransition53(fromIdx) {
+    const from = SP56[SEASON_NAMES[fromIdx]];
+    const to = SP56[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother55(clamp0156(pp));
-      paint55(ctx, lerpP55(from, to, k), 0);
+      const k = smoother56(clamp0157(pp));
+      paint56(ctx, lerpP56(from, to, k), 0);
     };
   }
-  var springToSummer51 = makeTransition52(0);
-  var summerToAutumn51 = makeTransition52(1);
-  var autumnToWinter51 = makeTransition52(2);
+  var springToSummer50 = makeTransition53(0);
+  var summerToAutumn50 = makeTransition53(1);
+  var autumnToWinter50 = makeTransition53(2);
   var VARIANTS58 = {
     Spring: { draw: draw46("Spring"), anim: anim46("Spring") },
     Summer: { draw: draw46("Summer"), anim: anim46("Summer") },
@@ -32661,31 +32721,31 @@
     Winter: { draw: draw46("Winter"), anim: anim46("Winter") }
   };
   var TRANSITIONS58 = {
-    0: springToSummer51,
-    1: summerToAutumn51,
-    2: autumnToWinter51
+    0: springToSummer50,
+    1: summerToAutumn50,
+    2: autumnToWinter50
   };
 
   // src/textures/seasonal/fish/mackerel.ts
-  function clamp0157(x) {
+  function clamp0158(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother56 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function lerp61(a, b, t) {
+  var smoother57 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp62(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB50(a, b, t) {
-    return [lerp61(a[0], b[0], t), lerp61(a[1], b[1], t), lerp61(a[2], b[2], t)];
+    return [lerp62(a[0], b[0], t), lerp62(a[1], b[1], t), lerp62(a[2], b[2], t)];
   }
-  function rgb56(c) {
+  function rgb57(c) {
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba25(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0157(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0158(a)})`;
   }
-  function lerpP56(a, b, t) {
+  function lerpP57(a, b, t) {
     return {
       backDark: lerpRGB50(a.backDark, b.backDark, t),
       backMid: lerpRGB50(a.backMid, b.backMid, t),
@@ -32698,28 +32758,28 @@
       waterDeep: lerpRGB50(a.waterDeep, b.waterDeep, t),
       outline: lerpRGB50(a.outline, b.outline, t),
       light: lerpRGB50(a.light, b.light, t),
-      lightAmt: lerp61(a.lightAmt, b.lightAmt, t),
-      vividness: lerp61(a.vividness, b.vividness, t),
-      gloss: lerp61(a.gloss, b.gloss, t),
-      iceAmt: lerp61(a.iceAmt, b.iceAmt, t),
-      frostAmt: lerp61(a.frostAmt, b.frostAmt, t),
-      blossomAmt: lerp61(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp61(a.fallenLeafAmt, b.fallenLeafAmt, t)
+      lightAmt: lerp62(a.lightAmt, b.lightAmt, t),
+      vividness: lerp62(a.vividness, b.vividness, t),
+      gloss: lerp62(a.gloss, b.gloss, t),
+      iceAmt: lerp62(a.iceAmt, b.iceAmt, t),
+      frostAmt: lerp62(a.frostAmt, b.frostAmt, t),
+      blossomAmt: lerp62(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp62(a.fallenLeafAmt, b.fallenLeafAmt, t)
     };
   }
   function clampP46(p) {
     return {
       ...p,
-      lightAmt: clamp0157(p.lightAmt),
-      vividness: clamp0157(p.vividness),
-      gloss: clamp0157(p.gloss),
-      iceAmt: clamp0157(p.iceAmt),
-      frostAmt: clamp0157(p.frostAmt),
-      blossomAmt: clamp0157(p.blossomAmt),
-      fallenLeafAmt: clamp0157(p.fallenLeafAmt)
+      lightAmt: clamp0158(p.lightAmt),
+      vividness: clamp0158(p.vividness),
+      gloss: clamp0158(p.gloss),
+      iceAmt: clamp0158(p.iceAmt),
+      frostAmt: clamp0158(p.frostAmt),
+      blossomAmt: clamp0158(p.blossomAmt),
+      fallenLeafAmt: clamp0158(p.fallenLeafAmt)
     };
   }
-  var SP56 = {
+  var SP57 = {
     // Spring — bright fish; fresh blue dewy water; a tiny blossom petal.
     Spring: {
       backDark: [44, 96, 110],
@@ -32816,12 +32876,12 @@
     return FISH_CY + bob - arch + wave;
   }
   function bodyHalf(u) {
-    const shape = Math.sin(Math.pow(clamp0157(u), 0.85) * Math.PI);
-    const taper = 1 - clamp0157((u - 0.55) / 0.45) * 0.72;
+    const shape = Math.sin(Math.pow(clamp0158(u), 0.85) * Math.PI);
+    const taper = 1 - clamp0158((u - 0.55) / 0.45) * 0.72;
     return BODY_HALF * shape * Math.max(0.28, taper);
   }
   function xAt(u) {
-    return lerp61(HEAD_X2, TAIL_X2, clamp0157(u));
+    return lerp62(HEAD_X2, TAIL_X2, clamp0158(u));
   }
   function fishBodyPath(ctx, bob, flex) {
     const N = 14;
@@ -32840,8 +32900,8 @@
   function tailFin(ctx, bob, flex, col, oc) {
     const wristY = spineY(1, bob, flex);
     const wx = TAIL_X2;
-    ctx.fillStyle = rgb56(col);
-    ctx.strokeStyle = rgb56(oc);
+    ctx.fillStyle = rgb57(col);
+    ctx.strokeStyle = rgb57(oc);
     ctx.lineWidth = 1.1;
     ctx.beginPath();
     ctx.moveTo(wx - 1, wristY - 1.4);
@@ -32853,7 +32913,7 @@
     ctx.fill();
     ctx.stroke();
   }
-  function paint56(ctx, raw, bob, flex = 0) {
+  function paint57(ctx, raw, bob, flex = 0) {
     const p = clampP46(raw);
     ctx.save();
     try {
@@ -32864,11 +32924,11 @@
       ctx.beginPath();
       ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb56(p.waterDeep);
+      ctx.fillStyle = rgb57(p.waterDeep);
       ctx.beginPath();
       ctx.ellipse(0, 20.4, 18, 5.6, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb56(p.water);
+      ctx.fillStyle = rgb57(p.water);
       ctx.beginPath();
       ctx.ellipse(0, 19, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -32973,16 +33033,16 @@
       tailFin(ctx, bob, flex, p.fin, p.outline);
       ctx.save();
       ctx.lineWidth = 2.2;
-      ctx.strokeStyle = rgb56(p.outline);
+      ctx.strokeStyle = rgb57(p.outline);
       fishBodyPath(ctx, bob, flex);
       ctx.stroke();
       ctx.restore();
       ctx.save();
       fishBodyPath(ctx, bob, flex);
       ctx.clip();
-      ctx.fillStyle = rgb56(p.belly);
+      ctx.fillStyle = rgb57(p.belly);
       ctx.fillRect(HEAD_X2 - 4, FISH_CY + bob - 14, TAIL_X2 - HEAD_X2 + 10, 28);
-      ctx.fillStyle = rgb56(p.bellyLit);
+      ctx.fillStyle = rgb57(p.bellyLit);
       ctx.beginPath();
       ctx.moveTo(HEAD_X2, FISH_CY + bob + 1);
       for (let i = 0; i <= 14; i++) {
@@ -32995,7 +33055,7 @@
       }
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb56(p.backMid);
+      ctx.fillStyle = rgb57(p.backMid);
       ctx.beginPath();
       for (let i = 0; i <= 14; i++) {
         const u = i / 14;
@@ -33007,7 +33067,7 @@
       }
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgb56(p.backDark);
+      ctx.fillStyle = rgb57(p.backDark);
       ctx.beginPath();
       for (let i = 0; i <= 14; i++) {
         const u = i / 14;
@@ -33029,7 +33089,7 @@
         const midY = spineY(u, bob, flex) - bodyHalf(u) * 0.08;
         ctx.beginPath();
         ctx.moveTo(cx - 0.6, topY + 0.4);
-        ctx.quadraticCurveTo(cx + 1.8, lerp61(topY, midY, 0.5), cx - 0.8, midY);
+        ctx.quadraticCurveTo(cx + 1.8, lerp62(topY, midY, 0.5), cx - 0.8, midY);
         ctx.stroke();
       }
       if (p.vividness > 0.02) {
@@ -33091,8 +33151,8 @@
         const u = 0.42;
         const bx = xAt(u);
         const by = spineY(u, bob, flex) - bodyHalf(u) + 0.6;
-        ctx.fillStyle = rgb56(p.fin);
-        ctx.strokeStyle = rgb56(p.outline);
+        ctx.fillStyle = rgb57(p.fin);
+        ctx.strokeStyle = rgb57(p.outline);
         ctx.lineWidth = 1;
         ctx.beginPath();
         ctx.moveTo(bx - 3, by);
@@ -33107,7 +33167,7 @@
         const fx = xAt(u);
         const fy = spineY(u, bob, flex) + bodyHalf(u) * 0.55;
         ctx.fillStyle = rgba25(p.fin, 0.92);
-        ctx.strokeStyle = rgb56(p.outline);
+        ctx.strokeStyle = rgb57(p.outline);
         ctx.lineWidth = 0.9;
         ctx.beginPath();
         ctx.moveTo(fx - 1, fy - 1);
@@ -33130,11 +33190,11 @@
         ctx.stroke();
         const ex = HEAD_X2 + 4.2;
         const ey = spineY(0.06, bob, flex) - 1.2;
-        ctx.fillStyle = rgb56(p.bellyLit);
+        ctx.fillStyle = rgb57(p.bellyLit);
         ctx.beginPath();
         ctx.arc(ex, ey, 1.9, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb56(p.eye);
+        ctx.fillStyle = rgb57(p.eye);
         ctx.beginPath();
         ctx.arc(ex, ey, 1.25, 0, Math.PI * 2);
         ctx.fill();
@@ -33156,25 +33216,25 @@
       ctx.restore();
     }
   }
-  function bobAt56(t, amp = 0.7, w = 1.4) {
+  function bobAt57(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function flexAt(t, amp = 1.1, w = 1.4) {
     return amp * Math.sin(w * t);
   }
   function draw47(season) {
-    return (ctx) => paint56(ctx, SP56[season], 0, 0);
+    return (ctx) => paint57(ctx, SP57[season], 0, 0);
   }
   function anim47(season) {
     return (ctx, t) => {
-      const bob = bobAt56(t);
+      const bob = bobAt57(t);
       const flex = flexAt(t);
-      paint56(ctx, SP56[season], bob, flex);
+      paint57(ctx, SP57[season], bob, flex);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
         const ripPhase = t * 0.35 % 1;
-        const iceMute = 1 - 0.55 * clamp0157(SP56[season].iceAmt);
+        const iceMute = 1 - 0.55 * clamp0158(SP57[season].iceAmt);
         ctx.strokeStyle = `rgba(255,255,255,${(0.12 + 0.12 * (0.5 + 0.5 * Math.sin(t * 1.3))) * iceMute})`;
         ctx.lineWidth = 0.8;
         ctx.beginPath();
@@ -33198,7 +33258,7 @@
           ctx.fill();
         } else if (season === "Summer") {
           const prog = t * 0.5 % 1;
-          const u = lerp61(0.12, 0.86, prog);
+          const u = lerp62(0.12, 0.86, prog);
           const x = xAt(u);
           const y = spineY(u, bob, flex) - bodyHalf(u) * 0.6;
           const sh = ctx.createRadialGradient(x, y, 0.4, x, y, 6);
@@ -33248,17 +33308,17 @@
       }
     };
   }
-  function makeTransition53(fromIdx) {
-    const from = SP56[SEASON_NAMES[fromIdx]];
-    const to = SP56[SEASON_NAMES[fromIdx + 1]];
+  function makeTransition54(fromIdx) {
+    const from = SP57[SEASON_NAMES[fromIdx]];
+    const to = SP57[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother56(clamp0157(pp));
-      paint56(ctx, lerpP56(from, to, k), 0, 0);
+      const k = smoother57(clamp0158(pp));
+      paint57(ctx, lerpP57(from, to, k), 0, 0);
     };
   }
-  var springToSummer52 = makeTransition53(0);
-  var summerToAutumn52 = makeTransition53(1);
-  var autumnToWinter52 = makeTransition53(2);
+  var springToSummer51 = makeTransition54(0);
+  var summerToAutumn51 = makeTransition54(1);
+  var autumnToWinter51 = makeTransition54(2);
   var VARIANTS59 = {
     Spring: { draw: draw47("Spring"), anim: anim47("Spring") },
     Summer: { draw: draw47("Summer"), anim: anim47("Summer") },
@@ -33266,31 +33326,31 @@
     Winter: { draw: draw47("Winter"), anim: anim47("Winter") }
   };
   var TRANSITIONS59 = {
-    0: springToSummer52,
-    1: summerToAutumn52,
-    2: autumnToWinter52
+    0: springToSummer51,
+    1: summerToAutumn51,
+    2: autumnToWinter51
   };
 
   // src/textures/seasonal/fish/kelp.ts
-  function clamp0158(x) {
+  function clamp0159(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother57 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function lerp62(a, b, t) {
+  var smoother58 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp63(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB51(a, b, t) {
-    return [lerp62(a[0], b[0], t), lerp62(a[1], b[1], t), lerp62(a[2], b[2], t)];
+    return [lerp63(a[0], b[0], t), lerp63(a[1], b[1], t), lerp63(a[2], b[2], t)];
   }
-  function rgb57(c) {
+  function rgb58(c) {
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba26(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0158(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0159(a)})`;
   }
-  function lerpP57(a, b, t) {
+  function lerpP58(a, b, t) {
     return {
       bladeLight: lerpRGB51(a.bladeLight, b.bladeLight, t),
       bladeMid: lerpRGB51(a.bladeMid, b.bladeMid, t),
@@ -33301,34 +33361,34 @@
       padDark: lerpRGB51(a.padDark, b.padDark, t),
       outline: lerpRGB51(a.outline, b.outline, t),
       light: lerpRGB51(a.light, b.light, t),
-      lightAmt: lerp62(a.lightAmt, b.lightAmt, t),
-      ripeness: lerp62(a.ripeness, b.ripeness, t),
-      gloss: lerp62(a.gloss, b.gloss, t),
-      frostAmt: lerp62(a.frostAmt, b.frostAmt, t),
-      snowCapAmt: lerp62(a.snowCapAmt, b.snowCapAmt, t),
-      iceAmt: lerp62(a.iceAmt, b.iceAmt, t),
-      padSnowAmt: lerp62(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp62(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp62(a.fallenLeafAmt, b.fallenLeafAmt, t),
-      frayAmt: lerp62(a.frayAmt, b.frayAmt, t)
+      lightAmt: lerp63(a.lightAmt, b.lightAmt, t),
+      ripeness: lerp63(a.ripeness, b.ripeness, t),
+      gloss: lerp63(a.gloss, b.gloss, t),
+      frostAmt: lerp63(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp63(a.snowCapAmt, b.snowCapAmt, t),
+      iceAmt: lerp63(a.iceAmt, b.iceAmt, t),
+      padSnowAmt: lerp63(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp63(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp63(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      frayAmt: lerp63(a.frayAmt, b.frayAmt, t)
     };
   }
   function clampP47(p) {
     return {
       ...p,
-      lightAmt: clamp0158(p.lightAmt),
-      ripeness: clamp0158(p.ripeness),
-      gloss: clamp0158(p.gloss),
-      frostAmt: clamp0158(p.frostAmt),
-      snowCapAmt: clamp0158(p.snowCapAmt),
-      iceAmt: clamp0158(p.iceAmt),
-      padSnowAmt: clamp0158(p.padSnowAmt),
-      blossomAmt: clamp0158(p.blossomAmt),
-      fallenLeafAmt: clamp0158(p.fallenLeafAmt),
-      frayAmt: clamp0158(p.frayAmt)
+      lightAmt: clamp0159(p.lightAmt),
+      ripeness: clamp0159(p.ripeness),
+      gloss: clamp0159(p.gloss),
+      frostAmt: clamp0159(p.frostAmt),
+      snowCapAmt: clamp0159(p.snowCapAmt),
+      iceAmt: clamp0159(p.iceAmt),
+      padSnowAmt: clamp0159(p.padSnowAmt),
+      blossomAmt: clamp0159(p.blossomAmt),
+      fallenLeafAmt: clamp0159(p.fallenLeafAmt),
+      frayAmt: clamp0159(p.frayAmt)
     };
   }
-  var SP57 = {
+  var SP58 = {
     // Spring — bright fresh-green young kelp; fresh blue water; a tiny blossom.
     Spring: {
       bladeLight: [150, 206, 96],
@@ -33422,7 +33482,7 @@
   var KELP_BASE_Y = 17;
   var KELP_TOP_Y = -22;
   function stipePoint(s, wave) {
-    const y = lerp62(KELP_BASE_Y, KELP_TOP_Y, s);
+    const y = lerp63(KELP_BASE_Y, KELP_TOP_Y, s);
     const baseBend = Math.sin(s * Math.PI * 1.15) * 3.4 - s * 2;
     const x = baseBend + wave * s * s;
     return [x, y];
@@ -33442,7 +33502,7 @@
     [0.72, 1],
     [0.88, -1]
   ];
-  function paint57(ctx, raw, bob, wave = 0) {
+  function paint58(ctx, raw, bob, wave = 0) {
     const p = clampP47(raw);
     ctx.save();
     try {
@@ -33453,11 +33513,11 @@
       ctx.beginPath();
       ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb57(p.padDark);
+      ctx.fillStyle = rgb58(p.padDark);
       ctx.beginPath();
       ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb57(p.padWater);
+      ctx.fillStyle = rgb58(p.padWater);
       ctx.beginPath();
       ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -33491,7 +33551,7 @@
           ctx.stroke();
         });
         if (p.padSnowAmt > 0.01) {
-          ctx.fillStyle = rgba26([255, 255, 255], 0.8 * clamp0158(p.padSnowAmt));
+          ctx.fillStyle = rgba26([255, 255, 255], 0.8 * clamp0159(p.padSnowAmt));
           [[-9, 17.6], [5, 19], [11, 17.6], [-3, 20.2]].forEach(([sx, sy]) => {
             ctx.beginPath();
             ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -33543,7 +33603,7 @@
       ctx.beginPath();
       ctx.ellipse(2.5, KELP_BASE_Y + 2, 8, 2, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb57(p.holdfast);
+      ctx.fillStyle = rgb58(p.holdfast);
       ctx.beginPath();
       ctx.moveTo(-6, KELP_BASE_Y + 1.5);
       ctx.quadraticCurveTo(-3, KELP_BASE_Y - 3, 0, KELP_BASE_Y - 2.5);
@@ -33552,7 +33612,7 @@
       ctx.quadraticCurveTo(-3, KELP_BASE_Y + 3, -6, KELP_BASE_Y + 1.5);
       ctx.closePath();
       ctx.fill();
-      ctx.strokeStyle = rgb57(p.holdfast);
+      ctx.strokeStyle = rgb58(p.holdfast);
       ctx.lineWidth = 1.6;
       [-5, -2, 2, 5].forEach((rx) => {
         ctx.beginPath();
@@ -33581,18 +33641,18 @@
         ctx.quadraticCurveTo(midX, midY, tipX, tipY);
         ctx.stroke();
       };
-      BLADES3.forEach(([s, side, len]) => drawBlade(s, side, len + 1, rgb57(p.outline), 5.2));
-      ctx.strokeStyle = rgb57(p.outline);
+      BLADES3.forEach(([s, side, len]) => drawBlade(s, side, len + 1, rgb58(p.outline), 5.2));
+      ctx.strokeStyle = rgb58(p.outline);
       ctx.lineWidth = 5.4;
       ctx.beginPath();
       ctx.moveTo(spineBob[0][0], spineBob[0][1]);
       for (let i = 1; i < spineBob.length; i++) ctx.lineTo(spineBob[i][0], spineBob[i][1]);
       ctx.stroke();
-      BLADES3.forEach(([s, side, len]) => drawBlade(s, side, len, rgb57(p.bladeMid), 3.6));
+      BLADES3.forEach(([s, side, len]) => drawBlade(s, side, len, rgb58(p.bladeMid), 3.6));
       BLADES3.forEach(([s, side, len]) => {
-        if (side < 0) drawBlade(s, side, len * 0.92, rgb57(p.bladeLight), 1.5);
+        if (side < 0) drawBlade(s, side, len * 0.92, rgb58(p.bladeLight), 1.5);
       });
-      ctx.strokeStyle = rgb57(p.bladeMid);
+      ctx.strokeStyle = rgb58(p.bladeMid);
       ctx.lineWidth = 3.4;
       ctx.beginPath();
       ctx.moveTo(spineBob[0][0], spineBob[0][1]);
@@ -33608,11 +33668,11 @@
         const [ax, ay] = stipePoint(s, wave);
         const fy = ay - bob * s;
         const fx = ax + side * 1.6;
-        ctx.fillStyle = rgb57(p.outline);
+        ctx.fillStyle = rgb58(p.outline);
         ctx.beginPath();
         ctx.arc(fx, fy, 2.6, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = rgb57(p.float);
+        ctx.fillStyle = rgb58(p.float);
         ctx.beginPath();
         ctx.arc(fx, fy, 2, 0, Math.PI * 2);
         ctx.fill();
@@ -33703,21 +33763,21 @@
       ctx.restore();
     }
   }
-  function bobAt57(t, amp = 0.7, w = 1.3) {
+  function bobAt58(t, amp = 0.7, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function waveAt(t, amp = 2.2, w = 0.9) {
     return amp * (1 - Math.cos(w * t)) * 0.5 - amp * (1 - Math.cos(w * 2 * t)) * 0.5 * 0.25;
   }
   function draw48(season) {
-    return (ctx) => paint57(ctx, SP57[season], 0, 0);
+    return (ctx) => paint58(ctx, SP58[season], 0, 0);
   }
   function anim48(season) {
     return (ctx, t) => {
-      const bob = bobAt57(t);
+      const bob = bobAt58(t);
       const swayScale = season === "Winter" ? 0.35 : 1;
       const wave = waveAt(t) * swayScale;
-      paint57(ctx, SP57[season], bob, wave);
+      paint58(ctx, SP58[season], bob, wave);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
@@ -33741,7 +33801,7 @@
           ctx.ellipse(0, 19, 4 + rp * 10, (4 + rp * 10) * 0.26, 0, 0, Math.PI * 2);
           ctx.stroke();
           const prog = t * 0.45 % 1;
-          const sy = lerp62(-2, -18, prog);
+          const sy = lerp63(-2, -18, prog);
           ctx.fillStyle = "rgba(255,255,255,0.7)";
           ctx.beginPath();
           ctx.ellipse(-5 + wave * 0.6, sy - bob * 0.5, 1.3, 2.4, -0.1, 0, Math.PI * 2);
@@ -33797,17 +33857,17 @@
       }
     };
   }
-  function makeTransition54(fromIdx) {
-    const from = SP57[SEASON_NAMES[fromIdx]];
-    const to = SP57[SEASON_NAMES[fromIdx + 1]];
+  function makeTransition55(fromIdx) {
+    const from = SP58[SEASON_NAMES[fromIdx]];
+    const to = SP58[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother57(clamp0158(pp));
-      paint57(ctx, lerpP57(from, to, k), 0, 0);
+      const k = smoother58(clamp0159(pp));
+      paint58(ctx, lerpP58(from, to, k), 0, 0);
     };
   }
-  var springToSummer53 = makeTransition54(0);
-  var summerToAutumn53 = makeTransition54(1);
-  var autumnToWinter53 = makeTransition54(2);
+  var springToSummer52 = makeTransition55(0);
+  var summerToAutumn52 = makeTransition55(1);
+  var autumnToWinter52 = makeTransition55(2);
   var VARIANTS60 = {
     Spring: { draw: draw48("Spring"), anim: anim48("Spring") },
     Summer: { draw: draw48("Summer"), anim: anim48("Summer") },
@@ -33815,31 +33875,31 @@
     Winter: { draw: draw48("Winter"), anim: anim48("Winter") }
   };
   var TRANSITIONS60 = {
-    0: springToSummer53,
-    1: summerToAutumn53,
-    2: autumnToWinter53
+    0: springToSummer52,
+    1: summerToAutumn52,
+    2: autumnToWinter52
   };
 
   // src/textures/seasonal/mine/gem.ts
-  function clamp0159(x) {
+  function clamp0160(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother58 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function lerp63(a, b, t) {
+  var smoother59 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp64(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB52(a, b, t) {
-    return [lerp63(a[0], b[0], t), lerp63(a[1], b[1], t), lerp63(a[2], b[2], t)];
+    return [lerp64(a[0], b[0], t), lerp64(a[1], b[1], t), lerp64(a[2], b[2], t)];
   }
-  function rgb58(c) {
+  function rgb59(c) {
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba27(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0159(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0160(a)})`;
   }
-  function lerpP58(a, b, t) {
+  function lerpP59(a, b, t) {
     return {
       rockLight: lerpRGB52(a.rockLight, b.rockLight, t),
       rockMid: lerpRGB52(a.rockMid, b.rockMid, t),
@@ -33852,32 +33912,32 @@
       soil: lerpRGB52(a.soil, b.soil, t),
       outline: lerpRGB52(a.outline, b.outline, t),
       light: lerpRGB52(a.light, b.light, t),
-      lightAmt: lerp63(a.lightAmt, b.lightAmt, t),
-      gemSat: lerp63(a.gemSat, b.gemSat, t),
-      gloss: lerp63(a.gloss, b.gloss, t),
-      mossAmt: lerp63(a.mossAmt, b.mossAmt, t),
-      frostAmt: lerp63(a.frostAmt, b.frostAmt, t),
-      snowCapAmt: lerp63(a.snowCapAmt, b.snowCapAmt, t),
-      padSnowAmt: lerp63(a.padSnowAmt, b.padSnowAmt, t),
-      dewAmt: lerp63(a.dewAmt, b.dewAmt, t),
-      fallenLeafAmt: lerp63(a.fallenLeafAmt, b.fallenLeafAmt, t)
+      lightAmt: lerp64(a.lightAmt, b.lightAmt, t),
+      gemSat: lerp64(a.gemSat, b.gemSat, t),
+      gloss: lerp64(a.gloss, b.gloss, t),
+      mossAmt: lerp64(a.mossAmt, b.mossAmt, t),
+      frostAmt: lerp64(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp64(a.snowCapAmt, b.snowCapAmt, t),
+      padSnowAmt: lerp64(a.padSnowAmt, b.padSnowAmt, t),
+      dewAmt: lerp64(a.dewAmt, b.dewAmt, t),
+      fallenLeafAmt: lerp64(a.fallenLeafAmt, b.fallenLeafAmt, t)
     };
   }
   function clampP48(p) {
     return {
       ...p,
-      lightAmt: clamp0159(p.lightAmt),
-      gemSat: clamp0159(p.gemSat),
-      gloss: clamp0159(p.gloss),
-      mossAmt: clamp0159(p.mossAmt),
-      frostAmt: clamp0159(p.frostAmt),
-      snowCapAmt: clamp0159(p.snowCapAmt),
-      padSnowAmt: clamp0159(p.padSnowAmt),
-      dewAmt: clamp0159(p.dewAmt),
-      fallenLeafAmt: clamp0159(p.fallenLeafAmt)
+      lightAmt: clamp0160(p.lightAmt),
+      gemSat: clamp0160(p.gemSat),
+      gloss: clamp0160(p.gloss),
+      mossAmt: clamp0160(p.mossAmt),
+      frostAmt: clamp0160(p.frostAmt),
+      snowCapAmt: clamp0160(p.snowCapAmt),
+      padSnowAmt: clamp0160(p.padSnowAmt),
+      dewAmt: clamp0160(p.dewAmt),
+      fallenLeafAmt: clamp0160(p.fallenLeafAmt)
     };
   }
-  var SP58 = {
+  var SP59 = {
     // Spring — cool-bright light; fresh moss tint at the rock base; dewy pad.
     Spring: {
       rockLight: [176, 180, 188],
@@ -34046,7 +34106,7 @@
     [[3, -22], [6, -9]],
     [[8, -14], [6, -9]]
   ];
-  function paint58(ctx, raw, bob) {
+  function paint59(ctx, raw, bob) {
     const p = clampP48(raw);
     ctx.save();
     try {
@@ -34057,11 +34117,11 @@
       ctx.beginPath();
       ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb58(p.padDark);
+      ctx.fillStyle = rgb59(p.padDark);
       ctx.beginPath();
       ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb58(p.padRock);
+      ctx.fillStyle = rgb59(p.padRock);
       ctx.beginPath();
       ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -34122,7 +34182,7 @@
           ctx.fill();
         });
       }
-      ctx.fillStyle = rgb58(p.soil);
+      ctx.fillStyle = rgb59(p.soil);
       ctx.beginPath();
       ctx.ellipse(0, ROCK_BASE_Y + bob + 1.5, 13, 2.8, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -34131,41 +34191,41 @@
       ctx.ellipse(3, ROCK_BASE_Y + bob + 2, 14, 2.6, 0, 0, Math.PI * 2);
       ctx.fill();
       rockPath(ctx, bob);
-      ctx.fillStyle = rgb58(p.outline);
+      ctx.fillStyle = rgb59(p.outline);
       ctx.fill();
       ctx.save();
       rockPath(ctx, bob);
       ctx.clip();
       const rb = ROCK_BASE_Y + bob;
       const rt = ROCK_TOP_Y + bob;
-      ctx.fillStyle = rgb58(p.rockMid);
+      ctx.fillStyle = rgb59(p.rockMid);
       ctx.fillRect(-18, rt - 6, 36, rb - rt + 14);
       const litGrad = ctx.createLinearGradient(-14, rt - 2, 14, rb);
-      litGrad.addColorStop(0, rgb58(p.rockLight));
-      litGrad.addColorStop(0.5, rgb58(p.rockMid));
-      litGrad.addColorStop(1, rgb58(p.rockDark));
+      litGrad.addColorStop(0, rgb59(p.rockLight));
+      litGrad.addColorStop(0.5, rgb59(p.rockMid));
+      litGrad.addColorStop(1, rgb59(p.rockDark));
       ctx.fillStyle = litGrad;
       ctx.globalAlpha = 0.92;
       ctx.beginPath();
-      ctx.ellipse(-3, lerp63(rt, rb, 0.5), 16, (rb - rt) * 0.72, 0, 0, Math.PI * 2);
+      ctx.ellipse(-3, lerp64(rt, rb, 0.5), 16, (rb - rt) * 0.72, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
       ctx.strokeStyle = rgba27(p.rockDark, 0.8);
       ctx.lineWidth = 1.4;
       ctx.beginPath();
       ctx.moveTo(-9, rt + 6);
-      ctx.lineTo(-6, lerp63(rt, rb, 0.6));
+      ctx.lineTo(-6, lerp64(rt, rb, 0.6));
       ctx.lineTo(-9, rb - 2);
       ctx.stroke();
       ctx.beginPath();
       ctx.moveTo(11, rt + 4);
-      ctx.lineTo(8, lerp63(rt, rb, 0.5));
+      ctx.lineTo(8, lerp64(rt, rb, 0.5));
       ctx.stroke();
       ctx.fillStyle = rgba27(p.rockLight, 0.5);
       ctx.beginPath();
       ctx.moveTo(-12, rt + 6);
       ctx.lineTo(-6, rt + 2);
-      ctx.lineTo(-7, lerp63(rt, rb, 0.45));
+      ctx.lineTo(-7, lerp64(rt, rb, 0.45));
       ctx.closePath();
       ctx.fill();
       ctx.fillStyle = rgba27(p.rockDark, 0.5);
@@ -34191,14 +34251,14 @@
         ctx.fill();
       }
       gemOutlinePath(ctx, bob);
-      ctx.fillStyle = rgb58(p.outline);
+      ctx.fillStyle = rgb59(p.outline);
       ctx.fill();
       ctx.save();
       gemOutlinePath(ctx, bob);
       ctx.clip();
       GEM_FACETS.forEach(({ pts, tone }) => {
         const col = tone === 0 ? p.gemLight : tone === 1 ? p.gemMid : p.gemDark;
-        ctx.fillStyle = rgb58(col);
+        ctx.fillStyle = rgb59(col);
         ctx.beginPath();
         pts.forEach(([x, y], i) => {
           const px = GEM_OX + x;
@@ -34283,21 +34343,21 @@
       ctx.restore();
     }
   }
-  function bobAt58(t, amp = 0.7, w = 1.4) {
+  function bobAt59(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw49(season) {
-    return (ctx) => paint58(ctx, SP58[season], 0);
+    return (ctx) => paint59(ctx, SP59[season], 0);
   }
   function glintPoint(prog, bob) {
-    const x = GEM_OX + lerp63(1.5, 1.5, prog);
-    const y = GEM_OY + lerp63(2, -20, prog) + bob;
+    const x = GEM_OX + lerp64(1.5, 1.5, prog);
+    const y = GEM_OY + lerp64(2, -20, prog) + bob;
     return [x, y];
   }
   function anim49(season) {
     return (ctx, t) => {
-      const bob = bobAt58(t);
-      paint58(ctx, SP58[season], bob);
+      const bob = bobAt59(t);
+      paint59(ctx, SP59[season], bob);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
@@ -34358,17 +34418,17 @@
       }
     };
   }
-  function makeTransition55(fromIdx) {
-    const from = SP58[SEASON_NAMES[fromIdx]];
-    const to = SP58[SEASON_NAMES[fromIdx + 1]];
+  function makeTransition56(fromIdx) {
+    const from = SP59[SEASON_NAMES[fromIdx]];
+    const to = SP59[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother58(clamp0159(pp));
-      paint58(ctx, lerpP58(from, to, k), 0);
+      const k = smoother59(clamp0160(pp));
+      paint59(ctx, lerpP59(from, to, k), 0);
     };
   }
-  var springToSummer54 = makeTransition55(0);
-  var summerToAutumn54 = makeTransition55(1);
-  var autumnToWinter54 = makeTransition55(2);
+  var springToSummer53 = makeTransition56(0);
+  var summerToAutumn53 = makeTransition56(1);
+  var autumnToWinter53 = makeTransition56(2);
   var VARIANTS61 = {
     Spring: { draw: draw49("Spring"), anim: anim49("Spring") },
     Summer: { draw: draw49("Summer"), anim: anim49("Summer") },
@@ -34376,31 +34436,31 @@
     Winter: { draw: draw49("Winter"), anim: anim49("Winter") }
   };
   var TRANSITIONS61 = {
-    0: springToSummer54,
-    1: summerToAutumn54,
-    2: autumnToWinter54
+    0: springToSummer53,
+    1: summerToAutumn53,
+    2: autumnToWinter53
   };
 
   // src/textures/seasonal/mine/gold.ts
-  function clamp0160(x) {
+  function clamp0161(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother59 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function lerp64(a, b, t) {
+  var smoother60 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp65(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB53(a, b, t) {
-    return [lerp64(a[0], b[0], t), lerp64(a[1], b[1], t), lerp64(a[2], b[2], t)];
+    return [lerp65(a[0], b[0], t), lerp65(a[1], b[1], t), lerp65(a[2], b[2], t)];
   }
-  function rgb59(c) {
+  function rgb60(c) {
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba28(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0160(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0161(a)})`;
   }
-  function lerpP59(a, b, t) {
+  function lerpP60(a, b, t) {
     return {
       rockLight: lerpRGB53(a.rockLight, b.rockLight, t),
       rockMid: lerpRGB53(a.rockMid, b.rockMid, t),
@@ -34413,30 +34473,30 @@
       soil: lerpRGB53(a.soil, b.soil, t),
       outline: lerpRGB53(a.outline, b.outline, t),
       light: lerpRGB53(a.light, b.light, t),
-      lightAmt: lerp64(a.lightAmt, b.lightAmt, t),
-      goldShine: lerp64(a.goldShine, b.goldShine, t),
-      mossAmt: lerp64(a.mossAmt, b.mossAmt, t),
-      frostAmt: lerp64(a.frostAmt, b.frostAmt, t),
-      snowCapAmt: lerp64(a.snowCapAmt, b.snowCapAmt, t),
-      padSnowAmt: lerp64(a.padSnowAmt, b.padSnowAmt, t),
-      dewAmt: lerp64(a.dewAmt, b.dewAmt, t),
-      fallenLeafAmt: lerp64(a.fallenLeafAmt, b.fallenLeafAmt, t)
+      lightAmt: lerp65(a.lightAmt, b.lightAmt, t),
+      goldShine: lerp65(a.goldShine, b.goldShine, t),
+      mossAmt: lerp65(a.mossAmt, b.mossAmt, t),
+      frostAmt: lerp65(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp65(a.snowCapAmt, b.snowCapAmt, t),
+      padSnowAmt: lerp65(a.padSnowAmt, b.padSnowAmt, t),
+      dewAmt: lerp65(a.dewAmt, b.dewAmt, t),
+      fallenLeafAmt: lerp65(a.fallenLeafAmt, b.fallenLeafAmt, t)
     };
   }
   function clampP49(p) {
     return {
       ...p,
-      lightAmt: clamp0160(p.lightAmt),
-      goldShine: clamp0160(p.goldShine),
-      mossAmt: clamp0160(p.mossAmt),
-      frostAmt: clamp0160(p.frostAmt),
-      snowCapAmt: clamp0160(p.snowCapAmt),
-      padSnowAmt: clamp0160(p.padSnowAmt),
-      dewAmt: clamp0160(p.dewAmt),
-      fallenLeafAmt: clamp0160(p.fallenLeafAmt)
+      lightAmt: clamp0161(p.lightAmt),
+      goldShine: clamp0161(p.goldShine),
+      mossAmt: clamp0161(p.mossAmt),
+      frostAmt: clamp0161(p.frostAmt),
+      snowCapAmt: clamp0161(p.snowCapAmt),
+      padSnowAmt: clamp0161(p.padSnowAmt),
+      dewAmt: clamp0161(p.dewAmt),
+      fallenLeafAmt: clamp0161(p.fallenLeafAmt)
     };
   }
-  var SP59 = {
+  var SP60 = {
     // Spring — cool-bright light; grey rock + bright gold; fresh moss at the base,
     // dewy pad.
     Spring: {
@@ -34563,7 +34623,7 @@
     [9, 6, 1.7],
     [-3, 9, 1.5]
   ];
-  function paint59(ctx, raw, bob) {
+  function paint60(ctx, raw, bob) {
     const p = clampP49(raw);
     ctx.save();
     try {
@@ -34574,11 +34634,11 @@
       ctx.beginPath();
       ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb59(p.padDark);
+      ctx.fillStyle = rgb60(p.padDark);
       ctx.beginPath();
       ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb59(p.padTop);
+      ctx.fillStyle = rgb60(p.padTop);
       ctx.beginPath();
       ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -34650,7 +34710,7 @@
           ctx.restore();
         });
       }
-      ctx.fillStyle = rgb59(p.soil);
+      ctx.fillStyle = rgb60(p.soil);
       ctx.beginPath();
       ctx.ellipse(0, ROCK_BOT + bob + 1.5, 12, 2.8, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -34659,33 +34719,33 @@
       ctx.ellipse(3, ROCK_BOT + bob + 2, 13, 2.6, 0, 0, Math.PI * 2);
       ctx.fill();
       rockBodyPath(ctx, bob);
-      ctx.strokeStyle = rgb59(p.outline);
+      ctx.strokeStyle = rgb60(p.outline);
       ctx.lineWidth = 2.4;
       ctx.stroke();
-      ctx.fillStyle = rgb59(p.outline);
+      ctx.fillStyle = rgb60(p.outline);
       ctx.fill();
       ctx.save();
       rockBodyPath(ctx, bob);
       ctx.clip();
       const top = ROCK_TOP + bob;
       const bot = ROCK_BOT + bob;
-      ctx.fillStyle = rgb59(p.rockMid);
+      ctx.fillStyle = rgb60(p.rockMid);
       ctx.fillRect(-ROCK_HALF - 3, top - 4, (ROCK_HALF + 3) * 2, bot - top + 10);
       const litGrad = ctx.createLinearGradient(-ROCK_HALF, top, ROCK_HALF, bot);
-      litGrad.addColorStop(0, rgb59(p.rockLight));
-      litGrad.addColorStop(0.5, rgb59(p.rockMid));
-      litGrad.addColorStop(1, rgb59(p.rockDark));
+      litGrad.addColorStop(0, rgb60(p.rockLight));
+      litGrad.addColorStop(0.5, rgb60(p.rockMid));
+      litGrad.addColorStop(1, rgb60(p.rockDark));
       ctx.fillStyle = litGrad;
       ctx.globalAlpha = 0.92;
       ctx.beginPath();
-      ctx.ellipse(-2, lerp64(top, bot, 0.45), ROCK_HALF + 3, (bot - top) * 0.62, 0, 0, Math.PI * 2);
+      ctx.ellipse(-2, lerp65(top, bot, 0.45), ROCK_HALF + 3, (bot - top) * 0.62, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
       ctx.strokeStyle = rgba28(p.rockDark, 0.8);
       ctx.lineWidth = 1.8;
       [
-        [[-9, top + 4], [-4, lerp64(top, bot, 0.5)], [-6, bot - 2]],
-        [[6, top + 5], [9, lerp64(top, bot, 0.55)], [11, bot - 3]]
+        [[-9, top + 4], [-4, lerp65(top, bot, 0.5)], [-6, bot - 2]],
+        [[6, top + 5], [9, lerp65(top, bot, 0.55)], [11, bot - 3]]
       ].forEach((seg) => {
         ctx.beginPath();
         ctx.moveTo(seg[0][0], seg[0][1]);
@@ -34696,8 +34756,8 @@
       ctx.strokeStyle = rgba28(p.rockLight, 0.5);
       ctx.lineWidth = 1.1;
       [
-        [[-10, top + 6], [-7, lerp64(top, bot, 0.4)]],
-        [[-2, top + 2], [0, lerp64(top, bot, 0.3)]]
+        [[-10, top + 6], [-7, lerp65(top, bot, 0.4)]],
+        [[-2, top + 2], [0, lerp65(top, bot, 0.3)]]
       ].forEach((seg) => {
         ctx.beginPath();
         ctx.moveTo(seg[0][0], seg[0][1]);
@@ -34709,13 +34769,13 @@
       ctx.ellipse(0, bot - 2, ROCK_HALF, 4, 0, 0, Math.PI * 2);
       ctx.fill();
       VEINS.forEach((pts) => {
-        ctx.strokeStyle = rgb59(p.goldDark);
+        ctx.strokeStyle = rgb60(p.goldDark);
         ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.moveTo(pts[0][0], pts[0][1] + bob);
         for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1] + bob);
         ctx.stroke();
-        ctx.strokeStyle = rgb59(p.goldMid);
+        ctx.strokeStyle = rgb60(p.goldMid);
         ctx.lineWidth = 1.8;
         ctx.beginPath();
         ctx.moveTo(pts[0][0], pts[0][1] + bob);
@@ -34730,9 +34790,9 @@
       });
       NUGGETS.forEach(([nx, ny, nr]) => {
         const ng = ctx.createRadialGradient(nx - nr * 0.4, ny - nr * 0.4 + bob, nr * 0.2, nx, ny + bob, nr);
-        ng.addColorStop(0, rgb59(p.goldLight));
-        ng.addColorStop(0.6, rgb59(p.goldMid));
-        ng.addColorStop(1, rgb59(p.goldDark));
+        ng.addColorStop(0, rgb60(p.goldLight));
+        ng.addColorStop(0.6, rgb60(p.goldMid));
+        ng.addColorStop(1, rgb60(p.goldDark));
         ctx.fillStyle = ng;
         ctx.beginPath();
         ctx.arc(nx, ny + bob, nr, 0, Math.PI * 2);
@@ -34748,7 +34808,7 @@
       if (p.frostAmt > 0.02) {
         ctx.fillStyle = rgba28([210, 230, 250], 0.26 * p.frostAmt);
         ctx.beginPath();
-        ctx.ellipse(-1, lerp64(top, bot, 0.28), ROCK_HALF, (bot - top) * 0.32, 0, 0, Math.PI * 2);
+        ctx.ellipse(-1, lerp65(top, bot, 0.28), ROCK_HALF, (bot - top) * 0.32, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = rgba28([235, 246, 255], 0.65 * p.frostAmt);
         const speck = [
@@ -34756,9 +34816,9 @@
           [-3, top + 2],
           [4, top + 4],
           [9, top + 5],
-          [-6, lerp64(top, bot, 0.4)],
-          [6, lerp64(top, bot, 0.45)],
-          [0, lerp64(top, bot, 0.32)]
+          [-6, lerp65(top, bot, 0.4)],
+          [6, lerp65(top, bot, 0.45)],
+          [0, lerp65(top, bot, 0.32)]
         ];
         speck.forEach(([sx, sy]) => {
           ctx.beginPath();
@@ -34798,26 +34858,26 @@
       ctx.restore();
     }
   }
-  function bobAt59(t, amp = 0.7, w = 1.3) {
+  function bobAt60(t, amp = 0.7, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var GLINT_PATH = VEINS.flat();
   function glintAt(u) {
     const n = GLINT_PATH.length;
-    const f = clamp0160(u) * (n - 1);
+    const f = clamp0161(u) * (n - 1);
     const i = Math.min(n - 2, Math.floor(f));
     const k = f - i;
     const a = GLINT_PATH[i];
     const b = GLINT_PATH[i + 1];
-    return [lerp64(a[0], b[0], k), lerp64(a[1], b[1], k)];
+    return [lerp65(a[0], b[0], k), lerp65(a[1], b[1], k)];
   }
   function draw50(season) {
-    return (ctx) => paint59(ctx, SP59[season], 0);
+    return (ctx) => paint60(ctx, SP60[season], 0);
   }
   function anim50(season) {
     return (ctx, t) => {
-      const bob = bobAt59(t);
-      paint59(ctx, SP59[season], bob);
+      const bob = bobAt60(t);
+      paint60(ctx, SP60[season], bob);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
@@ -34880,17 +34940,17 @@
       }
     };
   }
-  function makeTransition56(fromIdx) {
-    const from = SP59[SEASON_NAMES[fromIdx]];
-    const to = SP59[SEASON_NAMES[fromIdx + 1]];
+  function makeTransition57(fromIdx) {
+    const from = SP60[SEASON_NAMES[fromIdx]];
+    const to = SP60[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother59(clamp0160(pp));
-      paint59(ctx, lerpP59(from, to, k), 0);
+      const k = smoother60(clamp0161(pp));
+      paint60(ctx, lerpP60(from, to, k), 0);
     };
   }
-  var springToSummer55 = makeTransition56(0);
-  var summerToAutumn55 = makeTransition56(1);
-  var autumnToWinter55 = makeTransition56(2);
+  var springToSummer54 = makeTransition57(0);
+  var summerToAutumn54 = makeTransition57(1);
+  var autumnToWinter54 = makeTransition57(2);
   var VARIANTS62 = {
     Spring: { draw: draw50("Spring"), anim: anim50("Spring") },
     Summer: { draw: draw50("Summer"), anim: anim50("Summer") },
@@ -34898,31 +34958,31 @@
     Winter: { draw: draw50("Winter"), anim: anim50("Winter") }
   };
   var TRANSITIONS62 = {
-    0: springToSummer55,
-    1: summerToAutumn55,
-    2: autumnToWinter55
+    0: springToSummer54,
+    1: summerToAutumn54,
+    2: autumnToWinter54
   };
 
   // src/textures/seasonal/special/giantPearl.ts
-  function clamp0161(x) {
+  function clamp0162(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother60 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function lerp65(a, b, t) {
+  var smoother61 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp66(a, b, t) {
     return a + (b - a) * t;
   }
   function lerpRGB54(a, b, t) {
-    return [lerp65(a[0], b[0], t), lerp65(a[1], b[1], t), lerp65(a[2], b[2], t)];
+    return [lerp66(a[0], b[0], t), lerp66(a[1], b[1], t), lerp66(a[2], b[2], t)];
   }
-  function rgb60(c) {
+  function rgb61(c) {
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba29(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0161(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0162(a)})`;
   }
-  function lerpP60(a, b, t) {
+  function lerpP61(a, b, t) {
     return {
       pearlLight: lerpRGB54(a.pearlLight, b.pearlLight, t),
       pearlMid: lerpRGB54(a.pearlMid, b.pearlMid, t),
@@ -34934,32 +34994,32 @@
       waterDark: lerpRGB54(a.waterDark, b.waterDark, t),
       outline: lerpRGB54(a.outline, b.outline, t),
       light: lerpRGB54(a.light, b.light, t),
-      lightAmt: lerp65(a.lightAmt, b.lightAmt, t),
-      lustre: lerp65(a.lustre, b.lustre, t),
-      gloss: lerp65(a.gloss, b.gloss, t),
-      frostAmt: lerp65(a.frostAmt, b.frostAmt, t),
-      snowCapAmt: lerp65(a.snowCapAmt, b.snowCapAmt, t),
-      iceAmt: lerp65(a.iceAmt, b.iceAmt, t),
-      padSnowAmt: lerp65(a.padSnowAmt, b.padSnowAmt, t),
-      blossomAmt: lerp65(a.blossomAmt, b.blossomAmt, t),
-      fallenLeafAmt: lerp65(a.fallenLeafAmt, b.fallenLeafAmt, t)
+      lightAmt: lerp66(a.lightAmt, b.lightAmt, t),
+      lustre: lerp66(a.lustre, b.lustre, t),
+      gloss: lerp66(a.gloss, b.gloss, t),
+      frostAmt: lerp66(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp66(a.snowCapAmt, b.snowCapAmt, t),
+      iceAmt: lerp66(a.iceAmt, b.iceAmt, t),
+      padSnowAmt: lerp66(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp66(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp66(a.fallenLeafAmt, b.fallenLeafAmt, t)
     };
   }
   function clampP50(p) {
     return {
       ...p,
-      lightAmt: clamp0161(p.lightAmt),
-      lustre: clamp0161(p.lustre),
-      gloss: clamp0161(p.gloss),
-      frostAmt: clamp0161(p.frostAmt),
-      snowCapAmt: clamp0161(p.snowCapAmt),
-      iceAmt: clamp0161(p.iceAmt),
-      padSnowAmt: clamp0161(p.padSnowAmt),
-      blossomAmt: clamp0161(p.blossomAmt),
-      fallenLeafAmt: clamp0161(p.fallenLeafAmt)
+      lightAmt: clamp0162(p.lightAmt),
+      lustre: clamp0162(p.lustre),
+      gloss: clamp0162(p.gloss),
+      frostAmt: clamp0162(p.frostAmt),
+      snowCapAmt: clamp0162(p.snowCapAmt),
+      iceAmt: clamp0162(p.iceAmt),
+      padSnowAmt: clamp0162(p.padSnowAmt),
+      blossomAmt: clamp0162(p.blossomAmt),
+      fallenLeafAmt: clamp0162(p.fallenLeafAmt)
     };
   }
-  var SP60 = {
+  var SP61 = {
     // Spring — lustrous pearl in the shell; fresh bright-blue water + a blossom petal.
     Spring: {
       pearlLight: [255, 255, 255],
@@ -35081,7 +35141,7 @@
     ctx.quadraticCurveTo(-8, hingeY + dir * 1.2, -15.5, hingeY - dir * 1.5);
     ctx.closePath();
   }
-  function paint60(ctx, raw, bob) {
+  function paint61(ctx, raw, bob) {
     const p = clampP50(raw);
     ctx.save();
     try {
@@ -35092,11 +35152,11 @@
       ctx.beginPath();
       ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb60(p.waterDark);
+      ctx.fillStyle = rgb61(p.waterDark);
       ctx.beginPath();
       ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgb60(p.water);
+      ctx.fillStyle = rgb61(p.water);
       ctx.beginPath();
       ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -35189,18 +35249,18 @@
       ctx.ellipse(2.5, SHELL_BASE_Y + bob + 2.5, 15, 3, 0, 0, Math.PI * 2);
       ctx.fill();
       shellValvePath(ctx, -1, bob);
-      ctx.fillStyle = rgb60(p.outline);
+      ctx.fillStyle = rgb61(p.outline);
       ctx.lineWidth = 2.4;
-      ctx.strokeStyle = rgb60(p.outline);
+      ctx.strokeStyle = rgb61(p.outline);
       ctx.stroke();
       ctx.fill();
       ctx.save();
       shellValvePath(ctx, -1, bob);
       ctx.clip();
       const upGrad = ctx.createLinearGradient(0, SHELL_BASE_Y - 22 + bob, 0, SHELL_BASE_Y + bob);
-      upGrad.addColorStop(0, rgb60(p.shellLight));
-      upGrad.addColorStop(0.6, rgb60(p.shellMid));
-      upGrad.addColorStop(1, rgb60(p.shellDark));
+      upGrad.addColorStop(0, rgb61(p.shellLight));
+      upGrad.addColorStop(0.6, rgb61(p.shellMid));
+      upGrad.addColorStop(1, rgb61(p.shellDark));
       ctx.fillStyle = upGrad;
       ctx.fillRect(-18, SHELL_BASE_Y - 24 + bob, 36, 26);
       ctx.strokeStyle = rgba29(p.shellDark, 0.7);
@@ -35220,7 +35280,7 @@
       ctx.fill();
       ctx.beginPath();
       ctx.arc(pcx, pcy, PEARL_R + 0.6, 0, Math.PI * 2);
-      ctx.fillStyle = rgb60(p.outline);
+      ctx.fillStyle = rgb61(p.outline);
       ctx.fill();
       const pGrad = ctx.createRadialGradient(
         pcx - PEARL_R * 0.42,
@@ -35230,9 +35290,9 @@
         pcy,
         PEARL_R
       );
-      pGrad.addColorStop(0, rgb60(p.pearlLight));
-      pGrad.addColorStop(0.5, rgb60(p.pearlMid));
-      pGrad.addColorStop(1, rgb60(p.pearlDark));
+      pGrad.addColorStop(0, rgb61(p.pearlLight));
+      pGrad.addColorStop(0.5, rgb61(p.pearlMid));
+      pGrad.addColorStop(1, rgb61(p.pearlDark));
       ctx.fillStyle = pGrad;
       ctx.beginPath();
       ctx.arc(pcx, pcy, PEARL_R, 0, Math.PI * 2);
@@ -35274,18 +35334,18 @@
         ctx.fill();
       }
       shellValvePath(ctx, 1, bob);
-      ctx.fillStyle = rgb60(p.outline);
+      ctx.fillStyle = rgb61(p.outline);
       ctx.lineWidth = 2.4;
-      ctx.strokeStyle = rgb60(p.outline);
+      ctx.strokeStyle = rgb61(p.outline);
       ctx.stroke();
       ctx.fill();
       ctx.save();
       shellValvePath(ctx, 1, bob);
       ctx.clip();
       const loGrad = ctx.createLinearGradient(0, SHELL_BASE_Y - 4 + bob, 0, SHELL_BASE_Y + 20 + bob);
-      loGrad.addColorStop(0, rgb60(p.shellLight));
-      loGrad.addColorStop(0.55, rgb60(p.shellMid));
-      loGrad.addColorStop(1, rgb60(p.shellDark));
+      loGrad.addColorStop(0, rgb61(p.shellLight));
+      loGrad.addColorStop(0.55, rgb61(p.shellMid));
+      loGrad.addColorStop(1, rgb61(p.shellDark));
       ctx.fillStyle = loGrad;
       ctx.fillRect(-18, SHELL_BASE_Y - 4 + bob, 36, 26);
       ctx.strokeStyle = rgba29(p.shellDark, 0.7);
@@ -35348,16 +35408,16 @@
       ctx.restore();
     }
   }
-  function bobAt60(t, amp = 0.6, w = 1.3) {
+  function bobAt61(t, amp = 0.6, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw51(season) {
-    return (ctx) => paint60(ctx, SP60[season], 0);
+    return (ctx) => paint61(ctx, SP61[season], 0);
   }
   function anim51(season) {
     return (ctx, t) => {
-      const bob = bobAt60(t);
-      paint60(ctx, SP60[season], bob);
+      const bob = bobAt61(t);
+      paint61(ctx, SP61[season], bob);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
@@ -35372,7 +35432,7 @@
         const pcy = PEARL_CY + bob;
         const glintBright = season === "Summer" ? 0.5 : season === "Autumn" ? 0.26 : 0.34;
         const ga = (t * 0.18 % 1 + 1) % 1;
-        const gang = lerp65(Math.PI * 0.85, Math.PI * 0.15, ga);
+        const gang = lerp66(Math.PI * 0.85, Math.PI * 0.15, ga);
         const gx = pcx + Math.cos(gang) * PEARL_R * 0.62;
         const gy = pcy - Math.sin(gang) * PEARL_R * 0.62 + 1;
         ctx.save();
@@ -35433,17 +35493,17 @@
       }
     };
   }
-  function makeTransition57(fromIdx) {
-    const from = SP60[SEASON_NAMES[fromIdx]];
-    const to = SP60[SEASON_NAMES[fromIdx + 1]];
+  function makeTransition58(fromIdx) {
+    const from = SP61[SEASON_NAMES[fromIdx]];
+    const to = SP61[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother60(clamp0161(pp));
-      paint60(ctx, lerpP60(from, to, k), 0);
+      const k = smoother61(clamp0162(pp));
+      paint61(ctx, lerpP61(from, to, k), 0);
     };
   }
-  var springToSummer56 = makeTransition57(0);
-  var summerToAutumn56 = makeTransition57(1);
-  var autumnToWinter56 = makeTransition57(2);
+  var springToSummer55 = makeTransition58(0);
+  var summerToAutumn55 = makeTransition58(1);
+  var autumnToWinter55 = makeTransition58(2);
   var VARIANTS63 = {
     Spring: { draw: draw51("Spring"), anim: anim51("Spring") },
     Summer: { draw: draw51("Summer"), anim: anim51("Summer") },
@@ -35451,75 +35511,153 @@
     Winter: { draw: draw51("Winter"), anim: anim51("Winter") }
   };
   var TRANSITIONS63 = {
-    0: springToSummer56,
-    1: summerToAutumn56,
-    2: autumnToWinter56
+    0: springToSummer55,
+    1: summerToAutumn55,
+    2: autumnToWinter55
   };
 
-  // ../../../tmp/doc_entry_all.ts
-  window.SEASONAL_DEMO = { tiles: [
-    { key: "tile_tree_oak", label: "Oak", family: "tree", V: VARIANTS, T: TRANSITIONS },
-    { key: "tile_tree_birch", label: "Birch", family: "tree", V: VARIANTS2, T: TRANSITIONS2 },
-    { key: "tile_tree_cypress", label: "Cypress", family: "tree", V: VARIANTS3, T: TRANSITIONS3 },
-    { key: "tile_tree_fir", label: "Fir", family: "tree", V: VARIANTS4, T: TRANSITIONS4 },
-    { key: "tile_tree_palm", label: "Palm", family: "tree", V: VARIANTS5, T: TRANSITIONS5 },
-    { key: "tile_tree_willow", label: "Willow", family: "tree", V: VARIANTS6, T: TRANSITIONS6 },
-    { key: "tile_fruit_apple", label: "Apple", family: "fruit", V: VARIANTS7, T: TRANSITIONS7 },
-    { key: "tile_fruit_pear", label: "Pear", family: "fruit", V: VARIANTS8, T: TRANSITIONS8 },
-    { key: "tile_fruit_lemon", label: "Lemon", family: "fruit", V: VARIANTS9, T: TRANSITIONS9 },
-    { key: "tile_fruit_blackberry", label: "Blackberry", family: "fruit", V: VARIANTS10, T: TRANSITIONS10 },
-    { key: "tile_fruit_coconut", label: "Coconut", family: "fruit", V: VARIANTS11, T: TRANSITIONS11 },
-    { key: "tile_fruit_golden_apple", label: "Golden Apple", family: "fruit", V: VARIANTS12, T: TRANSITIONS12 },
-    { key: "tile_fruit_jackfruit", label: "Jackfruit", family: "fruit", V: VARIANTS13, T: TRANSITIONS13 },
-    { key: "tile_fruit_rambutan", label: "Rambutan", family: "fruit", V: VARIANTS14, T: TRANSITIONS14 },
-    { key: "tile_fruit_starfruit", label: "Starfruit", family: "fruit", V: VARIANTS15, T: TRANSITIONS15 },
-    { key: "tile_grain_corn", label: "Corn", family: "grain", V: VARIANTS16, T: TRANSITIONS16 },
-    { key: "tile_veg_pepper", label: "Pepper", family: "veg", V: VARIANTS17, T: TRANSITIONS17 },
-    { key: "tile_veg_mushroom", label: "Mushroom", family: "veg", V: VARIANTS18, T: TRANSITIONS18 },
-    { key: "tile_veg_beet", label: "Beet", family: "veg", V: VARIANTS19, T: TRANSITIONS19 },
-    { key: "tile_veg_broccoli", label: "Broccoli", family: "veg", V: VARIANTS20, T: TRANSITIONS20 },
-    { key: "tile_veg_carrot", label: "Carrot", family: "veg", V: VARIANTS21, T: TRANSITIONS21 },
-    { key: "tile_veg_cucumber", label: "Cucumber", family: "veg", V: VARIANTS22, T: TRANSITIONS22 },
-    { key: "tile_veg_eggplant", label: "Eggplant", family: "veg", V: VARIANTS23, T: TRANSITIONS23 },
-    { key: "tile_veg_squash", label: "Squash", family: "veg", V: VARIANTS24, T: TRANSITIONS24 },
-    { key: "tile_veg_turnip", label: "Turnip", family: "veg", V: VARIANTS25, T: TRANSITIONS25 },
-    { key: "tile_grass_grass", label: "Grass", family: "grass", V: VARIANTS26, T: TRANSITIONS26 },
-    { key: "tile_grass_meadow", label: "Meadow", family: "grass", V: VARIANTS27, T: TRANSITIONS27 },
-    { key: "tile_grass_spiky", label: "Spiky Grass", family: "grass", V: VARIANTS28, T: TRANSITIONS28 },
-    { key: "tile_bird_clover", label: "Clover", family: "grass", V: VARIANTS29, T: TRANSITIONS29 },
-    { key: "tile_flower_pansy", label: "Pansy", family: "flower", V: VARIANTS30, T: TRANSITIONS30 },
-    { key: "tile_grass_heather", label: "Heather", family: "flower", V: VARIANTS31, T: TRANSITIONS31 },
-    { key: "tile_flower_water_lily", label: "Water Lily", family: "flower", V: VARIANTS32, T: TRANSITIONS32 },
-    { key: "tile_bird_chicken", label: "Chicken", family: "bird", V: VARIANTS33, T: TRANSITIONS33 },
-    { key: "tile_bird_rooster", label: "Rooster", family: "bird", V: VARIANTS34, T: TRANSITIONS34 },
-    { key: "tile_bird_hen", label: "Hen", family: "bird", V: VARIANTS35, T: TRANSITIONS35 },
-    { key: "tile_bird_turkey", label: "Turkey", family: "bird", V: VARIANTS36, T: TRANSITIONS36 },
-    { key: "tile_bird_goose", label: "Goose", family: "bird", V: VARIANTS37, T: TRANSITIONS37 },
-    { key: "tile_bird_pheasant", label: "Pheasant", family: "bird", V: VARIANTS38, T: TRANSITIONS38 },
-    { key: "tile_bird_parrot", label: "Parrot", family: "bird", V: VARIANTS39, T: TRANSITIONS39 },
-    { key: "tile_bird_phoenix", label: "Phoenix", family: "bird", V: VARIANTS40, T: TRANSITIONS40 },
-    { key: "tile_bird_dodo", label: "Dodo", family: "bird", V: VARIANTS41, T: TRANSITIONS41 },
-    { key: "tile_herd_sheep", label: "Sheep", family: "herd", V: VARIANTS42, T: TRANSITIONS42 },
-    { key: "tile_herd_pig", label: "Pig", family: "herd", V: VARIANTS43, T: TRANSITIONS43 },
-    { key: "tile_herd_hog", label: "Hog", family: "herd", V: VARIANTS44, T: TRANSITIONS44 },
-    { key: "tile_herd_boar", label: "Boar", family: "herd", V: VARIANTS45, T: TRANSITIONS45 },
-    { key: "tile_herd_warthog", label: "Warthog", family: "herd", V: VARIANTS46, T: TRANSITIONS46 },
-    { key: "tile_herd_alpaca", label: "Alpaca", family: "herd", V: VARIANTS47, T: TRANSITIONS47 },
-    { key: "tile_herd_goat", label: "Goat", family: "herd", V: VARIANTS48, T: TRANSITIONS48 },
-    { key: "tile_herd_ram", label: "Ram", family: "herd", V: VARIANTS49, T: TRANSITIONS49 },
-    { key: "tile_cattle_cow", label: "Cow", family: "cattle", V: VARIANTS50, T: TRANSITIONS50 },
-    { key: "tile_cattle_longhorn", label: "Longhorn", family: "cattle", V: VARIANTS51, T: TRANSITIONS51 },
-    { key: "tile_cattle_triceratops", label: "Triceratops", family: "cattle", V: VARIANTS52, T: TRANSITIONS52 },
-    { key: "tile_mount_horse", label: "Horse", family: "mount", V: VARIANTS53, T: TRANSITIONS53 },
-    { key: "tile_mount_donkey", label: "Donkey", family: "mount", V: VARIANTS54, T: TRANSITIONS54 },
-    { key: "tile_mount_moose", label: "Moose", family: "mount", V: VARIANTS55, T: TRANSITIONS55 },
-    { key: "tile_mount_mammoth", label: "Mammoth", family: "mount", V: VARIANTS56, T: TRANSITIONS56 },
-    { key: "tile_fish_clam", label: "Clam", family: "fish", V: VARIANTS57, T: TRANSITIONS57 },
-    { key: "tile_fish_oyster", label: "Oyster", family: "fish", V: VARIANTS58, T: TRANSITIONS58 },
-    { key: "tile_fish_mackerel", label: "Mackerel", family: "fish", V: VARIANTS59, T: TRANSITIONS59 },
-    { key: "tile_fish_kelp", label: "Kelp", family: "fish", V: VARIANTS60, T: TRANSITIONS60 },
-    { key: "tile_mine_gem", label: "Gem", family: "mine", V: VARIANTS61, T: TRANSITIONS61 },
-    { key: "tile_mine_gold", label: "Gold", family: "mine", V: VARIANTS62, T: TRANSITIONS62 },
-    { key: "tile_special_giant_pearl", label: "Giant Pearl", family: "special", V: VARIANTS63, T: TRANSITIONS63 }
-  ] };
+  // src/textures/seasonal/showcaseTiles.ts
+  var SHOWCASE_TILES = {
+    tile_tree_oak: VARIANTS,
+    tile_tree_birch: VARIANTS2,
+    tile_tree_cypress: VARIANTS3,
+    tile_tree_fir: VARIANTS4,
+    tile_tree_palm: VARIANTS5,
+    tile_tree_willow: VARIANTS6,
+    tile_fruit_apple: VARIANTS7,
+    tile_fruit_pear: VARIANTS8,
+    tile_fruit_lemon: VARIANTS9,
+    tile_fruit_blackberry: VARIANTS10,
+    tile_fruit_coconut: VARIANTS11,
+    tile_fruit_golden_apple: VARIANTS12,
+    tile_fruit_jackfruit: VARIANTS13,
+    tile_fruit_rambutan: VARIANTS14,
+    tile_fruit_starfruit: VARIANTS15,
+    tile_grain_corn: VARIANTS16,
+    tile_veg_pepper: VARIANTS17,
+    tile_veg_mushroom: VARIANTS18,
+    tile_veg_beet: VARIANTS19,
+    tile_veg_broccoli: VARIANTS20,
+    tile_veg_carrot: VARIANTS21,
+    tile_veg_cucumber: VARIANTS22,
+    tile_veg_eggplant: VARIANTS23,
+    tile_veg_squash: VARIANTS24,
+    tile_veg_turnip: VARIANTS25,
+    tile_grass_grass: VARIANTS26,
+    tile_grass_meadow: VARIANTS27,
+    tile_grass_spiky: VARIANTS28,
+    tile_bird_clover: VARIANTS29,
+    tile_flower_pansy: VARIANTS30,
+    tile_grass_heather: VARIANTS31,
+    tile_flower_water_lily: VARIANTS32,
+    tile_bird_chicken: VARIANTS33,
+    tile_bird_rooster: VARIANTS34,
+    tile_bird_hen: VARIANTS35,
+    tile_bird_turkey: VARIANTS36,
+    tile_bird_goose: VARIANTS37,
+    tile_bird_pheasant: VARIANTS38,
+    tile_bird_parrot: VARIANTS39,
+    tile_bird_phoenix: VARIANTS40,
+    tile_bird_dodo: VARIANTS41,
+    tile_herd_sheep: VARIANTS42,
+    tile_herd_pig: VARIANTS43,
+    tile_herd_hog: VARIANTS44,
+    tile_herd_boar: VARIANTS45,
+    tile_herd_warthog: VARIANTS46,
+    tile_herd_alpaca: VARIANTS47,
+    tile_herd_goat: VARIANTS48,
+    tile_herd_ram: VARIANTS49,
+    tile_cattle_cow: VARIANTS50,
+    tile_cattle_longhorn: VARIANTS51,
+    tile_cattle_triceratops: VARIANTS52,
+    tile_mount_horse: VARIANTS53,
+    tile_mount_donkey: VARIANTS54,
+    tile_mount_moose: VARIANTS55,
+    tile_mount_mammoth: VARIANTS56,
+    tile_fish_clam: VARIANTS57,
+    tile_fish_oyster: VARIANTS58,
+    tile_fish_mackerel: VARIANTS59,
+    tile_fish_kelp: VARIANTS60,
+    tile_mine_gem: VARIANTS61,
+    tile_mine_gold: VARIANTS62,
+    tile_special_giant_pearl: VARIANTS63
+  };
+  var SHOWCASE_TRANSITIONS = {
+    tile_tree_oak: TRANSITIONS,
+    tile_tree_birch: TRANSITIONS2,
+    tile_tree_cypress: TRANSITIONS3,
+    tile_tree_fir: TRANSITIONS4,
+    tile_tree_palm: TRANSITIONS5,
+    tile_tree_willow: TRANSITIONS6,
+    tile_fruit_apple: TRANSITIONS7,
+    tile_fruit_pear: TRANSITIONS8,
+    tile_fruit_lemon: TRANSITIONS9,
+    tile_fruit_blackberry: TRANSITIONS10,
+    tile_fruit_coconut: TRANSITIONS11,
+    tile_fruit_golden_apple: TRANSITIONS12,
+    tile_fruit_jackfruit: TRANSITIONS13,
+    tile_fruit_rambutan: TRANSITIONS14,
+    tile_fruit_starfruit: TRANSITIONS15,
+    tile_grain_corn: TRANSITIONS16,
+    tile_veg_pepper: TRANSITIONS17,
+    tile_veg_mushroom: TRANSITIONS18,
+    tile_veg_beet: TRANSITIONS19,
+    tile_veg_broccoli: TRANSITIONS20,
+    tile_veg_carrot: TRANSITIONS21,
+    tile_veg_cucumber: TRANSITIONS22,
+    tile_veg_eggplant: TRANSITIONS23,
+    tile_veg_squash: TRANSITIONS24,
+    tile_veg_turnip: TRANSITIONS25,
+    tile_grass_grass: TRANSITIONS26,
+    tile_grass_meadow: TRANSITIONS27,
+    tile_grass_spiky: TRANSITIONS28,
+    tile_bird_clover: TRANSITIONS29,
+    tile_flower_pansy: TRANSITIONS30,
+    tile_grass_heather: TRANSITIONS31,
+    tile_flower_water_lily: TRANSITIONS32,
+    tile_bird_chicken: TRANSITIONS33,
+    tile_bird_rooster: TRANSITIONS34,
+    tile_bird_hen: TRANSITIONS35,
+    tile_bird_turkey: TRANSITIONS36,
+    tile_bird_goose: TRANSITIONS37,
+    tile_bird_pheasant: TRANSITIONS38,
+    tile_bird_parrot: TRANSITIONS39,
+    tile_bird_phoenix: TRANSITIONS40,
+    tile_bird_dodo: TRANSITIONS41,
+    tile_herd_sheep: TRANSITIONS42,
+    tile_herd_pig: TRANSITIONS43,
+    tile_herd_hog: TRANSITIONS44,
+    tile_herd_boar: TRANSITIONS45,
+    tile_herd_warthog: TRANSITIONS46,
+    tile_herd_alpaca: TRANSITIONS47,
+    tile_herd_goat: TRANSITIONS48,
+    tile_herd_ram: TRANSITIONS49,
+    tile_cattle_cow: TRANSITIONS50,
+    tile_cattle_longhorn: TRANSITIONS51,
+    tile_cattle_triceratops: TRANSITIONS52,
+    tile_mount_horse: TRANSITIONS53,
+    tile_mount_donkey: TRANSITIONS54,
+    tile_mount_moose: TRANSITIONS55,
+    tile_mount_mammoth: TRANSITIONS56,
+    tile_fish_clam: TRANSITIONS57,
+    tile_fish_oyster: TRANSITIONS58,
+    tile_fish_mackerel: TRANSITIONS59,
+    tile_fish_kelp: TRANSITIONS60,
+    tile_mine_gem: TRANSITIONS61,
+    tile_mine_gold: TRANSITIONS62,
+    tile_special_giant_pearl: TRANSITIONS63
+  };
+
+  // docs/seasonal-vector-tiles/_entry.ts
+  var cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  var labelFor = (key) => key.split("_").slice(2).map(cap).join(" ");
+  var familyFor = (key) => key.split("_")[1] ?? "";
+  var tiles = Object.keys(SHOWCASE_TILES).map((key) => ({
+    key,
+    label: labelFor(key),
+    family: familyFor(key),
+    V: SHOWCASE_TILES[key],
+    T: SHOWCASE_TRANSITIONS[key]
+  }));
+  window.SEASONAL_DEMO = { tiles };
 })();

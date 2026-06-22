@@ -94,7 +94,9 @@ draw a different subject per season.
 - **Grass** — a dense raised tuft of blades fanning from the pad centre, taller
   than the pad's own grass; seasonal colour + winter snow among the blades.
 - **Flower** — the bloom itself on a short stem; constant bloom shape, only
-  colour/openness + frost change (never wither to a bare stub).
+  colour/openness + frost change (never wither to a bare stub). On-model
+  examples: `flower/heather.ts`, `flower/pansy.ts`, `flower/waterLily.ts` — all
+  keep a recognizable bloom in winter (frost-dusted + a snow cap), not a husk.
 - **Bird / Herd / Cattle / Mount (animals)** — the animal stands on the pad in
   front-¾, turned ~15–20° toward lower-left, full body readable (may overhang the
   pad width); legs/contact on the pad. Honour the subject's PALETTE LOCK — seasons

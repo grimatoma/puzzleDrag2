@@ -11,28 +11,30 @@ Each tile is one parameterized `paint()` with a per-season parameter set; the
 season stills are `paint(seasonParams)`, the idle adds a rest-anchored bob, and
 the transitions are an eased lerp of those params — which keeps the subject's
 identity constant across seasons and makes every morph start/end exactly on the
-neighbouring season still (no snap at the idle hand-off). To regenerate the
-bundle, point the esbuild entry below at all the per-tile modules under
-`src/textures/seasonal/**` and re-run it.
+neighbouring season still (no snap at the idle hand-off).
 
 Open `index.html` directly in a browser — no dev server needed.
 
 ## Regenerating the bundle
 
-`tiles.bundle.js` is the three art modules bundled with esbuild (their only
-imports are `import type`, so the bundle is dependency-free). Regenerate after
-editing the art:
+`tiles.bundle.js` is built **straight from the live showcase registry**
+(`src/textures/seasonal/showcaseTiles.ts`), so it can never drift from the board
+roster — adding a tile to the registry adds it to the preview automatically. The
+art modules only `import type`, so the bundle is dependency-free. Regenerate
+after editing any tile or adding a new one:
 
 ```bash
-printf '%s\n' \
-  'import { VARIANTS as OAK, TRANSITIONS as OAK_T } from "../../src/textures/seasonal/tree/oak.ts";' \
-  'import { VARIANTS as PANSY, TRANSITIONS as PANSY_T } from "../../src/textures/seasonal/flower/pansy.ts";' \
-  'import { VARIANTS as APPLE, TRANSITIONS as APPLE_T } from "../../src/textures/seasonal/fruit/apple.ts";' \
-  'window.SEASONAL_DEMO = { tiles: [' \
-  '  { key: "tile_tree_oak", label: "Oak", family: "tree", V: OAK, T: OAK_T },' \
-  '  { key: "tile_flower_pansy", label: "Pansy", family: "flower", V: PANSY, T: PANSY_T },' \
-  '  { key: "tile_fruit_apple", label: "Apple", family: "fruit", V: APPLE, T: APPLE_T },' \
-  '] };' > docs/seasonal-vector-tiles/_entry.ts
+cat > docs/seasonal-vector-tiles/_entry.ts <<'EOF'
+import { SHOWCASE_TILES, SHOWCASE_TRANSITIONS } from "../../src/textures/seasonal/showcaseTiles.ts";
+const cap = (s: string): string => s.charAt(0).toUpperCase() + s.slice(1);
+const labelFor = (key: string): string => key.split("_").slice(2).map(cap).join(" ");
+const familyFor = (key: string): string => key.split("_")[1] ?? "";
+const tiles = Object.keys(SHOWCASE_TILES).map((key) => ({
+  key, label: labelFor(key), family: familyFor(key),
+  V: SHOWCASE_TILES[key], T: SHOWCASE_TRANSITIONS[key],
+}));
+(window as unknown as { SEASONAL_DEMO: unknown }).SEASONAL_DEMO = { tiles };
+EOF
 npx esbuild docs/seasonal-vector-tiles/_entry.ts --bundle --format=iife --target=es2020 \
   --outfile=docs/seasonal-vector-tiles/tiles.bundle.js
 rm docs/seasonal-vector-tiles/_entry.ts
@@ -43,6 +45,6 @@ rm docs/seasonal-vector-tiles/_entry.ts
 > `index.html`** — otherwise returning visitors (and the GitHub Pages CDN) may keep
 > serving the previously cached bundle and the page will look unchanged.
 >
-> The entry list above is the original three tiles; the live bundle includes all
-> thirteen — list every per-tile module under `src/textures/seasonal/**` when you
-> regenerate.
+> Then regenerate `preview.png` (a full-page screenshot of the doc) so the GitHub
+> thumbnail matches, and update the tile count in the `index.html` prose if the
+> set changed.

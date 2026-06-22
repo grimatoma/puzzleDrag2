@@ -125,8 +125,10 @@ mid-frames through the REAL code and look at it. The procedure (esbuild-bundle
 the modules — they only `import type`, so they're dependency-free — then
 screenshot a grid via Playwright) is in `references/montage-and-preview.md`.
 Check: subject identity holds in all four seasons, winter isn't a white-out,
-transitions read as sensible interpolations. The simpler procedural animals
-(dodo, goose, donkey) are the most likely to need a polish pass — flag them.
+transitions read as sensible interpolations. Give the simpler procedural
+subjects an extra look — the current dodo / goose / donkey / warthog set is on
+the param model and reads cleanly, but a freshly-authored animal is the most
+likely to need a polish pass, so flag any that don't hold up.
 
 ### 6. Update the preview doc
 `docs/seasonal-vector-tiles/` is the standalone, no-server preview the user
@@ -146,7 +148,10 @@ build / test / e2e.
 - **Don't let winter erase the subject.** Frost/snow dust the upward surfaces; the
   subject stays clearly visible in its own colour. No white burst, no full ice
   coating. (Trees are the one exception — foliage may go bare; the trunk keeps
-  identity.)
+  identity.) The pansy was the last holdout — its original winter withered to a
+  bare snow-covered stub (it predated this rule) and has since been refactored to
+  the param model so winter is a frost-dusted, greyed-violet bloom with a light
+  snow cap; mirror that, never the stub.
 - **Idle must start at rest.** `bobAt(0)===0` with zero velocity, so the morph→idle
   hand-off has no positional jump. The engine restarts the idle clock at each
   settle (`seasonalVectorAdvance` returns `idleSec` from the last settle).
