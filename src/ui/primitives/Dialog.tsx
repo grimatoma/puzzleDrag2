@@ -139,7 +139,7 @@ export function ParchmentDialog({
           aria-labelledby={ariaLabel ? undefined : titleId}
           aria-label={ariaLabel}
           tabIndex={-1}
-          className={`${bgCls} border-[4px] border-iron w-[92vw] ${sizeCls} max-h-[88dvh] flex flex-col shadow-2xl outline-none ${className}`}
+          className={`${bgCls} border-[4px] border-iron w-[92vw] ${sizeCls} max-h-[88dvh] flex flex-col shadow-2xl outline-none overflow-hidden ${className}`}
           style={{ borderRadius: 20 }}
         >
           <DialogCtx.Provider
@@ -183,7 +183,7 @@ export function StoryDialog({
           aria-labelledby={ariaLabel ? undefined : titleId}
           aria-label={ariaLabel}
           tabIndex={-1}
-          className={`w-[92vw] ${sizeCls} max-h-[88dvh] flex flex-col shadow-2xl outline-none border border-panel-edge ${className}`}
+          className={`w-[92vw] ${sizeCls} max-h-[88dvh] flex flex-col shadow-2xl outline-none border border-panel-edge overflow-hidden ${className}`}
           style={{
             background: "linear-gradient(180deg, var(--panel-edge) 0%, var(--bg-darkest) 100%)",
             borderRadius: 22,
