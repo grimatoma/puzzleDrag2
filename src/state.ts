@@ -1,7 +1,7 @@
-import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, getItem, tileFamilyResource, BALANCE_OVERRIDES } from "./constants.js";
+import { BIOMES, BUILDINGS, RECIPES, WORKSHOP_RECIPES, DAILY_REWARDS, MIN_EXPEDITION_TURNS, CAPPED_INVENTORY_RESOURCES, getItem, tileFamilyResource, tileFamily, BALANCE_OVERRIDES } from "./constants.js";
 import { producedResource } from "./game/producedResource.js";
 import { computePromotion } from "./game/promotion.js";
-import { categoryOfTileKey } from "./config/productionLines.js";
+import { categoryOfTileKey, PRODUCTION_LINES } from "./config/productionLines.js";
 import { effectiveTilesPerResource } from "./game/effectiveDivisor.js";
 import { locBuilt as _locBuilt } from "./locBuilt.js";
 import { sellPriceFor as _sellPriceFor, effectiveSellPrice as _effectiveSellPrice } from "./features/market/pricing.js";
@@ -75,6 +75,10 @@ const FAMILY_RESOURCE_BY_CATEGORY: Record<string, string> = (() => {
   const out: Record<string, string> = {};
   for (const t of TILE_TYPES) {
     if (out[t.category]) continue;
+    // Skip cross-category tiles (e.g. tile_bird_clover is categorized "flowers"
+    // but produces eggs) so they don't poison the category→resource map.
+    const fam = tileFamily(t.id);
+    if (fam && PRODUCTION_LINES[fam] && fam !== t.category) continue;
     const r = producedResource({ key: t.id });
     if (r) out[t.category] = r;
   }
@@ -397,8 +401,7 @@ function coreReducer(state: GameState, action: Action): GameState {
         // (zero hires => null), so no behavioural change until a promoter is hired.
         const fromCat = categoryOfTileKey(key);
         if (fromCat) {
-          const chainLenForProgress2 = chainLength ?? gained;
-          const promo = computePromotion(chainAgg, fromCat, chainLenForProgress2);
+          const promo = computePromotion(chainAgg, fromCat, chainLenForProgress);
           if (promo) {
             const promotedResource = familyResourceForCategory(promo.toCategory);
             if (promotedResource) {

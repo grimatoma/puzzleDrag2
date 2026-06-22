@@ -103,13 +103,50 @@ describe("CHAIN_COLLECTED: promotion-chain mechanic (PC2)", () => {
     expect(inv(next).soup ?? 0).toBe(0);
   });
 
-  it("with 10 Stewards, a grain chain of 18 banks > 0 soup (promotion fired)", () => {
+  it("with 10 Stewards, a grain chain of 18 banks exactly 1 soup (promotion fired)", () => {
     // 10 Stewards: eff threshold = 10. Chain 18 >= 10 → promotes.
-    // units = max(1, floor(1 * (18/10))) = max(1,1) = 1 soup
+    // units = max(1, floor(1.0 * 18/10)) = max(1, 1) = 1 soup
     const state = mergeTestState({
       workers: { hired: { steward: 10 } },
     });
     const next = dispatchLongGrainChain(state);
-    expect(inv(next).soup ?? 0).toBeGreaterThan(0);
+    expect(inv(next).soup ?? 0).toBe(1);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Perfumer promotion: fruits → flowers → honey (Bug-1 regression guard)
+// ---------------------------------------------------------------------------
+// Perfumer: fruits → flowers. baseThreshold=22, minThreshold=11.
+// With 10 Perfumers hired (weight=1): eff threshold = 22 - (22-11)*1 = 11.
+// A tile_fruit_apple chain of length 18 >= 11 → promotes; awards honey (NOT eggs).
+// ---------------------------------------------------------------------------
+
+const PERFUMER_CHAIN_LENGTH = 18;
+
+function dispatchAppleChain(state: ReturnType<typeof mergeTestState>) {
+  return gameReducer(state, {
+    type: "CHAIN_COLLECTED",
+    payload: {
+      key: "tile_fruit_apple",
+      gained: PERFUMER_CHAIN_LENGTH,
+      upgrades: 0,
+      value: 2,
+      chainLength: PERFUMER_CHAIN_LENGTH,
+      resourceKey: "pie",
+    },
+  } as never);
+}
+
+describe("CHAIN_COLLECTED: Perfumer promotion awards honey not eggs (Bug-1 guard)", () => {
+  it("with 10 Perfumers, a fruit chain of 18 banks honey > 0 (NOT eggs)", () => {
+    // 10 Perfumers: eff threshold = 11. Chain 18 >= 11 → promotes → honey.
+    const state = mergeTestState({
+      workers: { hired: { perfumer: 10 } },
+    });
+    const next = dispatchAppleChain(state);
+    expect(inv(next).honey ?? 0).toBeGreaterThan(0);
+    // The chain produces pie; promotion produces honey; neither is eggs
+    expect(inv(next).eggs ?? 0).toBe(0);
   });
 });
