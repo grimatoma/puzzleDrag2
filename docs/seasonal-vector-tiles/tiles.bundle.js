@@ -1,6 +1,23 @@
 "use strict";
 (() => {
   // src/textures/seasonal/tree/oak.ts
+  function clamp01(x) {
+    return x < 0 ? 0 : x > 1 ? 1 : x;
+  }
+  function smoother(x) {
+    const c = clamp01(x);
+    return c * c * c * (c * (6 * c - 15) + 10);
+  }
+  var IDLE_W = 0.66;
+  function breezeAt(t, w, amp) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function bobAt(t, w, amp) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function shimmerAt(t, w, phase) {
+    return 0.5 - 0.5 * Math.cos(w * t + phase);
+  }
   function groundShadow(ctx, rx = 16, alpha = 0.22) {
     ctx.fillStyle = `rgba(0,0,0,${alpha})`;
     ctx.beginPath();
@@ -114,8 +131,10 @@
     [-15, -8, 3],
     [16, -7, 3]
   ];
-  function springOak(ctx, sway, budPulse) {
+  function springOak(ctx, sway, bob, budPulse) {
     groundShadow(ctx, 14, 0.2);
+    ctx.save();
+    ctx.translate(0, bob);
     trunk(ctx, false);
     branchSilhouette(ctx, "#5a3d20", sway, false);
     const fresh = ["#5a7d24", "#86b53a", "#c0e26a"];
@@ -141,19 +160,21 @@
       [-13, -11]
     ];
     buds.forEach(([bx, by], i) => {
-      const a = 0.5 + 0.45 * (0.5 + 0.5 * Math.sin(budPulse + i * 1.3));
+      const a = 0.5 + 0.45 * shimmerAt(budPulse, 1, i * 1.3);
       ctx.fillStyle = `rgba(232,224,150,${a})`;
       ctx.beginPath();
       ctx.arc(bx + sway * 0.2, by, 1.5, 0, Math.PI * 2);
       ctx.fill();
     });
+    ctx.restore();
   }
   function drawOakSpring(ctx) {
-    springOak(ctx, 0, 0.6);
+    springOak(ctx, 0, 0, 0);
   }
   function animOakSpring(ctx, t) {
-    const sway = Math.sin(t * 1.3) * 1.6;
-    springOak(ctx, sway, t * 2.4);
+    const sway = breezeAt(t, IDLE_W, 2.2);
+    const bob = bobAt(t, IDLE_W, 0.5);
+    springOak(ctx, sway, bob, t * IDLE_W);
   }
   var SUMMER_BLOBS = [
     // [x, y, r]
@@ -167,37 +188,41 @@
     [13, -9, 5.5],
     [0, -10, 7]
   ];
-  function summerOak(ctx, sway, shimmer) {
+  function summerOak(ctx, sway, bob, shimmer) {
     groundShadow(ctx, 16, 0.22);
-    trunk(ctx, false);
+    ctx.save();
+    ctx.translate(0, bob);
     const green = ["#2f5418", "#4f8a2a", "#86bf48"];
     SUMMER_BLOBS.forEach(([x, y, r], i) => {
-      const s = sway * (0.25 + Math.abs(x) / 26) + Math.sin(shimmer + i) * 0.4;
+      const sh = shimmerAt(shimmer, 1, i) - shimmerAt(0, 1, i);
+      const s = sway * (0.25 + Math.abs(x) / 26) + sh * 0.7;
       canopyBlob(ctx, x + s, y, r, green, 1);
     });
-    ctx.fillStyle = `rgba(190,230,140,${0.4 + 0.3 * (0.5 + 0.5 * Math.sin(shimmer))})`;
+    ctx.fillStyle = `rgba(190,230,140,${0.4 + 0.3 * shimmerAt(shimmer, 1, 0)})`;
     [[-7, -22, 2], [-2, -19, 1.6], [-11, -14, 1.8]].forEach(([fx, fy, r]) => {
       ctx.beginPath();
       ctx.arc(fx + sway * 0.3, fy, r, 0, Math.PI * 2);
       ctx.fill();
     });
-    const flx = 15 + Math.sin(shimmer * 0.8) * 1.5;
-    const fly = -6 + Math.cos(shimmer * 1.1) * 1.2;
+    const flx = 15 + (shimmerAt(shimmer, 0.8, 0) - shimmerAt(0, 0.8, 0)) * 3;
+    const fly = -6 + (shimmerAt(shimmer, 1.1, Math.PI / 2) - shimmerAt(0, 1.1, Math.PI / 2)) * 2.4;
     ctx.fillStyle = "#4f8a2a";
     ctx.save();
     ctx.translate(flx, fly);
-    ctx.rotate(Math.sin(shimmer) * 0.4);
+    ctx.rotate((shimmerAt(shimmer, 1, 0) - shimmerAt(0, 1, 0)) * 0.6);
     ctx.beginPath();
     ctx.ellipse(0, 0, 1.6, 2.8, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
+    ctx.restore();
   }
   function drawOakSummer(ctx) {
-    summerOak(ctx, 0, 0);
+    summerOak(ctx, 0, 0, 0);
   }
   function animOakSummer(ctx, t) {
-    const sway = Math.sin(t * 1.3) * 1.4;
-    summerOak(ctx, sway, t * 1.9);
+    const sway = breezeAt(t, IDLE_W, 2);
+    const bob = bobAt(t, IDLE_W, 0.5);
+    summerOak(ctx, sway, bob, t * IDLE_W);
   }
   var AUTUMN_BLOBS = [
     [0, -16, 10.5, 0.5],
@@ -260,8 +285,10 @@
       ctx.fill();
     });
   }
-  function autumnOak(ctx, sway, fall) {
+  function autumnOak(ctx, sway, bob, fall) {
     groundShadow(ctx, 15, 0.22);
+    ctx.save();
+    ctx.translate(0, bob);
     trunk(ctx, false);
     AUTUMN_BLOBS.forEach(([x, y, r, hue], i) => {
       if (i === 5) return;
@@ -294,16 +321,18 @@
       ctx.ellipse(fx, fy, 2.4, 1.3, 0.4, 0, Math.PI * 2);
       ctx.fill();
     });
+    ctx.restore();
   }
   function drawOakAutumn(ctx) {
-    autumnOak(ctx, 0, 0.25);
+    autumnOak(ctx, 0, 0, 0.25);
   }
   function animOakAutumn(ctx, t) {
-    const sway = Math.sin(t * 1.1) * 1.2;
-    const fall = t * 0.28 % 1;
-    autumnOak(ctx, sway, fall);
+    const sway = breezeAt(t, IDLE_W, 1.8);
+    const bob = bobAt(t, IDLE_W, 0.45);
+    const fall = t * 0.22 % 1;
+    autumnOak(ctx, sway, bob, fall);
   }
-  function winterOak(ctx, sway, flakes, sheen3) {
+  function winterOak(ctx, sway, bob, flakes, sheen3) {
     groundShadow(ctx, 16, 0.18);
     const snow = ctx.createLinearGradient(0, 16, 0, 24);
     snow.addColorStop(0, "#eef4fb");
@@ -312,8 +341,11 @@
     ctx.beginPath();
     ctx.ellipse(0, 20, 18, 6, 0, 0, Math.PI * 2);
     ctx.fill();
+    ctx.save();
+    ctx.translate(0, bob);
     trunk(ctx, true);
     branchSilhouette(ctx, "#2e2114", sway, true);
+    ctx.restore();
     ctx.fillStyle = `rgba(200,224,255,${0.16 + sheen3 * 0.16})`;
     ctx.beginPath();
     ctx.ellipse(-3, 19, 10, 2.4, 0, 0, Math.PI * 2);
@@ -331,6 +363,7 @@
     winterOak(
       ctx,
       0,
+      0,
       [
         [-9, -14, 1.3],
         [6, -4, 1.1],
@@ -341,7 +374,8 @@
     );
   }
   function animOakWinter(ctx, t) {
-    const sway = Math.sin(t * 0.9) * 1;
+    const sway = breezeAt(t, IDLE_W * 0.8, 0.9);
+    const bob = bobAt(t, IDLE_W * 0.8, 0.3);
     const span = 36;
     const seeds = [
       [-9, 1.3, 0],
@@ -350,161 +384,308 @@
       [-3, 1.2, 0.25]
     ];
     const flakes = seeds.map(([fx, r, phase]) => {
-      const prog = ((t / 3.6 + phase) % 1 + 1) % 1;
+      const prog = ((t / 4.2 + phase) % 1 + 1) % 1;
       const fy = -24 + prog * span;
       const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
       return [driftX, fy, r];
     });
-    const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.7);
-    winterOak(ctx, sway, flakes, sheen3);
+    const sheen3 = shimmerAt(t, 0.5, 0);
+    winterOak(ctx, sway, bob, flakes, sheen3);
   }
   function lerp(a, b, f) {
     return a + (b - a) * f;
   }
   function springToSummer(ctx, p) {
-    const q = Math.max(0, Math.min(1, p));
-    groundShadow(ctx, lerp(14, 16, q), 0.21);
+    const q = clamp01(p);
+    const gust = Math.sin(Math.PI * q) * 1.6;
+    groundShadow(ctx, lerp(14, 16, q), lerp(0.2, 0.22, q));
     trunk(ctx, false);
-    branchSilhouette(ctx, "#5a3d20", 0, false);
-    const fresh = ["#5a7d24", "#86b53a", "#c0e26a"];
-    SPRING_CLUSTERS.forEach(([x, y, r]) => {
-      const a = 0.9 * (1 - q);
-      if (a > 0.02) canopyBlob(ctx, x, y, lerp(r, r * 0.8, q), fresh, a);
-    });
-    const green = ["#2f5418", "#4f8a2a", "#86bf48"];
-    SUMMER_BLOBS.forEach(([x, y, r], i) => {
-      const grow = Math.max(0, q * 1.15 - i * 0.015);
-      const rr = r * Math.min(1, grow);
-      if (rr > 0.5) canopyBlob(ctx, x, y, rr, green, Math.min(1, q + 0.15));
-    });
-    const buds = [
-      [-8, -18],
-      [6, -19],
-      [-2, -14],
-      [11, -12],
-      [-13, -11]
-    ];
-    const budA = Math.max(0, 0.6 * (1 - q * 1.6));
-    if (budA > 0.02) {
-      buds.forEach(([bx, by]) => {
-        ctx.fillStyle = `rgba(232,224,150,${budA})`;
+    branchSilhouette(ctx, "#5a3d20", gust * 0.4, false);
+    const springFade = 1 - smoother(Math.min(1, q / 0.65));
+    if (springFade > 1e-3) {
+      ctx.save();
+      ctx.globalAlpha = springFade;
+      const fresh = ["#5a7d24", "#86b53a", "#c0e26a"];
+      SPRING_CLUSTERS.forEach(([x, y, r]) => {
+        const s = gust * 0.3 * (0.3 + Math.abs(x) / 28);
+        canopyBlob(ctx, x + s, y, r, fresh, 0.9);
+      });
+      ctx.fillStyle = "#a6e06a";
+      SPRING_CLUSTERS.forEach(([x, y, r], i) => {
+        const s = gust * 0.3 * (0.3 + Math.abs(x) / 28);
+        for (let k = 0; k < 3; k++) {
+          const a = i * 1.7 + k * 2.1;
+          ctx.beginPath();
+          ctx.ellipse(x + s + Math.cos(a) * r, y + Math.sin(a) * r, 1.4, 2.2, a, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
+      const buds = [
+        [-8, -18],
+        [6, -19],
+        [-2, -14],
+        [11, -12],
+        [-13, -11]
+      ];
+      buds.forEach(([bx, by], i) => {
+        const a = 0.5 + 0.45 * shimmerAt(0, 1, i * 1.3);
+        ctx.fillStyle = `rgba(232,224,150,${a})`;
         ctx.beginPath();
-        ctx.arc(bx, by, 1.4, 0, Math.PI * 2);
+        ctx.arc(bx + gust * 0.2, by, 1.5, 0, Math.PI * 2);
         ctx.fill();
       });
+      ctx.restore();
+    }
+    const green = ["#2f5418", "#4f8a2a", "#86bf48"];
+    SUMMER_BLOBS.forEach(([x, y, r], i) => {
+      const start = 0.18 + i * 0.04;
+      const grow = smoother(clamp01((q - start) / (1 - start)));
+      const rr = r * grow;
+      if (rr > 0.4) {
+        const s = gust * (0.25 + Math.abs(x) / 26);
+        canopyBlob(ctx, x + s, y, rr, green, 1);
+      }
+    });
+    const dress = smoother(clamp01((q - 0.88) / 0.12));
+    if (dress > 1e-3) {
+      ctx.save();
+      ctx.globalAlpha = dress;
+      ctx.fillStyle = "rgba(190,230,140,0.4)";
+      [[-7, -22, 2], [-2, -19, 1.6], [-11, -14, 1.8]].forEach(([fx, fy, r]) => {
+        ctx.beginPath();
+        ctx.arc(fx, fy, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = "#4f8a2a";
+      ctx.beginPath();
+      ctx.ellipse(15, -6, 1.6, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
     ctx.globalAlpha = 1;
   }
+  function autumnCrownStill(ctx) {
+    AUTUMN_BLOBS.forEach(([x, y, r, hue], i) => {
+      if (i === 5) return;
+      canopyBlob(ctx, x, y, r, autumnColors(hue), 0.95);
+    });
+    acorns(ctx);
+    const fall = 0.25;
+    const leaves2 = [
+      [-6, 0.3, 0, 6],
+      [9, 0.8, 0.5, 5]
+    ];
+    leaves2.forEach(([sx, hue, phase, amp]) => {
+      const prog = ((fall + phase) % 1 + 1) % 1;
+      const ly = -6 + prog * 26;
+      const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * amp;
+      ctx.fillStyle = autumnColors(hue)[1];
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(prog * Math.PI * 3 + phase * 4);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 1.7, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+    ctx.fillStyle = autumnColors(0.6)[1];
+    [[-7, 21], [5, 22]].forEach(([fx, fy]) => {
+      ctx.beginPath();
+      ctx.ellipse(fx, fy, 2.4, 1.3, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
   function summerToAutumn(ctx, p) {
-    const q = Math.max(0, Math.min(1, p));
+    const q = clamp01(p);
+    const transient3 = Math.sin(Math.PI * q);
     groundShadow(ctx, lerp(16, 15, q), 0.22);
     trunk(ctx, false);
-    SUMMER_BLOBS.forEach(([x, y, r], i) => {
-      const aBlob = AUTUMN_BLOBS[Math.min(i, AUTUMN_BLOBS.length - 1)];
-      const [adark, amid, alight] = autumnColors(aBlob[3]);
-      const greenCols = ["#2f5418", "#4f8a2a", "#86bf48"];
-      const autumnCols = [adark, amid, alight];
-      const rr = i === 5 ? r * lerp(1, 0.15, q) : r;
-      if (rr > 0.5) {
-        canopyBlob(ctx, x, y, rr, greenCols, 1);
-        if (q > 0.01) canopyBlob(ctx, x, y, rr, autumnCols, q);
-      }
-    });
-    if (q > 0.5) {
+    const autumnFade = smoother(clamp01((q - 0.45) / 0.55));
+    const summerWeight = 1 - autumnFade;
+    if (summerWeight > 1e-3) {
       ctx.save();
-      ctx.globalAlpha = (q - 0.5) * 2;
-      acorns(ctx);
+      ctx.globalAlpha = summerWeight;
+      const greenCols = ["#2f5418", "#4f8a2a", "#86bf48"];
+      SUMMER_BLOBS.forEach(([x, y, r], i) => {
+        const aBlob = AUTUMN_BLOBS[Math.min(i, AUTUMN_BLOBS.length - 1)];
+        const autumnCols = autumnColors(aBlob[3]);
+        const sweep = smoother(clamp01((q * 1.4 - (x + 14) / 28) / 0.6));
+        const rr = i === 5 ? r * lerp(1, 0.15, q) : r;
+        if (rr > 0.5) {
+          canopyBlob(ctx, x, y, rr, greenCols, 1);
+          if (sweep > 0.01) canopyBlob(ctx, x, y, rr, autumnCols, sweep);
+        }
+      });
+      ctx.fillStyle = "rgba(190,230,140,0.4)";
+      [[-7, -22, 2], [-2, -19, 1.6], [-11, -14, 1.8]].forEach(([fx, fy, r]) => {
+        ctx.beginPath();
+        ctx.arc(fx, fy, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = "#4f8a2a";
+      ctx.beginPath();
+      ctx.ellipse(15, -6, 1.6, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
-    if (q > 0.65) {
-      const d = (q - 0.65) / 0.35;
+    if (autumnFade > 1e-3) {
+      ctx.save();
+      ctx.globalAlpha = autumnFade;
+      autumnCrownStill(ctx);
+      ctx.restore();
+    }
+    if (transient3 > 0.01) {
       const leaves2 = [
-        [-6, -6, 0.4],
-        [9, -8, 0.8]
+        [-12, -14, 0.3],
+        [13, -12, 0.8]
       ];
-      leaves2.forEach(([sx, sy, hue]) => {
-        const lx = sx + d * 2;
-        const ly = sy + d * 5;
-        ctx.fillStyle = autumnColors(hue)[1];
+      leaves2.forEach(([sx, sy, hue], i) => {
+        const lift = transient3;
+        const lx = sx + (sx < 0 ? -1 : 1) * lift * 3;
+        const ly = sy + lift * 3 - lift * Math.abs(Math.sin(q * Math.PI * 4 + i)) * 1.5;
         ctx.save();
+        ctx.globalAlpha = transient3;
+        ctx.fillStyle = autumnColors(hue)[1];
         ctx.translate(lx, ly);
-        ctx.rotate(d * 1.4);
-        ctx.globalAlpha = 1 - d * 0.3;
+        ctx.rotate(Math.sin(q * Math.PI * 3 + i) * 0.8);
         ctx.beginPath();
-        ctx.ellipse(0, 0, 1.7, 3, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 1.6, 2.8, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       });
     }
     ctx.globalAlpha = 1;
   }
-  function autumnToWinter(ctx, p) {
-    const q = Math.max(0, Math.min(1, p));
-    const shed = Math.min(1, q / 0.7);
-    const snowAmt = Math.max(0, (q - 0.4) / 0.6);
-    groundShadow(ctx, lerp(15, 16, q), lerp(0.22, 0.18, q));
-    if (snowAmt > 0.01) {
-      const snow = ctx.createLinearGradient(0, 16, 0, 24);
-      snow.addColorStop(0, "#eef4fb");
-      snow.addColorStop(1, "#c2d2e4");
-      ctx.save();
-      ctx.globalAlpha = snowAmt;
-      ctx.fillStyle = snow;
+  function winterPadStill(ctx) {
+    const snow = ctx.createLinearGradient(0, 16, 0, 24);
+    snow.addColorStop(0, "#eef4fb");
+    snow.addColorStop(1, "#c2d2e4");
+    ctx.fillStyle = snow;
+    ctx.beginPath();
+    ctx.ellipse(0, 20, 18, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function winterFlakesStill(ctx) {
+    const flakes = [
+      [-9, -14, 1.3],
+      [6, -4, 1.1],
+      [12, -18, 1],
+      [-3, 6, 1.2]
+    ];
+    ctx.fillStyle = "#ffffff";
+    flakes.forEach(([fx, fy, r]) => {
+      ctx.globalAlpha = 0.85;
       ctx.beginPath();
-      ctx.ellipse(0, 20, 18, 6, 0, 0, Math.PI * 2);
+      ctx.arc(fx, fy, r, 0, Math.PI * 2);
       ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+  }
+  function autumnToWinter(ctx, p) {
+    const q = clamp01(p);
+    const shed = smoother(clamp01(q / 0.7));
+    const settle = smoother(clamp01((q - 0.6) / 0.4));
+    groundShadow(ctx, lerp(15, 16, q), lerp(0.22, 0.18, q));
+    if (settle > 1e-3) {
+      ctx.save();
+      ctx.globalAlpha = settle;
+      winterPadStill(ctx);
       ctx.restore();
     }
-    trunk(ctx, false);
-    if (snowAmt > 0.01) {
+    if (1 - settle > 1e-3) {
       ctx.save();
-      ctx.globalAlpha = snowAmt;
+      ctx.globalAlpha = 1 - settle;
+      trunk(ctx, false);
+      ctx.restore();
+    }
+    if (settle > 1e-3) {
+      ctx.save();
+      ctx.globalAlpha = settle;
       trunk(ctx, true);
       ctx.restore();
     }
-    branchSilhouette(ctx, "#3a2a18", 0, false);
-    AUTUMN_BLOBS.forEach(([x, y, r, hue], i) => {
-      if (i === 5) return;
-      const a = 0.95 * (1 - shed);
-      if (a > 0.03) {
-        const drop = shed * (8 + Math.abs(x) * 0.3);
-        canopyBlob(ctx, x, y + drop, r * (1 - shed * 0.4), autumnColors(hue), a);
-      }
-    });
-    if (shed > 0.05 && shed < 0.98) {
+    if (shed > 1e-3) {
+      ctx.save();
+      ctx.globalAlpha = shed * (1 - settle);
+      branchSilhouette(ctx, "#3a2a18", 0, false);
+      ctx.restore();
+    }
+    if (settle > 1e-3) {
+      ctx.save();
+      ctx.globalAlpha = settle;
+      branchSilhouette(ctx, "#2e2114", 0, true);
+      ctx.restore();
+      ctx.save();
+      ctx.globalAlpha = settle;
+      ctx.fillStyle = "rgba(200,224,255,0.224)";
+      ctx.beginPath();
+      ctx.ellipse(-3, 19, 10, 2.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    const autumnVis = 1 - shed;
+    if (autumnVis > 3e-3) {
+      ctx.save();
+      ctx.globalAlpha = autumnVis;
+      AUTUMN_BLOBS.forEach(([x, y, r, hue], i) => {
+        if (i === 5) return;
+        const drop = shed * (6 + Math.abs(x) * 0.25);
+        canopyBlob(ctx, x, y + drop, r * (1 - shed * 0.35), autumnColors(hue), 0.95);
+      });
+      acorns(ctx);
       const leaves2 = [
         [-6, 0.3, 0, 6],
-        [9, 0.8, 0.4, 5],
-        [2, 0.6, 0.7, 5]
+        [9, 0.8, 0.5, 5]
       ];
       leaves2.forEach(([sx, hue, phase, amp]) => {
-        const prog = Math.min(1, shed + phase * 0.3);
-        const ly = -8 + prog * 30;
+        const prog = ((0.25 + phase) % 1 + 1) % 1;
+        const ly = -6 + prog * 26 + shed * 6;
         const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * amp;
         ctx.fillStyle = autumnColors(hue)[1];
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(prog * Math.PI * 3 + phase * 4);
-        ctx.globalAlpha = 1 - prog * 0.5;
         ctx.beginPath();
         ctx.ellipse(0, 0, 1.7, 3, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       });
-    }
-    if (snowAmt > 0.02) {
-      ctx.save();
-      ctx.globalAlpha = snowAmt;
-      BRANCHES.forEach(([_cx, _cy, tx, ty], i) => {
-        ctx.fillStyle = "#f4f8ff";
+      ctx.fillStyle = autumnColors(0.6)[1];
+      [[-7, 21], [5, 22]].forEach(([fx, fy]) => {
         ctx.beginPath();
-        ctx.ellipse(tx, ty - 0.5, 2.6 + i % 2 * 0.6, 1.5, tx < 0 ? -0.5 : 0.5, 0, Math.PI * 2);
+        ctx.ellipse(fx, fy, 2.4, 1.3, 0.4, 0, Math.PI * 2);
         ctx.fill();
       });
-      ctx.fillStyle = `rgba(200,224,255,${0.16 * snowAmt})`;
+      ctx.restore();
+    }
+    const fallers = [
+      // [startX, startY, spawnQ, hue]
+      [-11, -13, 0.08, 0.3],
+      [12, -11, 0.3, 0.8],
+      [3, -17, 0.52, 0.55]
+    ];
+    fallers.forEach(([sx, sy, spawnQ, hue], i) => {
+      const span = 0.9 - spawnQ;
+      if (q <= spawnQ || span <= 0) return;
+      const prog = clamp01((q - spawnQ) / span);
+      if (prog >= 1) return;
+      const ly = sy + prog * (30 - sy);
+      const flutter = Math.sin(prog * Math.PI * 5 + i) * (1 - prog) * 4;
+      const lx = sx + flutter + (sx < 0 ? -1 : 1) * prog * 2;
+      ctx.save();
+      ctx.globalAlpha = (1 - prog) * 0.95;
+      ctx.fillStyle = autumnColors(hue)[1];
+      ctx.translate(lx, ly);
+      ctx.rotate(prog * Math.PI * 3 + i);
       ctx.beginPath();
-      ctx.ellipse(-3, 19, 10, 2.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 1.7, 3, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
+    });
+    if (settle > 1e-3) {
+      ctx.save();
+      ctx.globalAlpha = settle;
+      winterFlakesStill(ctx);
       ctx.restore();
     }
     ctx.globalAlpha = 1;
@@ -522,7 +703,7 @@
   };
 
   // src/textures/seasonal/tree/birch.ts
-  function clamp01(x) {
+  function clamp012(x) {
     if (!Number.isFinite(x)) return 0;
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
@@ -533,19 +714,19 @@
     return [lerp2(a[0], b[0], f), lerp2(a[1], b[1], f), lerp2(a[2], b[2], f)];
   }
   function rgb(c, alpha = 1) {
-    const r = Math.round(clamp01(c[0] / 255) * 255);
-    const g = Math.round(clamp01(c[1] / 255) * 255);
-    const b = Math.round(clamp01(c[2] / 255) * 255);
+    const r = Math.round(clamp012(c[0] / 255) * 255);
+    const g = Math.round(clamp012(c[1] / 255) * 255);
+    const b = Math.round(clamp012(c[2] / 255) * 255);
     return `rgba(${r},${g},${b},${alpha})`;
   }
   function scale3(c, k) {
     return [c[0] * k, c[1] * k, c[2] * k];
   }
-  var smoother = (x) => {
-    const c = clamp01(x);
+  var smoother2 = (x) => {
+    const c = clamp012(x);
     return c * c * c * (c * (6 * c - 15) + 10);
   };
-  function bobAt(t, A = 0.6, w = 1.2) {
+  function bobAt2(t, A = 0.6, w = 1.2) {
     return A * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP = {
@@ -878,11 +1059,11 @@
     ctx.restore();
   }
   function canopy(ctx, p, sway, shimmer) {
-    const d = clamp01(p.leafDensity);
+    const d = clamp012(p.leafDensity);
     if (d < 0.03) return;
     CLUSTERS.forEach(([x, y, r], i) => {
       const threshold = i / CLUSTERS.length;
-      const grow = clamp01((d - threshold * 0.55) / 0.45);
+      const grow = clamp012((d - threshold * 0.55) / 0.45);
       if (grow < 0.04) return;
       const s = sway * (0.3 + Math.abs(x) / 28) + Math.sin(shimmer + i) * 0.35 * d;
       canopyBlob2(ctx, x + s, y, r * grow, p, 0.9);
@@ -892,7 +1073,7 @@
       ctx.fillStyle = rgb(p.foliageLight, fleckAlpha);
       CLUSTERS.forEach(([x, y, r], i) => {
         const threshold = i / CLUSTERS.length;
-        const grow = clamp01((d - threshold * 0.55) / 0.45);
+        const grow = clamp012((d - threshold * 0.55) / 0.45);
         if (grow < 0.2) return;
         const s = sway * (0.3 + Math.abs(x) / 28);
         for (let k = 0; k < 2; k++) {
@@ -985,17 +1166,17 @@
     return (ctx) => paint(ctx, SP[season], 0, 0, 0);
   }
   function animSpring(ctx, t) {
-    const bob = bobAt(t, 0.5, 1.3);
+    const bob = bobAt2(t, 0.5, 1.3);
     const sway = Math.sin(t * 1.4) * 1.4;
     paint(ctx, SP.Spring, bob, sway, t * 2.4);
   }
   function animSummer(ctx, t) {
-    const bob = bobAt(t, 0.5, 1.2);
+    const bob = bobAt2(t, 0.5, 1.2);
     const sway = Math.sin(t * 1.3) * 1.3;
     paint(ctx, SP.Summer, bob, sway, t * 1.9);
   }
   function animAutumn(ctx, t) {
-    const bob = bobAt(t, 0.5, 1.1);
+    const bob = bobAt2(t, 0.5, 1.1);
     const sway = Math.sin(t * 1.1) * 1.1;
     paint(ctx, SP.Autumn, bob, sway, t * 1.6);
     ctx.save();
@@ -1026,7 +1207,7 @@
     }
   }
   function animWinter(ctx, t) {
-    const bob = bobAt(t, 0.35, 0.9);
+    const bob = bobAt2(t, 0.35, 0.9);
     const sway = Math.sin(t * 0.9) * 0.9;
     paint(ctx, SP.Winter, bob, sway, 0);
     ctx.save();
@@ -1059,7 +1240,7 @@
   }
   function makeTransition(from, to) {
     return (ctx, pp) => {
-      const f = smoother(clamp01(pp));
+      const f = smoother2(clamp012(pp));
       paint(ctx, lerpP(SP[from], SP[to], f), 0, 0, 0);
     };
   }
@@ -1076,7 +1257,7 @@
   };
 
   // src/textures/seasonal/tree/cypress.ts
-  function clamp012(x) {
+  function clamp013(x) {
     if (!Number.isFinite(x)) return 0;
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
@@ -1087,19 +1268,19 @@
     return [lerp4(a[0], b[0], f), lerp4(a[1], b[1], f), lerp4(a[2], b[2], f)];
   }
   function rgb2(c, alpha = 1) {
-    const r = Math.round(clamp012(c[0] / 255) * 255);
-    const g = Math.round(clamp012(c[1] / 255) * 255);
-    const b = Math.round(clamp012(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp012(alpha)})`;
+    const r = Math.round(clamp013(c[0] / 255) * 255);
+    const g = Math.round(clamp013(c[1] / 255) * 255);
+    const b = Math.round(clamp013(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp013(alpha)})`;
   }
   function scale32(c, k) {
     return [c[0] * k, c[1] * k, c[2] * k];
   }
-  var smoother2 = (x) => {
-    const c = clamp012(x);
+  var smoother3 = (x) => {
+    const c = clamp013(x);
     return c * c * c * (c * (6 * c - 15) + 10);
   };
-  function bobAt2(t, A = 0.5, w = 1.2) {
+  function bobAt3(t, A = 0.5, w = 1.2) {
     return A * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP2 = {
@@ -1242,11 +1423,11 @@
       ];
       spots.forEach(([sx, sy], i) => {
         const a = p.blossomAmt * (i % 2 === 0 ? 0.9 : 0.7);
-        ctx.fillStyle = `rgba(255,236,246,${clamp012(a)})`;
+        ctx.fillStyle = `rgba(255,236,246,${clamp013(a)})`;
         ctx.beginPath();
         ctx.arc(sx, sy, 1.1, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = `rgba(248,210,90,${clamp012(a)})`;
+        ctx.fillStyle = `rgba(248,210,90,${clamp013(a)})`;
         ctx.beginPath();
         ctx.arc(sx, sy, 0.45, 0, Math.PI * 2);
         ctx.fill();
@@ -1264,7 +1445,7 @@
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.fillStyle = rgb2([196, 120, 40], clamp012(p.fallenLeafAmt + 0.3));
+        ctx.fillStyle = rgb2([196, 120, 40], clamp013(p.fallenLeafAmt + 0.3));
         ctx.beginPath();
         ctx.ellipse(0, 0, 2.4, 1.3, 0, 0, Math.PI * 2);
         ctx.fill();
@@ -1282,14 +1463,14 @@
       snow.addColorStop(0, "#eef4fb");
       snow.addColorStop(1, "#c6d6e6");
       ctx.save();
-      ctx.globalAlpha = clamp012(p.padSnowAmt);
+      ctx.globalAlpha = clamp013(p.padSnowAmt);
       ctx.fillStyle = snow;
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
       if (p.frostAmt > 0.02) {
-        ctx.fillStyle = `rgba(255,255,255,${clamp012(0.5 * p.frostAmt + 0.3)})`;
+        ctx.fillStyle = `rgba(255,255,255,${clamp013(0.5 * p.frostAmt + 0.3)})`;
         const sparkle = [
           [-10, 18],
           [-4, 20],
@@ -1376,7 +1557,7 @@
     ctx.fill();
   }
   function spire(ctx, p, sway, shimmer) {
-    const d = clamp012(p.leafDensity);
+    const d = clamp013(p.leafDensity);
     TIERS.forEach(([cy, hw], i) => {
       const w = hw * (0.86 + 0.14 * d);
       const sh = Math.sin(shimmer + i * 0.8) * 0.3 * d;
@@ -1393,7 +1574,7 @@
   }
   function snowCaps(ctx, p, sway) {
     if (p.snowCapAmt < 0.02) return;
-    const a = clamp012(p.snowCapAmt);
+    const a = clamp013(p.snowCapAmt);
     TIERS.forEach(([cy, hw], i) => {
       if (i % 2 === 1) return;
       const s = sway * (0.4 + (SPIRE_BASE - cy) / 40);
@@ -1468,14 +1649,14 @@
     return (ctx) => paint2(ctx, SP2[season], 0, 0, 0);
   }
   function animSpring2(ctx, t) {
-    const bob = bobAt2(t, 0.45, 1.3);
+    const bob = bobAt3(t, 0.45, 1.3);
     const sway = Math.sin(t * 1.4) * 1;
     paint2(ctx, SP2.Spring, bob, sway, t * 2.2);
     ctx.save();
     try {
       const g = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
       const gy = -4 - bob + Math.sin(t * 1) * 4;
-      ctx.fillStyle = `rgba(255,255,255,${clamp012(g)})`;
+      ctx.fillStyle = `rgba(255,255,255,${clamp013(g)})`;
       ctx.beginPath();
       ctx.arc(-3.2, gy, 1 + g * 0.7, 0, Math.PI * 2);
       ctx.fill();
@@ -1486,7 +1667,7 @@
     }
   }
   function animSummer2(ctx, t) {
-    const bob = bobAt2(t, 0.5, 1.2);
+    const bob = bobAt3(t, 0.5, 1.2);
     const sway = Math.sin(t * 1.2) * 0.9;
     paint2(ctx, SP2.Summer, bob, sway, t * 2);
     ctx.save();
@@ -1498,7 +1679,7 @@
       ];
       spots.forEach(([sx, sy, ph]) => {
         const g = 0.1 + 0.16 * (0.5 + 0.5 * Math.sin(t * 3 + ph));
-        ctx.fillStyle = `rgba(220,250,210,${clamp012(g)})`;
+        ctx.fillStyle = `rgba(220,250,210,${clamp013(g)})`;
         ctx.beginPath();
         ctx.arc(sx, sy - bob, 0.9, 0, Math.PI * 2);
         ctx.fill();
@@ -1510,13 +1691,13 @@
     }
   }
   function animAutumn2(ctx, t) {
-    const bob = bobAt2(t, 0.4, 1);
+    const bob = bobAt3(t, 0.4, 1);
     const sway = Math.sin(t * 0.9) * 0.8;
     paint2(ctx, SP2.Autumn, bob, sway, t * 1.4);
     ctx.save();
     try {
       const s = 0.1 + 0.14 * (0.5 + 0.5 * Math.sin(t * 0.9));
-      ctx.fillStyle = `rgba(250,224,170,${clamp012(s)})`;
+      ctx.fillStyle = `rgba(250,224,170,${clamp013(s)})`;
       ctx.beginPath();
       ctx.ellipse(-2, -6 - bob, 5, 8, -0.1, 0, Math.PI * 2);
       ctx.fill();
@@ -1527,7 +1708,7 @@
     }
   }
   function animWinter2(ctx, t) {
-    const bob = bobAt2(t, 0.32, 0.9);
+    const bob = bobAt3(t, 0.32, 0.9);
     const sway = Math.sin(t * 0.8) * 0.7;
     paint2(ctx, SP2.Winter, bob, sway, 0);
     ctx.save();
@@ -1548,7 +1729,7 @@
         ctx.fill();
       });
       const sheen3 = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7));
-      ctx.fillStyle = `rgba(200,224,255,${clamp012(sheen3)})`;
+      ctx.fillStyle = `rgba(200,224,255,${clamp013(sheen3)})`;
       ctx.beginPath();
       ctx.ellipse(-3, 18.6, 11, 2.6, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -1560,7 +1741,7 @@
   }
   function makeTransition2(from, to) {
     return (ctx, pp) => {
-      const f = smoother2(clamp012(pp));
+      const f = smoother3(clamp013(pp));
       paint2(ctx, lerpP2(SP2[from], SP2[to], f), 0, 0, 0);
     };
   }
@@ -1577,7 +1758,7 @@
   };
 
   // src/textures/seasonal/tree/fir.ts
-  function clamp013(x) {
+  function clamp014(x) {
     if (!Number.isFinite(x)) return 0;
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
@@ -1591,16 +1772,16 @@
     return [c[0] * k, c[1] * k, c[2] * k];
   }
   function rgb3(c, alpha = 1) {
-    const r = Math.round(clamp013(c[0] / 255) * 255);
-    const g = Math.round(clamp013(c[1] / 255) * 255);
-    const b = Math.round(clamp013(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp013(alpha)})`;
+    const r = Math.round(clamp014(c[0] / 255) * 255);
+    const g = Math.round(clamp014(c[1] / 255) * 255);
+    const b = Math.round(clamp014(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp014(alpha)})`;
   }
-  var smoother3 = (x) => {
-    const c = clamp013(x);
+  var smoother4 = (x) => {
+    const c = clamp014(x);
     return c * c * c * (c * (6 * c - 15) + 10);
   };
-  function bobAt3(t, A = 0.55, w = 1.2) {
+  function bobAt4(t, A = 0.55, w = 1.2) {
     return A * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP3 = {
@@ -1757,11 +1938,11 @@
       ];
       spots.forEach(([sx, sy], i) => {
         const a = p.blossomAmt * (i % 2 === 0 ? 0.9 : 0.7);
-        ctx.fillStyle = `rgba(255,236,246,${clamp013(a)})`;
+        ctx.fillStyle = `rgba(255,236,246,${clamp014(a)})`;
         ctx.beginPath();
         ctx.arc(sx, sy, 1.1, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = `rgba(248,210,90,${clamp013(a)})`;
+        ctx.fillStyle = `rgba(248,210,90,${clamp014(a)})`;
         ctx.beginPath();
         ctx.arc(sx, sy, 0.45, 0, Math.PI * 2);
         ctx.fill();
@@ -1796,14 +1977,14 @@
       snow.addColorStop(0, "#eef4fb");
       snow.addColorStop(1, "#c6d6e6");
       ctx.save();
-      ctx.globalAlpha = clamp013(p.padSnowAmt);
+      ctx.globalAlpha = clamp014(p.padSnowAmt);
       ctx.fillStyle = snow;
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
       if (p.frostAmt > 0.02) {
-        ctx.fillStyle = `rgba(255,255,255,${clamp013(0.5 * p.frostAmt + 0.3)})`;
+        ctx.fillStyle = `rgba(255,255,255,${clamp014(0.5 * p.frostAmt + 0.3)})`;
         const sparkle = [
           [-10, 18],
           [-4, 20],
@@ -1921,7 +2102,7 @@
   }
   function cone(ctx, x, y, p, a) {
     ctx.save();
-    ctx.globalAlpha = clamp013(a);
+    ctx.globalAlpha = clamp014(a);
     ctx.fillStyle = rgb3([110, 72, 36], 1);
     ctx.beginPath();
     ctx.moveTo(x, y - 3);
@@ -1945,7 +2126,7 @@
     const topY = cy - depth * 0.7;
     const h = half - 1.2;
     ctx.save();
-    ctx.fillStyle = `rgba(246,251,255,${clamp013(0.95 * a)})`;
+    ctx.fillStyle = `rgba(246,251,255,${clamp014(0.95 * a)})`;
     ctx.beginPath();
     ctx.moveTo(-h + s, topY + 0.5);
     ctx.quadraticCurveTo(s, topY - depth * 0.45, h + s, topY + 0.5);
@@ -1958,7 +2139,7 @@
     }
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = `rgba(205,222,242,${clamp013(0.5 * a)})`;
+    ctx.fillStyle = `rgba(205,222,242,${clamp014(0.5 * a)})`;
     ctx.beginPath();
     ctx.ellipse(s, topY + 1.4, h * 0.7, 1.6, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -2009,7 +2190,7 @@
           tierSnow(ctx, cy, half, depth, p, sway);
         });
         const a = p.snowLoadAmt;
-        ctx.fillStyle = `rgba(246,251,255,${clamp013(0.95 * a)})`;
+        ctx.fillStyle = `rgba(246,251,255,${clamp014(0.95 * a)})`;
         ctx.beginPath();
         ctx.moveTo(-3.4, APEX_Y + 6);
         ctx.quadraticCurveTo(apexS, APEX_Y - 1.5, 3.4, APEX_Y + 6);
@@ -2061,13 +2242,13 @@
     return (ctx) => paint3(ctx, SP3[season], 0, 0);
   }
   function animSpring3(ctx, t) {
-    const bob = bobAt3(t, 0.5, 1.3);
+    const bob = bobAt4(t, 0.5, 1.3);
     const sway = Math.sin(t * 1.3) * 1;
     paint3(ctx, SP3.Spring, bob, sway);
     ctx.save();
     try {
       const g = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.2));
-      ctx.fillStyle = `rgba(255,255,255,${clamp013(g)})`;
+      ctx.fillStyle = `rgba(255,255,255,${clamp014(g)})`;
       const spots = [[-7, 3], [6, -2], [-3, 9]];
       spots.forEach(([sx, sy], i) => {
         const gy = sy - bob + Math.sin(t * 1.1 + i) * 0.8;
@@ -2082,7 +2263,7 @@
     }
   }
   function animSummer3(ctx, t) {
-    const bob = bobAt3(t, 0.5, 1.2);
+    const bob = bobAt4(t, 0.5, 1.2);
     const sway = Math.sin(t * 1.25) * 1.1;
     paint3(ctx, SP3.Summer, bob, sway);
     ctx.save();
@@ -2090,7 +2271,7 @@
       const prog = t * 0.35 % 1;
       const sy = -16 + prog * 28;
       const s = 0.1 + 0.14 * Math.sin(prog * Math.PI);
-      ctx.fillStyle = `rgba(206,236,170,${clamp013(s)})`;
+      ctx.fillStyle = `rgba(206,236,170,${clamp014(s)})`;
       ctx.beginPath();
       ctx.ellipse(-3 + sway * 0.5, sy - bob, 7, 3.2, -0.15, 0, Math.PI * 2);
       ctx.fill();
@@ -2101,12 +2282,12 @@
     }
   }
   function animAutumn3(ctx, t) {
-    const bob = bobAt3(t, 0.45, 1);
+    const bob = bobAt4(t, 0.45, 1);
     const sway = Math.sin(t * 0.95) * 0.8;
     paint3(ctx, SP3.Autumn, bob, sway);
   }
   function animWinter3(ctx, t) {
-    const bob = bobAt3(t, 0.32, 0.9);
+    const bob = bobAt4(t, 0.32, 0.9);
     const sway = Math.sin(t * 0.85) * 0.6;
     paint3(ctx, SP3.Winter, bob, sway);
     ctx.save();
@@ -2122,13 +2303,13 @@
         const prog = ((t / 3.6 + phase) % 1 + 1) % 1;
         const fy = -24 + prog * span;
         const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
-        ctx.fillStyle = `rgba(255,255,255,${clamp013(0.4 + 0.45 * Math.sin(prog * Math.PI))})`;
+        ctx.fillStyle = `rgba(255,255,255,${clamp014(0.4 + 0.45 * Math.sin(prog * Math.PI))})`;
         ctx.beginPath();
         ctx.arc(driftX, fy, r, 0, Math.PI * 2);
         ctx.fill();
       });
       const sheen3 = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7));
-      ctx.fillStyle = `rgba(200,224,255,${clamp013(sheen3)})`;
+      ctx.fillStyle = `rgba(200,224,255,${clamp014(sheen3)})`;
       ctx.beginPath();
       ctx.ellipse(-3, 18.6, 11, 2.6, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -2140,7 +2321,7 @@
   }
   function makeTransition3(from, to) {
     return (ctx, pp) => {
-      const f = smoother3(clamp013(pp));
+      const f = smoother4(clamp014(pp));
       paint3(ctx, lerpP3(SP3[from], SP3[to], f), 0, 0);
     };
   }
@@ -2160,12 +2341,12 @@
   var SEASON_NAMES = ["Spring", "Summer", "Autumn", "Winter"];
 
   // src/textures/seasonal/tree/palm.ts
-  function clamp014(x) {
+  function clamp015(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother4 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother5 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp6(a, b, t) {
     return a + (b - a) * t;
   }
@@ -2176,7 +2357,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp014(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp015(a)})`;
   }
   function lerpP4(a, b, t) {
     return {
@@ -2207,16 +2388,16 @@
   function clampP(p) {
     return {
       ...p,
-      lightAmt: clamp014(p.lightAmt),
-      vigor: clamp014(p.vigor),
-      gloss: clamp014(p.gloss),
-      tipBrown: clamp014(p.tipBrown),
-      droop: clamp014(p.droop),
-      frostAmt: clamp014(p.frostAmt),
-      snowCapAmt: clamp014(p.snowCapAmt),
-      padSnowAmt: clamp014(p.padSnowAmt),
-      blossomAmt: clamp014(p.blossomAmt),
-      fallenLeafAmt: clamp014(p.fallenLeafAmt)
+      lightAmt: clamp015(p.lightAmt),
+      vigor: clamp015(p.vigor),
+      gloss: clamp015(p.gloss),
+      tipBrown: clamp015(p.tipBrown),
+      droop: clamp015(p.droop),
+      frostAmt: clamp015(p.frostAmt),
+      snowCapAmt: clamp015(p.snowCapAmt),
+      padSnowAmt: clamp015(p.padSnowAmt),
+      blossomAmt: clamp015(p.blossomAmt),
+      fallenLeafAmt: clamp015(p.fallenLeafAmt)
     };
   }
   var SP4 = {
@@ -2381,7 +2562,7 @@
     const droopFall = 5 + extraDroop * 9;
     const tipX = ax + dirX * len + sway;
     const tipY = ay + dirY * len + droopFall;
-    const tipCol = lerpRGB(p.frondMid, p.frondTip, clamp014(tipMix));
+    const tipCol = lerpRGB(p.frondMid, p.frondTip, clamp015(tipMix));
     ctx.strokeStyle = rgb4(p.frondDark);
     ctx.lineWidth = 3.4;
     ctx.lineCap = "round";
@@ -2659,7 +2840,7 @@
       ctx.restore();
     }
   }
-  function bobAt4(t, amp = 0.8, w = 1.4) {
+  function bobAt5(t, amp = 0.8, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw(season) {
@@ -2685,7 +2866,7 @@
   }
   function anim(season) {
     return (ctx, t) => {
-      const bob = bobAt4(t);
+      const bob = bobAt5(t);
       paintWithSway(ctx, season, t, bob);
       ctx.save();
       try {
@@ -2755,7 +2936,7 @@
     const from = SP4[SEASON_NAMES[fromIdx]];
     const to = SP4[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother4(clamp014(pp));
+      const k = smoother5(clamp015(pp));
       paint4(ctx, lerpP4(from, to, k), 0);
     };
   }
@@ -2775,7 +2956,7 @@
   };
 
   // src/textures/seasonal/tree/willow.ts
-  function clamp015(x) {
+  function clamp016(x) {
     if (!Number.isFinite(x)) return 0;
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
@@ -2786,19 +2967,19 @@
     return [lerp7(a[0], b[0], f), lerp7(a[1], b[1], f), lerp7(a[2], b[2], f)];
   }
   function rgb5(c, alpha = 1) {
-    const r = Math.round(clamp015(c[0] / 255) * 255);
-    const g = Math.round(clamp015(c[1] / 255) * 255);
-    const b = Math.round(clamp015(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp015(alpha)})`;
+    const r = Math.round(clamp016(c[0] / 255) * 255);
+    const g = Math.round(clamp016(c[1] / 255) * 255);
+    const b = Math.round(clamp016(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp016(alpha)})`;
   }
   function scale34(c, k) {
     return [c[0] * k, c[1] * k, c[2] * k];
   }
-  var smoother5 = (x) => {
-    const c = clamp015(x);
+  var smoother6 = (x) => {
+    const c = clamp016(x);
     return c * c * c * (c * (6 * c - 15) + 10);
   };
-  function bobAt5(t, A = 0.5, w = 1.1) {
+  function bobAt6(t, A = 0.5, w = 1.1) {
     return A * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP5 = {
@@ -2962,11 +3143,11 @@
       ];
       spots.forEach(([sx, sy], i) => {
         const a = p.blossomAmt * (i % 2 === 0 ? 0.9 : 0.7);
-        ctx.fillStyle = `rgba(255,236,246,${clamp015(a)})`;
+        ctx.fillStyle = `rgba(255,236,246,${clamp016(a)})`;
         ctx.beginPath();
         ctx.arc(sx, sy, 1.1, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = `rgba(248,210,90,${clamp015(a)})`;
+        ctx.fillStyle = `rgba(248,210,90,${clamp016(a)})`;
         ctx.beginPath();
         ctx.arc(sx, sy, 0.45, 0, Math.PI * 2);
         ctx.fill();
@@ -2999,14 +3180,14 @@
       snow.addColorStop(0, "#eef4fb");
       snow.addColorStop(1, "#c6d6e6");
       ctx.save();
-      ctx.globalAlpha = clamp015(p.padSnowAmt);
+      ctx.globalAlpha = clamp016(p.padSnowAmt);
       ctx.fillStyle = snow;
       ctx.beginPath();
       ctx.ellipse(0, 18.6, 18, 5.4, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
       if (p.frostAmt > 0.02) {
-        ctx.fillStyle = `rgba(255,255,255,${clamp015(0.5 * p.frostAmt + 0.3)})`;
+        ctx.fillStyle = `rgba(255,255,255,${clamp016(0.5 * p.frostAmt + 0.3)})`;
         const sparkle = [
           [-10, 18],
           [-4, 20],
@@ -3080,7 +3261,7 @@
     });
     ctx.lineCap = "butt";
     if (p.crownSnowAmt > 0.02) {
-      ctx.fillStyle = `rgba(244,248,255,${clamp015(0.9 * p.crownSnowAmt)})`;
+      ctx.fillStyle = `rgba(244,248,255,${clamp016(0.9 * p.crownSnowAmt)})`;
       ctx.beginPath();
       ctx.ellipse(0, -5.4, 4.4, 1.6, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -3089,7 +3270,7 @@
   function crownBlob(ctx, x, y, r, p, alpha) {
     if (r < 0.4 || alpha < 0.02) return;
     ctx.save();
-    ctx.globalAlpha = clamp015(alpha);
+    ctx.globalAlpha = clamp016(alpha);
     ctx.fillStyle = rgb5(p.frondDark, 1);
     ctx.beginPath();
     ctx.ellipse(x, y + r * 0.2, r, r * 0.92, 0, 0, Math.PI * 2);
@@ -3102,7 +3283,7 @@
     ctx.beginPath();
     ctx.ellipse(x, y, r * 0.96, r * 0.82, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.globalAlpha = clamp015(alpha * 0.7);
+    ctx.globalAlpha = clamp016(alpha * 0.7);
     ctx.fillStyle = rgb5(p.frondLight, 1);
     ctx.beginPath();
     ctx.ellipse(x - r * 0.38, y - r * 0.42, r * 0.32, r * 0.26, -0.5, 0, Math.PI * 2);
@@ -3110,7 +3291,7 @@
     ctx.restore();
   }
   function crown(ctx, p, sway, shimmer) {
-    const d = clamp015(p.leafDensity);
+    const d = clamp016(p.leafDensity);
     const domeA = 0.45 + 0.55 * d;
     CROWN.forEach(([x, y, r], i) => {
       const s = sway * (0.15 + Math.abs(x) / 40) + Math.sin(shimmer + i) * 0.25 * d;
@@ -3118,11 +3299,11 @@
     });
   }
   function strands(ctx, p, sway, shimmer) {
-    const d = clamp015(p.leafDensity);
+    const d = clamp016(p.leafDensity);
     ctx.lineCap = "round";
     STRANDS.forEach(([ax, ay, len, baseSway], i) => {
       const threshold = i % 10 / 10;
-      const grow = clamp015((d - threshold * 0.45) / 0.55);
+      const grow = clamp016((d - threshold * 0.45) / 0.55);
       if (grow < 0.04) return;
       const L = len * (0.62 + 0.38 * grow);
       const tipY = ay + L;
@@ -3155,7 +3336,7 @@
         }
       }
       if (p.frostAmt > 0.02 && grow < 0.7) {
-        ctx.fillStyle = `rgba(228,240,255,${clamp015(0.6 * p.frostAmt)})`;
+        ctx.fillStyle = `rgba(228,240,255,${clamp016(0.6 * p.frostAmt)})`;
         const fy = ay + L * 0.78;
         ctx.beginPath();
         ctx.arc(tipX + (midX - tipX) * 0.1, fy, 0.7, 0, Math.PI * 2);
@@ -3175,14 +3356,14 @@
       anchors.forEach(([cx, cy], i) => {
         if (i / anchors.length > p.catkinAmt + 0.1) return;
         const dx = sway * 0.4 + Math.sin(i * 1.3) * 0.4;
-        ctx.fillStyle = `rgba(232,232,176,${clamp015(0.85 * p.catkinAmt)})`;
+        ctx.fillStyle = `rgba(232,232,176,${clamp016(0.85 * p.catkinAmt)})`;
         ctx.beginPath();
         ctx.ellipse(cx + dx, cy, 1, 1.7, 0, 0, Math.PI * 2);
         ctx.fill();
       });
     }
     if (p.crownSnowAmt > 0.02) {
-      ctx.fillStyle = `rgba(244,248,255,${clamp015(0.92 * p.crownSnowAmt)})`;
+      ctx.fillStyle = `rgba(244,248,255,${clamp016(0.92 * p.crownSnowAmt)})`;
       const caps = [
         [-7, -17, 5.2],
         [2, -19, 5.6],
@@ -3248,17 +3429,17 @@
     return (ctx) => paint5(ctx, SP5[season], 0, 0, 0);
   }
   function animSpring4(ctx, t) {
-    const bob = bobAt5(t, 0.45, 1.2);
+    const bob = bobAt6(t, 0.45, 1.2);
     const sway = Math.sin(t * 1.3) * 2.2;
     paint5(ctx, SP5.Spring, bob, sway, t * 2.4);
   }
   function animSummer4(ctx, t) {
-    const bob = bobAt5(t, 0.45, 1.1);
+    const bob = bobAt6(t, 0.45, 1.1);
     const sway = Math.sin(t * 1.2) * 2.4;
     paint5(ctx, SP5.Summer, bob, sway, t * 1.9);
   }
   function animAutumn4(ctx, t) {
-    const bob = bobAt5(t, 0.45, 1.05);
+    const bob = bobAt6(t, 0.45, 1.05);
     const sway = Math.sin(t * 1) * 2;
     paint5(ctx, SP5.Autumn, bob, sway, t * 1.6);
     ctx.save();
@@ -3289,7 +3470,7 @@
     }
   }
   function animWinter4(ctx, t) {
-    const bob = bobAt5(t, 0.32, 0.9);
+    const bob = bobAt6(t, 0.32, 0.9);
     const sway = Math.sin(t * 0.85) * 1.5;
     paint5(ctx, SP5.Winter, bob, sway, 0);
     ctx.save();
@@ -3322,7 +3503,7 @@
   }
   function makeTransition5(from, to) {
     return (ctx, pp) => {
-      const f = smoother5(clamp015(pp));
+      const f = smoother6(clamp016(pp));
       paint5(ctx, lerpP5(SP5[from], SP5[to], f), 0, 0, 0);
     };
   }
@@ -3484,6 +3665,15 @@
     ctx.restore();
     ctx.globalAlpha = 1;
   }
+  var IDLE_PERIOD = 5;
+  var IDLE_W2 = 2 * Math.PI / IDLE_PERIOD;
+  var GLINT_SPEED = 1 / IDLE_PERIOD;
+  function bobAt7(t, amp) {
+    return amp * (1 - Math.cos(IDLE_W2 * t)) * 0.5;
+  }
+  function swayAt(t, amp) {
+    return amp * Math.sin(IDLE_W2 * t) * (0.5 + 0.5 * (1 - Math.cos(IDLE_W2 * t)) * 0.5);
+  }
   var LEAF_GREEN = { dark: "#2f5916", lite: "#6fae35" };
   var LEAF_GOLD = { dark: "#9a6a16", lite: "#e0a73a" };
   var GREEN_SKIN = { hi: "#cfe88a", mid: "#7fb53a", lo: "#3f6b1c" };
@@ -3515,8 +3705,9 @@
     appleSpring(ctx, 0, 0.3);
   }
   function animAppleSpring(ctx, t) {
-    const sway = Math.sin(t * 1.3) * 1.8;
-    appleSpring(ctx, sway, t * 2.4);
+    const sway = swayAt(t, 1.6);
+    const glint = t * GLINT_SPEED % 1;
+    appleSpring(ctx, sway, glint * Math.PI * 2);
   }
   function appleSummer(ctx, bob, glint) {
     groundShadow2(ctx, 12, 0.2);
@@ -3531,8 +3722,8 @@
     appleSummer(ctx, 0, 0.3);
   }
   function animAppleSummer(ctx, t) {
-    const bob = Math.sin(t * 1.3) * 1.6;
-    const glint = t * 0.45 % 1;
+    const bob = -bobAt7(t, 1.6);
+    const glint = t * GLINT_SPEED % 1;
     appleSummer(ctx, bob, glint);
   }
   function appleAutumn(ctx, bob, glint, leafFall) {
@@ -3548,13 +3739,13 @@
     appleAutumn(ctx, 0, 0.3, { x: 14, y: 8, rot: 0.6 });
   }
   function animAppleAutumn(ctx, t) {
-    const bob = Math.sin(t * 1) * 1.7;
-    const glint = t * 0.5 % 1;
-    const prog = (t / 4 % 1 + 1) % 1;
+    const bob = -bobAt7(t, 1.7);
+    const glint = t * GLINT_SPEED % 1;
+    const phase = IDLE_W2 * t;
     const leafFall = {
-      x: 12 + Math.sin(prog * Math.PI * 2) * 4,
-      y: -12 + prog * 30,
-      rot: 0.4 + prog * Math.PI * 2
+      x: 14 + Math.sin(phase) * 3,
+      y: 8 - (1 - Math.cos(phase)) * 0.5 * 2.5,
+      rot: 0.6 + Math.sin(phase) * 0.35
     };
     appleAutumn(ctx, bob, glint, leafFall);
   }
@@ -3614,124 +3805,132 @@
   }
   function animAppleWinter(ctx, t) {
     const span = 30;
-    const seeds = [
-      [-8, 1.4, 0],
-      [6, 1.1, 0.45],
-      [11, 1, 0.7],
-      [-3, 1.2, 0.25]
+    const settled = [
+      [-8, -6, 1.4],
+      [6, 2, 1.1],
+      [11, -12, 1],
+      [-3, 10, 1.2]
     ];
-    const flakes = seeds.map(([fx, r, phase]) => {
-      const prog = ((t / 3.2 + phase) % 1 + 1) % 1;
-      const fy = -22 + prog * span;
-      const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
-      return [driftX, fy, r];
-    });
-    const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
-    const sway = Math.sin(t * 0.7) * 0.8;
+    const prog = (t / (IDLE_PERIOD * 2) % 1 + 1) % 1;
+    const fy = -22 + prog * span;
+    const fx = -2 + Math.sin(prog * Math.PI * 2) * 6;
+    const drifting = [fx, fy, 1.3];
+    const flakes = settled.concat([drifting]);
+    const sheen3 = 0.4 + 0.15 * (1 - Math.cos(IDLE_W2 * t)) * 0.5;
+    const sway = swayAt(t, 0.7);
     appleWinter(ctx, flakes, sheen3, sway);
   }
   function lerp8(a, b, p) {
     return a + (b - a) * p;
   }
-  function clamp016(p) {
+  function clamp017(p) {
     return p < 0 ? 0 : p > 1 ? 1 : p;
   }
-  function mixHex(c1, c2, p) {
-    const a = parseInt(c1.slice(1), 16);
-    const b = parseInt(c2.slice(1), 16);
-    const r = Math.round(lerp8(a >> 16 & 255, b >> 16 & 255, p));
-    const g = Math.round(lerp8(a >> 8 & 255, b >> 8 & 255, p));
-    const bl = Math.round(lerp8(a & 255, b & 255, p));
-    return `rgb(${r},${g},${bl})`;
+  function smoother7(x) {
+    const c = clamp017(x);
+    return c * c * c * (c * (6 * c - 15) + 10);
   }
-  function mixSkin(s1, s2, p) {
-    return {
-      hi: mixHex(s1.hi, s2.hi, p),
-      mid: mixHex(s1.mid, s2.mid, p),
-      lo: mixHex(s1.lo, s2.lo, p)
-    };
+  function transient(p) {
+    return Math.sin(Math.PI * clamp017(p));
+  }
+  function ripeningWipe(ctx, p, angle, drawFrom, drawTo) {
+    const q = clamp017(p);
+    ctx.save();
+    drawFrom(ctx);
+    ctx.restore();
+    if (q <= 0) return;
+    const dx = Math.cos(angle);
+    const dy = Math.sin(angle);
+    const HALF = 40;
+    const s = lerp8(-HALF, HALF, smoother7(q));
+    ctx.save();
+    ctx.beginPath();
+    const ux = dx;
+    const uy = dy;
+    const px = -dy;
+    const py = dx;
+    const L = 120;
+    const ex = ux * s;
+    const ey = uy * s;
+    ctx.moveTo(ex + px * L, ey + py * L);
+    ctx.lineTo(ex - px * L, ey - py * L);
+    ctx.lineTo(ex - px * L - ux * L, ey - py * L - uy * L);
+    ctx.lineTo(ex + px * L - ux * L, ey + py * L - uy * L);
+    ctx.closePath();
+    ctx.clip();
+    drawTo(ctx);
+    ctx.restore();
+    if (q >= 1) return;
+    const haze = transient(q) * 0.18;
+    if (haze > 5e-3) {
+      ctx.save();
+      ctx.globalAlpha = haze;
+      const g = ctx.createLinearGradient(
+        ux * (s - 7),
+        uy * (s - 7),
+        ux * (s + 7),
+        uy * (s + 7)
+      );
+      g.addColorStop(0, "rgba(255,236,200,0)");
+      g.addColorStop(0.5, "rgba(255,236,200,0.7)");
+      g.addColorStop(1, "rgba(255,236,200,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.rect(-24, -24, 48, 48);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
   }
   function springToSummer3(ctx, p) {
-    const q = clamp016(p);
-    groundShadow2(ctx, 12, 0.2);
-    twig(ctx, 0, false);
-    leaf(ctx, 7, -10, -0.7, lerp8(11, 12, q), LEAF_GREEN.dark, LEAF_GREEN.lite);
-    leaf(ctx, -7, -2, 3.2, lerp8(9, 10, q), LEAF_GREEN.dark, LEAF_GREEN.lite);
-    leaf(ctx, 11, -1, -0.2, lerp8(8, 9, q), LEAF_GREEN.dark, LEAF_GREEN.lite);
-    if (q > 0.4) {
-      apple(ctx, 9, -11, lerp8(2, 5, (q - 0.4) / 0.6), GREEN_SKIN, { color: "#cfe88a", amt: 0 }, 0.3, false);
+    const q = clamp017(p);
+    ripeningWipe(ctx, q, -Math.PI * 0.25, drawAppleSpring, drawAppleSummer);
+    const tr = transient(q);
+    if (tr > 0.01) {
+      const fall = smoother7(q) * 16;
+      blossom(ctx, 4, 2 + fall, 4.5, tr, tr * 0.9);
+      blossom(ctx, -6, 6 + fall * 0.7, 3.2, tr, tr * 0.8);
+      blossom(ctx, 10, -4 + fall * 0.5, 3, tr, tr * 0.7);
     }
-    const r = lerp8(3, 10, q);
-    const fy = lerp8(-2, 2, q);
-    apple(ctx, lerp8(-3, -1, q), fy, r, GREEN_SKIN, { color: "#e8f0a0", amt: lerp8(0, 0.25, q) }, 0.3, q > 0.3);
-    const fade = clamp016(1 - q / 0.7);
-    if (fade > 0.01) {
-      const fall = q * 14;
-      blossom(ctx, 2, 0 + fall, 8, fade, fade);
-      blossom(ctx, 11, -10 + fall * 0.8, 5, fade, fade * 0.9);
-    }
+    ctx.globalAlpha = 1;
   }
   function summerToAutumn3(ctx, p) {
-    const q = clamp016(p);
-    groundShadow2(ctx, lerp8(12, 13, q), lerp8(0.2, 0.22, q));
-    twig(ctx, 0, false);
-    const ld = mixHex(LEAF_GREEN.dark, LEAF_GOLD.dark, q);
-    const ll = mixHex(LEAF_GREEN.lite, LEAF_GOLD.lite, q);
-    leaf(ctx, 7, -10, -0.7, 12, ld, ll);
-    leaf(ctx, -7, -2, 3.2, 10, ld, ll);
-    leaf(ctx, 11, -1, -0.2, lerp8(9, 0.01, q), ld, ll);
-    const skin2 = mixSkin(GREEN_SKIN, RED_SKIN, q);
-    apple(ctx, 10, -10, lerp8(5, 5.5, q), skin2, { color: mixHex("#cfe88a", "#ffcf6a", q), amt: lerp8(0, 0.5, q) }, 0.3, false);
-    const skin = mixSkin(GREEN_SKIN, RED_SKIN, q);
-    const blushColor = mixHex("#e8f0a0", "#ffd166", q);
-    apple(ctx, -1, lerp8(2, 3, q), lerp8(10, 11, q), skin, { color: blushColor, amt: lerp8(0.25, 0.7, q) }, 0.3, true);
+    const q = clamp017(p);
+    ripeningWipe(ctx, q, Math.PI * 0.85, drawAppleSummer, drawAppleAutumn);
+    const tr = transient(q);
+    if (tr > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = tr * 0.45;
+      const g = ctx.createRadialGradient(5, -13, 1, 5, -13, 12);
+      g.addColorStop(0, "rgba(224,167,58,0.9)");
+      g.addColorStop(1, "rgba(224,167,58,0)");
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(5, -12, 12, 9, -0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
   }
   function autumnToWinter3(ctx, p) {
-    const q = clamp016(p);
-    groundShadow2(ctx, 14, lerp8(0.22, 0.18, q));
-    const snowAmt = clamp016((q - 0.5) / 0.5);
-    if (snowAmt > 0.01) {
+    const q = clamp017(p);
+    ripeningWipe(ctx, q, -Math.PI * 0.5, drawAppleAutumn, drawAppleWinter);
+    const tr = transient(q);
+    if (tr > 0.01) {
       ctx.save();
-      ctx.globalAlpha = snowAmt;
-      const snow = ctx.createLinearGradient(0, 16, 0, 24);
-      snow.addColorStop(0, "#eef4fb");
-      snow.addColorStop(1, "#c2d2e4");
-      ctx.fillStyle = snow;
-      ctx.beginPath();
-      ctx.ellipse(0, 21, lerp8(8, 16, snowAmt), lerp8(3, 5.5, snowAmt), 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-    twig(ctx, 0, q > 0.5);
-    const leafLife = clamp016(1 - q / 0.5);
-    if (leafLife > 0.01) {
-      ctx.save();
-      ctx.globalAlpha = leafLife;
-      const drop = (1 - leafLife) * 16;
-      leaf(ctx, 7, -10 + drop, -0.7 + (1 - leafLife), 12 * leafLife + 2, LEAF_GOLD.dark, LEAF_GOLD.lite);
-      leaf(ctx, -7, -2 + drop, 3.2 + (1 - leafLife), 10 * leafLife + 2, LEAF_GOLD.dark, LEAF_GOLD.lite);
-      ctx.restore();
-    }
-    if (q < 0.6) {
-      const a2 = clamp016(1 - q / 0.6);
-      ctx.save();
-      ctx.globalAlpha = a2;
-      apple(ctx, 10, -10, 5.5, mixSkin(RED_SKIN, DULL_RED_SKIN, q), { color: "#7c4a30", amt: 0.4 }, 0.5, false);
-      ctx.restore();
-    }
-    const skin = mixSkin(RED_SKIN, DULL_RED_SKIN, q);
-    apple(ctx, -1, 3, lerp8(11, 10, q), skin, { color: mixHex("#ffd166", "#7c4a30", q), amt: lerp8(0.7, 0.35, q) }, 0.5, q < 0.5);
-    if (snowAmt > 0.01) {
-      ctx.save();
-      ctx.globalAlpha = snowAmt;
-      ctx.fillStyle = "#f4f8ff";
-      ctx.beginPath();
-      ctx.ellipse(8, -14, 3.4 * snowAmt, 1.8 * snowAmt, -0.3, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "rgba(244,248,255,0.85)";
-      ctx.beginPath();
-      ctx.ellipse(-1, -5, lerp8(3, 6, snowAmt), lerp8(1.4, 2.6, snowAmt), 0, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.globalAlpha = tr * 0.85;
+      ctx.fillStyle = "#ffffff";
+      const motes = [
+        [-10, -8, 1.1],
+        [4, -16, 0.9],
+        [12, -3, 1],
+        [-2, -20, 0.8]
+      ];
+      motes.forEach(([mx, my, mr]) => {
+        ctx.beginPath();
+        ctx.arc(mx, my + smoother7(q) * 10, mr, 0, Math.PI * 2);
+        ctx.fill();
+      });
       ctx.restore();
     }
     ctx.globalAlpha = 1;
@@ -3749,7 +3948,7 @@
   };
 
   // src/textures/seasonal/fruit/pear.ts
-  var clamp017 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+  var clamp018 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
   var rgb6 = (c, a = 1) => `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${a})`;
   var lerp9 = (a, b, t) => a + (b - a) * t;
   var lerpRGB2 = (a, b, t) => [
@@ -3757,7 +3956,7 @@
     lerp9(a[1], b[1], t),
     lerp9(a[2], b[2], t)
   ];
-  var smoother6 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother8 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerpP6(a, b, t) {
     return {
       skinTop: lerpRGB2(a.skinTop, b.skinTop, t),
@@ -3800,17 +3999,17 @@
   function paint6(ctx, pp, bob) {
     const p = {
       ...pp,
-      lightAmt: clamp017(pp.lightAmt),
-      shadowAmt: clamp017(pp.shadowAmt),
-      ripeness: clamp017(pp.ripeness),
-      gloss: clamp017(pp.gloss),
-      blush: clamp017(pp.blush),
-      freckleAmt: clamp017(pp.freckleAmt),
-      frostAmt: clamp017(pp.frostAmt),
-      snowCapAmt: clamp017(pp.snowCapAmt),
-      padSnowAmt: clamp017(pp.padSnowAmt),
-      blossomAmt: clamp017(pp.blossomAmt),
-      fallenLeafAmt: clamp017(pp.fallenLeafAmt)
+      lightAmt: clamp018(pp.lightAmt),
+      shadowAmt: clamp018(pp.shadowAmt),
+      ripeness: clamp018(pp.ripeness),
+      gloss: clamp018(pp.gloss),
+      blush: clamp018(pp.blush),
+      freckleAmt: clamp018(pp.freckleAmt),
+      frostAmt: clamp018(pp.frostAmt),
+      snowCapAmt: clamp018(pp.snowCapAmt),
+      padSnowAmt: clamp018(pp.padSnowAmt),
+      blossomAmt: clamp018(pp.blossomAmt),
+      fallenLeafAmt: clamp018(pp.fallenLeafAmt)
     };
     const s = 0.92 + p.ripeness * 0.12;
     ctx.save();
@@ -4108,7 +4307,7 @@
   };
   var BOB_W = 1.5;
   var BOB_A = 1.1;
-  var bobAt6 = (t) => -BOB_A * (1 - Math.cos(BOB_W * t)) * 0.5;
+  var bobAt8 = (t) => -BOB_A * (1 - Math.cos(BOB_W * t)) * 0.5;
   function summerGlint(ctx, t, bob) {
     const prog = t * 0.35 % 1;
     const gx = -5 + prog * 9;
@@ -4175,7 +4374,7 @@
     paint6(ctx, SP6[season], 0);
   };
   var anim2 = (season) => (ctx, t) => {
-    const bob = bobAt6(t);
+    const bob = bobAt8(t);
     paint6(ctx, SP6[season], bob);
     if (season === "Spring") springDew(ctx, t, bob);
     else if (season === "Summer") summerGlint(ctx, t, bob);
@@ -4183,15 +4382,15 @@
     else if (season === "Winter") winterSnow(ctx, t);
   };
   var springToSummer4 = (ctx, pp) => {
-    const u = smoother6(clamp017(pp));
+    const u = smoother8(clamp018(pp));
     paint6(ctx, lerpP6(SP6.Spring, SP6.Summer, u), 0);
   };
   var summerToAutumn4 = (ctx, pp) => {
-    const u = smoother6(clamp017(pp));
+    const u = smoother8(clamp018(pp));
     paint6(ctx, lerpP6(SP6.Summer, SP6.Autumn, u), 0);
   };
   var autumnToWinter4 = (ctx, pp) => {
-    const u = smoother6(clamp017(pp));
+    const u = smoother8(clamp018(pp));
     paint6(ctx, lerpP6(SP6.Autumn, SP6.Winter, u), 0);
   };
   var VARIANTS8 = {
@@ -4207,18 +4406,18 @@
   };
 
   // src/textures/seasonal/fruit/lemon.ts
-  function clamp018(x) {
+  function clamp019(x) {
     if (!Number.isFinite(x)) return 0;
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
   function rgb7(c, a = 1) {
-    const r = Math.round(clamp018(c[0] / 255) * 255);
-    const g = Math.round(clamp018(c[1] / 255) * 255);
-    const b = Math.round(clamp018(c[2] / 255) * 255);
+    const r = Math.round(clamp019(c[0] / 255) * 255);
+    const g = Math.round(clamp019(c[1] / 255) * 255);
+    const b = Math.round(clamp019(c[2] / 255) * 255);
     return `rgba(${r},${g},${b},${a})`;
   }
   function mix(a, b, t) {
-    const k = clamp018(t);
+    const k = clamp019(t);
     return [
       a[0] + (b[0] - a[0]) * k,
       a[1] + (b[1] - a[1]) * k,
@@ -4319,7 +4518,7 @@
     return a + (b - a) * t;
   }
   function lerpP7(a, b, t) {
-    const k = clamp018(t);
+    const k = clamp019(t);
     return {
       skinDark: mix(a.skinDark, b.skinDark, k),
       skinMid: mix(a.skinMid, b.skinMid, k),
@@ -4426,7 +4625,7 @@
   }
   function drawPadDressing(ctx, p) {
     if (p.blossomAmt > 0.02) {
-      const a = clamp018(p.blossomAmt);
+      const a = clamp019(p.blossomAmt);
       ctx.save();
       ctx.globalAlpha = a;
       ctx.translate(-12, 17.5);
@@ -4445,7 +4644,7 @@
       ctx.globalAlpha = 1;
     }
     if (p.fallenLeafAmt > 0.02) {
-      const a = clamp018(p.fallenLeafAmt);
+      const a = clamp019(p.fallenLeafAmt);
       const leaves2 = [
         [-11, 19.5, 0.5, [206, 120, 42]],
         [12, 18.5, -0.7, [190, 92, 36]]
@@ -4470,7 +4669,7 @@
       ctx.globalAlpha = 1;
     }
     if (p.padSnowAmt > 0.02) {
-      const a = clamp018(p.padSnowAmt);
+      const a = clamp019(p.padSnowAmt);
       ctx.save();
       ctx.globalAlpha = a;
       const g = ctx.createLinearGradient(0, 14, 0, 24);
@@ -4540,7 +4739,7 @@
       ctx.fill();
     });
     if (p.frostAmt > 0.01) {
-      const fa = clamp018(p.frostAmt);
+      const fa = clamp019(p.frostAmt);
       ctx.fillStyle = `rgba(212,232,255,${0.34 * fa})`;
       ctx.beginPath();
       ctx.ellipse(-2, BODY_CY - 5, BODY_RX - 2, BODY_RY - 4, TILT, 0, Math.PI * 2);
@@ -4561,7 +4760,7 @@
     ctx.fill();
     ctx.restore();
     if (p.snowCapAmt > 0.01) {
-      const sa = clamp018(p.snowCapAmt);
+      const sa = clamp019(p.snowCapAmt);
       ctx.fillStyle = `rgba(248,252,255,${0.95 * sa})`;
       ctx.beginPath();
       ctx.ellipse(-3.5, BODY_CY - 10, 8.5 * sa + 2, 4.5 * sa + 1.5, TILT - 0.1, 0, Math.PI * 2);
@@ -4605,7 +4804,7 @@
     ctx.fillStyle = g;
     ctx.fillRect(-24, -24, 48, 48);
   }
-  function bobAt7(t, amp = 1.1, w = 1.5) {
+  function bobAt9(t, amp = 1.1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function microMotion(ctx, season, t) {
@@ -4665,16 +4864,16 @@
       }
     }
   }
-  var smoother7 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother9 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function makeDraw5(season) {
     return (ctx) => paint7(ctx, SP7[season], 0);
   }
   function makeAnim(season) {
     return (ctx, t) => {
-      paint7(ctx, SP7[season], bobAt7(t));
+      paint7(ctx, SP7[season], bobAt9(t));
       ctx.save();
       try {
-        ctx.translate(0, -bobAt7(t));
+        ctx.translate(0, -bobAt9(t));
         microMotion(ctx, season, t);
       } catch {
       } finally {
@@ -4687,7 +4886,7 @@
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother7(clamp018(pp));
+      const k = smoother9(clamp019(pp));
       paint7(ctx, lerpP7(SP7[from], SP7[to], k), 0);
     };
   }
@@ -4707,12 +4906,12 @@
   };
 
   // src/textures/seasonal/fruit/blackberry.ts
-  function clamp019(x) {
+  function clamp0110(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother8 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother10 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp10(a, b, t) {
     return a + (b - a) * t;
   }
@@ -4723,7 +4922,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba2(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp019(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0110(a)})`;
   }
   function lerpP8(a, b, t) {
     return {
@@ -4753,15 +4952,15 @@
   function clampP2(p) {
     return {
       ...p,
-      lightAmt: clamp019(p.lightAmt),
-      ripeness: clamp019(p.ripeness),
-      gloss: clamp019(p.gloss),
-      sunken: clamp019(p.sunken),
-      frostAmt: clamp019(p.frostAmt),
-      snowCapAmt: clamp019(p.snowCapAmt),
-      padSnowAmt: clamp019(p.padSnowAmt),
-      blossomAmt: clamp019(p.blossomAmt),
-      fallenLeafAmt: clamp019(p.fallenLeafAmt)
+      lightAmt: clamp0110(p.lightAmt),
+      ripeness: clamp0110(p.ripeness),
+      gloss: clamp0110(p.gloss),
+      sunken: clamp0110(p.sunken),
+      frostAmt: clamp0110(p.frostAmt),
+      snowCapAmt: clamp0110(p.snowCapAmt),
+      padSnowAmt: clamp0110(p.padSnowAmt),
+      blossomAmt: clamp0110(p.blossomAmt),
+      fallenLeafAmt: clamp0110(p.fallenLeafAmt)
     };
   }
   var SP8 = {
@@ -5120,7 +5319,7 @@
       ctx.restore();
     }
   }
-  function bobAt8(t, amp = 0.9, w = 1.5) {
+  function bobAt10(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw3(season) {
@@ -5128,7 +5327,7 @@
   }
   function anim3(season) {
     return (ctx, t) => {
-      const bob = bobAt8(t);
+      const bob = bobAt10(t);
       paint8(ctx, SP8[season], bob);
       ctx.save();
       try {
@@ -5193,7 +5392,7 @@
     const from = SP8[SEASON_NAMES[fromIdx]];
     const to = SP8[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother8(clamp019(pp));
+      const k = smoother10(clamp0110(pp));
       paint8(ctx, lerpP8(from, to, k), 0);
     };
   }
@@ -5213,12 +5412,12 @@
   };
 
   // src/textures/seasonal/fruit/coconut.ts
-  function clamp0110(x) {
+  function clamp0111(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother9 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother11 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp11(a, b, t) {
     return a + (b - a) * t;
   }
@@ -5229,7 +5428,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba3(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0110(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0111(a)})`;
   }
   function lerpP9(a, b, t) {
     return {
@@ -5258,14 +5457,14 @@
   function clampP3(p) {
     return {
       ...p,
-      lightAmt: clamp0110(p.lightAmt),
-      ripeness: clamp0110(p.ripeness),
-      gloss: clamp0110(p.gloss),
-      frostAmt: clamp0110(p.frostAmt),
-      snowCapAmt: clamp0110(p.snowCapAmt),
-      padSnowAmt: clamp0110(p.padSnowAmt),
-      blossomAmt: clamp0110(p.blossomAmt),
-      fallenLeafAmt: clamp0110(p.fallenLeafAmt)
+      lightAmt: clamp0111(p.lightAmt),
+      ripeness: clamp0111(p.ripeness),
+      gloss: clamp0111(p.gloss),
+      frostAmt: clamp0111(p.frostAmt),
+      snowCapAmt: clamp0111(p.snowCapAmt),
+      padSnowAmt: clamp0111(p.padSnowAmt),
+      blossomAmt: clamp0111(p.blossomAmt),
+      fallenLeafAmt: clamp0111(p.fallenLeafAmt)
     };
   }
   var SP9 = {
@@ -5649,7 +5848,7 @@
       ctx.restore();
     }
   }
-  function bobAt9(t, amp = 0.9, w = 1.4) {
+  function bobAt11(t, amp = 0.9, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw4(season) {
@@ -5657,7 +5856,7 @@
   }
   function anim4(season) {
     return (ctx, t) => {
-      const bob = bobAt9(t);
+      const bob = bobAt11(t);
       const tuftSway = Math.sin(t * 1.7) * 1.2 + Math.sin(t * 1.7 + 1) * 0.5;
       paint9(ctx, SP9[season], bob, tuftSway);
       ctx.save();
@@ -5722,7 +5921,7 @@
     const from = SP9[SEASON_NAMES[fromIdx]];
     const to = SP9[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother9(clamp0110(pp));
+      const k = smoother11(clamp0111(pp));
       paint9(ctx, lerpP9(from, to, k), 0, 0);
     };
   }
@@ -5742,12 +5941,12 @@
   };
 
   // src/textures/seasonal/fruit/goldenApple.ts
-  function clamp0111(x) {
+  function clamp0112(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother10 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother12 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp12(a, b, t) {
     return a + (b - a) * t;
   }
@@ -5758,7 +5957,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba4(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0111(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0112(a)})`;
   }
   function lerpP10(a, b, t) {
     return {
@@ -5786,15 +5985,15 @@
   function clampP4(p) {
     return {
       ...p,
-      lightAmt: clamp0111(p.lightAmt),
-      ripeness: clamp0111(p.ripeness),
-      gloss: clamp0111(p.gloss),
-      frostAmt: clamp0111(p.frostAmt),
-      snowCapAmt: clamp0111(p.snowCapAmt),
-      padSnowAmt: clamp0111(p.padSnowAmt),
-      blossomAmt: clamp0111(p.blossomAmt),
-      fallenLeafAmt: clamp0111(p.fallenLeafAmt),
-      leafTurn: clamp0111(p.leafTurn)
+      lightAmt: clamp0112(p.lightAmt),
+      ripeness: clamp0112(p.ripeness),
+      gloss: clamp0112(p.gloss),
+      frostAmt: clamp0112(p.frostAmt),
+      snowCapAmt: clamp0112(p.snowCapAmt),
+      padSnowAmt: clamp0112(p.padSnowAmt),
+      blossomAmt: clamp0112(p.blossomAmt),
+      fallenLeafAmt: clamp0112(p.fallenLeafAmt),
+      leafTurn: clamp0112(p.leafTurn)
     };
   }
   var SP10 = {
@@ -6102,7 +6301,7 @@
       ctx.moveTo(0, stemBaseY);
       ctx.quadraticCurveTo(1.2, stemBaseY - 4, 2.2, stemBaseY - 7);
       ctx.stroke();
-      const leafCol = lerpRGB5(p.leaf, [210, 150, 56], clamp0111(p.leafTurn));
+      const leafCol = lerpRGB5(p.leaf, [210, 150, 56], clamp0112(p.leafTurn));
       ctx.save();
       ctx.translate(-1, stemBaseY - 5.5);
       ctx.rotate(-0.7);
@@ -6134,7 +6333,7 @@
       ctx.restore();
     }
   }
-  function bobAt10(t, amp = 0.9, w = 1.5) {
+  function bobAt12(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw5(season) {
@@ -6142,7 +6341,7 @@
   }
   function anim5(season) {
     return (ctx, t) => {
-      const bob = bobAt10(t);
+      const bob = bobAt12(t);
       paint10(ctx, SP10[season], bob);
       const top = APP_TOP + bob;
       const bot = APP_BOT + bob;
@@ -6213,7 +6412,7 @@
     const from = SP10[SEASON_NAMES[fromIdx]];
     const to = SP10[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother10(clamp0111(pp));
+      const k = smoother12(clamp0112(pp));
       paint10(ctx, lerpP10(from, to, k), 0);
     };
   }
@@ -6233,12 +6432,12 @@
   };
 
   // src/textures/seasonal/fruit/jackfruit.ts
-  function clamp0112(x) {
+  function clamp0113(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother11 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother13 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp13(a, b, t) {
     return a + (b - a) * t;
   }
@@ -6249,7 +6448,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba5(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0112(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0113(a)})`;
   }
   function lerpP11(a, b, t) {
     return {
@@ -6276,14 +6475,14 @@
   function clampP5(p) {
     return {
       ...p,
-      lightAmt: clamp0112(p.lightAmt),
-      ripeness: clamp0112(p.ripeness),
-      gloss: clamp0112(p.gloss),
-      frostAmt: clamp0112(p.frostAmt),
-      snowCapAmt: clamp0112(p.snowCapAmt),
-      padSnowAmt: clamp0112(p.padSnowAmt),
-      blossomAmt: clamp0112(p.blossomAmt),
-      fallenLeafAmt: clamp0112(p.fallenLeafAmt)
+      lightAmt: clamp0113(p.lightAmt),
+      ripeness: clamp0113(p.ripeness),
+      gloss: clamp0113(p.gloss),
+      frostAmt: clamp0113(p.frostAmt),
+      snowCapAmt: clamp0113(p.snowCapAmt),
+      padSnowAmt: clamp0113(p.padSnowAmt),
+      blossomAmt: clamp0113(p.blossomAmt),
+      fallenLeafAmt: clamp0113(p.fallenLeafAmt)
     };
   }
   var SP11 = {
@@ -6640,7 +6839,7 @@
       ctx.restore();
     }
   }
-  function bobAt11(t, amp = 0.7, w = 1.3) {
+  function bobAt13(t, amp = 0.7, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw6(season) {
@@ -6648,7 +6847,7 @@
   }
   function anim6(season) {
     return (ctx, t) => {
-      const bob = bobAt11(t);
+      const bob = bobAt13(t);
       paint11(ctx, SP11[season], bob);
       ctx.save();
       try {
@@ -6713,7 +6912,7 @@
     const from = SP11[SEASON_NAMES[fromIdx]];
     const to = SP11[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother11(clamp0112(pp));
+      const k = smoother13(clamp0113(pp));
       paint11(ctx, lerpP11(from, to, k), 0);
     };
   }
@@ -6733,12 +6932,12 @@
   };
 
   // src/textures/seasonal/fruit/rambutan.ts
-  function clamp0113(x) {
+  function clamp0114(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother12 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother14 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp14(a, b, t) {
     return a + (b - a) * t;
   }
@@ -6749,7 +6948,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba6(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0113(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0114(a)})`;
   }
   function lerpP12(a, b, t) {
     return {
@@ -6779,15 +6978,15 @@
   function clampP6(p) {
     return {
       ...p,
-      lightAmt: clamp0113(p.lightAmt),
-      ripeness: clamp0113(p.ripeness),
-      gloss: clamp0113(p.gloss),
-      spineTipGreen: clamp0113(p.spineTipGreen),
-      frostAmt: clamp0113(p.frostAmt),
-      snowCapAmt: clamp0113(p.snowCapAmt),
-      padSnowAmt: clamp0113(p.padSnowAmt),
-      blossomAmt: clamp0113(p.blossomAmt),
-      fallenLeafAmt: clamp0113(p.fallenLeafAmt)
+      lightAmt: clamp0114(p.lightAmt),
+      ripeness: clamp0114(p.ripeness),
+      gloss: clamp0114(p.gloss),
+      spineTipGreen: clamp0114(p.spineTipGreen),
+      frostAmt: clamp0114(p.frostAmt),
+      snowCapAmt: clamp0114(p.snowCapAmt),
+      padSnowAmt: clamp0114(p.padSnowAmt),
+      blossomAmt: clamp0114(p.blossomAmt),
+      fallenLeafAmt: clamp0114(p.fallenLeafAmt)
     };
   }
   var SP12 = {
@@ -6925,7 +7124,7 @@
         ctx.lineWidth = 2.4;
       } else {
         const upperLeft = -Math.sin(ang) * 0.5 - Math.cos(ang) * 0.5;
-        const litMix = clamp0113(0.4 + upperLeft * 0.5);
+        const litMix = clamp0114(0.4 + upperLeft * 0.5);
         const tipCol = lerpRGB7(p.spineDark, p.spineLight, litMix);
         const greened = lerpRGB7(tipCol, [120, 180, 70], p.spineTipGreen * 0.6);
         ctx.strokeStyle = rgb12(greened);
@@ -7157,7 +7356,7 @@
     ctx.quadraticCurveTo(-1.4, -4.4, -1, -8.4);
     ctx.stroke();
   }
-  function bobAt12(t, amp = 0.9, w = 1.5) {
+  function bobAt14(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw7(season) {
@@ -7165,7 +7364,7 @@
   }
   function anim7(season) {
     return (ctx, t) => {
-      const bob = bobAt12(t);
+      const bob = bobAt14(t);
       paint12(ctx, SP12[season], bob);
       ctx.save();
       try {
@@ -7234,7 +7433,7 @@
     const from = SP12[SEASON_NAMES[fromIdx]];
     const to = SP12[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother12(clamp0113(pp));
+      const k = smoother14(clamp0114(pp));
       paint12(ctx, lerpP12(from, to, k), 0);
     };
   }
@@ -7254,12 +7453,12 @@
   };
 
   // src/textures/seasonal/fruit/starfruit.ts
-  function clamp0114(x) {
+  function clamp0115(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother13 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother15 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp15(a, b, t) {
     return a + (b - a) * t;
   }
@@ -7270,7 +7469,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba7(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0114(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0115(a)})`;
   }
   function lerpP13(a, b, t) {
     return {
@@ -7298,15 +7497,15 @@
   function clampP7(p) {
     return {
       ...p,
-      lightAmt: clamp0114(p.lightAmt),
-      ripeness: clamp0114(p.ripeness),
-      gloss: clamp0114(p.gloss),
-      edgeBrown: clamp0114(p.edgeBrown),
-      frostAmt: clamp0114(p.frostAmt),
-      snowCapAmt: clamp0114(p.snowCapAmt),
-      padSnowAmt: clamp0114(p.padSnowAmt),
-      blossomAmt: clamp0114(p.blossomAmt),
-      fallenLeafAmt: clamp0114(p.fallenLeafAmt)
+      lightAmt: clamp0115(p.lightAmt),
+      ripeness: clamp0115(p.ripeness),
+      gloss: clamp0115(p.gloss),
+      edgeBrown: clamp0115(p.edgeBrown),
+      frostAmt: clamp0115(p.frostAmt),
+      snowCapAmt: clamp0115(p.snowCapAmt),
+      padSnowAmt: clamp0115(p.padSnowAmt),
+      blossomAmt: clamp0115(p.blossomAmt),
+      fallenLeafAmt: clamp0115(p.fallenLeafAmt)
     };
   }
   var SP13 = {
@@ -7695,7 +7894,7 @@
       ctx.restore();
     }
   }
-  function bobAt13(t, amp = 0.9, w = 1.5) {
+  function bobAt15(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw8(season) {
@@ -7703,7 +7902,7 @@
   }
   function anim8(season) {
     return (ctx, t) => {
-      const bob = bobAt13(t);
+      const bob = bobAt15(t);
       paint13(ctx, SP13[season], bob);
       ctx.save();
       try {
@@ -7787,7 +7986,7 @@
     const from = SP13[SEASON_NAMES[fromIdx]];
     const to = SP13[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother13(clamp0114(pp));
+      const k = smoother15(clamp0115(pp));
       paint13(ctx, lerpP13(from, to, k), 0);
     };
   }
@@ -7897,7 +8096,7 @@
       gloss: 0.35
     }
   };
-  function clamp0115(x) {
+  function clamp0116(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
   function rgb14([r, g, b], a = 1) {
@@ -7934,19 +8133,19 @@
   function clampP8(p) {
     return {
       ...p,
-      shadowAmt: clamp0115(p.shadowAmt),
-      padSnowAmt: clamp0115(p.padSnowAmt),
-      blossomAmt: clamp0115(p.blossomAmt),
-      fallenLeafAmt: clamp0115(p.fallenLeafAmt),
-      huskBrownAmt: clamp0115(p.huskBrownAmt),
-      huskOpen: clamp0115(p.huskOpen),
-      kernelDent: clamp0115(p.kernelDent),
-      frostAmt: clamp0115(p.frostAmt),
-      snowCapAmt: clamp0115(p.snowCapAmt),
-      gloss: clamp0115(p.gloss)
+      shadowAmt: clamp0116(p.shadowAmt),
+      padSnowAmt: clamp0116(p.padSnowAmt),
+      blossomAmt: clamp0116(p.blossomAmt),
+      fallenLeafAmt: clamp0116(p.fallenLeafAmt),
+      huskBrownAmt: clamp0116(p.huskBrownAmt),
+      huskOpen: clamp0116(p.huskOpen),
+      kernelDent: clamp0116(p.kernelDent),
+      frostAmt: clamp0116(p.frostAmt),
+      snowCapAmt: clamp0116(p.snowCapAmt),
+      gloss: clamp0116(p.gloss)
     };
   }
-  var smoother14 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother16 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   var COB_TOP = -22;
   var COB_BOT = 14;
   var COB_HALF = 8.5;
@@ -8290,6 +8489,32 @@
       ctx.fill();
       ctx.restore();
     }
+    if (m.peelGlow !== void 0 && m.peelGlow > 0.01) {
+      ctx.save();
+      cobBodyPath(ctx);
+      ctx.clip();
+      const a = clamp0116(m.peelGlow);
+      const glow = ctx.createRadialGradient(0, -2, 0, 0, -2, 13);
+      glow.addColorStop(0, `rgba(255,246,196,${0.5 * a})`);
+      glow.addColorStop(1, "rgba(255,246,196,0)");
+      ctx.fillStyle = glow;
+      cobBodyPath(ctx);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (m.deepenWash !== void 0 && m.deepenWash > 0.01) {
+      ctx.save();
+      cobBodyPath(ctx);
+      ctx.clip();
+      const a = clamp0116(m.deepenWash);
+      const wash = ctx.createLinearGradient(0, COB_TOP + 4, 0, COB_BOT);
+      wash.addColorStop(0, "rgba(196,120,28,0)");
+      wash.addColorStop(1, `rgba(168,96,20,${0.34 * a})`);
+      ctx.fillStyle = wash;
+      cobBodyPath(ctx);
+      ctx.fill();
+      ctx.restore();
+    }
     if (m.dew !== void 0 && m.dew > 0.01) {
       ctx.save();
       ctx.globalAlpha = m.dew;
@@ -8303,6 +8528,27 @@
       ctx.restore();
     }
     ctx.restore();
+    if (m.settleFall !== void 0 && m.settleFall > 0.01) {
+      ctx.save();
+      const a = clamp0116(m.settleFall);
+      ctx.fillStyle = "#f1f7ff";
+      const specks = [
+        [-7, -10],
+        [-2, -16],
+        [4, -12],
+        [6, -4],
+        [-4, 2],
+        [1, -7]
+      ];
+      specks.forEach(([sx, sy], i) => {
+        const fall = (1 - a) * 9;
+        ctx.globalAlpha = 0.8 * a;
+        ctx.beginPath();
+        ctx.arc(sx + (i % 2 === 0 ? -0.6 : 0.6) * fall, sy - fall, 0.85, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
     if (m.extraFlakes) {
       ctx.save();
       ctx.fillStyle = "#ffffff";
@@ -8316,10 +8562,13 @@
     }
     ctx.globalAlpha = 1;
   }
-  function bobAt14(t) {
+  var IDLE_W3 = 2 * Math.PI / 5;
+  function bobAt16(t) {
     const A = 1.4;
-    const w = 1.5;
-    return -A * (1 - Math.cos(w * t)) * 0.5;
+    return -A * (1 - Math.cos(IDLE_W3 * t)) * 0.5;
+  }
+  function gesture(t) {
+    return Math.sin(IDLE_W3 * t);
   }
   function drawCornSpring(ctx) {
     paint14(ctx, SP14.Spring, 0);
@@ -8334,24 +8583,25 @@
     paint14(ctx, SP14.Winter, 0);
   }
   function animCornSpring(ctx, t) {
-    const dew = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.8));
-    paint14(ctx, SP14.Spring, bobAt14(t), {
-      silkSway: Math.sin(t * 1.4) * 0.8,
+    const g = gesture(t);
+    const dew = 0.3 + 0.3 * (0.5 - 0.5 * Math.cos(IDLE_W3 * t));
+    paint14(ctx, SP14.Spring, bobAt16(t), {
+      silkSway: g * 1.1,
       dew
     });
   }
   function animCornSummer(ctx, t) {
-    const glint = t * 0.45 % 1;
-    paint14(ctx, SP14.Summer, bobAt14(t), {
-      silkSway: Math.sin(t * 1.3) * 1,
+    const glint = t / 10 % 1;
+    paint14(ctx, SP14.Summer, bobAt16(t), {
+      silkSway: gesture(t) * 1.3,
       glint
     });
   }
   function animCornAutumn(ctx, t) {
-    const leafFlutter = Math.sin(t * 2.2) * 1.4;
-    paint14(ctx, SP14.Autumn, bobAt14(t), {
+    const leafFlutter = gesture(t) * 1.5;
+    paint14(ctx, SP14.Autumn, bobAt16(t), {
       leafFlutter,
-      silkSway: Math.sin(t * 1.1) * 0.7
+      silkSway: Math.sin(IDLE_W3 * t - 0.6) * 0.9
     });
   }
   function animCornWinter(ctx, t) {
@@ -8361,27 +8611,74 @@
     ];
     const span = 36;
     const flakes = seeds.map(([fx, r, phase]) => {
-      const prog = ((t / 3.6 + phase) % 1 + 1) % 1;
+      const prog = ((t / 7.2 + phase) % 1 + 1) % 1;
       const fy = -22 + prog * span;
       const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
       return [driftX, fy, r];
     });
-    const coldSheen = 0.5 + 0.5 * Math.sin(t * 0.8);
-    paint14(ctx, SP14.Winter, bobAt14(t), {
-      silkSway: Math.sin(t * 0.9) * 0.5,
+    const coldSheen = 0.5 - 0.5 * Math.cos(IDLE_W3 * t);
+    paint14(ctx, SP14.Winter, bobAt16(t), {
+      silkSway: gesture(t) * 0.6,
       extraFlakes: flakes,
       coldSheen
     });
   }
-  function makeTransition13(from, to) {
-    return (ctx, pp) => {
-      const t = smoother14(clamp0115(pp));
-      paint14(ctx, lerpP14(SP14[from], SP14[to], t), 0);
-    };
+  var transient2 = (p) => Math.sin(Math.PI * clamp0116(p));
+  function stageEarly(p) {
+    return smoother16(clamp0116(p / 0.7));
   }
-  var springToSummer11 = makeTransition13("Spring", "Summer");
-  var summerToAutumn11 = makeTransition13("Summer", "Autumn");
-  var autumnToWinter11 = makeTransition13("Autumn", "Winter");
+  function stageLate(p) {
+    return smoother16(clamp0116((p - 0.3) / 0.7));
+  }
+  function stagedP(from, to, te, tl, huskLeads) {
+    const full = lerpP14(from, to, tl);
+    const huskT = huskLeads ? te : tl;
+    const restHusk = {
+      huskOpen: lerp16(from.huskOpen, to.huskOpen, huskT),
+      huskLight: lerpRGB9(from.huskLight, to.huskLight, huskT),
+      huskDark: lerpRGB9(from.huskDark, to.huskDark, huskT),
+      huskBrownAmt: lerp16(from.huskBrownAmt, to.huskBrownAmt, huskT)
+    };
+    return { ...full, ...restHusk };
+  }
+  function springToSummer11(ctx, pp) {
+    const p = clamp0116(pp);
+    const te = stageEarly(p);
+    const tl = stageLate(p);
+    paint14(ctx, stagedP(SP14.Spring, SP14.Summer, te, tl, true), 0, {
+      peelGlow: 0.55 * transient2(p)
+    });
+  }
+  function summerToAutumn11(ctx, pp) {
+    const p = clamp0116(pp);
+    const te = stageEarly(p);
+    const tl = stageLate(p);
+    const full = lerpP14(SP14.Summer, SP14.Autumn, tl);
+    const staged = {
+      ...full,
+      kernel: lerpRGB9(SP14.Summer.kernel, SP14.Autumn.kernel, te),
+      kernelDeep: lerpRGB9(SP14.Summer.kernelDeep, SP14.Autumn.kernelDeep, te),
+      kernelDent: lerp16(SP14.Summer.kernelDent, SP14.Autumn.kernelDent, te)
+    };
+    paint14(ctx, staged, 0, {
+      deepenWash: transient2(p)
+    });
+  }
+  function autumnToWinter11(ctx, pp) {
+    const p = clamp0116(pp);
+    const te = stageEarly(p);
+    const tl = stageLate(p);
+    const full = lerpP14(SP14.Autumn, SP14.Winter, tl);
+    const staged = {
+      ...full,
+      huskLight: lerpRGB9(SP14.Autumn.huskLight, SP14.Winter.huskLight, te),
+      huskDark: lerpRGB9(SP14.Autumn.huskDark, SP14.Winter.huskDark, te),
+      huskBrownAmt: lerp16(SP14.Autumn.huskBrownAmt, SP14.Winter.huskBrownAmt, te)
+    };
+    paint14(ctx, staged, 0, {
+      settleFall: transient2(p)
+    });
+  }
   var VARIANTS16 = {
     Spring: { draw: drawCornSpring, anim: animCornSpring },
     Summer: { draw: drawCornSummer, anim: animCornSummer },
@@ -8395,12 +8692,12 @@
   };
 
   // src/textures/seasonal/veg/pepper.ts
-  function clamp0116(x) {
+  function clamp0117(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother15 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother17 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp17(a, b, t) {
     return a + (b - a) * t;
   }
@@ -8411,7 +8708,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba8(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0116(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0117(a)})`;
   }
   function lerpP15(a, b, t) {
     return {
@@ -8437,14 +8734,14 @@
   function clampP9(p) {
     return {
       ...p,
-      lightAmt: clamp0116(p.lightAmt),
-      ripeness: clamp0116(p.ripeness),
-      gloss: clamp0116(p.gloss),
-      frostAmt: clamp0116(p.frostAmt),
-      snowCapAmt: clamp0116(p.snowCapAmt),
-      padSnowAmt: clamp0116(p.padSnowAmt),
-      blossomAmt: clamp0116(p.blossomAmt),
-      fallenLeafAmt: clamp0116(p.fallenLeafAmt)
+      lightAmt: clamp0117(p.lightAmt),
+      ripeness: clamp0117(p.ripeness),
+      gloss: clamp0117(p.gloss),
+      frostAmt: clamp0117(p.frostAmt),
+      snowCapAmt: clamp0117(p.snowCapAmt),
+      padSnowAmt: clamp0117(p.padSnowAmt),
+      blossomAmt: clamp0117(p.blossomAmt),
+      fallenLeafAmt: clamp0117(p.fallenLeafAmt)
     };
   }
   var SP15 = {
@@ -8792,7 +9089,7 @@
       ctx.restore();
     }
   }
-  function bobAt15(t, amp = 0.9, w = 1.5) {
+  function bobAt17(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw9(season) {
@@ -8800,7 +9097,7 @@
   }
   function anim9(season) {
     return (ctx, t) => {
-      const bob = bobAt15(t);
+      const bob = bobAt17(t);
       paint15(ctx, SP15[season], bob);
       ctx.save();
       try {
@@ -8861,17 +9158,17 @@
       }
     };
   }
-  function makeTransition14(fromIdx) {
+  function makeTransition13(fromIdx) {
     const from = SP15[SEASON_NAMES[fromIdx]];
     const to = SP15[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother15(clamp0116(pp));
+      const k = smoother17(clamp0117(pp));
       paint15(ctx, lerpP15(from, to, k), 0);
     };
   }
-  var springToSummer12 = makeTransition14(0);
-  var summerToAutumn12 = makeTransition14(1);
-  var autumnToWinter12 = makeTransition14(2);
+  var springToSummer12 = makeTransition13(0);
+  var summerToAutumn12 = makeTransition13(1);
+  var autumnToWinter12 = makeTransition13(2);
   var VARIANTS17 = {
     Spring: { draw: draw9("Spring"), anim: anim9("Spring") },
     Summer: { draw: draw9("Summer"), anim: anim9("Summer") },
@@ -8885,11 +9182,11 @@
   };
 
   // src/textures/seasonal/veg/mushroom.ts
-  function clamp0117(x) {
+  function clamp0118(x) {
     if (!Number.isFinite(x)) return 0;
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
-  var smoother16 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother18 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp18(a, b, t) {
     return a + (b - a) * t;
   }
@@ -8903,7 +9200,7 @@
     return alpha >= 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${alpha})`;
   }
   function mix2(c, target, k) {
-    return lerpRGB11(c, target, clamp0117(k));
+    return lerpRGB11(c, target, clamp0118(k));
   }
   function shade(c, k) {
     return k >= 0 ? mix2(c, [255, 255, 255], k) : mix2(c, [0, 0, 0], -k);
@@ -9057,7 +9354,7 @@
     }
     ctx.lineCap = "butt";
     if (p.blossomAmt > 0.01) {
-      const a = clamp0117(p.blossomAmt);
+      const a = clamp0118(p.blossomAmt);
       const flowers = [
         [-11, 18, 1],
         [12, 20, 0.85]
@@ -9079,7 +9376,7 @@
       ctx.globalAlpha = 1;
     }
     if (p.fallenLeafAmt > 0.01) {
-      const a = clamp0117(p.fallenLeafAmt);
+      const a = clamp0118(p.fallenLeafAmt);
       const leaves2 = [
         [-12, 20, 0.5, [196, 120, 40]],
         [11, 21, -0.7, [168, 70, 36]]
@@ -9104,7 +9401,7 @@
       ctx.globalAlpha = 1;
     }
     if (p.padSnowAmt > 0.01) {
-      const a = clamp0117(p.padSnowAmt);
+      const a = clamp0118(p.padSnowAmt);
       ctx.globalAlpha = a;
       const snow = ctx.createLinearGradient(0, cy - 4, 0, cy + 4);
       snow.addColorStop(0, "rgba(244,248,255,1)");
@@ -9117,7 +9414,7 @@
     }
   }
   function paintMushroom(ctx, p, bx, by, scale, sparkle) {
-    const open = clamp0117(p.capOpenAmount);
+    const open = clamp0118(p.capOpenAmount);
     const capW = (6 + open * 4) * scale;
     const capH = (5.6 - open * 1.4) * scale;
     const droop = p.droop * 2.4 * scale;
@@ -9160,7 +9457,7 @@
     ctx.ellipse(0, droop, capW, capH, 0, Math.PI, Math.PI * 2);
     ctx.stroke();
     if (p.gloss > 0.01) {
-      ctx.globalAlpha = clamp0117(p.gloss);
+      ctx.globalAlpha = clamp0118(p.gloss);
       ctx.fillStyle = "rgba(255,255,255,0.85)";
       ctx.beginPath();
       ctx.ellipse(-capW * 0.38, droop - capH * 0.42, capW * 0.34, capH * 0.3, -0.5, 0, Math.PI * 2);
@@ -9181,7 +9478,7 @@
       ctx.ellipse(sx, sy, r, r * 0.86, 0, 0, Math.PI * 2);
       ctx.fill();
       if (sparkle > 0.01 && i % 2 === 0) {
-        ctx.globalAlpha = clamp0117(sparkle);
+        ctx.globalAlpha = clamp0118(sparkle);
         ctx.fillStyle = "rgba(255,255,255,0.9)";
         ctx.beginPath();
         ctx.arc(sx - r * 0.3, sy - r * 0.3, r * 0.4, 0, Math.PI * 2);
@@ -9190,7 +9487,7 @@
       }
     });
     if (p.frostAmt > 0.01) {
-      const f = clamp0117(p.frostAmt);
+      const f = clamp0118(p.frostAmt);
       ctx.globalAlpha = 0.5 * f;
       ctx.strokeStyle = "rgba(226,240,255,1)";
       ctx.lineWidth = 1.4;
@@ -9212,7 +9509,7 @@
       ctx.globalAlpha = 1;
     }
     if (p.snowCapAmt > 0.01) {
-      const s = clamp0117(p.snowCapAmt);
+      const s = clamp0118(p.snowCapAmt);
       ctx.globalAlpha = s;
       ctx.fillStyle = "rgba(248,251,255,1)";
       ctx.beginPath();
@@ -9247,11 +9544,11 @@
     }
   }
   var drawFor = (season) => (ctx) => paint16(ctx, SP16[season], 0);
-  function bobAt16(t, amp, w) {
+  function bobAt18(t, amp, w) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var animFor = (season) => (ctx, t) => {
-    const bob = -bobAt16(t, 0.9, 1.5);
+    const bob = -bobAt18(t, 0.9, 1.5);
     ctx.save();
     try {
       paintPad(ctx, SP16[season]);
@@ -9267,7 +9564,7 @@
       if (season === "Autumn") {
         const rock = Math.sin(t * 1.2) * 0.25;
         ctx.save();
-        ctx.globalAlpha = clamp0117(p.fallenLeafAmt);
+        ctx.globalAlpha = clamp0118(p.fallenLeafAmt);
         ctx.translate(-12, 20);
         ctx.rotate(0.5 + rock);
         ctx.fillStyle = "rgb(196,120,40)";
@@ -9306,9 +9603,9 @@
       ctx.restore();
     }
   };
-  var springToSummer13 = (ctx, pp) => paint16(ctx, lerpP16(SP16.Spring, SP16.Summer, smoother16(clamp0117(pp))), 0);
-  var summerToAutumn13 = (ctx, pp) => paint16(ctx, lerpP16(SP16.Summer, SP16.Autumn, smoother16(clamp0117(pp))), 0);
-  var autumnToWinter13 = (ctx, pp) => paint16(ctx, lerpP16(SP16.Autumn, SP16.Winter, smoother16(clamp0117(pp))), 0);
+  var springToSummer13 = (ctx, pp) => paint16(ctx, lerpP16(SP16.Spring, SP16.Summer, smoother18(clamp0118(pp))), 0);
+  var summerToAutumn13 = (ctx, pp) => paint16(ctx, lerpP16(SP16.Summer, SP16.Autumn, smoother18(clamp0118(pp))), 0);
+  var autumnToWinter13 = (ctx, pp) => paint16(ctx, lerpP16(SP16.Autumn, SP16.Winter, smoother18(clamp0118(pp))), 0);
   var VARIANTS18 = {
     Spring: { draw: drawFor("Spring"), anim: animFor("Spring") },
     Summer: { draw: drawFor("Summer"), anim: animFor("Summer") },
@@ -9322,7 +9619,7 @@
   };
 
   // src/textures/seasonal/veg/beet.ts
-  function clamp0118(x) {
+  function clamp0119(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
   function lerp19(a, b, t) {
@@ -9335,12 +9632,12 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba9(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0118(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0119(a)})`;
   }
-  function smoother17(x) {
+  function smoother19(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt17(t, amp, w) {
+  function bobAt19(t, amp, w) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP17 = {
@@ -9504,7 +9801,7 @@
     }
     ctx.save();
     ctx.translate(0, bob);
-    const ripe = clamp0118(p.ripeness);
+    const ripe = clamp0119(p.ripeness);
     const bw = 12 + ripe * 1.8;
     const bh = 11 + ripe * 1.6;
     const cy = 9;
@@ -9720,21 +10017,21 @@
   function anim10(season) {
     return (ctx, t) => {
       const base = SP17[season];
-      const bob = bobAt17(t, 0.7, 1.4);
+      const bob = bobAt19(t, 0.7, 1.4);
       const p = base;
       let p2 = p;
       if (season === "Summer") {
         const pulse = (1 - Math.cos(t * 2)) * 0.5;
-        p2 = { ...base, gloss: clamp0118(base.gloss + pulse * 0.18) };
+        p2 = { ...base, gloss: clamp0119(base.gloss + pulse * 0.18) };
       } else if (season === "Autumn") {
         const flutter = (1 - Math.cos(t * 1.6)) * 0.5;
-        p2 = { ...base, leafYellow: clamp0118(base.leafYellow + flutter * 0.18) };
+        p2 = { ...base, leafYellow: clamp0119(base.leafYellow + flutter * 0.18) };
       } else if (season === "Winter") {
         const sheen3 = (1 - Math.cos(t * 0.9)) * 0.5;
-        p2 = { ...base, frostAmt: clamp0118(base.frostAmt + sheen3 * 0.12) };
+        p2 = { ...base, frostAmt: clamp0119(base.frostAmt + sheen3 * 0.12) };
       } else if (season === "Spring") {
         const dew = (1 - Math.cos(t * 1.8)) * 0.5;
-        p2 = { ...base, lightAmt: clamp0118(base.lightAmt + dew * 0.12) };
+        p2 = { ...base, lightAmt: clamp0119(base.lightAmt + dew * 0.12) };
       }
       paint17(ctx, p2, bob);
       if (season === "Winter") {
@@ -9764,7 +10061,7 @@
   function transition(fromIdx) {
     const a = SP17[FROM[fromIdx]];
     const b = SP17[FROM[fromIdx + 1]];
-    return (ctx, pp) => paint17(ctx, lerpP17(a, b, smoother17(clamp0118(pp))), 0);
+    return (ctx, pp) => paint17(ctx, lerpP17(a, b, smoother19(clamp0119(pp))), 0);
   }
   var VARIANTS19 = {
     Spring: { draw: draw10("Spring"), anim: anim10("Spring") },
@@ -9782,12 +10079,12 @@
   };
 
   // src/textures/seasonal/veg/broccoli.ts
-  function clamp0119(x) {
+  function clamp0120(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother18 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother20 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp20(a, b, t) {
     return a + (b - a) * t;
   }
@@ -9798,7 +10095,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba10(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0119(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0120(a)})`;
   }
   function lerpP18(a, b, t) {
     return {
@@ -9828,15 +10125,15 @@
   function clampP10(p) {
     return {
       ...p,
-      lightAmt: clamp0119(p.lightAmt),
-      ripeness: clamp0119(p.ripeness),
-      gloss: clamp0119(p.gloss),
-      loosen: clamp0119(p.loosen),
-      frostAmt: clamp0119(p.frostAmt),
-      snowCapAmt: clamp0119(p.snowCapAmt),
-      padSnowAmt: clamp0119(p.padSnowAmt),
-      blossomAmt: clamp0119(p.blossomAmt),
-      fallenLeafAmt: clamp0119(p.fallenLeafAmt)
+      lightAmt: clamp0120(p.lightAmt),
+      ripeness: clamp0120(p.ripeness),
+      gloss: clamp0120(p.gloss),
+      loosen: clamp0120(p.loosen),
+      frostAmt: clamp0120(p.frostAmt),
+      snowCapAmt: clamp0120(p.snowCapAmt),
+      padSnowAmt: clamp0120(p.padSnowAmt),
+      blossomAmt: clamp0120(p.blossomAmt),
+      fallenLeafAmt: clamp0120(p.fallenLeafAmt)
     };
   }
   var SP18 = {
@@ -10228,7 +10525,7 @@
       ctx.restore();
     }
   }
-  function bobAt18(t, amp = 0.85, w = 1.4) {
+  function bobAt20(t, amp = 0.85, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw11(season) {
@@ -10236,7 +10533,7 @@
   }
   function anim11(season) {
     return (ctx, t) => {
-      const bob = bobAt18(t);
+      const bob = bobAt20(t);
       paint18(ctx, SP18[season], bob);
       ctx.save();
       try {
@@ -10294,17 +10591,17 @@
       }
     };
   }
-  function makeTransition15(fromIdx) {
+  function makeTransition14(fromIdx) {
     const from = SP18[SEASON_NAMES[fromIdx]];
     const to = SP18[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother18(clamp0119(pp));
+      const k = smoother20(clamp0120(pp));
       paint18(ctx, lerpP18(from, to, k), 0);
     };
   }
-  var springToSummer14 = makeTransition15(0);
-  var summerToAutumn14 = makeTransition15(1);
-  var autumnToWinter14 = makeTransition15(2);
+  var springToSummer14 = makeTransition14(0);
+  var summerToAutumn14 = makeTransition14(1);
+  var autumnToWinter14 = makeTransition14(2);
   var VARIANTS20 = {
     Spring: { draw: draw11("Spring"), anim: anim11("Spring") },
     Summer: { draw: draw11("Summer"), anim: anim11("Summer") },
@@ -10318,12 +10615,12 @@
   };
 
   // src/textures/seasonal/veg/carrot.ts
-  function clamp0120(x) {
+  function clamp0121(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother19 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother21 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp21(a, b, t) {
     return a + (b - a) * t;
   }
@@ -10334,7 +10631,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba11(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0120(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0121(a)})`;
   }
   function lerpP19(a, b, t) {
     return {
@@ -10363,15 +10660,15 @@
   function clampP11(p) {
     return {
       ...p,
-      lightAmt: clamp0120(p.lightAmt),
-      ripeness: clamp0120(p.ripeness),
-      gloss: clamp0120(p.gloss),
-      freckleAmt: clamp0120(p.freckleAmt),
-      frostAmt: clamp0120(p.frostAmt),
-      snowCapAmt: clamp0120(p.snowCapAmt),
-      padSnowAmt: clamp0120(p.padSnowAmt),
-      blossomAmt: clamp0120(p.blossomAmt),
-      fallenLeafAmt: clamp0120(p.fallenLeafAmt)
+      lightAmt: clamp0121(p.lightAmt),
+      ripeness: clamp0121(p.ripeness),
+      gloss: clamp0121(p.gloss),
+      freckleAmt: clamp0121(p.freckleAmt),
+      frostAmt: clamp0121(p.frostAmt),
+      snowCapAmt: clamp0121(p.snowCapAmt),
+      padSnowAmt: clamp0121(p.padSnowAmt),
+      blossomAmt: clamp0121(p.blossomAmt),
+      fallenLeafAmt: clamp0121(p.fallenLeafAmt)
     };
   }
   var SP19 = {
@@ -10776,7 +11073,7 @@
       ctx.restore();
     }
   }
-  function bobAt19(t, amp = 0.9, w = 1.5) {
+  function bobAt21(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw12(season) {
@@ -10784,7 +11081,7 @@
   }
   function anim12(season) {
     return (ctx, t) => {
-      const bob = bobAt19(t);
+      const bob = bobAt21(t);
       paint19(ctx, SP19[season], bob);
       ctx.save();
       try {
@@ -10856,17 +11153,17 @@
       }
     };
   }
-  function makeTransition16(fromIdx) {
+  function makeTransition15(fromIdx) {
     const from = SP19[SEASON_NAMES[fromIdx]];
     const to = SP19[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother19(clamp0120(pp));
+      const k = smoother21(clamp0121(pp));
       paint19(ctx, lerpP19(from, to, k), 0);
     };
   }
-  var springToSummer15 = makeTransition16(0);
-  var summerToAutumn15 = makeTransition16(1);
-  var autumnToWinter15 = makeTransition16(2);
+  var springToSummer15 = makeTransition15(0);
+  var summerToAutumn15 = makeTransition15(1);
+  var autumnToWinter15 = makeTransition15(2);
   var VARIANTS21 = {
     Spring: { draw: draw12("Spring"), anim: anim12("Spring") },
     Summer: { draw: draw12("Summer"), anim: anim12("Summer") },
@@ -10880,12 +11177,12 @@
   };
 
   // src/textures/seasonal/veg/cucumber.ts
-  function clamp0121(x) {
+  function clamp0122(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother20 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother22 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp22(a, b, t) {
     return a + (b - a) * t;
   }
@@ -10896,7 +11193,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba12(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0121(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0122(a)})`;
   }
   function lerpP20(a, b, t) {
     return {
@@ -10925,15 +11222,15 @@
   function clampP12(p) {
     return {
       ...p,
-      lightAmt: clamp0121(p.lightAmt),
-      ripeness: clamp0121(p.ripeness),
-      gloss: clamp0121(p.gloss),
-      speckleAmt: clamp0121(p.speckleAmt),
-      frostAmt: clamp0121(p.frostAmt),
-      snowCapAmt: clamp0121(p.snowCapAmt),
-      padSnowAmt: clamp0121(p.padSnowAmt),
-      blossomAmt: clamp0121(p.blossomAmt),
-      fallenLeafAmt: clamp0121(p.fallenLeafAmt)
+      lightAmt: clamp0122(p.lightAmt),
+      ripeness: clamp0122(p.ripeness),
+      gloss: clamp0122(p.gloss),
+      speckleAmt: clamp0122(p.speckleAmt),
+      frostAmt: clamp0122(p.frostAmt),
+      snowCapAmt: clamp0122(p.snowCapAmt),
+      padSnowAmt: clamp0122(p.padSnowAmt),
+      blossomAmt: clamp0122(p.blossomAmt),
+      fallenLeafAmt: clamp0122(p.fallenLeafAmt)
     };
   }
   var SP20 = {
@@ -11388,7 +11685,7 @@
       ctx.restore();
     }
   }
-  function bobAt20(t, amp = 0.8, w = 1.5) {
+  function bobAt22(t, amp = 0.8, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw13(season) {
@@ -11400,7 +11697,7 @@
   }
   function anim13(season) {
     return (ctx, t) => {
-      const bob = bobAt20(t);
+      const bob = bobAt22(t);
       paint20(ctx, SP20[season], bob);
       ctx.save();
       try {
@@ -11471,17 +11768,17 @@
       }
     };
   }
-  function makeTransition17(fromIdx) {
+  function makeTransition16(fromIdx) {
     const from = SP20[SEASON_NAMES[fromIdx]];
     const to = SP20[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother20(clamp0121(pp));
+      const k = smoother22(clamp0122(pp));
       paint20(ctx, lerpP20(from, to, k), 0);
     };
   }
-  var springToSummer16 = makeTransition17(0);
-  var summerToAutumn16 = makeTransition17(1);
-  var autumnToWinter16 = makeTransition17(2);
+  var springToSummer16 = makeTransition16(0);
+  var summerToAutumn16 = makeTransition16(1);
+  var autumnToWinter16 = makeTransition16(2);
   var VARIANTS22 = {
     Spring: { draw: draw13("Spring"), anim: anim13("Spring") },
     Summer: { draw: draw13("Summer"), anim: anim13("Summer") },
@@ -11495,12 +11792,12 @@
   };
 
   // src/textures/seasonal/veg/eggplant.ts
-  function clamp0122(x) {
+  function clamp0123(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother21 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother23 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp23(a, b, t) {
     return a + (b - a) * t;
   }
@@ -11511,7 +11808,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba13(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0122(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0123(a)})`;
   }
   function lerpP21(a, b, t) {
     return {
@@ -11539,15 +11836,15 @@
   function clampP13(p) {
     return {
       ...p,
-      lightAmt: clamp0122(p.lightAmt),
-      ripeness: clamp0122(p.ripeness),
-      gloss: clamp0122(p.gloss),
-      capDry: clamp0122(p.capDry),
-      frostAmt: clamp0122(p.frostAmt),
-      snowCapAmt: clamp0122(p.snowCapAmt),
-      padSnowAmt: clamp0122(p.padSnowAmt),
-      blossomAmt: clamp0122(p.blossomAmt),
-      fallenLeafAmt: clamp0122(p.fallenLeafAmt)
+      lightAmt: clamp0123(p.lightAmt),
+      ripeness: clamp0123(p.ripeness),
+      gloss: clamp0123(p.gloss),
+      capDry: clamp0123(p.capDry),
+      frostAmt: clamp0123(p.frostAmt),
+      snowCapAmt: clamp0123(p.snowCapAmt),
+      padSnowAmt: clamp0123(p.padSnowAmt),
+      blossomAmt: clamp0123(p.blossomAmt),
+      fallenLeafAmt: clamp0123(p.fallenLeafAmt)
     };
   }
   var SP21 = {
@@ -11931,7 +12228,7 @@
       ctx.restore();
     }
   }
-  function bobAt21(t, amp = 0.9, w = 1.5) {
+  function bobAt23(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw14(season) {
@@ -11939,7 +12236,7 @@
   }
   function anim14(season) {
     return (ctx, t) => {
-      const bob = bobAt21(t);
+      const bob = bobAt23(t);
       paint21(ctx, SP21[season], bob);
       ctx.save();
       try {
@@ -12000,17 +12297,17 @@
       }
     };
   }
-  function makeTransition18(fromIdx) {
+  function makeTransition17(fromIdx) {
     const from = SP21[SEASON_NAMES[fromIdx]];
     const to = SP21[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother21(clamp0122(pp));
+      const k = smoother23(clamp0123(pp));
       paint21(ctx, lerpP21(from, to, k), 0);
     };
   }
-  var springToSummer17 = makeTransition18(0);
-  var summerToAutumn17 = makeTransition18(1);
-  var autumnToWinter17 = makeTransition18(2);
+  var springToSummer17 = makeTransition17(0);
+  var summerToAutumn17 = makeTransition17(1);
+  var autumnToWinter17 = makeTransition17(2);
   var VARIANTS23 = {
     Spring: { draw: draw14("Spring"), anim: anim14("Spring") },
     Summer: { draw: draw14("Summer"), anim: anim14("Summer") },
@@ -12024,12 +12321,12 @@
   };
 
   // src/textures/seasonal/veg/squash.ts
-  function clamp0123(x) {
+  function clamp0124(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother22 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother24 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp24(a, b, t) {
     return a + (b - a) * t;
   }
@@ -12040,7 +12337,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba14(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0123(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0124(a)})`;
   }
   function lerpP22(a, b, t) {
     return {
@@ -12066,14 +12363,14 @@
   function clampP14(p) {
     return {
       ...p,
-      lightAmt: clamp0123(p.lightAmt),
-      ripeness: clamp0123(p.ripeness),
-      gloss: clamp0123(p.gloss),
-      frostAmt: clamp0123(p.frostAmt),
-      snowCapAmt: clamp0123(p.snowCapAmt),
-      padSnowAmt: clamp0123(p.padSnowAmt),
-      blossomAmt: clamp0123(p.blossomAmt),
-      fallenLeafAmt: clamp0123(p.fallenLeafAmt)
+      lightAmt: clamp0124(p.lightAmt),
+      ripeness: clamp0124(p.ripeness),
+      gloss: clamp0124(p.gloss),
+      frostAmt: clamp0124(p.frostAmt),
+      snowCapAmt: clamp0124(p.snowCapAmt),
+      padSnowAmt: clamp0124(p.padSnowAmt),
+      blossomAmt: clamp0124(p.blossomAmt),
+      fallenLeafAmt: clamp0124(p.fallenLeafAmt)
     };
   }
   var SP22 = {
@@ -12184,15 +12481,15 @@
   }
   function halfWidthAt(y) {
     if (y <= WAIST_Y) {
-      const k2 = clamp0123((y - NECK_TOP_Y) / (WAIST_Y - NECK_TOP_Y));
+      const k2 = clamp0124((y - NECK_TOP_Y) / (WAIST_Y - NECK_TOP_Y));
       return lerp24(NECK_HALF, WAIST_HALF, k2);
     }
     const bottom = BULB_CY + BULB_RY;
     if (y <= BULB_CY) {
-      const k2 = clamp0123((y - WAIST_Y) / (BULB_CY - WAIST_Y));
+      const k2 = clamp0124((y - WAIST_Y) / (BULB_CY - WAIST_Y));
       return lerp24(WAIST_HALF, BULB_RX, k2);
     }
-    const k = clamp0123((y - BULB_CY) / (bottom - BULB_CY));
+    const k = clamp0124((y - BULB_CY) / (bottom - BULB_CY));
     return lerp24(BULB_RX, 0.5, k);
   }
   function paint22(ctx, raw, bob) {
@@ -12443,7 +12740,7 @@
       ctx.restore();
     }
   }
-  function bobAt22(t, amp = 0.8, w = 1.4) {
+  function bobAt24(t, amp = 0.8, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw15(season) {
@@ -12451,7 +12748,7 @@
   }
   function anim15(season) {
     return (ctx, t) => {
-      const bob = bobAt22(t);
+      const bob = bobAt24(t);
       paint22(ctx, SP22[season], bob);
       ctx.save();
       try {
@@ -12510,17 +12807,17 @@
       }
     };
   }
-  function makeTransition19(fromIdx) {
+  function makeTransition18(fromIdx) {
     const from = SP22[SEASON_NAMES[fromIdx]];
     const to = SP22[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother22(clamp0123(pp));
+      const k = smoother24(clamp0124(pp));
       paint22(ctx, lerpP22(from, to, k), 0);
     };
   }
-  var springToSummer18 = makeTransition19(0);
-  var summerToAutumn18 = makeTransition19(1);
-  var autumnToWinter18 = makeTransition19(2);
+  var springToSummer18 = makeTransition18(0);
+  var summerToAutumn18 = makeTransition18(1);
+  var autumnToWinter18 = makeTransition18(2);
   var VARIANTS24 = {
     Spring: { draw: draw15("Spring"), anim: anim15("Spring") },
     Summer: { draw: draw15("Summer"), anim: anim15("Summer") },
@@ -12534,12 +12831,12 @@
   };
 
   // src/textures/seasonal/veg/turnip.ts
-  function clamp0124(x) {
+  function clamp0125(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother23 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother25 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp25(a, b, t) {
     return a + (b - a) * t;
   }
@@ -12550,7 +12847,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba15(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0124(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0125(a)})`;
   }
   function lerpP23(a, b, t) {
     return {
@@ -12582,14 +12879,14 @@
   function clampP15(p) {
     return {
       ...p,
-      lightAmt: clamp0124(p.lightAmt),
-      ripeness: clamp0124(p.ripeness),
-      gloss: clamp0124(p.gloss),
-      frostAmt: clamp0124(p.frostAmt),
-      snowCapAmt: clamp0124(p.snowCapAmt),
-      padSnowAmt: clamp0124(p.padSnowAmt),
-      blossomAmt: clamp0124(p.blossomAmt),
-      fallenLeafAmt: clamp0124(p.fallenLeafAmt)
+      lightAmt: clamp0125(p.lightAmt),
+      ripeness: clamp0125(p.ripeness),
+      gloss: clamp0125(p.gloss),
+      frostAmt: clamp0125(p.frostAmt),
+      snowCapAmt: clamp0125(p.snowCapAmt),
+      padSnowAmt: clamp0125(p.padSnowAmt),
+      blossomAmt: clamp0125(p.blossomAmt),
+      fallenLeafAmt: clamp0125(p.fallenLeafAmt)
     };
   }
   var SP23 = {
@@ -12707,7 +13004,7 @@
   var BULB_RY2 = 12;
   var SHOULDER_FRAC = 0.34;
   function bulbRadii(ripeness) {
-    const k = 0.74 + 0.26 * clamp0124(ripeness);
+    const k = 0.74 + 0.26 * clamp0125(ripeness);
     return { rx: BULB_RX2 * k, ry: BULB_RY2 * k };
   }
   function bulbPath(ctx, cy, rx, ry) {
@@ -12993,7 +13290,7 @@
     ctx.fill();
     ctx.restore();
   }
-  function bobAt23(t, amp = 0.9, w = 1.5) {
+  function bobAt25(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw16(season) {
@@ -13001,7 +13298,7 @@
   }
   function anim16(season) {
     return (ctx, t) => {
-      const bob = bobAt23(t);
+      const bob = bobAt25(t);
       paint23(ctx, SP23[season], bob);
       const p = clampP15(SP23[season]);
       const { ry } = bulbRadii(p.ripeness);
@@ -13074,17 +13371,17 @@
       }
     };
   }
-  function makeTransition20(fromIdx) {
+  function makeTransition19(fromIdx) {
     const from = SP23[SEASON_NAMES[fromIdx]];
     const to = SP23[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother23(clamp0124(pp));
+      const k = smoother25(clamp0125(pp));
       paint23(ctx, lerpP23(from, to, k), 0);
     };
   }
-  var springToSummer19 = makeTransition20(0);
-  var summerToAutumn19 = makeTransition20(1);
-  var autumnToWinter19 = makeTransition20(2);
+  var springToSummer19 = makeTransition19(0);
+  var summerToAutumn19 = makeTransition19(1);
+  var autumnToWinter19 = makeTransition19(2);
   var VARIANTS25 = {
     Spring: { draw: draw16("Spring"), anim: anim16("Spring") },
     Summer: { draw: draw16("Summer"), anim: anim16("Summer") },
@@ -13098,12 +13395,12 @@
   };
 
   // src/textures/seasonal/grass/grass.ts
-  function clamp0125(x) {
+  function clamp0126(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother24 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother26 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp26(a, b, t) {
     return a + (b - a) * t;
   }
@@ -13114,7 +13411,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba16(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0125(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0126(a)})`;
   }
   function lerpP24(a, b, t) {
     return {
@@ -13142,16 +13439,16 @@
   function clampP16(p) {
     return {
       ...p,
-      lightAmt: clamp0125(p.lightAmt),
-      lushness: clamp0125(p.lushness),
-      tipAmt: clamp0125(p.tipAmt),
-      bentAmt: clamp0125(p.bentAmt),
-      frostAmt: clamp0125(p.frostAmt),
-      snowCapAmt: clamp0125(p.snowCapAmt),
-      snowBlanketAmt: clamp0125(p.snowBlanketAmt),
-      padSnowAmt: clamp0125(p.padSnowAmt),
-      blossomAmt: clamp0125(p.blossomAmt),
-      fallenLeafAmt: clamp0125(p.fallenLeafAmt)
+      lightAmt: clamp0126(p.lightAmt),
+      lushness: clamp0126(p.lushness),
+      tipAmt: clamp0126(p.tipAmt),
+      bentAmt: clamp0126(p.bentAmt),
+      frostAmt: clamp0126(p.frostAmt),
+      snowCapAmt: clamp0126(p.snowCapAmt),
+      snowBlanketAmt: clamp0126(p.snowBlanketAmt),
+      padSnowAmt: clamp0126(p.padSnowAmt),
+      blossomAmt: clamp0126(p.blossomAmt),
+      fallenLeafAmt: clamp0126(p.fallenLeafAmt)
     };
   }
   var SP24 = {
@@ -13464,7 +13761,7 @@
       ctx.restore();
     }
   }
-  function bobAt24(t, amp = 0.7, w = 1.4) {
+  function bobAt26(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw17(season) {
@@ -13472,7 +13769,7 @@
   }
   function anim17(season) {
     return (ctx, t) => {
-      const bob = bobAt24(t);
+      const bob = bobAt26(t);
       const bendBase = season === "Summer" ? 1.7 : season === "Winter" ? 1.2 : season === "Autumn" ? 1.5 : 1.9;
       const bend = bendBase * (1 - Math.cos(t * 1.5)) * 0.5 + bendBase * 0.35 * Math.sin(t * 0.9);
       const phase = t * 1.5;
@@ -13530,17 +13827,17 @@
       }
     };
   }
-  function makeTransition21(fromIdx) {
+  function makeTransition20(fromIdx) {
     const from = SP24[SEASON_NAMES[fromIdx]];
     const to = SP24[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother24(clamp0125(pp));
+      const k = smoother26(clamp0126(pp));
       paint24(ctx, lerpP24(from, to, k), 0);
     };
   }
-  var springToSummer20 = makeTransition21(0);
-  var summerToAutumn20 = makeTransition21(1);
-  var autumnToWinter20 = makeTransition21(2);
+  var springToSummer20 = makeTransition20(0);
+  var summerToAutumn20 = makeTransition20(1);
+  var autumnToWinter20 = makeTransition20(2);
   var VARIANTS26 = {
     Spring: { draw: draw17("Spring"), anim: anim17("Spring") },
     Summer: { draw: draw17("Summer"), anim: anim17("Summer") },
@@ -13554,12 +13851,12 @@
   };
 
   // src/textures/seasonal/grass/meadow.ts
-  function clamp0126(x) {
+  function clamp0127(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother25 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother27 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp27(a, b, t) {
     return a + (b - a) * t;
   }
@@ -13570,7 +13867,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba17(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0126(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0127(a)})`;
   }
   function lerpP25(a, b, t) {
     return {
@@ -13599,15 +13896,15 @@
   function clampP17(p) {
     return {
       ...p,
-      lightAmt: clamp0126(p.lightAmt),
-      droop: clamp0126(p.droop),
-      toSeed: clamp0126(p.toSeed),
-      gloss: clamp0126(p.gloss),
-      frostAmt: clamp0126(p.frostAmt),
-      snowCapAmt: clamp0126(p.snowCapAmt),
-      padSnowAmt: clamp0126(p.padSnowAmt),
-      blossomAmt: clamp0126(p.blossomAmt),
-      fallenLeafAmt: clamp0126(p.fallenLeafAmt)
+      lightAmt: clamp0127(p.lightAmt),
+      droop: clamp0127(p.droop),
+      toSeed: clamp0127(p.toSeed),
+      gloss: clamp0127(p.gloss),
+      frostAmt: clamp0127(p.frostAmt),
+      snowCapAmt: clamp0127(p.snowCapAmt),
+      padSnowAmt: clamp0127(p.padSnowAmt),
+      blossomAmt: clamp0127(p.blossomAmt),
+      fallenLeafAmt: clamp0127(p.fallenLeafAmt)
     };
   }
   var SP25 = {
@@ -13977,7 +14274,7 @@
       ctx.restore();
     }
   }
-  function bobAt25(t, amp = 0.7, w = 1.4) {
+  function bobAt27(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw18(season) {
@@ -13986,7 +14283,7 @@
   function anim18(season) {
     const p = SP25[season];
     return (ctx, t) => {
-      const bob = bobAt25(t);
+      const bob = bobAt27(t);
       paint25(ctx, p, bob);
       ctx.save();
       try {
@@ -14050,17 +14347,17 @@
       }
     };
   }
-  function makeTransition22(fromIdx) {
+  function makeTransition21(fromIdx) {
     const from = SP25[SEASON_NAMES[fromIdx]];
     const to = SP25[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother25(clamp0126(pp));
+      const k = smoother27(clamp0127(pp));
       paint25(ctx, lerpP25(from, to, k), 0);
     };
   }
-  var springToSummer21 = makeTransition22(0);
-  var summerToAutumn21 = makeTransition22(1);
-  var autumnToWinter21 = makeTransition22(2);
+  var springToSummer21 = makeTransition21(0);
+  var summerToAutumn21 = makeTransition21(1);
+  var autumnToWinter21 = makeTransition21(2);
   var VARIANTS27 = {
     Spring: { draw: draw18("Spring"), anim: anim18("Spring") },
     Summer: { draw: draw18("Summer"), anim: anim18("Summer") },
@@ -14074,12 +14371,12 @@
   };
 
   // src/textures/seasonal/grass/spiky.ts
-  function clamp0127(x) {
+  function clamp0128(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother26 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother28 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp28(a, b, t) {
     return a + (b - a) * t;
   }
@@ -14090,7 +14387,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba18(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0127(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0128(a)})`;
   }
   function lerpP26(a, b, t) {
     return {
@@ -14117,15 +14414,15 @@
   function clampP18(p) {
     return {
       ...p,
-      lightAmt: clamp0127(p.lightAmt),
-      ripeness: clamp0127(p.ripeness),
-      gloss: clamp0127(p.gloss),
-      tipRust: clamp0127(p.tipRust),
-      frostAmt: clamp0127(p.frostAmt),
-      snowCapAmt: clamp0127(p.snowCapAmt),
-      padSnowAmt: clamp0127(p.padSnowAmt),
-      blossomAmt: clamp0127(p.blossomAmt),
-      fallenLeafAmt: clamp0127(p.fallenLeafAmt)
+      lightAmt: clamp0128(p.lightAmt),
+      ripeness: clamp0128(p.ripeness),
+      gloss: clamp0128(p.gloss),
+      tipRust: clamp0128(p.tipRust),
+      frostAmt: clamp0128(p.frostAmt),
+      snowCapAmt: clamp0128(p.snowCapAmt),
+      padSnowAmt: clamp0128(p.padSnowAmt),
+      blossomAmt: clamp0128(p.blossomAmt),
+      fallenLeafAmt: clamp0128(p.fallenLeafAmt)
     };
   }
   var SP26 = {
@@ -14449,7 +14746,7 @@
       ctx.restore();
     }
   }
-  function bobAt26(t, amp = 0.45, w = 1.4) {
+  function bobAt28(t, amp = 0.45, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function quiverAt(t) {
@@ -14464,7 +14761,7 @@
   }
   function anim19(season) {
     return (ctx, t) => {
-      const bob = bobAt26(t);
+      const bob = bobAt28(t);
       const quiver = quiverAt(t);
       paint26(ctx, SP26[season], bob, quiver);
       ctx.save();
@@ -14527,17 +14824,17 @@
       }
     };
   }
-  function makeTransition23(fromIdx) {
+  function makeTransition22(fromIdx) {
     const from = SP26[SEASON_NAMES[fromIdx]];
     const to = SP26[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother26(clamp0127(pp));
+      const k = smoother28(clamp0128(pp));
       paint26(ctx, lerpP26(from, to, k), 0);
     };
   }
-  var springToSummer22 = makeTransition23(0);
-  var summerToAutumn22 = makeTransition23(1);
-  var autumnToWinter22 = makeTransition23(2);
+  var springToSummer22 = makeTransition22(0);
+  var summerToAutumn22 = makeTransition22(1);
+  var autumnToWinter22 = makeTransition22(2);
   var VARIANTS28 = {
     Spring: { draw: draw19("Spring"), anim: anim19("Spring") },
     Summer: { draw: draw19("Summer"), anim: anim19("Summer") },
@@ -14551,12 +14848,12 @@
   };
 
   // src/textures/seasonal/grass/clover.ts
-  function clamp0128(x) {
+  function clamp0129(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother27 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother29 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp29(a, b, t) {
     return a + (b - a) * t;
   }
@@ -14567,7 +14864,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba19(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0128(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0129(a)})`;
   }
   function lerpP27(a, b, t) {
     return {
@@ -14598,16 +14895,16 @@
   function clampP19(p) {
     return {
       ...p,
-      lightAmt: clamp0128(p.lightAmt),
-      vitality: clamp0128(p.vitality),
-      edgeBrown: clamp0128(p.edgeBrown),
-      flatten: clamp0128(p.flatten),
-      frostAmt: clamp0128(p.frostAmt),
-      snowCapAmt: clamp0128(p.snowCapAmt),
-      padSnowAmt: clamp0128(p.padSnowAmt),
-      bloomAmt: clamp0128(p.bloomAmt),
-      blossomAmt: clamp0128(p.blossomAmt),
-      fallenLeafAmt: clamp0128(p.fallenLeafAmt)
+      lightAmt: clamp0129(p.lightAmt),
+      vitality: clamp0129(p.vitality),
+      edgeBrown: clamp0129(p.edgeBrown),
+      flatten: clamp0129(p.flatten),
+      frostAmt: clamp0129(p.frostAmt),
+      snowCapAmt: clamp0129(p.snowCapAmt),
+      padSnowAmt: clamp0129(p.padSnowAmt),
+      bloomAmt: clamp0129(p.bloomAmt),
+      blossomAmt: clamp0129(p.blossomAmt),
+      fallenLeafAmt: clamp0129(p.fallenLeafAmt)
     };
   }
   var SP27 = {
@@ -14720,7 +15017,7 @@
   var MOUND_HALF = 16.5;
   var MOUND_TOP_Y = -7;
   function moundTopY(flatten) {
-    return lerp29(MOUND_TOP_Y, MOUND_BASE_Y - 6, clamp0128(flatten));
+    return lerp29(MOUND_TOP_Y, MOUND_BASE_Y - 6, clamp0129(flatten));
   }
   function moundPath(ctx, bob, flatten) {
     const top = moundTopY(flatten) + bob;
@@ -14809,7 +15106,7 @@
     });
   }
   function puffBloom(ctx, p, baseX, baseY, topX, topY, open, sway) {
-    const o = clamp0128(open);
+    const o = clamp0129(open);
     if (o < 0.03) return;
     const tx = topX + sway;
     ctx.strokeStyle = rgb27(p.stem);
@@ -14959,10 +15256,10 @@
       ctx.globalAlpha = 1;
       LEAVES.forEach(([cx, cy, sc, rot]) => {
         ctx.save();
-        const ly = lerp29(cy, cy * 0.4 + 4, clamp0128(p.flatten));
+        const ly = lerp29(cy, cy * 0.4 + 4, clamp0129(p.flatten));
         ctx.translate(cx, top + ly + 0.5);
         ctx.rotate(rot);
-        trefoil(ctx, p, sc * lerp29(1, 0.86, clamp0128(p.flatten)));
+        trefoil(ctx, p, sc * lerp29(1, 0.86, clamp0129(p.flatten)));
         ctx.restore();
       });
       if (p.frostAmt > 0.02) {
@@ -15022,7 +15319,7 @@
       ctx.restore();
     }
   }
-  function bobAt27(t, amp = 0.7, w = 1.4) {
+  function bobAt29(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw20(season) {
@@ -15030,7 +15327,7 @@
   }
   function anim20(season) {
     return (ctx, t) => {
-      const bob = bobAt27(t);
+      const bob = bobAt29(t);
       paint27(ctx, SP27[season], bob);
       ctx.save();
       try {
@@ -15094,17 +15391,17 @@
       }
     };
   }
-  function makeTransition24(fromIdx) {
+  function makeTransition23(fromIdx) {
     const from = SP27[SEASON_NAMES[fromIdx]];
     const to = SP27[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother27(clamp0128(pp));
+      const k = smoother29(clamp0129(pp));
       paint27(ctx, lerpP27(from, to, k), 0);
     };
   }
-  var springToSummer23 = makeTransition24(0);
-  var summerToAutumn23 = makeTransition24(1);
-  var autumnToWinter23 = makeTransition24(2);
+  var springToSummer23 = makeTransition23(0);
+  var summerToAutumn23 = makeTransition23(1);
+  var autumnToWinter23 = makeTransition23(2);
   var VARIANTS29 = {
     Spring: { draw: draw20("Spring"), anim: anim20("Spring") },
     Summer: { draw: draw20("Summer"), anim: anim20("Summer") },
@@ -15251,20 +15548,20 @@
       fallenLeafAmt: 0
     }
   };
-  var clamp0129 = (x) => x < 0 || Number.isNaN(x) ? 0 : x > 1 ? 1 : x;
-  var smoother28 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var clamp0130 = (x) => x < 0 || Number.isNaN(x) ? 0 : x > 1 ? 1 : x;
+  var smoother30 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function rgb28(c, a = 1) {
-    const r = Math.round(clamp0129(c[0] / 255) * 255);
-    const g = Math.round(clamp0129(c[1] / 255) * 255);
-    const b = Math.round(clamp0129(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0129(a)})`;
+    const r = Math.round(clamp0130(c[0] / 255) * 255);
+    const g = Math.round(clamp0130(c[1] / 255) * 255);
+    const b = Math.round(clamp0130(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0130(a)})`;
   }
   function mixRGB(a, b, k) {
-    const t = clamp0129(k);
+    const t = clamp0130(k);
     return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   }
   function lerp30(a, b, k) {
-    return a + (b - a) * clamp0129(k);
+    return a + (b - a) * clamp0130(k);
   }
   function lerpP28(a, b, k) {
     return {
@@ -15320,7 +15617,7 @@
     ctx.restore();
   }
   function drawBloom(ctx, p, cx, cy) {
-    const open = clamp0129(p.bloomOpen);
+    const open = clamp0130(p.bloomOpen);
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(p.droop);
@@ -15333,7 +15630,7 @@
     ctx.beginPath();
     ctx.ellipse(0, 2.4, 3.4 * open, 3 * open, 0, 0, Math.PI * 2);
     ctx.fill();
-    const wA = clamp0129(p.whiskerAmt) * Math.max(0, (open - 0.3) / 0.7);
+    const wA = clamp0130(p.whiskerAmt) * Math.max(0, (open - 0.3) / 0.7);
     if (wA > 0.02) {
       ctx.strokeStyle = rgb28(p.blotch, wA);
       ctx.lineWidth = 0.9;
@@ -15494,11 +15791,11 @@
       const spots = [[-12, 18.5], [11, 19.5], [6, 21], [-7, 21]];
       spots.forEach(([sx, sy], i) => {
         if (i / spots.length < p.blossomAmt + 0.05) {
-          ctx.fillStyle = `rgba(248,210,232,${0.9 * clamp0129(p.blossomAmt * 1.6)})`;
+          ctx.fillStyle = `rgba(248,210,232,${0.9 * clamp0130(p.blossomAmt * 1.6)})`;
           ctx.beginPath();
           ctx.arc(sx, sy, 1.3, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = `rgba(255,238,120,${0.9 * clamp0129(p.blossomAmt * 1.6)})`;
+          ctx.fillStyle = `rgba(255,238,120,${0.9 * clamp0130(p.blossomAmt * 1.6)})`;
           ctx.beginPath();
           ctx.arc(sx, sy, 0.5, 0, Math.PI * 2);
           ctx.fill();
@@ -15516,8 +15813,8 @@
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
-          ctx.fillStyle = rgb28(col, clamp0129(p.fallenLeafAmt * 1.4));
-          ctx.strokeStyle = rgb28(p.outline, 0.5 * clamp0129(p.fallenLeafAmt * 1.4));
+          ctx.fillStyle = rgb28(col, clamp0130(p.fallenLeafAmt * 1.4));
+          ctx.strokeStyle = rgb28(p.outline, 0.5 * clamp0130(p.fallenLeafAmt * 1.4));
           ctx.lineWidth = 0.7;
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.8, 1.4, 0, 0, Math.PI * 2);
@@ -15529,7 +15826,7 @@
     }
     if (p.padSnowAmt > 1e-3) {
       ctx.save();
-      ctx.globalAlpha = clamp0129(p.padSnowAmt);
+      ctx.globalAlpha = clamp0130(p.padSnowAmt);
       const sg = ctx.createLinearGradient(0, cy - 4, 0, cy + 4);
       sg.addColorStop(0, "rgba(250,253,255,1)");
       sg.addColorStop(1, "rgba(214,228,244,1)");
@@ -15546,35 +15843,55 @@
       ctx.restore();
     }
   }
-  function bobAt28(t, amp = 0.8, w = 1.4) {
+  var IDLE_W4 = 1.1;
+  function bobAt30(t, amp = 0.7, w = IDLE_W4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function breezeSway(t) {
+    const env = (1 - Math.cos(IDLE_W4 * t)) * 0.5;
+    return Math.sin(IDLE_W4 * t) * 0.85 * env;
+  }
+  function shimmerPhase(t) {
+    return (1 - Math.cos(IDLE_W4 * t)) * 0.5;
   }
   function makeDraw6(season) {
     return (ctx) => paint28(ctx, SP28[season], 0);
   }
   function makeAnim2(season) {
     return (ctx, t) => {
-      const bob = bobAt28(t);
-      const sway = Math.sin(t * 1.2) * 0.7 * (1 - Math.cos(t * 1.2)) * 0.5;
+      const bob = bobAt30(t);
+      const sway = breezeSway(t);
+      const shimmer = shimmerPhase(t);
       ctx.save();
       try {
-        ctx.translate(sway, 0);
+        const lean = sway * 0.012;
+        ctx.translate(sway * 0.5, 0);
+        ctx.translate(STEM_BASE[0], STEM_BASE[1]);
+        ctx.rotate(lean);
+        ctx.translate(-STEM_BASE[0], -STEM_BASE[1]);
         paint28(ctx, SP28[season], bob);
         ctx.translate(0, bob);
         if (season === "Spring" || season === "Summer") {
-          const glint = 0.2 + 0.32 * (0.5 + 0.5 * Math.sin(t * 2.3));
+          const glint = 0.16 + 0.26 * shimmer;
           ctx.fillStyle = `rgba(255,255,255,${glint})`;
           ctx.beginPath();
           ctx.arc(BLOOM_CX - 2.6, BLOOM_CY - 4.4, 1 + glint, 0, Math.PI * 2);
           ctx.fill();
+          const g2 = 0.1 + 0.18 * shimmerPhase(t + 1.9);
+          ctx.fillStyle = `rgba(255,255,255,${g2})`;
+          ctx.beginPath();
+          ctx.arc(BLOOM_CX + 3.4, BLOOM_CY - 1.2, 0.8 + g2, 0, Math.PI * 2);
+          ctx.fill();
         } else if (season === "Autumn") {
-          const k = t / 3.6 % 1;
-          const px = BLOOM_CX + 6 + k * 9;
-          const py = BLOOM_CY + 2 + k * 18;
+          const period = 2 * Math.PI / IDLE_W4;
+          const k = t % period / period;
+          const ease = k * k * (3 - 2 * k);
+          const px = BLOOM_CX + 6 + ease * 9;
+          const py = BLOOM_CY + 2 + ease * 18;
           ctx.save();
-          ctx.globalAlpha = Math.max(0, 0.95 * (1 - k));
+          ctx.globalAlpha = Math.max(0, Math.sin(Math.PI * k)) * 0.95;
           ctx.translate(px, py);
-          ctx.rotate(k * 2.4);
+          ctx.rotate(ease * 2.4 + Math.sin(t * IDLE_W4) * 0.25);
           ctx.fillStyle = rgb28(SP28.Autumn.petalSide);
           ctx.strokeStyle = rgb28(SP28.Autumn.petalEdge);
           ctx.lineWidth = 1;
@@ -15588,20 +15905,16 @@
           ctx.stroke();
           ctx.restore();
         } else {
-          const span = 30;
-          ctx.fillStyle = "rgba(255,255,255,0.9)";
-          for (const [fx, ph] of [[-7, 0], [8, 0.55]]) {
-            const prog = ((t / 3.2 + ph) % 1 + 1) % 1;
+          ctx.fillStyle = "rgba(255,255,255,0.85)";
+          const span = 32;
+          for (const [fx, ph, sz] of [[-7, 0, 1], [8, 0.5, 0.85], [1, 0.78, 0.7]]) {
+            const prog = ((IDLE_W4 * t / (2 * Math.PI) + ph) % 1 + 1) % 1;
             const y = -20 + prog * span;
-            const x = fx + Math.sin(prog * 6.28 + ph * 6) * 3;
+            const x = fx + Math.sin(prog * 2 * Math.PI + ph * 6) * 3.2;
             ctx.beginPath();
-            ctx.arc(x, y, 1, 0, Math.PI * 2);
+            ctx.arc(x, y, sz, 0, Math.PI * 2);
             ctx.fill();
           }
-          ctx.fillStyle = `rgba(210,228,255,${0.1 + 0.08 * (0.5 + 0.5 * Math.sin(t * 0.8))})`;
-          ctx.beginPath();
-          ctx.ellipse(BLOOM_CX, BLOOM_CY, 11, 11, 0, 0, Math.PI * 2);
-          ctx.fill();
         }
       } catch {
       } finally {
@@ -15610,10 +15923,58 @@
       }
     };
   }
-  function makeTransition25(from, to) {
+  function stagedEase(p) {
+    const s = smoother30(clamp0130(p));
+    const pull = Math.sin(Math.PI * s) * 0.08;
+    return clamp0130(s + pull * (0.5 - s) * 2);
+  }
+  function makeTransition24(from, to) {
     return (ctx, pp) => {
-      const k = smoother28(clamp0129(pp));
-      paint28(ctx, lerpP28(SP28[from], SP28[to], k), 0);
+      const p = clamp0130(pp);
+      const k = stagedEase(p);
+      const trans = Math.sin(Math.PI * p);
+      const lp = lerpP28(SP28[from], SP28[to], k);
+      const bob = -0.9 * trans;
+      ctx.save();
+      try {
+        paint28(ctx, lp, bob);
+        ctx.save();
+        ctx.translate(0, bob);
+        if (to === "Summer") {
+          ctx.globalAlpha = 0.22 * trans;
+          ctx.fillStyle = "rgba(255,250,210,1)";
+          ctx.beginPath();
+          ctx.arc(BLOOM_CX, BLOOM_CY, 9, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (to === "Autumn") {
+          ctx.fillStyle = `rgba(150,96,60,${0.55 * trans})`;
+          for (const [mx, my, ph] of [[-5, -5, 0], [4, -6, 1.7], [6, 0, 3.1]]) {
+            const rise = trans * 3;
+            ctx.beginPath();
+            ctx.arc(mx + Math.sin(ph) * 1.5, my - rise, 0.8, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } else {
+          ctx.fillStyle = `rgba(236,246,255,${0.7 * trans})`;
+          for (const [fx, fy] of [[-5, -6], [-0.5, -8], [4, -6.5], [-7, -2.5], [6, -3]]) {
+            ctx.beginPath();
+            ctx.arc(fx, fy, 0.9, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = `rgba(255,255,255,${0.8 * trans})`;
+          for (const [fx, ph] of [[-6, 0.2], [7, 0.65]]) {
+            const yy = -16 + p * 30;
+            ctx.beginPath();
+            ctx.arc(fx + Math.sin(p * 6 + ph * 6) * 3, yy, 1, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+      } catch {
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
     };
   }
   var VARIANTS30 = {
@@ -15623,9 +15984,9 @@
     Winter: { draw: makeDraw6("Winter"), anim: makeAnim2("Winter") }
   };
   var TRANSITIONS30 = {
-    0: makeTransition25("Spring", "Summer"),
-    1: makeTransition25("Summer", "Autumn"),
-    2: makeTransition25("Autumn", "Winter")
+    0: makeTransition24("Spring", "Summer"),
+    1: makeTransition24("Summer", "Autumn"),
+    2: makeTransition24("Autumn", "Winter")
   };
 
   // src/textures/seasonal/flower/heather.ts
@@ -15725,20 +16086,20 @@
       fallenLeafAmt: 0
     }
   };
-  var clamp0130 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
-  var smoother29 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var clamp0131 = (x) => x < 0 ? 0 : x > 1 ? 1 : x;
+  var smoother31 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function rgb29(c, a = 1) {
-    const r = Math.round(clamp0130(c[0] / 255) * 255);
-    const g = Math.round(clamp0130(c[1] / 255) * 255);
-    const b = Math.round(clamp0130(c[2] / 255) * 255);
+    const r = Math.round(clamp0131(c[0] / 255) * 255);
+    const g = Math.round(clamp0131(c[1] / 255) * 255);
+    const b = Math.round(clamp0131(c[2] / 255) * 255);
     return `rgba(${r},${g},${b},${a})`;
   }
   function mixRGB2(a, b, k) {
-    const t = clamp0130(k);
+    const t = clamp0131(k);
     return [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
   }
   function lerp31(a, b, k) {
-    return a + (b - a) * clamp0130(k);
+    return a + (b - a) * clamp0131(k);
   }
   function lerpP29(a, b, k) {
     return {
@@ -15898,7 +16259,7 @@
       ctx.lineTo(tx, ty);
       ctx.stroke();
     });
-    const open = clamp0130(p.bloomAmount);
+    const open = clamp0131(p.bloomAmount);
     BELLS.forEach((b) => {
       const w = (1.5 + open * 1) * b.s;
       const h = (2.4 + open * 0.6) * b.s;
@@ -15965,11 +16326,11 @@
       ];
       spots.forEach(([sx, sy], i) => {
         if (i / spots.length < p.blossomAmt + 0.05) {
-          ctx.fillStyle = `rgba(248,210,232,${0.9 * clamp0130(p.blossomAmt * 1.6)})`;
+          ctx.fillStyle = `rgba(248,210,232,${0.9 * clamp0131(p.blossomAmt * 1.6)})`;
           ctx.beginPath();
           ctx.arc(sx, sy, 1.3, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = `rgba(255,238,120,${0.9 * clamp0130(p.blossomAmt * 1.6)})`;
+          ctx.fillStyle = `rgba(255,238,120,${0.9 * clamp0131(p.blossomAmt * 1.6)})`;
           ctx.beginPath();
           ctx.arc(sx, sy, 0.5, 0, Math.PI * 2);
           ctx.fill();
@@ -15987,8 +16348,8 @@
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
-          ctx.fillStyle = rgb29(col, clamp0130(p.fallenLeafAmt * 1.4));
-          ctx.strokeStyle = rgb29(p.outline, 0.5 * clamp0130(p.fallenLeafAmt * 1.4));
+          ctx.fillStyle = rgb29(col, clamp0131(p.fallenLeafAmt * 1.4));
+          ctx.strokeStyle = rgb29(p.outline, 0.5 * clamp0131(p.fallenLeafAmt * 1.4));
           ctx.lineWidth = 0.7;
           ctx.beginPath();
           ctx.ellipse(0, 0, 2.8, 1.4, 0, 0, Math.PI * 2);
@@ -16000,7 +16361,7 @@
     }
     if (p.padSnowAmt > 1e-3) {
       ctx.save();
-      ctx.globalAlpha = clamp0130(p.padSnowAmt);
+      ctx.globalAlpha = clamp0131(p.padSnowAmt);
       const sg = ctx.createLinearGradient(0, cy - 4, 0, cy + 4);
       sg.addColorStop(0, "rgba(250,253,255,1)");
       sg.addColorStop(1, "rgba(214,228,244,1)");
@@ -16023,7 +16384,7 @@
       ctx.restore();
     }
   }
-  function bobAt29(t, amp = 0.8, w = 1.4) {
+  function bobAt31(t, amp = 0.8, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function makeDraw7(season) {
@@ -16031,7 +16392,7 @@
   }
   function makeAnim3(season) {
     return (ctx, t) => {
-      const bob = bobAt29(t);
+      const bob = bobAt31(t);
       const sway = Math.sin(t * 1.1) * 0.6 * (1 - Math.cos(t * 1.1)) * 0.5;
       ctx.save();
       try {
@@ -16089,9 +16450,9 @@
       }
     };
   }
-  function makeTransition26(from, to) {
+  function makeTransition25(from, to) {
     return (ctx, pp) => {
-      const k = smoother29(clamp0130(pp));
+      const k = smoother31(clamp0131(pp));
       paint29(ctx, lerpP29(SP29[from], SP29[to], k), 0);
     };
   }
@@ -16102,13 +16463,13 @@
     Winter: { draw: makeDraw7("Winter"), anim: makeAnim3("Winter") }
   };
   var TRANSITIONS31 = {
-    0: makeTransition26("Spring", "Summer"),
-    1: makeTransition26("Summer", "Autumn"),
-    2: makeTransition26("Autumn", "Winter")
+    0: makeTransition25("Spring", "Summer"),
+    1: makeTransition25("Summer", "Autumn"),
+    2: makeTransition25("Autumn", "Winter")
   };
 
   // src/textures/seasonal/flower/waterLily.ts
-  function clamp0131(x) {
+  function clamp0132(x) {
     if (!Number.isFinite(x)) return 0;
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
@@ -16119,13 +16480,13 @@
     return [lerp35(a[0], b[0], t), lerp35(a[1], b[1], t), lerp35(a[2], b[2], t)];
   }
   function rgb30(c, alpha = 1) {
-    const r = Math.round(clamp0131(c[0] / 255) * 255);
-    const g = Math.round(clamp0131(c[1] / 255) * 255);
-    const b = Math.round(clamp0131(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0131(alpha)})`;
+    const r = Math.round(clamp0132(c[0] / 255) * 255);
+    const g = Math.round(clamp0132(c[1] / 255) * 255);
+    const b = Math.round(clamp0132(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0132(alpha)})`;
   }
-  var smoother30 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt30(t, amp = 0.9, w = 1.5) {
+  var smoother32 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt32(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP30 = {
@@ -16207,7 +16568,7 @@
     }
   };
   function lerpP30(a, b, t) {
-    const s = clamp0131(t);
+    const s = clamp0132(t);
     return {
       petal: lerpRGB23(a.petal, b.petal, s),
       petalTip: lerpRGB23(a.petalTip, b.petalTip, s),
@@ -16239,14 +16600,14 @@
   function paint30(ctx, raw, bob, micro = NO_MICRO) {
     const p = {
       ...raw,
-      bloomOpen: clamp0131(raw.bloomOpen),
-      iceAmt: clamp0131(raw.iceAmt),
-      frostAmt: clamp0131(raw.frostAmt),
-      padSnowAmt: clamp0131(raw.padSnowAmt),
-      padYellow: clamp0131(raw.padYellow),
-      gloss: clamp0131(raw.gloss),
-      dressLeaf: clamp0131(raw.dressLeaf),
-      dressBlossom: clamp0131(raw.dressBlossom)
+      bloomOpen: clamp0132(raw.bloomOpen),
+      iceAmt: clamp0132(raw.iceAmt),
+      frostAmt: clamp0132(raw.frostAmt),
+      padSnowAmt: clamp0132(raw.padSnowAmt),
+      padYellow: clamp0132(raw.padYellow),
+      gloss: clamp0132(raw.gloss),
+      dressLeaf: clamp0132(raw.dressLeaf),
+      dressBlossom: clamp0132(raw.dressBlossom)
     };
     ctx.save();
     try {
@@ -16472,7 +16833,7 @@
         drawPetal(angle, 1.4, length, width, frontFill, tipCol);
       }
       if (open > 0.12) {
-        const ca = clamp0131((open - 0.12) / 0.88);
+        const ca = clamp0132((open - 0.12) / 0.88);
         ctx.fillStyle = rgb30(outlineCol, 0.8 * ca);
         ctx.beginPath();
         ctx.ellipse(bloomCx, bloomCy - 1.4, 3.2, 2.6, 0, 0, Math.PI * 2);
@@ -16544,7 +16905,7 @@
     return (ctx) => paint30(ctx, SP30[season], 0);
   }
   function animSpring5(ctx, t) {
-    const bob = bobAt30(t, 0.7, 1.4);
+    const bob = bobAt32(t, 0.7, 1.4);
     const micro = {
       ...NO_MICRO,
       ripple: 0.5 + 0.5 * Math.sin(t * 1.8),
@@ -16553,7 +16914,7 @@
     paint30(ctx, SP30.Spring, bob, micro);
   }
   function animSummer5(ctx, t) {
-    const bob = bobAt30(t, 0.9, 1.5);
+    const bob = bobAt32(t, 0.9, 1.5);
     const micro = {
       ...NO_MICRO,
       ripple: 0.5 + 0.5 * Math.sin(t * 2),
@@ -16562,7 +16923,7 @@
     paint30(ctx, SP30.Summer, bob, micro);
   }
   function animAutumn5(ctx, t) {
-    const bob = bobAt30(t, 0.6, 1.1);
+    const bob = bobAt32(t, 0.6, 1.1);
     const micro = {
       ...NO_MICRO,
       ripple: 0.4 + 0.4 * Math.sin(t * 1.4),
@@ -16571,7 +16932,7 @@
     paint30(ctx, SP30.Autumn, bob, micro);
   }
   function animWinter5(ctx, t) {
-    const bob = bobAt30(t, 0.5, 1);
+    const bob = bobAt32(t, 0.5, 1);
     const prog = t / 3.4 % 1;
     const micro = {
       ...NO_MICRO,
@@ -16593,16 +16954,16 @@
       ctx.globalAlpha = 1;
     }
   }
-  function makeTransition27(fromIdx) {
+  function makeTransition26(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      paint30(ctx, lerpP30(SP30[from], SP30[to], smoother30(clamp0131(pp))), 0);
+      paint30(ctx, lerpP30(SP30[from], SP30[to], smoother32(clamp0132(pp))), 0);
     };
   }
-  var springToSummer24 = makeTransition27(0);
-  var summerToAutumn24 = makeTransition27(1);
-  var autumnToWinter24 = makeTransition27(2);
+  var springToSummer24 = makeTransition26(0);
+  var summerToAutumn24 = makeTransition26(1);
+  var autumnToWinter24 = makeTransition26(2);
   var VARIANTS32 = {
     Spring: { draw: makeDraw8("Spring"), anim: animSpring5 },
     Summer: { draw: makeDraw8("Summer"), anim: animSummer5 },
@@ -16616,12 +16977,12 @@
   };
 
   // src/textures/seasonal/bird/chicken.ts
-  function clamp0132(x) {
+  function clamp0133(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother31 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother33 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp36(a, b, t) {
     return a + (b - a) * t;
   }
@@ -16632,7 +16993,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba20(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0132(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0133(a)})`;
   }
   function lerpP31(a, b, t) {
     return {
@@ -16662,15 +17023,15 @@
   function clampP20(p) {
     return {
       ...p,
-      lightAmt: clamp0132(p.lightAmt),
-      fluff: clamp0132(p.fluff),
-      sheen: clamp0132(p.sheen),
-      frostAmt: clamp0132(p.frostAmt),
-      snowCapAmt: clamp0132(p.snowCapAmt),
-      padSnowAmt: clamp0132(p.padSnowAmt),
-      blossomAmt: clamp0132(p.blossomAmt),
-      fallenLeafAmt: clamp0132(p.fallenLeafAmt),
-      chickAmt: clamp0132(p.chickAmt)
+      lightAmt: clamp0133(p.lightAmt),
+      fluff: clamp0133(p.fluff),
+      sheen: clamp0133(p.sheen),
+      frostAmt: clamp0133(p.frostAmt),
+      snowCapAmt: clamp0133(p.snowCapAmt),
+      padSnowAmt: clamp0133(p.padSnowAmt),
+      blossomAmt: clamp0133(p.blossomAmt),
+      fallenLeafAmt: clamp0133(p.fallenLeafAmt),
+      chickAmt: clamp0133(p.chickAmt)
     };
   }
   var SP31 = {
@@ -17138,7 +17499,7 @@
     ctx.restore();
   }
   function drawChick(ctx, p, bob) {
-    const a = clamp0132(p.chickAmt);
+    const a = clamp0133(p.chickAmt);
     if (a <= 0.01) return;
     const cx = 13.5;
     const cy = 12 + bob * 0.5;
@@ -17187,12 +17548,12 @@
     ctx.fill();
     ctx.restore();
   }
-  function bobAt31(t, amp = 0.7, w = 1.4) {
+  function bobAt33(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function peckAt(t, w = 1.4) {
     const ph = w * t / (Math.PI * 2) % 1;
-    const x = clamp0132((ph - 0.32) / 0.36);
+    const x = clamp0133((ph - 0.32) / 0.36);
     const hump = x <= 0 || x >= 1 ? 0 : Math.sin(x * Math.PI);
     return hump * hump * 3.2;
   }
@@ -17201,7 +17562,7 @@
   }
   function anim21(season) {
     return (ctx, t) => {
-      const bob = bobAt31(t);
+      const bob = bobAt33(t);
       const peck = peckAt(t);
       if (peck < 0.05) {
         paint31(ctx, SP31[season], bob);
@@ -17278,17 +17639,17 @@
       }
     };
   }
-  function makeTransition28(fromIdx) {
+  function makeTransition27(fromIdx) {
     const from = SP31[SEASON_NAMES[fromIdx]];
     const to = SP31[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother31(clamp0132(pp));
+      const k = smoother33(clamp0133(pp));
       paint31(ctx, lerpP31(from, to, k), 0);
     };
   }
-  var springToSummer25 = makeTransition28(0);
-  var summerToAutumn25 = makeTransition28(1);
-  var autumnToWinter25 = makeTransition28(2);
+  var springToSummer25 = makeTransition27(0);
+  var summerToAutumn25 = makeTransition27(1);
+  var autumnToWinter25 = makeTransition27(2);
   var VARIANTS33 = {
     Spring: { draw: draw21("Spring"), anim: anim21("Spring") },
     Summer: { draw: draw21("Summer"), anim: anim21("Summer") },
@@ -17302,7 +17663,7 @@
   };
 
   // src/textures/seasonal/bird/rooster.ts
-  function clamp0133(x) {
+  function clamp0134(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
@@ -17314,15 +17675,15 @@
     return [lerp37(a[0], b[0], t), lerp37(a[1], b[1], t), lerp37(a[2], b[2], t)];
   }
   function rgb32(c, a = 1) {
-    const r = Math.round(clamp0133(c[0] / 255) * 255);
-    const g = Math.round(clamp0133(c[1] / 255) * 255);
-    const b = Math.round(clamp0133(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0133(a)})`;
+    const r = Math.round(clamp0134(c[0] / 255) * 255);
+    const g = Math.round(clamp0134(c[1] / 255) * 255);
+    const b = Math.round(clamp0134(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0134(a)})`;
   }
-  function smoother32(x) {
+  function smoother34(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt32(t, amp = 0.9, w = 1.5) {
+  function bobAt34(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var COMB = [214, 44, 42];
@@ -17482,15 +17843,15 @@
   function clampP21(p) {
     return {
       ...p,
-      lightWashAmt: clamp0133(p.lightWashAmt),
-      fluff: clamp0133(p.fluff),
-      frostAmt: clamp0133(p.frostAmt),
-      backSnowAmt: clamp0133(p.backSnowAmt),
-      padSnowAmt: clamp0133(p.padSnowAmt),
-      blossomAmt: clamp0133(p.blossomAmt),
-      fallenLeafAmt: clamp0133(p.fallenLeafAmt),
-      breathFogAmt: clamp0133(p.breathFogAmt),
-      gloss: clamp0133(p.gloss)
+      lightWashAmt: clamp0134(p.lightWashAmt),
+      fluff: clamp0134(p.fluff),
+      frostAmt: clamp0134(p.frostAmt),
+      backSnowAmt: clamp0134(p.backSnowAmt),
+      padSnowAmt: clamp0134(p.padSnowAmt),
+      blossomAmt: clamp0134(p.blossomAmt),
+      fallenLeafAmt: clamp0134(p.fallenLeafAmt),
+      breathFogAmt: clamp0134(p.breathFogAmt),
+      gloss: clamp0134(p.gloss)
     };
   }
   function paintPad2(ctx, p) {
@@ -17862,7 +18223,7 @@
   function anim22(season) {
     return (ctx, t) => {
       const p = clampP21(SP32[season]);
-      const bob = bobAt32(t);
+      const bob = bobAt34(t);
       const loop = t % 5 / 5;
       const gate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 4;
       const headBob = gate * -1.4;
@@ -17931,17 +18292,17 @@
       }
     };
   }
-  function makeTransition29(fromIdx) {
+  function makeTransition28(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother32(clamp0133(pp));
+      const k = smoother34(clamp0134(pp));
       paint32(ctx, lerpP32(SP32[from], SP32[to], k), 0);
     };
   }
-  var springToSummer26 = makeTransition29(0);
-  var summerToAutumn26 = makeTransition29(1);
-  var autumnToWinter26 = makeTransition29(2);
+  var springToSummer26 = makeTransition28(0);
+  var summerToAutumn26 = makeTransition28(1);
+  var autumnToWinter26 = makeTransition28(2);
   var VARIANTS34 = {
     Spring: { draw: draw22("Spring"), anim: anim22("Spring") },
     Summer: { draw: draw22("Summer"), anim: anim22("Summer") },
@@ -17955,12 +18316,12 @@
   };
 
   // src/textures/seasonal/bird/hen.ts
-  function clamp0134(x) {
+  function clamp0135(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother33 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother35 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp38(a, b, t) {
     return a + (b - a) * t;
   }
@@ -17971,7 +18332,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba21(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0134(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0135(a)})`;
   }
   function lerpP33(a, b, t) {
     return {
@@ -18002,14 +18363,14 @@
   function clampP22(p) {
     return {
       ...p,
-      lightAmt: clamp0134(p.lightAmt),
-      fluff: clamp0134(p.fluff),
-      sheen: clamp0134(p.sheen),
-      frostAmt: clamp0134(p.frostAmt),
-      snowCapAmt: clamp0134(p.snowCapAmt),
-      padSnowAmt: clamp0134(p.padSnowAmt),
-      blossomAmt: clamp0134(p.blossomAmt),
-      fallenLeafAmt: clamp0134(p.fallenLeafAmt)
+      lightAmt: clamp0135(p.lightAmt),
+      fluff: clamp0135(p.fluff),
+      sheen: clamp0135(p.sheen),
+      frostAmt: clamp0135(p.frostAmt),
+      snowCapAmt: clamp0135(p.snowCapAmt),
+      padSnowAmt: clamp0135(p.padSnowAmt),
+      blossomAmt: clamp0135(p.blossomAmt),
+      fallenLeafAmt: clamp0135(p.fallenLeafAmt)
     };
   }
   var SP33 = {
@@ -18493,7 +18854,7 @@
       ctx.restore();
     }
   }
-  function bobAt33(t, amp = 0.8, w = 1.1) {
+  function bobAt35(t, amp = 0.8, w = 1.1) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw23(season) {
@@ -18501,7 +18862,7 @@
   }
   function anim23(season) {
     return (ctx, t) => {
-      const bob = bobAt33(t);
+      const bob = bobAt35(t);
       paint33(ctx, SP33[season], bob);
       ctx.save();
       try {
@@ -18579,17 +18940,17 @@
       }
     };
   }
-  function makeTransition30(fromIdx) {
+  function makeTransition29(fromIdx) {
     const from = SP33[SEASON_NAMES[fromIdx]];
     const to = SP33[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother33(clamp0134(pp));
+      const k = smoother35(clamp0135(pp));
       paint33(ctx, lerpP33(from, to, k), 0);
     };
   }
-  var springToSummer27 = makeTransition30(0);
-  var summerToAutumn27 = makeTransition30(1);
-  var autumnToWinter27 = makeTransition30(2);
+  var springToSummer27 = makeTransition29(0);
+  var summerToAutumn27 = makeTransition29(1);
+  var autumnToWinter27 = makeTransition29(2);
   var VARIANTS35 = {
     Spring: { draw: draw23("Spring"), anim: anim23("Spring") },
     Summer: { draw: draw23("Summer"), anim: anim23("Summer") },
@@ -18603,7 +18964,7 @@
   };
 
   // src/textures/seasonal/bird/turkey.ts
-  function clamp0135(x) {
+  function clamp0136(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
@@ -18614,15 +18975,15 @@
     return [lerp39(a[0], b[0], t), lerp39(a[1], b[1], t), lerp39(a[2], b[2], t)];
   }
   function rgb34(c, a = 1) {
-    const r = Math.round(clamp0135(c[0] / 255) * 255);
-    const g = Math.round(clamp0135(c[1] / 255) * 255);
-    const b = Math.round(clamp0135(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0135(a)})`;
+    const r = Math.round(clamp0136(c[0] / 255) * 255);
+    const g = Math.round(clamp0136(c[1] / 255) * 255);
+    const b = Math.round(clamp0136(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0136(a)})`;
   }
-  function smoother34(x) {
+  function smoother36(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt34(t, amp = 1, w = 1.5) {
+  function bobAt36(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP34 = {
@@ -18774,15 +19135,15 @@
   function clampP23(p) {
     return {
       ...p,
-      lightWashAmt: clamp0135(p.lightWashAmt),
-      irid: clamp0135(p.irid),
-      fluff: clamp0135(p.fluff),
-      frostAmt: clamp0135(p.frostAmt),
-      backSnowAmt: clamp0135(p.backSnowAmt),
-      padSnowAmt: clamp0135(p.padSnowAmt),
-      blossomAmt: clamp0135(p.blossomAmt),
-      fallenLeafAmt: clamp0135(p.fallenLeafAmt),
-      breathFogAmt: clamp0135(p.breathFogAmt)
+      lightWashAmt: clamp0136(p.lightWashAmt),
+      irid: clamp0136(p.irid),
+      fluff: clamp0136(p.fluff),
+      frostAmt: clamp0136(p.frostAmt),
+      backSnowAmt: clamp0136(p.backSnowAmt),
+      padSnowAmt: clamp0136(p.padSnowAmt),
+      blossomAmt: clamp0136(p.blossomAmt),
+      fallenLeafAmt: clamp0136(p.fallenLeafAmt),
+      breathFogAmt: clamp0136(p.breathFogAmt)
     };
   }
   function paintPad3(ctx, p) {
@@ -19123,7 +19484,7 @@
   function anim24(season) {
     return (ctx, t) => {
       const p = clampP23(SP34[season]);
-      const bob = bobAt34(t);
+      const bob = bobAt36(t);
       const loop = t % 6 / 6;
       const shimmer = Math.sin(t * 1.5) * 0.5 + 0.5;
       const fanSpread = (1 - Math.cos(t * 1.5)) * 0.5 * 0.05;
@@ -19221,17 +19582,17 @@
       }
     };
   }
-  function makeTransition31(fromIdx) {
+  function makeTransition30(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother34(clamp0135(pp));
+      const k = smoother36(clamp0136(pp));
       paint34(ctx, lerpP34(SP34[from], SP34[to], k), 0, 0);
     };
   }
-  var springToSummer28 = makeTransition31(0);
-  var summerToAutumn28 = makeTransition31(1);
-  var autumnToWinter28 = makeTransition31(2);
+  var springToSummer28 = makeTransition30(0);
+  var summerToAutumn28 = makeTransition30(1);
+  var autumnToWinter28 = makeTransition30(2);
   var VARIANTS36 = {
     Spring: { draw: draw24("Spring"), anim: anim24("Spring") },
     Summer: { draw: draw24("Summer"), anim: anim24("Summer") },
@@ -19245,12 +19606,12 @@
   };
 
   // src/textures/seasonal/bird/goose.ts
-  function clamp0136(x) {
+  function clamp0137(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother35 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother37 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp40(a, b, t) {
     return a + (b - a) * t;
   }
@@ -19261,7 +19622,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba22(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0136(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0137(a)})`;
   }
   function lerpP35(a, b, t) {
     return {
@@ -19289,14 +19650,14 @@
   function clampP24(p) {
     return {
       ...p,
-      lightAmt: clamp0136(p.lightAmt),
-      plumage: clamp0136(p.plumage),
-      fluff: clamp0136(p.fluff),
-      snowCapAmt: clamp0136(p.snowCapAmt),
-      frostAmt: clamp0136(p.frostAmt),
-      padSnowAmt: clamp0136(p.padSnowAmt),
-      blossomAmt: clamp0136(p.blossomAmt),
-      fallenLeafAmt: clamp0136(p.fallenLeafAmt)
+      lightAmt: clamp0137(p.lightAmt),
+      plumage: clamp0137(p.plumage),
+      fluff: clamp0137(p.fluff),
+      snowCapAmt: clamp0137(p.snowCapAmt),
+      frostAmt: clamp0137(p.frostAmt),
+      padSnowAmt: clamp0137(p.padSnowAmt),
+      blossomAmt: clamp0137(p.blossomAmt),
+      fallenLeafAmt: clamp0137(p.fallenLeafAmt)
     };
   }
   var SP35 = {
@@ -19730,7 +20091,7 @@
       ctx.restore();
     }
   }
-  function bobAt35(t, amp = 0.9, w = 1.4) {
+  function bobAt37(t, amp = 0.9, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw25(season) {
@@ -19738,7 +20099,7 @@
   }
   function anim25(season) {
     return (ctx, t) => {
-      const breathe = bobAt35(t);
+      const breathe = bobAt37(t);
       const nod = 0.6 * (1 - Math.cos(t * 0.7)) * 0.5;
       paint35(ctx, SP35[season], breathe + nod);
       ctx.save();
@@ -19806,17 +20167,17 @@
       }
     };
   }
-  function makeTransition32(fromIdx) {
+  function makeTransition31(fromIdx) {
     const from = SP35[SEASON_NAMES[fromIdx]];
     const to = SP35[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother35(clamp0136(pp));
+      const k = smoother37(clamp0137(pp));
       paint35(ctx, lerpP35(from, to, k), 0);
     };
   }
-  var springToSummer29 = makeTransition32(0);
-  var summerToAutumn29 = makeTransition32(1);
-  var autumnToWinter29 = makeTransition32(2);
+  var springToSummer29 = makeTransition31(0);
+  var summerToAutumn29 = makeTransition31(1);
+  var autumnToWinter29 = makeTransition31(2);
   var VARIANTS37 = {
     Spring: { draw: draw25("Spring"), anim: anim25("Spring") },
     Summer: { draw: draw25("Summer"), anim: anim25("Summer") },
@@ -19830,7 +20191,7 @@
   };
 
   // src/textures/seasonal/bird/pheasant.ts
-  function clamp0137(x) {
+  function clamp0138(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
@@ -19841,15 +20202,15 @@
     return [lerp41(a[0], b[0], t), lerp41(a[1], b[1], t), lerp41(a[2], b[2], t)];
   }
   function rgb36(c, a = 1) {
-    const r = Math.round(clamp0137(c[0] / 255) * 255);
-    const g = Math.round(clamp0137(c[1] / 255) * 255);
-    const b = Math.round(clamp0137(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0137(a)})`;
+    const r = Math.round(clamp0138(c[0] / 255) * 255);
+    const g = Math.round(clamp0138(c[1] / 255) * 255);
+    const b = Math.round(clamp0138(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0138(a)})`;
   }
-  function smoother36(x) {
+  function smoother38(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt36(t, amp = 1, w = 1.5) {
+  function bobAt38(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP36 = {
@@ -20003,16 +20364,16 @@
   function clampP25(p) {
     return {
       ...p,
-      lightWashAmt: clamp0137(p.lightWashAmt),
-      plumage: clamp0137(p.plumage),
-      fluff: clamp0137(p.fluff),
-      sheen: clamp0137(p.sheen),
-      frostAmt: clamp0137(p.frostAmt),
-      backSnowAmt: clamp0137(p.backSnowAmt),
-      padSnowAmt: clamp0137(p.padSnowAmt),
-      blossomAmt: clamp0137(p.blossomAmt),
-      fallenLeafAmt: clamp0137(p.fallenLeafAmt),
-      breathFogAmt: clamp0137(p.breathFogAmt)
+      lightWashAmt: clamp0138(p.lightWashAmt),
+      plumage: clamp0138(p.plumage),
+      fluff: clamp0138(p.fluff),
+      sheen: clamp0138(p.sheen),
+      frostAmt: clamp0138(p.frostAmt),
+      backSnowAmt: clamp0138(p.backSnowAmt),
+      padSnowAmt: clamp0138(p.padSnowAmt),
+      blossomAmt: clamp0138(p.blossomAmt),
+      fallenLeafAmt: clamp0138(p.fallenLeafAmt),
+      breathFogAmt: clamp0138(p.breathFogAmt)
     };
   }
   function paintPad4(ctx, p) {
@@ -20337,7 +20698,7 @@
   function anim26(season) {
     return (ctx, t) => {
       const p = clampP25(SP36[season]);
-      const bob = bobAt36(t);
+      const bob = bobAt38(t);
       const headBob = (1 - Math.cos(t * 1.5)) * 0.5 * 0.8;
       const tailSway = Math.sin(t * 0.7) * 1.2;
       paint36(ctx, SP36[season], bob);
@@ -20421,17 +20782,17 @@
       }
     };
   }
-  function makeTransition33(fromIdx) {
+  function makeTransition32(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother36(clamp0137(pp));
+      const k = smoother38(clamp0138(pp));
       paint36(ctx, lerpP36(SP36[from], SP36[to], k), 0);
     };
   }
-  var springToSummer30 = makeTransition33(0);
-  var summerToAutumn30 = makeTransition33(1);
-  var autumnToWinter30 = makeTransition33(2);
+  var springToSummer30 = makeTransition32(0);
+  var summerToAutumn30 = makeTransition32(1);
+  var autumnToWinter30 = makeTransition32(2);
   var VARIANTS38 = {
     Spring: { draw: draw26("Spring"), anim: anim26("Spring") },
     Summer: { draw: draw26("Summer"), anim: anim26("Summer") },
@@ -20445,7 +20806,7 @@
   };
 
   // src/textures/seasonal/bird/parrot.ts
-  function clamp0138(x) {
+  function clamp0139(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
@@ -20456,15 +20817,15 @@
     return [lerp42(a[0], b[0], t), lerp42(a[1], b[1], t), lerp42(a[2], b[2], t)];
   }
   function rgb37(c, a = 1) {
-    const r = Math.round(clamp0138(c[0] / 255) * 255);
-    const g = Math.round(clamp0138(c[1] / 255) * 255);
-    const b = Math.round(clamp0138(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0138(a)})`;
+    const r = Math.round(clamp0139(c[0] / 255) * 255);
+    const g = Math.round(clamp0139(c[1] / 255) * 255);
+    const b = Math.round(clamp0139(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0139(a)})`;
   }
-  function smoother37(x) {
+  function smoother39(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt37(t, amp = 0.95, w = 1.5) {
+  function bobAt39(t, amp = 0.95, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP37 = {
@@ -20608,15 +20969,15 @@
   function clampP26(p) {
     return {
       ...p,
-      lightWashAmt: clamp0138(p.lightWashAmt),
-      saturation: clamp0138(p.saturation),
-      fluff: clamp0138(p.fluff),
-      frostAmt: clamp0138(p.frostAmt),
-      backSnowAmt: clamp0138(p.backSnowAmt),
-      padSnowAmt: clamp0138(p.padSnowAmt),
-      blossomAmt: clamp0138(p.blossomAmt),
-      fallenLeafAmt: clamp0138(p.fallenLeafAmt),
-      breathFogAmt: clamp0138(p.breathFogAmt)
+      lightWashAmt: clamp0139(p.lightWashAmt),
+      saturation: clamp0139(p.saturation),
+      fluff: clamp0139(p.fluff),
+      frostAmt: clamp0139(p.frostAmt),
+      backSnowAmt: clamp0139(p.backSnowAmt),
+      padSnowAmt: clamp0139(p.padSnowAmt),
+      blossomAmt: clamp0139(p.blossomAmt),
+      fallenLeafAmt: clamp0139(p.fallenLeafAmt),
+      breathFogAmt: clamp0139(p.breathFogAmt)
     };
   }
   var PERCH_Y = 13;
@@ -20949,7 +21310,7 @@
   function anim27(season) {
     return (ctx, t) => {
       const p = clampP26(SP37[season]);
-      const bob = bobAt37(t);
+      const bob = bobAt39(t);
       paint37(ctx, SP37[season], bob);
       ctx.save();
       try {
@@ -21040,17 +21401,17 @@
       }
     };
   }
-  function makeTransition34(fromIdx) {
+  function makeTransition33(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother37(clamp0138(pp));
+      const k = smoother39(clamp0139(pp));
       paint37(ctx, lerpP37(SP37[from], SP37[to], k), 0);
     };
   }
-  var springToSummer31 = makeTransition34(0);
-  var summerToAutumn31 = makeTransition34(1);
-  var autumnToWinter31 = makeTransition34(2);
+  var springToSummer31 = makeTransition33(0);
+  var summerToAutumn31 = makeTransition33(1);
+  var autumnToWinter31 = makeTransition33(2);
   var VARIANTS39 = {
     Spring: { draw: draw27("Spring"), anim: anim27("Spring") },
     Summer: { draw: draw27("Summer"), anim: anim27("Summer") },
@@ -21064,7 +21425,7 @@
   };
 
   // src/textures/seasonal/bird/phoenix.ts
-  function clamp0139(x) {
+  function clamp0140(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
@@ -21075,15 +21436,15 @@
     return [lerp43(a[0], b[0], t), lerp43(a[1], b[1], t), lerp43(a[2], b[2], t)];
   }
   function rgb38(c, a = 1) {
-    const r = Math.round(clamp0139(c[0] / 255) * 255);
-    const g = Math.round(clamp0139(c[1] / 255) * 255);
-    const b = Math.round(clamp0139(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0139(a)})`;
+    const r = Math.round(clamp0140(c[0] / 255) * 255);
+    const g = Math.round(clamp0140(c[1] / 255) * 255);
+    const b = Math.round(clamp0140(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0140(a)})`;
   }
-  function smoother38(x) {
+  function smoother40(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt38(t, amp = 1, w = 1.5) {
+  function bobAt40(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP38 = {
@@ -21208,14 +21569,14 @@
   function clampP27(p) {
     return {
       ...p,
-      lightWashAmt: clamp0139(p.lightWashAmt),
-      fireWarmth: clamp0139(p.fireWarmth),
-      emberSparkAmt: clamp0139(p.emberSparkAmt),
-      blossomAmt: clamp0139(p.blossomAmt),
-      fallenLeafAmt: clamp0139(p.fallenLeafAmt),
-      padSnowAmt: clamp0139(p.padSnowAmt),
-      meltRingAmt: clamp0139(p.meltRingAmt),
-      steamAmt: clamp0139(p.steamAmt)
+      lightWashAmt: clamp0140(p.lightWashAmt),
+      fireWarmth: clamp0140(p.fireWarmth),
+      emberSparkAmt: clamp0140(p.emberSparkAmt),
+      blossomAmt: clamp0140(p.blossomAmt),
+      fallenLeafAmt: clamp0140(p.fallenLeafAmt),
+      padSnowAmt: clamp0140(p.padSnowAmt),
+      meltRingAmt: clamp0140(p.meltRingAmt),
+      steamAmt: clamp0140(p.steamAmt)
     };
   }
   function paintPad6(ctx, p) {
@@ -21563,7 +21924,7 @@
   function anim28(season) {
     return (ctx, t) => {
       const p = clampP27(SP38[season]);
-      const bob = bobAt38(t);
+      const bob = bobAt40(t);
       const flickAmp = 1.4 + 1.6 * p.fireWarmth + (season === "Summer" ? 1 : 0);
       const tailFlick = Math.sin(t * 2.3) * flickAmp + Math.sin(t * 3.7) * (0.5 * flickAmp);
       const emberRise = t / 2.6 % 1;
@@ -21618,17 +21979,17 @@
       }
     };
   }
-  function makeTransition35(fromIdx) {
+  function makeTransition34(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother38(clamp0139(pp));
+      const k = smoother40(clamp0140(pp));
       paint38(ctx, lerpP38(SP38[from], SP38[to], k), 0, 0, 0.2, 0.2);
     };
   }
-  var springToSummer32 = makeTransition35(0);
-  var summerToAutumn32 = makeTransition35(1);
-  var autumnToWinter32 = makeTransition35(2);
+  var springToSummer32 = makeTransition34(0);
+  var summerToAutumn32 = makeTransition34(1);
+  var autumnToWinter32 = makeTransition34(2);
   var VARIANTS40 = {
     Spring: { draw: draw28("Spring"), anim: anim28("Spring") },
     Summer: { draw: draw28("Summer"), anim: anim28("Summer") },
@@ -21642,7 +22003,7 @@
   };
 
   // src/textures/seasonal/bird/dodo.ts
-  function clamp0140(x) {
+  function clamp0141(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
@@ -21653,15 +22014,15 @@
     return [lerp44(a[0], b[0], t), lerp44(a[1], b[1], t), lerp44(a[2], b[2], t)];
   }
   function rgb39(c, a = 1) {
-    const r = Math.round(clamp0140(c[0] / 255) * 255);
-    const g = Math.round(clamp0140(c[1] / 255) * 255);
-    const b = Math.round(clamp0140(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0140(a)})`;
+    const r = Math.round(clamp0141(c[0] / 255) * 255);
+    const g = Math.round(clamp0141(c[1] / 255) * 255);
+    const b = Math.round(clamp0141(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0141(a)})`;
   }
-  function smoother39(x) {
+  function smoother41(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt39(t, amp = 1, w = 1.5) {
+  function bobAt41(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP39 = {
@@ -21795,15 +22156,15 @@
   function clampP28(p) {
     return {
       ...p,
-      lightWashAmt: clamp0140(p.lightWashAmt),
-      plumeVolume: clamp0140(p.plumeVolume),
-      sheenAmt: clamp0140(p.sheenAmt),
-      frostAmt: clamp0140(p.frostAmt),
-      backSnowAmt: clamp0140(p.backSnowAmt),
-      padSnowAmt: clamp0140(p.padSnowAmt),
-      blossomAmt: clamp0140(p.blossomAmt),
-      fallenLeafAmt: clamp0140(p.fallenLeafAmt),
-      breathFogAmt: clamp0140(p.breathFogAmt)
+      lightWashAmt: clamp0141(p.lightWashAmt),
+      plumeVolume: clamp0141(p.plumeVolume),
+      sheenAmt: clamp0141(p.sheenAmt),
+      frostAmt: clamp0141(p.frostAmt),
+      backSnowAmt: clamp0141(p.backSnowAmt),
+      padSnowAmt: clamp0141(p.padSnowAmt),
+      blossomAmt: clamp0141(p.blossomAmt),
+      fallenLeafAmt: clamp0141(p.fallenLeafAmt),
+      breathFogAmt: clamp0141(p.breathFogAmt)
     };
   }
   function paintPad7(ctx, p) {
@@ -22121,7 +22482,7 @@
   function anim29(season) {
     return (ctx, t) => {
       const p = clampP28(SP39[season]);
-      const bob = bobAt39(t);
+      const bob = bobAt41(t);
       const loop = t % 5 / 5;
       const waddle = Math.sin(loop * Math.PI * 2) * (1 - bob / 1.2) * 1.4;
       const headDip = Math.max(0, Math.sin(loop * Math.PI * 4)) ** 2 * 1.3;
@@ -22218,17 +22579,17 @@
       }
     };
   }
-  function makeTransition36(fromIdx) {
+  function makeTransition35(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother39(clamp0140(pp));
+      const k = smoother41(clamp0141(pp));
       paint39(ctx, lerpP39(SP39[from], SP39[to], k), 0);
     };
   }
-  var springToSummer33 = makeTransition36(0);
-  var summerToAutumn33 = makeTransition36(1);
-  var autumnToWinter33 = makeTransition36(2);
+  var springToSummer33 = makeTransition35(0);
+  var summerToAutumn33 = makeTransition35(1);
+  var autumnToWinter33 = makeTransition35(2);
   var VARIANTS41 = {
     Spring: { draw: draw29("Spring"), anim: anim29("Spring") },
     Summer: { draw: draw29("Summer"), anim: anim29("Summer") },
@@ -22242,7 +22603,7 @@
   };
 
   // src/textures/seasonal/herd/sheep.ts
-  function clamp0141(x) {
+  function clamp0142(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
   function lerp45(a, b, t) {
@@ -22252,15 +22613,16 @@
     return [lerp45(a[0], b[0], t), lerp45(a[1], b[1], t), lerp45(a[2], b[2], t)];
   }
   function rgb40(c, a = 1) {
-    const r = Math.round(clamp0141(c[0] / 255) * 255);
-    const g = Math.round(clamp0141(c[1] / 255) * 255);
-    const b = Math.round(clamp0141(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0141(a)})`;
+    const r = Math.round(clamp0142(c[0] / 255) * 255);
+    const g = Math.round(clamp0142(c[1] / 255) * 255);
+    const b = Math.round(clamp0142(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0142(a)})`;
   }
-  function smoother40(x) {
+  function smoother42(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt40(t, amp = 1.1, w = 1.5) {
+  var BREATH_W = Math.PI * 2 / 5.4;
+  function bobAt42(t, amp = 1.3, w = BREATH_W) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP40 = {
@@ -22367,14 +22729,14 @@
   function clampP29(p) {
     return {
       ...p,
-      lightWashAmt: clamp0141(p.lightWashAmt),
-      fleeceVolume: clamp0141(p.fleeceVolume),
-      frostAmt: clamp0141(p.frostAmt),
-      backSnowAmt: clamp0141(p.backSnowAmt),
-      padSnowAmt: clamp0141(p.padSnowAmt),
-      blossomAmt: clamp0141(p.blossomAmt),
-      fallenLeafAmt: clamp0141(p.fallenLeafAmt),
-      breathFogAmt: clamp0141(p.breathFogAmt)
+      lightWashAmt: clamp0142(p.lightWashAmt),
+      fleeceVolume: clamp0142(p.fleeceVolume),
+      frostAmt: clamp0142(p.frostAmt),
+      backSnowAmt: clamp0142(p.backSnowAmt),
+      padSnowAmt: clamp0142(p.padSnowAmt),
+      blossomAmt: clamp0142(p.blossomAmt),
+      fallenLeafAmt: clamp0142(p.fallenLeafAmt),
+      breathFogAmt: clamp0142(p.breathFogAmt)
     };
   }
   function paintPad8(ctx, p) {
@@ -22622,10 +22984,19 @@
   function draw30(season) {
     return (ctx) => paint40(ctx, SP40[season], 0);
   }
+  function gestureEnvelope(t, periodS, widthFrac, phase01 = 0) {
+    const loop = (t / periodS % 1 + 1) % 1;
+    let d = loop - phase01;
+    d = (d % 1 + 1) % 1;
+    if (d > 0.5) d -= 1;
+    const half = Math.max(0.02, widthFrac * 0.5);
+    if (Math.abs(d) >= half) return 0;
+    return 0.5 + 0.5 * Math.cos(d / half * Math.PI);
+  }
   function anim30(season) {
     return (ctx, t) => {
       const p = clampP29(SP40[season]);
-      const bob = bobAt40(t);
+      const bob = bobAt42(t);
       paint40(ctx, SP40[season], bob);
       ctx.save();
       try {
@@ -22633,23 +23004,46 @@
         const by = 4 - bob;
         const hx = bx - 11;
         const hy = by + 2;
-        const loop = t % 5 / 5;
-        const flickGate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 6;
-        const flick = Math.sin(t * 9) * flickGate;
+        const earEnv = gestureEnvelope(t, 6, 0.26, 0.45);
+        const tailEnv = gestureEnvelope(t, 6, 0.3, 0.78);
+        const headEnv = gestureEnvelope(t, 6, 0.34, 0.2);
         ctx.fillStyle = rgb40(p.faceDark);
         ctx.save();
         ctx.translate(hx + 2.6, hy - 4);
-        ctx.rotate(0.6 + flick * 0.5);
+        ctx.rotate(0.6 + earEnv * 0.7);
         ctx.beginPath();
         ctx.ellipse(0, 0, 3.4, 1.7, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
         ctx.fillStyle = rgb40(p.fleeceLight);
         ctx.beginPath();
-        ctx.arc(bx + 12.5 + flick * 1.4, by - 1, 2.4 + p.fleeceVolume * 0.6, 0, Math.PI * 2);
+        ctx.arc(bx + 12.5 + tailEnv * 2.2, by - 1 - tailEnv * 0.8, 2.4 + p.fleeceVolume * 0.6, 0, Math.PI * 2);
         ctx.fill();
+        if (headEnv > 2e-3) {
+          const dip = headEnv * 1.8;
+          ctx.save();
+          ctx.translate(hx, hy + dip);
+          ctx.rotate(0.28 + headEnv * 0.06);
+          ctx.fillStyle = rgb40(p.faceDark);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 4.1, 4.9, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = rgb40([245, 245, 240]);
+          for (const ex of [-1.6, 1.6]) {
+            ctx.beginPath();
+            ctx.arc(ex, -1.2, 1.05, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = rgb40([20, 18, 20]);
+          for (const ex of [-1.4, 1.8]) {
+            ctx.beginPath();
+            ctx.arc(ex, -1, 0.6, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        }
         if (season === "Spring") {
-          const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
+          const g = 0.18 + 0.26 * (0.5 - 0.5 * Math.cos(t * (Math.PI * 2 / 5.2)));
           ctx.fillStyle = rgb40([255, 255, 255], g);
           ctx.beginPath();
           ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
@@ -22658,18 +23052,18 @@
           ctx.arc(10, 19.6, 0.9 + g * 0.8, 0, Math.PI * 2);
           ctx.fill();
         } else if (season === "Summer") {
-          const s = 0.5 + 0.5 * Math.sin(t * 1.1);
+          const s = 0.5 - 0.5 * Math.cos(t * (Math.PI * 2 / 6));
           const sx = bx - 9 + s * 18;
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb40([255, 255, 255], 0.35);
+          ctx.fillStyle = rgb40([255, 255, 255], 0.32);
           ctx.beginPath();
           ctx.ellipse(sx, by - 2, 3, 6, 0.3, 0, Math.PI * 2);
           ctx.fill();
           ctx.restore();
         } else if (season === "Autumn") {
-          const a = Math.sin(t * 1.3) * 0.5;
-          const dx = Math.sin(t * 0.7) * 1.2;
+          const a = Math.sin(t * (Math.PI * 2 / 5.6)) * 0.45;
+          const dx = Math.sin(t * (Math.PI * 2 / 7.2)) * 1.2;
           ctx.save();
           ctx.translate(10 + dx, 20.5);
           ctx.rotate(0.7 + a);
@@ -22679,23 +23073,23 @@
           ctx.fill();
           ctx.restore();
         } else {
-          const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
-          const reach = 4 + breathe * 3;
-          ctx.fillStyle = rgb40([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
+          const breathe = 0.5 - 0.5 * Math.cos(t * (Math.PI * 2 / 5.4));
+          const reach = 4 + breathe * 3.4;
+          ctx.fillStyle = rgb40([235, 244, 255], (0.16 + 0.34 * breathe) * p.breathFogAmt);
           ctx.beginPath();
-          ctx.ellipse(hx - reach, hy + 3.4, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
+          ctx.ellipse(hx - reach, hy + 3.4, 2.6 + breathe * 2, 1.8 + breathe * 1.3, 0.2, 0, Math.PI * 2);
           ctx.fill();
-          const prog = (t / 3.4 % 1 + 1) % 1;
+          const prog = (t / 6 % 1 + 1) % 1;
           const fy = -20 + prog * 36;
           const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-          ctx.fillStyle = rgb40([255, 255, 255], 0.85);
+          ctx.fillStyle = rgb40([255, 255, 255], 0.82);
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 - 0.5 * Math.cos(t * (Math.PI * 2 / 6.4));
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb40([206, 224, 255], 0.12 + sheen3 * 0.14);
+          ctx.fillStyle = rgb40([206, 224, 255], 0.1 + sheen3 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13, 9, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -22708,17 +23102,85 @@
       }
     };
   }
-  function makeTransition37(fromIdx) {
+  function biasedEase(k, bias) {
+    const x = clamp0142(k);
+    return Math.pow(smoother42(x), bias);
+  }
+  function makeTransition36(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother40(clamp0141(pp));
-      paint40(ctx, lerpP40(SP40[from], SP40[to], k), 0);
+      const p = clamp0142(pp);
+      const kBase = smoother42(p);
+      const kCoat = biasedEase(p, 0.62);
+      const kSnow = biasedEase(p, 1.7);
+      const a = SP40[from];
+      const b = SP40[to];
+      const blended = lerpP40(a, b, kBase);
+      blended.fleeceVolume = lerp45(a.fleeceVolume, b.fleeceVolume, kCoat);
+      blended.backSnowAmt = lerp45(a.backSnowAmt, b.backSnowAmt, kSnow);
+      blended.padSnowAmt = lerp45(a.padSnowAmt, b.padSnowAmt, kSnow);
+      blended.frostAmt = lerp45(a.frostAmt, b.frostAmt, kSnow);
+      blended.breathFogAmt = lerp45(a.breathFogAmt, b.breathFogAmt, kSnow);
+      paint40(ctx, blended, 0);
+      const trans = Math.sin(Math.PI * p);
+      if (trans <= 8e-4) return;
+      ctx.save();
+      try {
+        const bx = -1;
+        const by = 4;
+        const fluff = trans * (0.4 + 0.6 * Math.max(0, b.fleeceVolume - a.fleeceVolume + 0.4));
+        if (fluff > 0.01) {
+          ctx.fillStyle = rgb40([255, 255, 255], 0.5 * fluff);
+          const motes = [
+            [-8, -8, 1.1],
+            [3, -10, 1.4],
+            [9, -6, 0.9],
+            [-3, -11, 1]
+          ];
+          for (const [mx, my, mr] of motes) {
+            const rise = (1 - Math.cos(Math.PI * p)) * 2.2;
+            ctx.beginPath();
+            ctx.arc(bx + mx, by + my - rise, mr * (0.7 + 0.5 * trans), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        const snowGain = Math.max(0, b.backSnowAmt - a.backSnowAmt);
+        if (snowGain > 0.01) {
+          ctx.fillStyle = rgb40([255, 255, 255], 0.8 * trans * snowGain);
+          const land = smoother42(p);
+          const flecks = [
+            [-6, -10],
+            [-1, -11],
+            [4, -9.5],
+            [7, -8]
+          ];
+          for (const [fxx, fyy] of flecks) {
+            const fall = (1 - land) * 6;
+            ctx.beginPath();
+            ctx.arc(bx + fxx, by + fyy - fall, 1, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        const fogGain = Math.max(0, b.breathFogAmt - a.breathFogAmt);
+        if (fogGain > 0.01) {
+          const hx = bx - 11;
+          const hy = by + 2;
+          ctx.fillStyle = rgb40([235, 244, 255], 0.4 * trans * fogGain);
+          ctx.beginPath();
+          ctx.ellipse(hx - (4 + trans * 3), hy + 3.4, 2.6 + trans * 1.8, 1.8 + trans * 1.2, 0.2, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "source-over";
+        ctx.restore();
+      }
     };
   }
-  var springToSummer34 = makeTransition37(0);
-  var summerToAutumn34 = makeTransition37(1);
-  var autumnToWinter34 = makeTransition37(2);
+  var springToSummer34 = makeTransition36(0);
+  var summerToAutumn34 = makeTransition36(1);
+  var autumnToWinter34 = makeTransition36(2);
   var VARIANTS42 = {
     Spring: { draw: draw30("Spring"), anim: anim30("Spring") },
     Summer: { draw: draw30("Summer"), anim: anim30("Summer") },
@@ -22732,7 +23194,7 @@
   };
 
   // src/textures/seasonal/herd/pig.ts
-  function clamp0142(x) {
+  function clamp0143(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
@@ -22743,15 +23205,15 @@
     return [lerp46(a[0], b[0], t), lerp46(a[1], b[1], t), lerp46(a[2], b[2], t)];
   }
   function rgb41(c, a = 1) {
-    const r = Math.round(clamp0142(c[0] / 255) * 255);
-    const g = Math.round(clamp0142(c[1] / 255) * 255);
-    const b = Math.round(clamp0142(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0142(a)})`;
+    const r = Math.round(clamp0143(c[0] / 255) * 255);
+    const g = Math.round(clamp0143(c[1] / 255) * 255);
+    const b = Math.round(clamp0143(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0143(a)})`;
   }
-  function smoother41(x) {
+  function smoother43(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt41(t, amp = 1, w = 1.5) {
+  function bobAt43(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP41 = {
@@ -22884,16 +23346,16 @@
   function clampP30(p) {
     return {
       ...p,
-      lightWashAmt: clamp0142(p.lightWashAmt),
-      coatVolume: clamp0142(p.coatVolume),
-      bristleAmt: clamp0142(p.bristleAmt),
-      glossAmt: clamp0142(p.glossAmt),
-      frostAmt: clamp0142(p.frostAmt),
-      backSnowAmt: clamp0142(p.backSnowAmt),
-      padSnowAmt: clamp0142(p.padSnowAmt),
-      blossomAmt: clamp0142(p.blossomAmt),
-      fallenLeafAmt: clamp0142(p.fallenLeafAmt),
-      breathFogAmt: clamp0142(p.breathFogAmt)
+      lightWashAmt: clamp0143(p.lightWashAmt),
+      coatVolume: clamp0143(p.coatVolume),
+      bristleAmt: clamp0143(p.bristleAmt),
+      glossAmt: clamp0143(p.glossAmt),
+      frostAmt: clamp0143(p.frostAmt),
+      backSnowAmt: clamp0143(p.backSnowAmt),
+      padSnowAmt: clamp0143(p.padSnowAmt),
+      blossomAmt: clamp0143(p.blossomAmt),
+      fallenLeafAmt: clamp0143(p.fallenLeafAmt),
+      breathFogAmt: clamp0143(p.breathFogAmt)
     };
   }
   function paintPad9(ctx, p) {
@@ -23209,7 +23671,7 @@
   function anim31(season) {
     return (ctx, t) => {
       const p = clampP30(SP41[season]);
-      const bob = bobAt41(t);
+      const bob = bobAt43(t);
       paint41(ctx, SP41[season], bob);
       ctx.save();
       try {
@@ -23316,17 +23778,17 @@
       }
     };
   }
-  function makeTransition38(fromIdx) {
+  function makeTransition37(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother41(clamp0142(pp));
+      const k = smoother43(clamp0143(pp));
       paint41(ctx, lerpP41(SP41[from], SP41[to], k), 0);
     };
   }
-  var springToSummer35 = makeTransition38(0);
-  var summerToAutumn35 = makeTransition38(1);
-  var autumnToWinter35 = makeTransition38(2);
+  var springToSummer35 = makeTransition37(0);
+  var summerToAutumn35 = makeTransition37(1);
+  var autumnToWinter35 = makeTransition37(2);
   var VARIANTS43 = {
     Spring: { draw: draw31("Spring"), anim: anim31("Spring") },
     Summer: { draw: draw31("Summer"), anim: anim31("Summer") },
@@ -23340,7 +23802,7 @@
   };
 
   // src/textures/seasonal/herd/hog.ts
-  function clamp0143(x) {
+  function clamp0144(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
@@ -23351,15 +23813,15 @@
     return [lerp47(a[0], b[0], t), lerp47(a[1], b[1], t), lerp47(a[2], b[2], t)];
   }
   function rgb42(c, a = 1) {
-    const r = Math.round(clamp0143(c[0] / 255) * 255);
-    const g = Math.round(clamp0143(c[1] / 255) * 255);
-    const b = Math.round(clamp0143(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0143(a)})`;
+    const r = Math.round(clamp0144(c[0] / 255) * 255);
+    const g = Math.round(clamp0144(c[1] / 255) * 255);
+    const b = Math.round(clamp0144(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0144(a)})`;
   }
-  function smoother42(x) {
+  function smoother44(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt42(t, amp = 1.2, w = 1.2) {
+  function bobAt44(t, amp = 1.2, w = 1.2) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP42 = {
@@ -23492,15 +23954,15 @@
   function clampP31(p) {
     return {
       ...p,
-      lightWashAmt: clamp0143(p.lightWashAmt),
-      coatVolume: clamp0143(p.coatVolume),
-      sheenAmt: clamp0143(p.sheenAmt),
-      frostAmt: clamp0143(p.frostAmt),
-      backSnowAmt: clamp0143(p.backSnowAmt),
-      padSnowAmt: clamp0143(p.padSnowAmt),
-      blossomAmt: clamp0143(p.blossomAmt),
-      fallenLeafAmt: clamp0143(p.fallenLeafAmt),
-      breathFogAmt: clamp0143(p.breathFogAmt)
+      lightWashAmt: clamp0144(p.lightWashAmt),
+      coatVolume: clamp0144(p.coatVolume),
+      sheenAmt: clamp0144(p.sheenAmt),
+      frostAmt: clamp0144(p.frostAmt),
+      backSnowAmt: clamp0144(p.backSnowAmt),
+      padSnowAmt: clamp0144(p.padSnowAmt),
+      blossomAmt: clamp0144(p.blossomAmt),
+      fallenLeafAmt: clamp0144(p.fallenLeafAmt),
+      breathFogAmt: clamp0144(p.breathFogAmt)
     };
   }
   function paintPad10(ctx, p) {
@@ -23817,7 +24279,7 @@
   function anim32(season) {
     return (ctx, t) => {
       const p = clampP31(SP42[season]);
-      const bob = bobAt42(t);
+      const bob = bobAt44(t);
       paint42(ctx, SP42[season], bob);
       ctx.save();
       try {
@@ -23914,17 +24376,17 @@
       }
     };
   }
-  function makeTransition39(fromIdx) {
+  function makeTransition38(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother42(clamp0143(pp));
+      const k = smoother44(clamp0144(pp));
       paint42(ctx, lerpP42(SP42[from], SP42[to], k), 0);
     };
   }
-  var springToSummer36 = makeTransition39(0);
-  var summerToAutumn36 = makeTransition39(1);
-  var autumnToWinter36 = makeTransition39(2);
+  var springToSummer36 = makeTransition38(0);
+  var summerToAutumn36 = makeTransition38(1);
+  var autumnToWinter36 = makeTransition38(2);
   var VARIANTS44 = {
     Spring: { draw: draw32("Spring"), anim: anim32("Spring") },
     Summer: { draw: draw32("Summer"), anim: anim32("Summer") },
@@ -23938,7 +24400,7 @@
   };
 
   // src/textures/seasonal/herd/boar.ts
-  function clamp0144(x) {
+  function clamp0145(x) {
     return x < 0 || Number.isNaN(x) ? 0 : x > 1 ? 1 : x;
   }
   function lerp48(a, b, t) {
@@ -23948,15 +24410,15 @@
     return [lerp48(a[0], b[0], t), lerp48(a[1], b[1], t), lerp48(a[2], b[2], t)];
   }
   function rgb43(c, a = 1) {
-    const r = Math.round(clamp0144(c[0] / 255) * 255);
-    const g = Math.round(clamp0144(c[1] / 255) * 255);
-    const b = Math.round(clamp0144(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0144(a)})`;
+    const r = Math.round(clamp0145(c[0] / 255) * 255);
+    const g = Math.round(clamp0145(c[1] / 255) * 255);
+    const b = Math.round(clamp0145(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0145(a)})`;
   }
-  function smoother43(x) {
+  function smoother45(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt43(t, amp = 1, w = 1.4) {
+  function bobAt45(t, amp = 1, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP43 = {
@@ -24088,14 +24550,14 @@
   function clampP32(p) {
     return {
       ...p,
-      lightWashAmt: clamp0144(p.lightWashAmt),
-      coatVolume: clamp0144(p.coatVolume),
-      frostAmt: clamp0144(p.frostAmt),
-      backSnowAmt: clamp0144(p.backSnowAmt),
-      padSnowAmt: clamp0144(p.padSnowAmt),
-      blossomAmt: clamp0144(p.blossomAmt),
-      fallenLeafAmt: clamp0144(p.fallenLeafAmt),
-      breathFogAmt: clamp0144(p.breathFogAmt)
+      lightWashAmt: clamp0145(p.lightWashAmt),
+      coatVolume: clamp0145(p.coatVolume),
+      frostAmt: clamp0145(p.frostAmt),
+      backSnowAmt: clamp0145(p.backSnowAmt),
+      padSnowAmt: clamp0145(p.padSnowAmt),
+      blossomAmt: clamp0145(p.blossomAmt),
+      fallenLeafAmt: clamp0145(p.fallenLeafAmt),
+      breathFogAmt: clamp0145(p.breathFogAmt)
     };
   }
   function paintPad11(ctx, p) {
@@ -24422,7 +24884,7 @@
   function anim33(season) {
     return (ctx, t) => {
       const p = clampP32(SP43[season]);
-      const bob = bobAt43(t);
+      const bob = bobAt45(t);
       const loop = t % 5.5 / 5.5;
       const gate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 5;
       const twitch = Math.sin(t * 11) * gate;
@@ -24492,17 +24954,17 @@
       }
     };
   }
-  function makeTransition40(fromIdx) {
+  function makeTransition39(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother43(clamp0144(pp));
+      const k = smoother45(clamp0145(pp));
       paint43(ctx, lerpP43(SP43[from], SP43[to], k), 0);
     };
   }
-  var springToSummer37 = makeTransition40(0);
-  var summerToAutumn37 = makeTransition40(1);
-  var autumnToWinter37 = makeTransition40(2);
+  var springToSummer37 = makeTransition39(0);
+  var summerToAutumn37 = makeTransition39(1);
+  var autumnToWinter37 = makeTransition39(2);
   var VARIANTS45 = {
     Spring: { draw: draw33("Spring"), anim: anim33("Spring") },
     Summer: { draw: draw33("Summer"), anim: anim33("Summer") },
@@ -24516,7 +24978,7 @@
   };
 
   // src/textures/seasonal/herd/warthog.ts
-  function clamp0145(x) {
+  function clamp0146(x) {
     return x < 0 || Number.isNaN(x) ? 0 : x > 1 ? 1 : x;
   }
   function lerp49(a, b, t) {
@@ -24526,15 +24988,15 @@
     return [lerp49(a[0], b[0], t), lerp49(a[1], b[1], t), lerp49(a[2], b[2], t)];
   }
   function rgb44(c, a = 1) {
-    const r = Math.round(clamp0145(c[0] / 255) * 255);
-    const g = Math.round(clamp0145(c[1] / 255) * 255);
-    const b = Math.round(clamp0145(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0145(a)})`;
+    const r = Math.round(clamp0146(c[0] / 255) * 255);
+    const g = Math.round(clamp0146(c[1] / 255) * 255);
+    const b = Math.round(clamp0146(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0146(a)})`;
   }
-  function smoother44(x) {
+  function smoother46(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt44(t, amp = 1, w = 1.5) {
+  function bobAt46(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP44 = {
@@ -24655,14 +25117,14 @@
   function clampP33(p) {
     return {
       ...p,
-      lightWashAmt: clamp0145(p.lightWashAmt),
-      coatVolume: clamp0145(p.coatVolume),
-      frostAmt: clamp0145(p.frostAmt),
-      backSnowAmt: clamp0145(p.backSnowAmt),
-      padSnowAmt: clamp0145(p.padSnowAmt),
-      blossomAmt: clamp0145(p.blossomAmt),
-      fallenLeafAmt: clamp0145(p.fallenLeafAmt),
-      breathFogAmt: clamp0145(p.breathFogAmt)
+      lightWashAmt: clamp0146(p.lightWashAmt),
+      coatVolume: clamp0146(p.coatVolume),
+      frostAmt: clamp0146(p.frostAmt),
+      backSnowAmt: clamp0146(p.backSnowAmt),
+      padSnowAmt: clamp0146(p.padSnowAmt),
+      blossomAmt: clamp0146(p.blossomAmt),
+      fallenLeafAmt: clamp0146(p.fallenLeafAmt),
+      breathFogAmt: clamp0146(p.breathFogAmt)
     };
   }
   function paintPad12(ctx, p) {
@@ -24964,7 +25426,7 @@
   function anim34(season) {
     return (ctx, t) => {
       const p = clampP33(SP44[season]);
-      const bob = bobAt44(t);
+      const bob = bobAt46(t);
       paint44(ctx, SP44[season], bob);
       ctx.save();
       try {
@@ -25057,17 +25519,17 @@
       }
     };
   }
-  function makeTransition41(fromIdx) {
+  function makeTransition40(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother44(clamp0145(pp));
+      const k = smoother46(clamp0146(pp));
       paint44(ctx, lerpP44(SP44[from], SP44[to], k), 0);
     };
   }
-  var springToSummer38 = makeTransition41(0);
-  var summerToAutumn38 = makeTransition41(1);
-  var autumnToWinter38 = makeTransition41(2);
+  var springToSummer38 = makeTransition40(0);
+  var summerToAutumn38 = makeTransition40(1);
+  var autumnToWinter38 = makeTransition40(2);
   var VARIANTS46 = {
     Spring: { draw: draw34("Spring"), anim: anim34("Spring") },
     Summer: { draw: draw34("Summer"), anim: anim34("Summer") },
@@ -25081,7 +25543,7 @@
   };
 
   // src/textures/seasonal/herd/alpaca.ts
-  function clamp0146(x) {
+  function clamp0147(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
   function lerp50(a, b, t) {
@@ -25091,15 +25553,15 @@
     return [lerp50(a[0], b[0], t), lerp50(a[1], b[1], t), lerp50(a[2], b[2], t)];
   }
   function rgb45(c, a = 1) {
-    const r = Math.round(clamp0146(c[0] / 255) * 255);
-    const g = Math.round(clamp0146(c[1] / 255) * 255);
-    const b = Math.round(clamp0146(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0146(a)})`;
+    const r = Math.round(clamp0147(c[0] / 255) * 255);
+    const g = Math.round(clamp0147(c[1] / 255) * 255);
+    const b = Math.round(clamp0147(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0147(a)})`;
   }
-  function smoother45(x) {
+  function smoother47(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt45(t, amp = 1.1, w = 1.5) {
+  function bobAt47(t, amp = 1.1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP45 = {
@@ -25215,14 +25677,14 @@
   function clampP34(p) {
     return {
       ...p,
-      lightWashAmt: clamp0146(p.lightWashAmt),
-      fleeceVolume: clamp0146(p.fleeceVolume),
-      frostAmt: clamp0146(p.frostAmt),
-      backSnowAmt: clamp0146(p.backSnowAmt),
-      padSnowAmt: clamp0146(p.padSnowAmt),
-      blossomAmt: clamp0146(p.blossomAmt),
-      fallenLeafAmt: clamp0146(p.fallenLeafAmt),
-      breathFogAmt: clamp0146(p.breathFogAmt)
+      lightWashAmt: clamp0147(p.lightWashAmt),
+      fleeceVolume: clamp0147(p.fleeceVolume),
+      frostAmt: clamp0147(p.frostAmt),
+      backSnowAmt: clamp0147(p.backSnowAmt),
+      padSnowAmt: clamp0147(p.padSnowAmt),
+      blossomAmt: clamp0147(p.blossomAmt),
+      fallenLeafAmt: clamp0147(p.fallenLeafAmt),
+      breathFogAmt: clamp0147(p.breathFogAmt)
     };
   }
   function paintPad13(ctx, p) {
@@ -25515,7 +25977,7 @@
   function anim35(season) {
     return (ctx, t) => {
       const p = clampP34(SP45[season]);
-      const bob = bobAt45(t);
+      const bob = bobAt47(t);
       const neckSwing = 0.06 * (1 - Math.cos(t * 0.9)) * 0.5 * Math.sin(t * 0.45);
       const loop = t % 5 / 5;
       const flickGate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 6;
@@ -25589,17 +26051,17 @@
       }
     };
   }
-  function makeTransition42(fromIdx) {
+  function makeTransition41(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother45(clamp0146(pp));
+      const k = smoother47(clamp0147(pp));
       paint45(ctx, lerpP45(SP45[from], SP45[to], k), 0);
     };
   }
-  var springToSummer39 = makeTransition42(0);
-  var summerToAutumn39 = makeTransition42(1);
-  var autumnToWinter39 = makeTransition42(2);
+  var springToSummer39 = makeTransition41(0);
+  var summerToAutumn39 = makeTransition41(1);
+  var autumnToWinter39 = makeTransition41(2);
   var VARIANTS47 = {
     Spring: { draw: draw35("Spring"), anim: anim35("Spring") },
     Summer: { draw: draw35("Summer"), anim: anim35("Summer") },
@@ -25613,7 +26075,7 @@
   };
 
   // src/textures/seasonal/herd/goat.ts
-  function clamp0147(x) {
+  function clamp0148(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
@@ -25624,15 +26086,15 @@
     return [lerp51(a[0], b[0], t), lerp51(a[1], b[1], t), lerp51(a[2], b[2], t)];
   }
   function rgb46(c, a = 1) {
-    const r = Math.round(clamp0147(c[0] / 255) * 255);
-    const g = Math.round(clamp0147(c[1] / 255) * 255);
-    const b = Math.round(clamp0147(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0147(a)})`;
+    const r = Math.round(clamp0148(c[0] / 255) * 255);
+    const g = Math.round(clamp0148(c[1] / 255) * 255);
+    const b = Math.round(clamp0148(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0148(a)})`;
   }
-  function smoother46(x) {
+  function smoother48(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt46(t, amp = 1, w = 1.5) {
+  function bobAt48(t, amp = 1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP46 = {
@@ -25770,16 +26232,16 @@
   function clampP35(p) {
     return {
       ...p,
-      lightWashAmt: clamp0147(p.lightWashAmt),
-      coatVolume: clamp0147(p.coatVolume),
-      coatPatchy: clamp0147(p.coatPatchy),
-      coatSheen: clamp0147(p.coatSheen),
-      frostAmt: clamp0147(p.frostAmt),
-      backSnowAmt: clamp0147(p.backSnowAmt),
-      padSnowAmt: clamp0147(p.padSnowAmt),
-      blossomAmt: clamp0147(p.blossomAmt),
-      fallenLeafAmt: clamp0147(p.fallenLeafAmt),
-      breathFogAmt: clamp0147(p.breathFogAmt)
+      lightWashAmt: clamp0148(p.lightWashAmt),
+      coatVolume: clamp0148(p.coatVolume),
+      coatPatchy: clamp0148(p.coatPatchy),
+      coatSheen: clamp0148(p.coatSheen),
+      frostAmt: clamp0148(p.frostAmt),
+      backSnowAmt: clamp0148(p.backSnowAmt),
+      padSnowAmt: clamp0148(p.padSnowAmt),
+      blossomAmt: clamp0148(p.blossomAmt),
+      fallenLeafAmt: clamp0148(p.fallenLeafAmt),
+      breathFogAmt: clamp0148(p.breathFogAmt)
     };
   }
   function paintPad14(ctx, p) {
@@ -26149,7 +26611,7 @@
   function anim36(season) {
     return (ctx, t) => {
       const p = clampP35(SP46[season]);
-      const bob = bobAt46(t);
+      const bob = bobAt48(t);
       paint46(ctx, SP46[season], bob);
       ctx.save();
       try {
@@ -26244,17 +26706,17 @@
       }
     };
   }
-  function makeTransition43(fromIdx) {
+  function makeTransition42(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother46(clamp0147(pp));
+      const k = smoother48(clamp0148(pp));
       paint46(ctx, lerpP46(SP46[from], SP46[to], k), 0);
     };
   }
-  var springToSummer40 = makeTransition43(0);
-  var summerToAutumn40 = makeTransition43(1);
-  var autumnToWinter40 = makeTransition43(2);
+  var springToSummer40 = makeTransition42(0);
+  var summerToAutumn40 = makeTransition42(1);
+  var autumnToWinter40 = makeTransition42(2);
   var VARIANTS48 = {
     Spring: { draw: draw36("Spring"), anim: anim36("Spring") },
     Summer: { draw: draw36("Summer"), anim: anim36("Summer") },
@@ -26268,7 +26730,7 @@
   };
 
   // src/textures/seasonal/herd/ram.ts
-  function clamp0148(x) {
+  function clamp0149(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
   function lerp52(a, b, t) {
@@ -26278,15 +26740,15 @@
     return [lerp52(a[0], b[0], t), lerp52(a[1], b[1], t), lerp52(a[2], b[2], t)];
   }
   function rgb47(c, a = 1) {
-    const r = Math.round(clamp0148(c[0] / 255) * 255);
-    const g = Math.round(clamp0148(c[1] / 255) * 255);
-    const b = Math.round(clamp0148(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0148(a)})`;
+    const r = Math.round(clamp0149(c[0] / 255) * 255);
+    const g = Math.round(clamp0149(c[1] / 255) * 255);
+    const b = Math.round(clamp0149(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0149(a)})`;
   }
-  function smoother47(x) {
+  function smoother49(x) {
     return x * x * x * (x * (6 * x - 15) + 10);
   }
-  function bobAt47(t, amp = 1.1, w = 1.5) {
+  function bobAt49(t, amp = 1.1, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP47 = {
@@ -26418,14 +26880,14 @@
   function clampP36(p) {
     return {
       ...p,
-      lightWashAmt: clamp0148(p.lightWashAmt),
-      fleeceVolume: clamp0148(p.fleeceVolume),
-      frostAmt: clamp0148(p.frostAmt),
-      backSnowAmt: clamp0148(p.backSnowAmt),
-      padSnowAmt: clamp0148(p.padSnowAmt),
-      blossomAmt: clamp0148(p.blossomAmt),
-      fallenLeafAmt: clamp0148(p.fallenLeafAmt),
-      breathFogAmt: clamp0148(p.breathFogAmt)
+      lightWashAmt: clamp0149(p.lightWashAmt),
+      fleeceVolume: clamp0149(p.fleeceVolume),
+      frostAmt: clamp0149(p.frostAmt),
+      backSnowAmt: clamp0149(p.backSnowAmt),
+      padSnowAmt: clamp0149(p.padSnowAmt),
+      blossomAmt: clamp0149(p.blossomAmt),
+      fallenLeafAmt: clamp0149(p.fallenLeafAmt),
+      breathFogAmt: clamp0149(p.breathFogAmt)
     };
   }
   function paintPad15(ctx, p) {
@@ -26739,7 +27201,7 @@
   function anim37(season) {
     return (ctx, t) => {
       const p = clampP36(SP47[season]);
-      const bob = bobAt47(t);
+      const bob = bobAt49(t);
       const loop = t % 6 / 6;
       const dipGate = Math.max(0, Math.sin(loop * Math.PI)) ** 2;
       const headDip = dipGate * 1.4;
@@ -26860,17 +27322,17 @@
       }
     };
   }
-  function makeTransition44(fromIdx) {
+  function makeTransition43(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother47(clamp0148(pp));
+      const k = smoother49(clamp0149(pp));
       paint47(ctx, lerpP47(SP47[from], SP47[to], k), 0);
     };
   }
-  var springToSummer41 = makeTransition44(0);
-  var summerToAutumn41 = makeTransition44(1);
-  var autumnToWinter41 = makeTransition44(2);
+  var springToSummer41 = makeTransition43(0);
+  var summerToAutumn41 = makeTransition43(1);
+  var autumnToWinter41 = makeTransition43(2);
   var VARIANTS49 = {
     Spring: { draw: draw37("Spring"), anim: anim37("Spring") },
     Summer: { draw: draw37("Summer"), anim: anim37("Summer") },
@@ -26884,7 +27346,7 @@
   };
 
   // src/textures/seasonal/cattle/cow.ts
-  function clamp0149(x) {
+  function clamp0150(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
@@ -26896,13 +27358,13 @@
     return [lerp53(a[0], b[0], t), lerp53(a[1], b[1], t), lerp53(a[2], b[2], t)];
   }
   function rgb48(c, a = 1) {
-    const r = Math.round(clamp0149(c[0] / 255) * 255);
-    const g = Math.round(clamp0149(c[1] / 255) * 255);
-    const b = Math.round(clamp0149(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0149(a)})`;
+    const r = Math.round(clamp0150(c[0] / 255) * 255);
+    const g = Math.round(clamp0150(c[1] / 255) * 255);
+    const b = Math.round(clamp0150(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0150(a)})`;
   }
-  var smoother48 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt48(t, amp = 1, w = 1.35) {
+  var smoother50 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt50(t, amp = 1, w = 1.35) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP48 = {
@@ -27023,14 +27485,14 @@
   function clampP37(p) {
     return {
       ...p,
-      lightWashAmt: clamp0149(p.lightWashAmt),
-      coatVolume: clamp0149(p.coatVolume),
-      frostAmt: clamp0149(p.frostAmt),
-      backSnowAmt: clamp0149(p.backSnowAmt),
-      padSnowAmt: clamp0149(p.padSnowAmt),
-      blossomAmt: clamp0149(p.blossomAmt),
-      fallenLeafAmt: clamp0149(p.fallenLeafAmt),
-      breathFogAmt: clamp0149(p.breathFogAmt)
+      lightWashAmt: clamp0150(p.lightWashAmt),
+      coatVolume: clamp0150(p.coatVolume),
+      frostAmt: clamp0150(p.frostAmt),
+      backSnowAmt: clamp0150(p.backSnowAmt),
+      padSnowAmt: clamp0150(p.padSnowAmt),
+      blossomAmt: clamp0150(p.blossomAmt),
+      fallenLeafAmt: clamp0150(p.fallenLeafAmt),
+      breathFogAmt: clamp0150(p.breathFogAmt)
     };
   }
   function paintPad16(ctx, p) {
@@ -27381,7 +27843,7 @@
   function anim38(season) {
     return (ctx, t) => {
       const p = clampP37(SP48[season]);
-      const bob = bobAt48(t);
+      const bob = bobAt50(t);
       const dipLoop = t % 6 / 6;
       const dip = 0.9 * (1 - Math.cos(dipLoop * Math.PI * 2)) * 0.5;
       paint48(ctx, SP48[season], bob, dip);
@@ -27483,17 +27945,17 @@
       }
     };
   }
-  function makeTransition45(fromIdx) {
+  function makeTransition44(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother48(clamp0149(pp));
+      const k = smoother50(clamp0150(pp));
       paint48(ctx, lerpP48(SP48[from], SP48[to], k), 0);
     };
   }
-  var springToSummer42 = makeTransition45(0);
-  var summerToAutumn42 = makeTransition45(1);
-  var autumnToWinter42 = makeTransition45(2);
+  var springToSummer42 = makeTransition44(0);
+  var summerToAutumn42 = makeTransition44(1);
+  var autumnToWinter42 = makeTransition44(2);
   var VARIANTS50 = {
     Spring: { draw: draw38("Spring"), anim: anim38("Spring") },
     Summer: { draw: draw38("Summer"), anim: anim38("Summer") },
@@ -27507,7 +27969,7 @@
   };
 
   // src/textures/seasonal/cattle/longhorn.ts
-  function clamp0150(x) {
+  function clamp0151(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
@@ -27519,13 +27981,13 @@
     return [lerp54(a[0], b[0], t), lerp54(a[1], b[1], t), lerp54(a[2], b[2], t)];
   }
   function rgb49(c, a = 1) {
-    const r = Math.round(clamp0150(c[0] / 255) * 255);
-    const g = Math.round(clamp0150(c[1] / 255) * 255);
-    const b = Math.round(clamp0150(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0150(a)})`;
+    const r = Math.round(clamp0151(c[0] / 255) * 255);
+    const g = Math.round(clamp0151(c[1] / 255) * 255);
+    const b = Math.round(clamp0151(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0151(a)})`;
   }
-  var smoother49 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt49(t, amp = 1, w = 1.35) {
+  var smoother51 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt51(t, amp = 1, w = 1.35) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP49 = {
@@ -27662,15 +28124,15 @@
   function clampP38(p) {
     return {
       ...p,
-      lightWashAmt: clamp0150(p.lightWashAmt),
-      coatVolume: clamp0150(p.coatVolume),
-      frostAmt: clamp0150(p.frostAmt),
-      hornFrostAmt: clamp0150(p.hornFrostAmt),
-      backSnowAmt: clamp0150(p.backSnowAmt),
-      padSnowAmt: clamp0150(p.padSnowAmt),
-      blossomAmt: clamp0150(p.blossomAmt),
-      fallenLeafAmt: clamp0150(p.fallenLeafAmt),
-      breathFogAmt: clamp0150(p.breathFogAmt)
+      lightWashAmt: clamp0151(p.lightWashAmt),
+      coatVolume: clamp0151(p.coatVolume),
+      frostAmt: clamp0151(p.frostAmt),
+      hornFrostAmt: clamp0151(p.hornFrostAmt),
+      backSnowAmt: clamp0151(p.backSnowAmt),
+      padSnowAmt: clamp0151(p.padSnowAmt),
+      blossomAmt: clamp0151(p.blossomAmt),
+      fallenLeafAmt: clamp0151(p.fallenLeafAmt),
+      breathFogAmt: clamp0151(p.breathFogAmt)
     };
   }
   function paintPad17(ctx, p) {
@@ -28051,7 +28513,7 @@
   function anim39(season) {
     return (ctx, t) => {
       const p = clampP38(SP49[season]);
-      const bob = bobAt49(t);
+      const bob = bobAt51(t);
       const dipLoop = t % 6 / 6;
       const dip = 0.9 * (1 - Math.cos(dipLoop * Math.PI * 2)) * 0.5;
       paint49(ctx, SP49[season], bob, dip);
@@ -28153,17 +28615,17 @@
       }
     };
   }
-  function makeTransition46(fromIdx) {
+  function makeTransition45(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother49(clamp0150(pp));
+      const k = smoother51(clamp0151(pp));
       paint49(ctx, lerpP49(SP49[from], SP49[to], k), 0);
     };
   }
-  var springToSummer43 = makeTransition46(0);
-  var summerToAutumn43 = makeTransition46(1);
-  var autumnToWinter43 = makeTransition46(2);
+  var springToSummer43 = makeTransition45(0);
+  var summerToAutumn43 = makeTransition45(1);
+  var autumnToWinter43 = makeTransition45(2);
   var VARIANTS51 = {
     Spring: { draw: draw39("Spring"), anim: anim39("Spring") },
     Summer: { draw: draw39("Summer"), anim: anim39("Summer") },
@@ -28177,7 +28639,7 @@
   };
 
   // src/textures/seasonal/cattle/triceratops.ts
-  function clamp0151(x) {
+  function clamp0152(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
@@ -28189,13 +28651,13 @@
     return [lerp55(a[0], b[0], t), lerp55(a[1], b[1], t), lerp55(a[2], b[2], t)];
   }
   function rgb50(c, a = 1) {
-    const r = Math.round(clamp0151(c[0] / 255) * 255);
-    const g = Math.round(clamp0151(c[1] / 255) * 255);
-    const b = Math.round(clamp0151(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0151(a)})`;
+    const r = Math.round(clamp0152(c[0] / 255) * 255);
+    const g = Math.round(clamp0152(c[1] / 255) * 255);
+    const b = Math.round(clamp0152(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0152(a)})`;
   }
-  var smoother50 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt50(t, amp = 1, w = 1.15) {
+  var smoother52 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt52(t, amp = 1, w = 1.15) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP50 = {
@@ -28323,14 +28785,14 @@
   function clampP39(p) {
     return {
       ...p,
-      lightWashAmt: clamp0151(p.lightWashAmt),
-      hideSheen: clamp0151(p.hideSheen),
-      frostAmt: clamp0151(p.frostAmt),
-      backSnowAmt: clamp0151(p.backSnowAmt),
-      padSnowAmt: clamp0151(p.padSnowAmt),
-      blossomAmt: clamp0151(p.blossomAmt),
-      fallenLeafAmt: clamp0151(p.fallenLeafAmt),
-      breathFogAmt: clamp0151(p.breathFogAmt)
+      lightWashAmt: clamp0152(p.lightWashAmt),
+      hideSheen: clamp0152(p.hideSheen),
+      frostAmt: clamp0152(p.frostAmt),
+      backSnowAmt: clamp0152(p.backSnowAmt),
+      padSnowAmt: clamp0152(p.padSnowAmt),
+      blossomAmt: clamp0152(p.blossomAmt),
+      fallenLeafAmt: clamp0152(p.fallenLeafAmt),
+      breathFogAmt: clamp0152(p.breathFogAmt)
     };
   }
   function drawPad4(ctx, p) {
@@ -28701,7 +29163,7 @@
   }
   function anim40(season) {
     return (ctx, t) => {
-      const bob = bobAt50(t, 1, 1.15);
+      const bob = bobAt52(t, 1, 1.15);
       const headSway = (1 - Math.cos(t * 0.85)) * 0.5 * 1.4;
       const tailSwish = (1 - Math.cos(t * 0.7)) * 0.5 * 3;
       paint50(ctx, SP50[season], bob, headSway, tailSwish);
@@ -28761,17 +29223,17 @@
       }
     };
   }
-  function makeTransition47(fromIdx) {
+  function makeTransition46(fromIdx) {
     const from = SP50[SEASON_NAMES[fromIdx]];
     const to = SP50[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother50(clamp0151(pp));
+      const k = smoother52(clamp0152(pp));
       paint50(ctx, lerpP50(from, to, k), 0, 0, 0);
     };
   }
-  var springToSummer44 = makeTransition47(0);
-  var summerToAutumn44 = makeTransition47(1);
-  var autumnToWinter44 = makeTransition47(2);
+  var springToSummer44 = makeTransition46(0);
+  var summerToAutumn44 = makeTransition46(1);
+  var autumnToWinter44 = makeTransition46(2);
   var VARIANTS52 = {
     Spring: { draw: draw40("Spring"), anim: anim40("Spring") },
     Summer: { draw: draw40("Summer"), anim: anim40("Summer") },
@@ -28785,7 +29247,7 @@
   };
 
   // src/textures/seasonal/mount/horse.ts
-  function clamp0152(x) {
+  function clamp0153(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
@@ -28797,13 +29259,13 @@
     return [lerp56(a[0], b[0], t), lerp56(a[1], b[1], t), lerp56(a[2], b[2], t)];
   }
   function rgb51(c, a = 1) {
-    const r = Math.round(clamp0152(c[0] / 255) * 255);
-    const g = Math.round(clamp0152(c[1] / 255) * 255);
-    const b = Math.round(clamp0152(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0152(a)})`;
+    const r = Math.round(clamp0153(c[0] / 255) * 255);
+    const g = Math.round(clamp0153(c[1] / 255) * 255);
+    const b = Math.round(clamp0153(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0153(a)})`;
   }
-  var smoother51 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt51(t, amp = 1, w = 1.35) {
+  var smoother53 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt53(t, amp = 1, w = 1.35) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP51 = {
@@ -28940,15 +29402,15 @@
   function clampP40(p) {
     return {
       ...p,
-      lightWashAmt: clamp0152(p.lightWashAmt),
-      coatVolume: clamp0152(p.coatVolume),
-      gloss: clamp0152(p.gloss),
-      frostAmt: clamp0152(p.frostAmt),
-      backSnowAmt: clamp0152(p.backSnowAmt),
-      padSnowAmt: clamp0152(p.padSnowAmt),
-      blossomAmt: clamp0152(p.blossomAmt),
-      fallenLeafAmt: clamp0152(p.fallenLeafAmt),
-      breathFogAmt: clamp0152(p.breathFogAmt)
+      lightWashAmt: clamp0153(p.lightWashAmt),
+      coatVolume: clamp0153(p.coatVolume),
+      gloss: clamp0153(p.gloss),
+      frostAmt: clamp0153(p.frostAmt),
+      backSnowAmt: clamp0153(p.backSnowAmt),
+      padSnowAmt: clamp0153(p.padSnowAmt),
+      blossomAmt: clamp0153(p.blossomAmt),
+      fallenLeafAmt: clamp0153(p.fallenLeafAmt),
+      breathFogAmt: clamp0153(p.breathFogAmt)
     };
   }
   function paintPad18(ctx, p) {
@@ -29328,7 +29790,7 @@
   function anim41(season) {
     return (ctx, t) => {
       const p = clampP40(SP51[season]);
-      const bob = bobAt51(t);
+      const bob = bobAt53(t);
       const maneSway = Math.sin(t * 1.6) * 0.7;
       const tailSway = Math.sin(t * 1.15 + 0.6) * 1.6;
       const tossLoop = t % 6 / 6;
@@ -29421,17 +29883,17 @@
       }
     };
   }
-  function makeTransition48(fromIdx) {
+  function makeTransition47(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother51(clamp0152(pp));
+      const k = smoother53(clamp0153(pp));
       paint51(ctx, lerpP51(SP51[from], SP51[to], k), 0);
     };
   }
-  var springToSummer45 = makeTransition48(0);
-  var summerToAutumn45 = makeTransition48(1);
-  var autumnToWinter45 = makeTransition48(2);
+  var springToSummer45 = makeTransition47(0);
+  var summerToAutumn45 = makeTransition47(1);
+  var autumnToWinter45 = makeTransition47(2);
   var VARIANTS53 = {
     Spring: { draw: draw41("Spring"), anim: anim41("Spring") },
     Summer: { draw: draw41("Summer"), anim: anim41("Summer") },
@@ -29445,7 +29907,7 @@
   };
 
   // src/textures/seasonal/mount/donkey.ts
-  function clamp0153(x) {
+  function clamp0154(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
@@ -29457,13 +29919,13 @@
     return [lerp57(a[0], b[0], t), lerp57(a[1], b[1], t), lerp57(a[2], b[2], t)];
   }
   function rgb52(c, a = 1) {
-    const r = Math.round(clamp0153(c[0] / 255) * 255);
-    const g = Math.round(clamp0153(c[1] / 255) * 255);
-    const b = Math.round(clamp0153(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0153(a)})`;
+    const r = Math.round(clamp0154(c[0] / 255) * 255);
+    const g = Math.round(clamp0154(c[1] / 255) * 255);
+    const b = Math.round(clamp0154(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0154(a)})`;
   }
-  var smoother52 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt52(t, amp = 1, w = 1.35) {
+  var smoother54 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt54(t, amp = 1, w = 1.35) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP52 = {
@@ -29600,15 +30062,15 @@
   function clampP41(p) {
     return {
       ...p,
-      lightWashAmt: clamp0153(p.lightWashAmt),
-      coatVolume: clamp0153(p.coatVolume),
-      gloss: clamp0153(p.gloss),
-      frostAmt: clamp0153(p.frostAmt),
-      backSnowAmt: clamp0153(p.backSnowAmt),
-      padSnowAmt: clamp0153(p.padSnowAmt),
-      blossomAmt: clamp0153(p.blossomAmt),
-      fallenLeafAmt: clamp0153(p.fallenLeafAmt),
-      breathFogAmt: clamp0153(p.breathFogAmt)
+      lightWashAmt: clamp0154(p.lightWashAmt),
+      coatVolume: clamp0154(p.coatVolume),
+      gloss: clamp0154(p.gloss),
+      frostAmt: clamp0154(p.frostAmt),
+      backSnowAmt: clamp0154(p.backSnowAmt),
+      padSnowAmt: clamp0154(p.padSnowAmt),
+      blossomAmt: clamp0154(p.blossomAmt),
+      fallenLeafAmt: clamp0154(p.fallenLeafAmt),
+      breathFogAmt: clamp0154(p.breathFogAmt)
     };
   }
   function paintPad19(ctx, p) {
@@ -30004,7 +30466,7 @@
   function anim42(season) {
     return (ctx, t) => {
       const p = clampP41(SP52[season]);
-      const bob = bobAt52(t);
+      const bob = bobAt54(t);
       const tailSway = Math.sin(t * 1.1 + 0.4) * 1.4;
       const swishLoop = t % 6 / 6;
       const swishGate = Math.max(0, Math.sin(swishLoop * Math.PI * 2)) ** 4;
@@ -30103,17 +30565,17 @@
       }
     };
   }
-  function makeTransition49(fromIdx) {
+  function makeTransition48(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother52(clamp0153(pp));
+      const k = smoother54(clamp0154(pp));
       paint52(ctx, lerpP52(SP52[from], SP52[to], k), 0);
     };
   }
-  var springToSummer46 = makeTransition49(0);
-  var summerToAutumn46 = makeTransition49(1);
-  var autumnToWinter46 = makeTransition49(2);
+  var springToSummer46 = makeTransition48(0);
+  var summerToAutumn46 = makeTransition48(1);
+  var autumnToWinter46 = makeTransition48(2);
   var VARIANTS54 = {
     Spring: { draw: draw42("Spring"), anim: anim42("Spring") },
     Summer: { draw: draw42("Summer"), anim: anim42("Summer") },
@@ -30127,7 +30589,7 @@
   };
 
   // src/textures/seasonal/mount/moose.ts
-  function clamp0154(x) {
+  function clamp0155(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
@@ -30139,13 +30601,13 @@
     return [lerp58(a[0], b[0], t), lerp58(a[1], b[1], t), lerp58(a[2], b[2], t)];
   }
   function rgb53(c, a = 1) {
-    const r = Math.round(clamp0154(c[0] / 255) * 255);
-    const g = Math.round(clamp0154(c[1] / 255) * 255);
-    const b = Math.round(clamp0154(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0154(a)})`;
+    const r = Math.round(clamp0155(c[0] / 255) * 255);
+    const g = Math.round(clamp0155(c[1] / 255) * 255);
+    const b = Math.round(clamp0155(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0155(a)})`;
   }
-  var smoother53 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt53(t, amp = 1.1, w = 1.15) {
+  var smoother55 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt55(t, amp = 1.1, w = 1.15) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP53 = {
@@ -30310,17 +30772,17 @@
   function clampP42(p) {
     return {
       ...p,
-      lightWashAmt: clamp0154(p.lightWashAmt),
-      coatVolume: clamp0154(p.coatVolume),
-      gloss: clamp0154(p.gloss),
-      velvetAmt: clamp0154(p.velvetAmt),
-      antlerSnowAmt: clamp0154(p.antlerSnowAmt),
-      frostAmt: clamp0154(p.frostAmt),
-      backSnowAmt: clamp0154(p.backSnowAmt),
-      padSnowAmt: clamp0154(p.padSnowAmt),
-      blossomAmt: clamp0154(p.blossomAmt),
-      fallenLeafAmt: clamp0154(p.fallenLeafAmt),
-      breathFogAmt: clamp0154(p.breathFogAmt)
+      lightWashAmt: clamp0155(p.lightWashAmt),
+      coatVolume: clamp0155(p.coatVolume),
+      gloss: clamp0155(p.gloss),
+      velvetAmt: clamp0155(p.velvetAmt),
+      antlerSnowAmt: clamp0155(p.antlerSnowAmt),
+      frostAmt: clamp0155(p.frostAmt),
+      backSnowAmt: clamp0155(p.backSnowAmt),
+      padSnowAmt: clamp0155(p.padSnowAmt),
+      blossomAmt: clamp0155(p.blossomAmt),
+      fallenLeafAmt: clamp0155(p.fallenLeafAmt),
+      breathFogAmt: clamp0155(p.breathFogAmt)
     };
   }
   function paintPad20(ctx, p) {
@@ -30812,7 +31274,7 @@
   function anim43(season) {
     return (ctx, t) => {
       const p = clampP42(SP53[season]);
-      const bob = bobAt53(t);
+      const bob = bobAt55(t);
       const headSway = Math.sin(t * 0.85) * 0.05;
       paint53(ctx, SP53[season], bob, headSway);
       ctx.save();
@@ -30908,17 +31370,17 @@
       }
     };
   }
-  function makeTransition50(fromIdx) {
+  function makeTransition49(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother53(clamp0154(pp));
+      const k = smoother55(clamp0155(pp));
       paint53(ctx, lerpP53(SP53[from], SP53[to], k), 0);
     };
   }
-  var springToSummer47 = makeTransition50(0);
-  var summerToAutumn47 = makeTransition50(1);
-  var autumnToWinter47 = makeTransition50(2);
+  var springToSummer47 = makeTransition49(0);
+  var summerToAutumn47 = makeTransition49(1);
+  var autumnToWinter47 = makeTransition49(2);
   var VARIANTS55 = {
     Spring: { draw: draw43("Spring"), anim: anim43("Spring") },
     Summer: { draw: draw43("Summer"), anim: anim43("Summer") },
@@ -30932,7 +31394,7 @@
   };
 
   // src/textures/seasonal/mount/mammoth.ts
-  function clamp0155(x) {
+  function clamp0156(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
@@ -30944,13 +31406,13 @@
     return [lerp59(a[0], b[0], t), lerp59(a[1], b[1], t), lerp59(a[2], b[2], t)];
   }
   function rgb54(c, a = 1) {
-    const r = Math.round(clamp0155(c[0] / 255) * 255);
-    const g = Math.round(clamp0155(c[1] / 255) * 255);
-    const b = Math.round(clamp0155(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0155(a)})`;
+    const r = Math.round(clamp0156(c[0] / 255) * 255);
+    const g = Math.round(clamp0156(c[1] / 255) * 255);
+    const b = Math.round(clamp0156(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0156(a)})`;
   }
-  var smoother54 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt54(t, amp = 1.1, w = 1.05) {
+  var smoother56 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt56(t, amp = 1.1, w = 1.05) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SP54 = {
@@ -31096,16 +31558,16 @@
   function clampP43(p) {
     return {
       ...p,
-      lightWashAmt: clamp0155(p.lightWashAmt),
-      coatVolume: clamp0155(p.coatVolume),
-      shedAmt: clamp0155(p.shedAmt),
-      gloss: clamp0155(p.gloss),
-      frostAmt: clamp0155(p.frostAmt),
-      backSnowAmt: clamp0155(p.backSnowAmt),
-      padSnowAmt: clamp0155(p.padSnowAmt),
-      blossomAmt: clamp0155(p.blossomAmt),
-      fallenLeafAmt: clamp0155(p.fallenLeafAmt),
-      breathFogAmt: clamp0155(p.breathFogAmt)
+      lightWashAmt: clamp0156(p.lightWashAmt),
+      coatVolume: clamp0156(p.coatVolume),
+      shedAmt: clamp0156(p.shedAmt),
+      gloss: clamp0156(p.gloss),
+      frostAmt: clamp0156(p.frostAmt),
+      backSnowAmt: clamp0156(p.backSnowAmt),
+      padSnowAmt: clamp0156(p.padSnowAmt),
+      blossomAmt: clamp0156(p.blossomAmt),
+      fallenLeafAmt: clamp0156(p.fallenLeafAmt),
+      breathFogAmt: clamp0156(p.breathFogAmt)
     };
   }
   function paintPad21(ctx, p) {
@@ -31527,7 +31989,7 @@
   function anim44(season) {
     return (ctx, t) => {
       const p = clampP43(SP54[season]);
-      const bob = bobAt54(t);
+      const bob = bobAt56(t);
       const trunkSway = Math.sin(t * 0.9) * 1.5;
       const loop = t % 5 / 5;
       const flickGate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 6;
@@ -31619,17 +32081,17 @@
       }
     };
   }
-  function makeTransition51(fromIdx) {
+  function makeTransition50(fromIdx) {
     const from = SEASON_NAMES[fromIdx];
     const to = SEASON_NAMES[fromIdx + 1];
     return (ctx, pp) => {
-      const k = smoother54(clamp0155(pp));
+      const k = smoother56(clamp0156(pp));
       paint54(ctx, lerpP54(SP54[from], SP54[to], k), 0);
     };
   }
-  var springToSummer48 = makeTransition51(0);
-  var summerToAutumn48 = makeTransition51(1);
-  var autumnToWinter48 = makeTransition51(2);
+  var springToSummer48 = makeTransition50(0);
+  var summerToAutumn48 = makeTransition50(1);
+  var autumnToWinter48 = makeTransition50(2);
   var VARIANTS56 = {
     Spring: { draw: draw44("Spring"), anim: anim44("Spring") },
     Summer: { draw: draw44("Summer"), anim: anim44("Summer") },
@@ -31643,12 +32105,12 @@
   };
 
   // src/textures/seasonal/fish/clam.ts
-  function clamp0156(x) {
+  function clamp0157(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother55 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother57 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp60(a, b, t) {
     return a + (b - a) * t;
   }
@@ -31659,7 +32121,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba23(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0156(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0157(a)})`;
   }
   function lerpP55(a, b, t) {
     return {
@@ -31685,14 +32147,14 @@
   function clampP44(p) {
     return {
       ...p,
-      lightAmt: clamp0156(p.lightAmt),
-      openAmt: clamp0156(p.openAmt),
-      gloss: clamp0156(p.gloss),
-      frostAmt: clamp0156(p.frostAmt),
-      snowCapAmt: clamp0156(p.snowCapAmt),
-      iceAmt: clamp0156(p.iceAmt),
-      blossomAmt: clamp0156(p.blossomAmt),
-      fallenLeafAmt: clamp0156(p.fallenLeafAmt)
+      lightAmt: clamp0157(p.lightAmt),
+      openAmt: clamp0157(p.openAmt),
+      gloss: clamp0157(p.gloss),
+      frostAmt: clamp0157(p.frostAmt),
+      snowCapAmt: clamp0157(p.snowCapAmt),
+      iceAmt: clamp0157(p.iceAmt),
+      blossomAmt: clamp0157(p.blossomAmt),
+      fallenLeafAmt: clamp0157(p.fallenLeafAmt)
     };
   }
   var TAN_LIGHT = [230, 206, 162];
@@ -32038,7 +32500,7 @@
       ctx.restore();
     }
   }
-  function bobAt55(t, amp = 0.7, w = 1.4) {
+  function bobAt57(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function breatheAt(t, amp = 0.12, w = 1) {
@@ -32049,9 +32511,9 @@
   }
   function anim45(season) {
     return (ctx, t) => {
-      const bob = bobAt55(t);
+      const bob = bobAt57(t);
       const sp = SP55[season];
-      const breathing = { ...sp, openAmt: clamp0156(sp.openAmt + breatheAt(t)) };
+      const breathing = { ...sp, openAmt: clamp0157(sp.openAmt + breatheAt(t)) };
       paint55(ctx, breathing, bob);
       ctx.save();
       try {
@@ -32128,17 +32590,17 @@
       }
     };
   }
-  function makeTransition52(fromIdx) {
+  function makeTransition51(fromIdx) {
     const from = SP55[SEASON_NAMES[fromIdx]];
     const to = SP55[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother55(clamp0156(pp));
+      const k = smoother57(clamp0157(pp));
       paint55(ctx, lerpP55(from, to, k), 0);
     };
   }
-  var springToSummer49 = makeTransition52(0);
-  var summerToAutumn49 = makeTransition52(1);
-  var autumnToWinter49 = makeTransition52(2);
+  var springToSummer49 = makeTransition51(0);
+  var summerToAutumn49 = makeTransition51(1);
+  var autumnToWinter49 = makeTransition51(2);
   var VARIANTS57 = {
     Spring: { draw: draw45("Spring"), anim: anim45("Spring") },
     Summer: { draw: draw45("Summer"), anim: anim45("Summer") },
@@ -32152,12 +32614,12 @@
   };
 
   // src/textures/seasonal/fish/oyster.ts
-  function clamp0157(x) {
+  function clamp0158(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother56 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother58 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp61(a, b, t) {
     return a + (b - a) * t;
   }
@@ -32168,7 +32630,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba24(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0157(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0158(a)})`;
   }
   function lerpP56(a, b, t) {
     return {
@@ -32197,14 +32659,14 @@
   function clampP45(p) {
     return {
       ...p,
-      lightAmt: clamp0157(p.lightAmt),
-      waterSat: clamp0157(p.waterSat),
-      pearlGloss: clamp0157(p.pearlGloss),
-      frostAmt: clamp0157(p.frostAmt),
-      iceAmt: clamp0157(p.iceAmt),
-      padSnowAmt: clamp0157(p.padSnowAmt),
-      blossomAmt: clamp0157(p.blossomAmt),
-      fallenLeafAmt: clamp0157(p.fallenLeafAmt)
+      lightAmt: clamp0158(p.lightAmt),
+      waterSat: clamp0158(p.waterSat),
+      pearlGloss: clamp0158(p.pearlGloss),
+      frostAmt: clamp0158(p.frostAmt),
+      iceAmt: clamp0158(p.iceAmt),
+      padSnowAmt: clamp0158(p.padSnowAmt),
+      blossomAmt: clamp0158(p.blossomAmt),
+      fallenLeafAmt: clamp0158(p.fallenLeafAmt)
     };
   }
   var SHELL_LIGHT = [196, 200, 206];
@@ -32594,7 +33056,7 @@
       ctx.restore();
     }
   }
-  function bobAt56(t, amp = 0.7, w = 1.4) {
+  function bobAt58(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw46(season) {
@@ -32619,7 +33081,7 @@
   }
   function anim46(season) {
     return (ctx, t) => {
-      const bob = bobAt56(t);
+      const bob = bobAt58(t);
       const p = clampP45(SP56[season]);
       paint56(ctx, SP56[season], bob);
       ctx.save();
@@ -32703,17 +33165,17 @@
       }
     };
   }
-  function makeTransition53(fromIdx) {
+  function makeTransition52(fromIdx) {
     const from = SP56[SEASON_NAMES[fromIdx]];
     const to = SP56[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother56(clamp0157(pp));
+      const k = smoother58(clamp0158(pp));
       paint56(ctx, lerpP56(from, to, k), 0);
     };
   }
-  var springToSummer50 = makeTransition53(0);
-  var summerToAutumn50 = makeTransition53(1);
-  var autumnToWinter50 = makeTransition53(2);
+  var springToSummer50 = makeTransition52(0);
+  var summerToAutumn50 = makeTransition52(1);
+  var autumnToWinter50 = makeTransition52(2);
   var VARIANTS58 = {
     Spring: { draw: draw46("Spring"), anim: anim46("Spring") },
     Summer: { draw: draw46("Summer"), anim: anim46("Summer") },
@@ -32727,12 +33189,12 @@
   };
 
   // src/textures/seasonal/fish/mackerel.ts
-  function clamp0158(x) {
+  function clamp0159(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother57 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother59 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp62(a, b, t) {
     return a + (b - a) * t;
   }
@@ -32743,7 +33205,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba25(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0158(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0159(a)})`;
   }
   function lerpP57(a, b, t) {
     return {
@@ -32770,13 +33232,13 @@
   function clampP46(p) {
     return {
       ...p,
-      lightAmt: clamp0158(p.lightAmt),
-      vividness: clamp0158(p.vividness),
-      gloss: clamp0158(p.gloss),
-      iceAmt: clamp0158(p.iceAmt),
-      frostAmt: clamp0158(p.frostAmt),
-      blossomAmt: clamp0158(p.blossomAmt),
-      fallenLeafAmt: clamp0158(p.fallenLeafAmt)
+      lightAmt: clamp0159(p.lightAmt),
+      vividness: clamp0159(p.vividness),
+      gloss: clamp0159(p.gloss),
+      iceAmt: clamp0159(p.iceAmt),
+      frostAmt: clamp0159(p.frostAmt),
+      blossomAmt: clamp0159(p.blossomAmt),
+      fallenLeafAmt: clamp0159(p.fallenLeafAmt)
     };
   }
   var SP57 = {
@@ -32876,12 +33338,12 @@
     return FISH_CY + bob - arch + wave;
   }
   function bodyHalf(u) {
-    const shape = Math.sin(Math.pow(clamp0158(u), 0.85) * Math.PI);
-    const taper = 1 - clamp0158((u - 0.55) / 0.45) * 0.72;
+    const shape = Math.sin(Math.pow(clamp0159(u), 0.85) * Math.PI);
+    const taper = 1 - clamp0159((u - 0.55) / 0.45) * 0.72;
     return BODY_HALF * shape * Math.max(0.28, taper);
   }
   function xAt(u) {
-    return lerp62(HEAD_X2, TAIL_X2, clamp0158(u));
+    return lerp62(HEAD_X2, TAIL_X2, clamp0159(u));
   }
   function fishBodyPath(ctx, bob, flex) {
     const N = 14;
@@ -33216,7 +33678,7 @@
       ctx.restore();
     }
   }
-  function bobAt57(t, amp = 0.7, w = 1.4) {
+  function bobAt59(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function flexAt(t, amp = 1.1, w = 1.4) {
@@ -33227,14 +33689,14 @@
   }
   function anim47(season) {
     return (ctx, t) => {
-      const bob = bobAt57(t);
+      const bob = bobAt59(t);
       const flex = flexAt(t);
       paint57(ctx, SP57[season], bob, flex);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
         const ripPhase = t * 0.35 % 1;
-        const iceMute = 1 - 0.55 * clamp0158(SP57[season].iceAmt);
+        const iceMute = 1 - 0.55 * clamp0159(SP57[season].iceAmt);
         ctx.strokeStyle = `rgba(255,255,255,${(0.12 + 0.12 * (0.5 + 0.5 * Math.sin(t * 1.3))) * iceMute})`;
         ctx.lineWidth = 0.8;
         ctx.beginPath();
@@ -33308,17 +33770,17 @@
       }
     };
   }
-  function makeTransition54(fromIdx) {
+  function makeTransition53(fromIdx) {
     const from = SP57[SEASON_NAMES[fromIdx]];
     const to = SP57[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother57(clamp0158(pp));
+      const k = smoother59(clamp0159(pp));
       paint57(ctx, lerpP57(from, to, k), 0, 0);
     };
   }
-  var springToSummer51 = makeTransition54(0);
-  var summerToAutumn51 = makeTransition54(1);
-  var autumnToWinter51 = makeTransition54(2);
+  var springToSummer51 = makeTransition53(0);
+  var summerToAutumn51 = makeTransition53(1);
+  var autumnToWinter51 = makeTransition53(2);
   var VARIANTS59 = {
     Spring: { draw: draw47("Spring"), anim: anim47("Spring") },
     Summer: { draw: draw47("Summer"), anim: anim47("Summer") },
@@ -33332,12 +33794,12 @@
   };
 
   // src/textures/seasonal/fish/kelp.ts
-  function clamp0159(x) {
+  function clamp0160(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother58 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother60 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp63(a, b, t) {
     return a + (b - a) * t;
   }
@@ -33348,7 +33810,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba26(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0159(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0160(a)})`;
   }
   function lerpP58(a, b, t) {
     return {
@@ -33376,16 +33838,16 @@
   function clampP47(p) {
     return {
       ...p,
-      lightAmt: clamp0159(p.lightAmt),
-      ripeness: clamp0159(p.ripeness),
-      gloss: clamp0159(p.gloss),
-      frostAmt: clamp0159(p.frostAmt),
-      snowCapAmt: clamp0159(p.snowCapAmt),
-      iceAmt: clamp0159(p.iceAmt),
-      padSnowAmt: clamp0159(p.padSnowAmt),
-      blossomAmt: clamp0159(p.blossomAmt),
-      fallenLeafAmt: clamp0159(p.fallenLeafAmt),
-      frayAmt: clamp0159(p.frayAmt)
+      lightAmt: clamp0160(p.lightAmt),
+      ripeness: clamp0160(p.ripeness),
+      gloss: clamp0160(p.gloss),
+      frostAmt: clamp0160(p.frostAmt),
+      snowCapAmt: clamp0160(p.snowCapAmt),
+      iceAmt: clamp0160(p.iceAmt),
+      padSnowAmt: clamp0160(p.padSnowAmt),
+      blossomAmt: clamp0160(p.blossomAmt),
+      fallenLeafAmt: clamp0160(p.fallenLeafAmt),
+      frayAmt: clamp0160(p.frayAmt)
     };
   }
   var SP58 = {
@@ -33551,7 +34013,7 @@
           ctx.stroke();
         });
         if (p.padSnowAmt > 0.01) {
-          ctx.fillStyle = rgba26([255, 255, 255], 0.8 * clamp0159(p.padSnowAmt));
+          ctx.fillStyle = rgba26([255, 255, 255], 0.8 * clamp0160(p.padSnowAmt));
           [[-9, 17.6], [5, 19], [11, 17.6], [-3, 20.2]].forEach(([sx, sy]) => {
             ctx.beginPath();
             ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
@@ -33763,7 +34225,7 @@
       ctx.restore();
     }
   }
-  function bobAt58(t, amp = 0.7, w = 1.3) {
+  function bobAt60(t, amp = 0.7, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function waveAt(t, amp = 2.2, w = 0.9) {
@@ -33774,7 +34236,7 @@
   }
   function anim48(season) {
     return (ctx, t) => {
-      const bob = bobAt58(t);
+      const bob = bobAt60(t);
       const swayScale = season === "Winter" ? 0.35 : 1;
       const wave = waveAt(t) * swayScale;
       paint58(ctx, SP58[season], bob, wave);
@@ -33857,17 +34319,17 @@
       }
     };
   }
-  function makeTransition55(fromIdx) {
+  function makeTransition54(fromIdx) {
     const from = SP58[SEASON_NAMES[fromIdx]];
     const to = SP58[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother58(clamp0159(pp));
+      const k = smoother60(clamp0160(pp));
       paint58(ctx, lerpP58(from, to, k), 0, 0);
     };
   }
-  var springToSummer52 = makeTransition55(0);
-  var summerToAutumn52 = makeTransition55(1);
-  var autumnToWinter52 = makeTransition55(2);
+  var springToSummer52 = makeTransition54(0);
+  var summerToAutumn52 = makeTransition54(1);
+  var autumnToWinter52 = makeTransition54(2);
   var VARIANTS60 = {
     Spring: { draw: draw48("Spring"), anim: anim48("Spring") },
     Summer: { draw: draw48("Summer"), anim: anim48("Summer") },
@@ -33881,12 +34343,12 @@
   };
 
   // src/textures/seasonal/mine/gem.ts
-  function clamp0160(x) {
+  function clamp0161(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother59 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother61 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp64(a, b, t) {
     return a + (b - a) * t;
   }
@@ -33897,7 +34359,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba27(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0160(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0161(a)})`;
   }
   function lerpP59(a, b, t) {
     return {
@@ -33926,15 +34388,15 @@
   function clampP48(p) {
     return {
       ...p,
-      lightAmt: clamp0160(p.lightAmt),
-      gemSat: clamp0160(p.gemSat),
-      gloss: clamp0160(p.gloss),
-      mossAmt: clamp0160(p.mossAmt),
-      frostAmt: clamp0160(p.frostAmt),
-      snowCapAmt: clamp0160(p.snowCapAmt),
-      padSnowAmt: clamp0160(p.padSnowAmt),
-      dewAmt: clamp0160(p.dewAmt),
-      fallenLeafAmt: clamp0160(p.fallenLeafAmt)
+      lightAmt: clamp0161(p.lightAmt),
+      gemSat: clamp0161(p.gemSat),
+      gloss: clamp0161(p.gloss),
+      mossAmt: clamp0161(p.mossAmt),
+      frostAmt: clamp0161(p.frostAmt),
+      snowCapAmt: clamp0161(p.snowCapAmt),
+      padSnowAmt: clamp0161(p.padSnowAmt),
+      dewAmt: clamp0161(p.dewAmt),
+      fallenLeafAmt: clamp0161(p.fallenLeafAmt)
     };
   }
   var SP59 = {
@@ -34343,7 +34805,7 @@
       ctx.restore();
     }
   }
-  function bobAt59(t, amp = 0.7, w = 1.4) {
+  function bobAt61(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw49(season) {
@@ -34356,7 +34818,7 @@
   }
   function anim49(season) {
     return (ctx, t) => {
-      const bob = bobAt59(t);
+      const bob = bobAt61(t);
       paint59(ctx, SP59[season], bob);
       ctx.save();
       try {
@@ -34418,17 +34880,17 @@
       }
     };
   }
-  function makeTransition56(fromIdx) {
+  function makeTransition55(fromIdx) {
     const from = SP59[SEASON_NAMES[fromIdx]];
     const to = SP59[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother59(clamp0160(pp));
+      const k = smoother61(clamp0161(pp));
       paint59(ctx, lerpP59(from, to, k), 0);
     };
   }
-  var springToSummer53 = makeTransition56(0);
-  var summerToAutumn53 = makeTransition56(1);
-  var autumnToWinter53 = makeTransition56(2);
+  var springToSummer53 = makeTransition55(0);
+  var summerToAutumn53 = makeTransition55(1);
+  var autumnToWinter53 = makeTransition55(2);
   var VARIANTS61 = {
     Spring: { draw: draw49("Spring"), anim: anim49("Spring") },
     Summer: { draw: draw49("Summer"), anim: anim49("Summer") },
@@ -34442,12 +34904,12 @@
   };
 
   // src/textures/seasonal/mine/gold.ts
-  function clamp0161(x) {
+  function clamp0162(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother60 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother62 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp65(a, b, t) {
     return a + (b - a) * t;
   }
@@ -34458,7 +34920,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba28(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0161(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0162(a)})`;
   }
   function lerpP60(a, b, t) {
     return {
@@ -34486,14 +34948,14 @@
   function clampP49(p) {
     return {
       ...p,
-      lightAmt: clamp0161(p.lightAmt),
-      goldShine: clamp0161(p.goldShine),
-      mossAmt: clamp0161(p.mossAmt),
-      frostAmt: clamp0161(p.frostAmt),
-      snowCapAmt: clamp0161(p.snowCapAmt),
-      padSnowAmt: clamp0161(p.padSnowAmt),
-      dewAmt: clamp0161(p.dewAmt),
-      fallenLeafAmt: clamp0161(p.fallenLeafAmt)
+      lightAmt: clamp0162(p.lightAmt),
+      goldShine: clamp0162(p.goldShine),
+      mossAmt: clamp0162(p.mossAmt),
+      frostAmt: clamp0162(p.frostAmt),
+      snowCapAmt: clamp0162(p.snowCapAmt),
+      padSnowAmt: clamp0162(p.padSnowAmt),
+      dewAmt: clamp0162(p.dewAmt),
+      fallenLeafAmt: clamp0162(p.fallenLeafAmt)
     };
   }
   var SP60 = {
@@ -34858,13 +35320,13 @@
       ctx.restore();
     }
   }
-  function bobAt60(t, amp = 0.7, w = 1.3) {
+  function bobAt62(t, amp = 0.7, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var GLINT_PATH = VEINS.flat();
   function glintAt(u) {
     const n = GLINT_PATH.length;
-    const f = clamp0161(u) * (n - 1);
+    const f = clamp0162(u) * (n - 1);
     const i = Math.min(n - 2, Math.floor(f));
     const k = f - i;
     const a = GLINT_PATH[i];
@@ -34876,7 +35338,7 @@
   }
   function anim50(season) {
     return (ctx, t) => {
-      const bob = bobAt60(t);
+      const bob = bobAt62(t);
       paint60(ctx, SP60[season], bob);
       ctx.save();
       try {
@@ -34940,17 +35402,17 @@
       }
     };
   }
-  function makeTransition57(fromIdx) {
+  function makeTransition56(fromIdx) {
     const from = SP60[SEASON_NAMES[fromIdx]];
     const to = SP60[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother60(clamp0161(pp));
+      const k = smoother62(clamp0162(pp));
       paint60(ctx, lerpP60(from, to, k), 0);
     };
   }
-  var springToSummer54 = makeTransition57(0);
-  var summerToAutumn54 = makeTransition57(1);
-  var autumnToWinter54 = makeTransition57(2);
+  var springToSummer54 = makeTransition56(0);
+  var summerToAutumn54 = makeTransition56(1);
+  var autumnToWinter54 = makeTransition56(2);
   var VARIANTS62 = {
     Spring: { draw: draw50("Spring"), anim: anim50("Spring") },
     Summer: { draw: draw50("Summer"), anim: anim50("Summer") },
@@ -34964,12 +35426,12 @@
   };
 
   // src/textures/seasonal/special/giantPearl.ts
-  function clamp0162(x) {
+  function clamp0163(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother61 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother63 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp66(a, b, t) {
     return a + (b - a) * t;
   }
@@ -34980,7 +35442,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba29(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0162(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0163(a)})`;
   }
   function lerpP61(a, b, t) {
     return {
@@ -35008,15 +35470,15 @@
   function clampP50(p) {
     return {
       ...p,
-      lightAmt: clamp0162(p.lightAmt),
-      lustre: clamp0162(p.lustre),
-      gloss: clamp0162(p.gloss),
-      frostAmt: clamp0162(p.frostAmt),
-      snowCapAmt: clamp0162(p.snowCapAmt),
-      iceAmt: clamp0162(p.iceAmt),
-      padSnowAmt: clamp0162(p.padSnowAmt),
-      blossomAmt: clamp0162(p.blossomAmt),
-      fallenLeafAmt: clamp0162(p.fallenLeafAmt)
+      lightAmt: clamp0163(p.lightAmt),
+      lustre: clamp0163(p.lustre),
+      gloss: clamp0163(p.gloss),
+      frostAmt: clamp0163(p.frostAmt),
+      snowCapAmt: clamp0163(p.snowCapAmt),
+      iceAmt: clamp0163(p.iceAmt),
+      padSnowAmt: clamp0163(p.padSnowAmt),
+      blossomAmt: clamp0163(p.blossomAmt),
+      fallenLeafAmt: clamp0163(p.fallenLeafAmt)
     };
   }
   var SP61 = {
@@ -35408,7 +35870,7 @@
       ctx.restore();
     }
   }
-  function bobAt61(t, amp = 0.6, w = 1.3) {
+  function bobAt63(t, amp = 0.6, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw51(season) {
@@ -35416,7 +35878,7 @@
   }
   function anim51(season) {
     return (ctx, t) => {
-      const bob = bobAt61(t);
+      const bob = bobAt63(t);
       paint61(ctx, SP61[season], bob);
       ctx.save();
       try {
@@ -35493,17 +35955,17 @@
       }
     };
   }
-  function makeTransition58(fromIdx) {
+  function makeTransition57(fromIdx) {
     const from = SP61[SEASON_NAMES[fromIdx]];
     const to = SP61[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother61(clamp0162(pp));
+      const k = smoother63(clamp0163(pp));
       paint61(ctx, lerpP61(from, to, k), 0);
     };
   }
-  var springToSummer55 = makeTransition58(0);
-  var summerToAutumn55 = makeTransition58(1);
-  var autumnToWinter55 = makeTransition58(2);
+  var springToSummer55 = makeTransition57(0);
+  var summerToAutumn55 = makeTransition57(1);
+  var autumnToWinter55 = makeTransition57(2);
   var VARIANTS63 = {
     Spring: { draw: draw51("Spring"), anim: anim51("Spring") },
     Summer: { draw: draw51("Summer"), anim: anim51("Summer") },
@@ -35517,12 +35979,12 @@
   };
 
   // src/textures/seasonal/mine/stone.ts
-  function clamp0163(x) {
+  function clamp0164(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother62 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother64 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp67(a, b, t) {
     return a + (b - a) * t;
   }
@@ -35533,7 +35995,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba30(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0163(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0164(a)})`;
   }
   function lerpP62(a, b, t) {
     return {
@@ -35559,15 +36021,15 @@
   function clampP51(p) {
     return {
       ...p,
-      lightAmt: clamp0163(p.lightAmt),
-      topHi: clamp0163(p.topHi),
-      contact: clamp0163(p.contact),
-      mossAmt: clamp0163(p.mossAmt),
-      frostAmt: clamp0163(p.frostAmt),
-      snowCapAmt: clamp0163(p.snowCapAmt),
-      padSnowAmt: clamp0163(p.padSnowAmt),
-      dewAmt: clamp0163(p.dewAmt),
-      fallenLeafAmt: clamp0163(p.fallenLeafAmt)
+      lightAmt: clamp0164(p.lightAmt),
+      topHi: clamp0164(p.topHi),
+      contact: clamp0164(p.contact),
+      mossAmt: clamp0164(p.mossAmt),
+      frostAmt: clamp0164(p.frostAmt),
+      snowCapAmt: clamp0164(p.snowCapAmt),
+      padSnowAmt: clamp0164(p.padSnowAmt),
+      dewAmt: clamp0164(p.dewAmt),
+      fallenLeafAmt: clamp0164(p.fallenLeafAmt)
     };
   }
   var SP62 = {
@@ -35702,7 +36164,7 @@
     ctx.beginPath();
     ctx.ellipse(cx + rx * 0.34, cy + ry * 0.42, rx * 0.82, ry * 0.72, -0.3, 0, Math.PI * 2);
     ctx.fill();
-    const hi = clamp0163(p.topHi) * topHiScale;
+    const hi = clamp0164(p.topHi) * topHiScale;
     if (hi > 0.01) {
       ctx.fillStyle = rgba30(p.stoneLight, 0.45 * hi);
       ctx.beginPath();
@@ -35908,7 +36370,7 @@
       ctx.restore();
     }
   }
-  function bobAt62(t, amp = 0.6, w = 1.3) {
+  function bobAt64(t, amp = 0.6, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw52(season) {
@@ -35916,7 +36378,7 @@
   }
   function anim52(season) {
     return (ctx, t) => {
-      const bob = bobAt62(t);
+      const bob = bobAt64(t);
       paint62(ctx, SP62[season], bob);
       ctx.save();
       try {
@@ -35983,17 +36445,17 @@
       }
     };
   }
-  function makeTransition59(fromIdx) {
+  function makeTransition58(fromIdx) {
     const from = SP62[SEASON_NAMES[fromIdx]];
     const to = SP62[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother62(clamp0163(pp));
+      const k = smoother64(clamp0164(pp));
       paint62(ctx, lerpP62(from, to, k), 0);
     };
   }
-  var springToSummer56 = makeTransition59(0);
-  var summerToAutumn56 = makeTransition59(1);
-  var autumnToWinter56 = makeTransition59(2);
+  var springToSummer56 = makeTransition58(0);
+  var summerToAutumn56 = makeTransition58(1);
+  var autumnToWinter56 = makeTransition58(2);
   var VARIANTS64 = {
     Spring: { draw: draw52("Spring"), anim: anim52("Spring") },
     Summer: { draw: draw52("Summer"), anim: anim52("Summer") },
@@ -36007,12 +36469,12 @@
   };
 
   // src/textures/seasonal/mine/ironOre.ts
-  function clamp0164(x) {
+  function clamp0165(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother63 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother65 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp68(a, b, t) {
     return a + (b - a) * t;
   }
@@ -36023,7 +36485,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba31(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0164(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0165(a)})`;
   }
   function lerpP63(a, b, t) {
     return {
@@ -36052,14 +36514,14 @@
   function clampP52(p) {
     return {
       ...p,
-      lightAmt: clamp0164(p.lightAmt),
-      oreShine: clamp0164(p.oreShine),
-      mossAmt: clamp0164(p.mossAmt),
-      frostAmt: clamp0164(p.frostAmt),
-      snowCapAmt: clamp0164(p.snowCapAmt),
-      padSnowAmt: clamp0164(p.padSnowAmt),
-      dewAmt: clamp0164(p.dewAmt),
-      fallenLeafAmt: clamp0164(p.fallenLeafAmt)
+      lightAmt: clamp0165(p.lightAmt),
+      oreShine: clamp0165(p.oreShine),
+      mossAmt: clamp0165(p.mossAmt),
+      frostAmt: clamp0165(p.frostAmt),
+      snowCapAmt: clamp0165(p.snowCapAmt),
+      padSnowAmt: clamp0165(p.padSnowAmt),
+      dewAmt: clamp0165(p.dewAmt),
+      fallenLeafAmt: clamp0165(p.fallenLeafAmt)
     };
   }
   var SP63 = {
@@ -36433,13 +36895,13 @@
       ctx.restore();
     }
   }
-  function bobAt63(t, amp = 0.7, w = 1.3) {
+  function bobAt65(t, amp = 0.7, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var GLINT_PATH2 = VEINS2.flat();
   function glintAt2(u) {
     const n = GLINT_PATH2.length;
-    const f = clamp0164(u) * (n - 1);
+    const f = clamp0165(u) * (n - 1);
     const i = Math.min(n - 2, Math.floor(f));
     const k = f - i;
     const a = GLINT_PATH2[i];
@@ -36451,7 +36913,7 @@
   }
   function anim53(season) {
     return (ctx, t) => {
-      const bob = bobAt63(t);
+      const bob = bobAt65(t);
       paint63(ctx, SP63[season], bob);
       ctx.save();
       try {
@@ -36515,17 +36977,17 @@
       }
     };
   }
-  function makeTransition60(fromIdx) {
+  function makeTransition59(fromIdx) {
     const from = SP63[SEASON_NAMES[fromIdx]];
     const to = SP63[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother63(clamp0164(pp));
+      const k = smoother65(clamp0165(pp));
       paint63(ctx, lerpP63(from, to, k), 0);
     };
   }
-  var springToSummer57 = makeTransition60(0);
-  var summerToAutumn57 = makeTransition60(1);
-  var autumnToWinter57 = makeTransition60(2);
+  var springToSummer57 = makeTransition59(0);
+  var summerToAutumn57 = makeTransition59(1);
+  var autumnToWinter57 = makeTransition59(2);
   var VARIANTS65 = {
     Spring: { draw: draw53("Spring"), anim: anim53("Spring") },
     Summer: { draw: draw53("Summer"), anim: anim53("Summer") },
@@ -36539,12 +37001,12 @@
   };
 
   // src/textures/seasonal/mine/copperOre.ts
-  function clamp0165(x) {
+  function clamp0166(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother64 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother66 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp69(a, b, t) {
     return a + (b - a) * t;
   }
@@ -36555,7 +37017,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba32(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0165(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0166(a)})`;
   }
   function lerpP64(a, b, t) {
     return {
@@ -36584,14 +37046,14 @@
   function clampP53(p) {
     return {
       ...p,
-      lightAmt: clamp0165(p.lightAmt),
-      copperShine: clamp0165(p.copperShine),
-      mossAmt: clamp0165(p.mossAmt),
-      frostAmt: clamp0165(p.frostAmt),
-      snowCapAmt: clamp0165(p.snowCapAmt),
-      padSnowAmt: clamp0165(p.padSnowAmt),
-      dewAmt: clamp0165(p.dewAmt),
-      fallenLeafAmt: clamp0165(p.fallenLeafAmt)
+      lightAmt: clamp0166(p.lightAmt),
+      copperShine: clamp0166(p.copperShine),
+      mossAmt: clamp0166(p.mossAmt),
+      frostAmt: clamp0166(p.frostAmt),
+      snowCapAmt: clamp0166(p.snowCapAmt),
+      padSnowAmt: clamp0166(p.padSnowAmt),
+      dewAmt: clamp0166(p.dewAmt),
+      fallenLeafAmt: clamp0166(p.fallenLeafAmt)
     };
   }
   var SP64 = {
@@ -36979,13 +37441,13 @@
       ctx.restore();
     }
   }
-  function bobAt64(t, amp = 0.7, w = 1.3) {
+  function bobAt66(t, amp = 0.7, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var GLINT_PATH3 = VEINS3.flat();
   function glintAt3(u) {
     const n = GLINT_PATH3.length;
-    const f = clamp0165(u) * (n - 1);
+    const f = clamp0166(u) * (n - 1);
     const i = Math.min(n - 2, Math.floor(f));
     const k = f - i;
     const a = GLINT_PATH3[i];
@@ -36997,7 +37459,7 @@
   }
   function anim54(season) {
     return (ctx, t) => {
-      const bob = bobAt64(t);
+      const bob = bobAt66(t);
       paint64(ctx, SP64[season], bob);
       ctx.save();
       try {
@@ -37061,17 +37523,17 @@
       }
     };
   }
-  function makeTransition61(fromIdx) {
+  function makeTransition60(fromIdx) {
     const from = SP64[SEASON_NAMES[fromIdx]];
     const to = SP64[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother64(clamp0165(pp));
+      const k = smoother66(clamp0166(pp));
       paint64(ctx, lerpP64(from, to, k), 0);
     };
   }
-  var springToSummer58 = makeTransition61(0);
-  var summerToAutumn58 = makeTransition61(1);
-  var autumnToWinter58 = makeTransition61(2);
+  var springToSummer58 = makeTransition60(0);
+  var summerToAutumn58 = makeTransition60(1);
+  var autumnToWinter58 = makeTransition60(2);
   var VARIANTS66 = {
     Spring: { draw: draw54("Spring"), anim: anim54("Spring") },
     Summer: { draw: draw54("Summer"), anim: anim54("Summer") },
@@ -37085,12 +37547,12 @@
   };
 
   // src/textures/seasonal/mine/silver.ts
-  function clamp0166(x) {
+  function clamp0167(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother65 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother67 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp70(a, b, t) {
     return a + (b - a) * t;
   }
@@ -37101,7 +37563,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba33(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0166(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0167(a)})`;
   }
   function lerpP65(a, b, t) {
     return {
@@ -37129,14 +37591,14 @@
   function clampP54(p) {
     return {
       ...p,
-      lightAmt: clamp0166(p.lightAmt),
-      silverShine: clamp0166(p.silverShine),
-      mossAmt: clamp0166(p.mossAmt),
-      frostAmt: clamp0166(p.frostAmt),
-      snowCapAmt: clamp0166(p.snowCapAmt),
-      padSnowAmt: clamp0166(p.padSnowAmt),
-      dewAmt: clamp0166(p.dewAmt),
-      fallenLeafAmt: clamp0166(p.fallenLeafAmt)
+      lightAmt: clamp0167(p.lightAmt),
+      silverShine: clamp0167(p.silverShine),
+      mossAmt: clamp0167(p.mossAmt),
+      frostAmt: clamp0167(p.frostAmt),
+      snowCapAmt: clamp0167(p.snowCapAmt),
+      padSnowAmt: clamp0167(p.padSnowAmt),
+      dewAmt: clamp0167(p.dewAmt),
+      fallenLeafAmt: clamp0167(p.fallenLeafAmt)
     };
   }
   var SP65 = {
@@ -37504,13 +37966,13 @@
       ctx.restore();
     }
   }
-  function bobAt65(t, amp = 0.7, w = 1.3) {
+  function bobAt67(t, amp = 0.7, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var GLINT_PATH4 = VEINS4.flat();
   function glintAt4(u) {
     const n = GLINT_PATH4.length;
-    const f = clamp0166(u) * (n - 1);
+    const f = clamp0167(u) * (n - 1);
     const i = Math.min(n - 2, Math.floor(f));
     const k = f - i;
     const a = GLINT_PATH4[i];
@@ -37522,7 +37984,7 @@
   }
   function anim55(season) {
     return (ctx, t) => {
-      const bob = bobAt65(t);
+      const bob = bobAt67(t);
       paint65(ctx, SP65[season], bob);
       ctx.save();
       try {
@@ -37586,17 +38048,17 @@
       }
     };
   }
-  function makeTransition62(fromIdx) {
+  function makeTransition61(fromIdx) {
     const from = SP65[SEASON_NAMES[fromIdx]];
     const to = SP65[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother65(clamp0166(pp));
+      const k = smoother67(clamp0167(pp));
       paint65(ctx, lerpP65(from, to, k), 0);
     };
   }
-  var springToSummer59 = makeTransition62(0);
-  var summerToAutumn59 = makeTransition62(1);
-  var autumnToWinter59 = makeTransition62(2);
+  var springToSummer59 = makeTransition61(0);
+  var summerToAutumn59 = makeTransition61(1);
+  var autumnToWinter59 = makeTransition61(2);
   var VARIANTS67 = {
     Spring: { draw: draw55("Spring"), anim: anim55("Spring") },
     Summer: { draw: draw55("Summer"), anim: anim55("Summer") },
@@ -37610,12 +38072,12 @@
   };
 
   // src/textures/seasonal/mine/coal.ts
-  function clamp0167(x) {
+  function clamp0168(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother66 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother68 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp71(a, b, t) {
     return a + (b - a) * t;
   }
@@ -37626,7 +38088,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba34(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0167(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0168(a)})`;
   }
   function lerpP66(a, b, t) {
     return {
@@ -37653,15 +38115,15 @@
   function clampP55(p) {
     return {
       ...p,
-      lightAmt: clamp0167(p.lightAmt),
-      gloss: clamp0167(p.gloss),
-      shadowAmt: clamp0167(p.shadowAmt),
-      mossAmt: clamp0167(p.mossAmt),
-      frostAmt: clamp0167(p.frostAmt),
-      snowCapAmt: clamp0167(p.snowCapAmt),
-      padSnowAmt: clamp0167(p.padSnowAmt),
-      dewAmt: clamp0167(p.dewAmt),
-      fallenLeafAmt: clamp0167(p.fallenLeafAmt)
+      lightAmt: clamp0168(p.lightAmt),
+      gloss: clamp0168(p.gloss),
+      shadowAmt: clamp0168(p.shadowAmt),
+      mossAmt: clamp0168(p.mossAmt),
+      frostAmt: clamp0168(p.frostAmt),
+      snowCapAmt: clamp0168(p.snowCapAmt),
+      padSnowAmt: clamp0168(p.padSnowAmt),
+      dewAmt: clamp0168(p.dewAmt),
+      fallenLeafAmt: clamp0168(p.fallenLeafAmt)
     };
   }
   var SP66 = {
@@ -38110,7 +38572,7 @@
       ctx.restore();
     }
   }
-  function bobAt66(t, amp = 0.6, w = 1.4) {
+  function bobAt68(t, amp = 0.6, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw56(season) {
@@ -38130,7 +38592,7 @@
   }
   function anim56(season) {
     return (ctx, t) => {
-      const bob = bobAt66(t);
+      const bob = bobAt68(t);
       paint66(ctx, SP66[season], bob);
       ctx.save();
       try {
@@ -38196,17 +38658,17 @@
       }
     };
   }
-  function makeTransition63(fromIdx) {
+  function makeTransition62(fromIdx) {
     const from = SP66[SEASON_NAMES[fromIdx]];
     const to = SP66[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother66(clamp0167(pp));
+      const k = smoother68(clamp0168(pp));
       paint66(ctx, lerpP66(from, to, k), 0);
     };
   }
-  var springToSummer60 = makeTransition63(0);
-  var summerToAutumn60 = makeTransition63(1);
-  var autumnToWinter60 = makeTransition63(2);
+  var springToSummer60 = makeTransition62(0);
+  var summerToAutumn60 = makeTransition62(1);
+  var autumnToWinter60 = makeTransition62(2);
   var VARIANTS68 = {
     Spring: { draw: draw56("Spring"), anim: anim56("Spring") },
     Summer: { draw: draw56("Summer"), anim: anim56("Summer") },
@@ -38220,12 +38682,12 @@
   };
 
   // src/textures/seasonal/coin/golden.ts
-  function clamp0168(x) {
+  function clamp0169(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother67 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother69 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp72(a, b, t) {
     return a + (b - a) * t;
   }
@@ -38236,7 +38698,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba35(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0168(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0169(a)})`;
   }
   function lerpP67(a, b, t) {
     return {
@@ -38264,14 +38726,14 @@
   function clampP56(p) {
     return {
       ...p,
-      lightAmt: clamp0168(p.lightAmt),
-      shadowAmt: clamp0168(p.shadowAmt),
-      shine: clamp0168(p.shine),
-      mossAmt: clamp0168(p.mossAmt),
-      frostAmt: clamp0168(p.frostAmt),
-      snowCapAmt: clamp0168(p.snowCapAmt),
-      padSnowAmt: clamp0168(p.padSnowAmt),
-      fallenLeafAmt: clamp0168(p.fallenLeafAmt)
+      lightAmt: clamp0169(p.lightAmt),
+      shadowAmt: clamp0169(p.shadowAmt),
+      shine: clamp0169(p.shine),
+      mossAmt: clamp0169(p.mossAmt),
+      frostAmt: clamp0169(p.frostAmt),
+      snowCapAmt: clamp0169(p.snowCapAmt),
+      padSnowAmt: clamp0169(p.padSnowAmt),
+      fallenLeafAmt: clamp0169(p.fallenLeafAmt)
     };
   }
   var _GOLD_S = [255, 250, 214];
@@ -38655,7 +39117,7 @@
       ctx.restore();
     }
   }
-  function bobAt67(t, amp = 0.6, w = 1.3) {
+  function bobAt69(t, amp = 0.6, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function drawSparkle(ctx, gx, gy, r, a, spec) {
@@ -38684,7 +39146,7 @@
   }
   function anim57(season) {
     return (ctx, t) => {
-      const bob = bobAt67(t);
+      const bob = bobAt69(t);
       paint67(ctx, SP67[season], bob);
       ctx.save();
       try {
@@ -38700,7 +39162,7 @@
         const gx = cx + lerp72(-COIN_RX * 0.62, COIN_RX * 0.62, sweep);
         const gy = cy + lerp72(-COIN_RY * 0.58, COIN_RY * 0.5, sweep);
         const base = season === "Summer" ? 0.95 : season === "Winter" ? 0.7 : 0.8;
-        const env = Math.sin(clamp0168(sweep) * Math.PI);
+        const env = Math.sin(clamp0169(sweep) * Math.PI);
         drawSparkle(ctx, gx, gy, 2.6 + 1 * SP67[season].shine, base * env, spec);
         ctx.restore();
         if (season === "Spring") {
@@ -38745,17 +39207,17 @@
       }
     };
   }
-  function makeTransition64(fromIdx) {
+  function makeTransition63(fromIdx) {
     const from = SP67[SEASON_NAMES[fromIdx]];
     const to = SP67[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother67(clamp0168(pp));
+      const k = smoother69(clamp0169(pp));
       paint67(ctx, lerpP67(from, to, k), 0);
     };
   }
-  var springToSummer61 = makeTransition64(0);
-  var summerToAutumn61 = makeTransition64(1);
-  var autumnToWinter61 = makeTransition64(2);
+  var springToSummer61 = makeTransition63(0);
+  var summerToAutumn61 = makeTransition63(1);
+  var autumnToWinter61 = makeTransition63(2);
   var VARIANTS69 = {
     Spring: { draw: draw57("Spring"), anim: anim57("Spring") },
     Summer: { draw: draw57("Summer"), anim: anim57("Summer") },
@@ -38769,12 +39231,12 @@
   };
 
   // src/textures/seasonal/fish/sardine.ts
-  function clamp0169(x) {
+  function clamp0170(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother68 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother70 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp73(a, b, t) {
     return a + (b - a) * t;
   }
@@ -38785,7 +39247,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba36(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0169(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0170(a)})`;
   }
   function lerpP68(a, b, t) {
     return {
@@ -38813,13 +39275,13 @@
   function clampP57(p) {
     return {
       ...p,
-      lightAmt: clamp0169(p.lightAmt),
-      sheen: clamp0169(p.sheen),
-      gloss: clamp0169(p.gloss),
-      iceAmt: clamp0169(p.iceAmt),
-      frostAmt: clamp0169(p.frostAmt),
-      blossomAmt: clamp0169(p.blossomAmt),
-      fallenLeafAmt: clamp0169(p.fallenLeafAmt)
+      lightAmt: clamp0170(p.lightAmt),
+      sheen: clamp0170(p.sheen),
+      gloss: clamp0170(p.gloss),
+      iceAmt: clamp0170(p.iceAmt),
+      frostAmt: clamp0170(p.frostAmt),
+      blossomAmt: clamp0170(p.blossomAmt),
+      fallenLeafAmt: clamp0170(p.fallenLeafAmt)
     };
   }
   var SP68 = {
@@ -38923,12 +39385,12 @@
     return cy + bob - arch + wave;
   }
   function bodyHalf2(u, scale = 1) {
-    const shape = Math.sin(Math.pow(clamp0169(u), 0.82) * Math.PI);
-    const taper = 1 - clamp0169((u - 0.5) / 0.5) * 0.78;
+    const shape = Math.sin(Math.pow(clamp0170(u), 0.82) * Math.PI);
+    const taper = 1 - clamp0170((u - 0.5) / 0.5) * 0.78;
     return BODY_HALF2 * scale * shape * Math.max(0.24, taper);
   }
   function xAt2(u, headX = HEAD_X3, tailX = TAIL_X3) {
-    return lerp73(headX, tailX, clamp0169(u));
+    return lerp73(headX, tailX, clamp0170(u));
   }
   function fishBodyPath2(ctx, bob, flex, cy, headX, tailX, scale) {
     const N = 14;
@@ -39303,7 +39765,7 @@
       ctx.restore();
     }
   }
-  function bobAt68(t, amp = 0.65, w = 1.4) {
+  function bobAt70(t, amp = 0.65, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function flexAt2(t, amp = 1, w = 1.4) {
@@ -39314,14 +39776,14 @@
   }
   function anim58(season) {
     return (ctx, t) => {
-      const bob = bobAt68(t);
+      const bob = bobAt70(t);
       const flex = flexAt2(t);
       paint68(ctx, SP68[season], bob, flex);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
         const ripPhase = t * 0.35 % 1;
-        const iceMute = 1 - 0.55 * clamp0169(SP68[season].iceAmt);
+        const iceMute = 1 - 0.55 * clamp0170(SP68[season].iceAmt);
         ctx.strokeStyle = `rgba(255,255,255,${(0.12 + 0.12 * (0.5 + 0.5 * Math.sin(t * 1.3))) * iceMute})`;
         ctx.lineWidth = 0.8;
         ctx.beginPath();
@@ -39395,17 +39857,17 @@
       }
     };
   }
-  function makeTransition65(fromIdx) {
+  function makeTransition64(fromIdx) {
     const from = SP68[SEASON_NAMES[fromIdx]];
     const to = SP68[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother68(clamp0169(pp));
+      const k = smoother70(clamp0170(pp));
       paint68(ctx, lerpP68(from, to, k), 0, 0);
     };
   }
-  var springToSummer62 = makeTransition65(0);
-  var summerToAutumn62 = makeTransition65(1);
-  var autumnToWinter62 = makeTransition65(2);
+  var springToSummer62 = makeTransition64(0);
+  var summerToAutumn62 = makeTransition64(1);
+  var autumnToWinter62 = makeTransition64(2);
   var VARIANTS70 = {
     Spring: { draw: draw58("Spring"), anim: anim58("Spring") },
     Summer: { draw: draw58("Summer"), anim: anim58("Summer") },
@@ -39419,12 +39881,12 @@
   };
 
   // src/textures/seasonal/fish/cocoa.ts
-  function clamp0170(x) {
+  function clamp0171(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother69 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother71 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp74(a, b, t) {
     return a + (b - a) * t;
   }
@@ -39435,7 +39897,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba37(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0170(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0171(a)})`;
   }
   function lerpP69(a, b, t) {
     return {
@@ -39462,14 +39924,14 @@
   function clampP58(p) {
     return {
       ...p,
-      lightAmt: clamp0170(p.lightAmt),
-      ripeness: clamp0170(p.ripeness),
-      gloss: clamp0170(p.gloss),
-      iceAmt: clamp0170(p.iceAmt),
-      frostAmt: clamp0170(p.frostAmt),
-      snowCapAmt: clamp0170(p.snowCapAmt),
-      blossomAmt: clamp0170(p.blossomAmt),
-      fallenLeafAmt: clamp0170(p.fallenLeafAmt)
+      lightAmt: clamp0171(p.lightAmt),
+      ripeness: clamp0171(p.ripeness),
+      gloss: clamp0171(p.gloss),
+      iceAmt: clamp0171(p.iceAmt),
+      frostAmt: clamp0171(p.frostAmt),
+      snowCapAmt: clamp0171(p.snowCapAmt),
+      blossomAmt: clamp0171(p.blossomAmt),
+      fallenLeafAmt: clamp0171(p.fallenLeafAmt)
     };
   }
   var BEAN = [110, 70, 44];
@@ -39592,7 +40054,7 @@
     return lerp74(-POD_RX * 0.74, POD_RX * 0.74, f);
   }
   function podHalfH(localX) {
-    const t = clamp0170(Math.abs(localX) / (POD_RX * 1.02));
+    const t = clamp0171(Math.abs(localX) / (POD_RX * 1.02));
     return POD_RY * Math.sqrt(Math.max(0, 1 - t * t));
   }
   function paint69(ctx, raw, bob, sheen3 = -1) {
@@ -39817,7 +40279,7 @@
         ctx.fill();
       }
       if (sheen3 >= 0) {
-        const s = clamp0170(sheen3);
+        const s = clamp0171(sheen3);
         const cxr = lerp74(-POD_RX * 0.55, POD_RX * 0.55, s);
         const h = podHalfH(cxr);
         const gg = ctx.createLinearGradient(cxr, -h, cxr, h);
@@ -39886,7 +40348,7 @@
       ctx.restore();
     }
   }
-  function bobAt69(t, amp = 0.7, w = 1.4) {
+  function bobAt71(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw59(season) {
@@ -39894,14 +40356,14 @@
   }
   function anim59(season) {
     return (ctx, t) => {
-      const bob = bobAt69(t);
+      const bob = bobAt71(t);
       const sheen3 = (t * 0.28 % 1 + 1) % 1;
       paint69(ctx, SP69[season], bob, sheen3);
       ctx.save();
       try {
         ctx.globalAlpha = 1;
         const ripPhase = t * 0.35 % 1;
-        const iceMute = 1 - 0.55 * clamp0170(SP69[season].iceAmt);
+        const iceMute = 1 - 0.55 * clamp0171(SP69[season].iceAmt);
         ctx.strokeStyle = `rgba(255,255,255,${(0.12 + 0.12 * (0.5 + 0.5 * Math.sin(t * 1.3))) * iceMute})`;
         ctx.lineWidth = 0.8;
         ctx.beginPath();
@@ -39966,17 +40428,17 @@
       }
     };
   }
-  function makeTransition66(fromIdx) {
+  function makeTransition65(fromIdx) {
     const from = SP69[SEASON_NAMES[fromIdx]];
     const to = SP69[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother69(clamp0170(pp));
+      const k = smoother71(clamp0171(pp));
       paint69(ctx, lerpP69(from, to, k), 0, -1);
     };
   }
-  var springToSummer63 = makeTransition66(0);
-  var summerToAutumn63 = makeTransition66(1);
-  var autumnToWinter63 = makeTransition66(2);
+  var springToSummer63 = makeTransition65(0);
+  var summerToAutumn63 = makeTransition65(1);
+  var autumnToWinter63 = makeTransition65(2);
   var VARIANTS71 = {
     Spring: { draw: draw59("Spring"), anim: anim59("Spring") },
     Summer: { draw: draw59("Summer"), anim: anim59("Summer") },
@@ -39990,12 +40452,12 @@
   };
 
   // src/textures/seasonal/fish/ink.ts
-  function clamp0171(x) {
+  function clamp0172(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother70 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother72 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp75(a, b, t) {
     return a + (b - a) * t;
   }
@@ -40006,7 +40468,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba38(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0171(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0172(a)})`;
   }
   function lerpP70(a, b, t) {
     return {
@@ -40035,14 +40497,14 @@
   function clampP59(p) {
     return {
       ...p,
-      lightAmt: clamp0171(p.lightAmt),
-      vividness: clamp0171(p.vividness),
-      gloss: clamp0171(p.gloss),
-      inkAmt: clamp0171(p.inkAmt),
-      iceAmt: clamp0171(p.iceAmt),
-      frostAmt: clamp0171(p.frostAmt),
-      blossomAmt: clamp0171(p.blossomAmt),
-      fallenLeafAmt: clamp0171(p.fallenLeafAmt)
+      lightAmt: clamp0172(p.lightAmt),
+      vividness: clamp0172(p.vividness),
+      gloss: clamp0172(p.gloss),
+      inkAmt: clamp0172(p.inkAmt),
+      iceAmt: clamp0172(p.iceAmt),
+      frostAmt: clamp0172(p.frostAmt),
+      blossomAmt: clamp0172(p.blossomAmt),
+      fallenLeafAmt: clamp0172(p.fallenLeafAmt)
     };
   }
   var MANTLE_DEEP = [22, 18, 40];
@@ -40509,7 +40971,7 @@
       ctx.restore();
     }
   }
-  function bobAt70(t, amp = 0.7, w = 1.3) {
+  function bobAt72(t, amp = 0.7, w = 1.3) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function waveAt2(t, w = 1.1) {
@@ -40520,7 +40982,7 @@
   }
   function anim60(season) {
     return (ctx, t) => {
-      const bob = bobAt70(t);
+      const bob = bobAt72(t);
       const wave = waveAt2(t);
       paint70(ctx, SP70[season], bob, wave);
       ctx.save();
@@ -40528,7 +40990,7 @@
         ctx.globalAlpha = 1;
         const sp = SP70[season];
         const ripPhase = t * 0.35 % 1;
-        const iceMute = 1 - 0.55 * clamp0171(sp.iceAmt);
+        const iceMute = 1 - 0.55 * clamp0172(sp.iceAmt);
         ctx.strokeStyle = `rgba(255,255,255,${(0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 1.3))) * iceMute})`;
         ctx.lineWidth = 0.8;
         ctx.beginPath();
@@ -40622,17 +41084,17 @@
       }
     };
   }
-  function makeTransition67(fromIdx) {
+  function makeTransition66(fromIdx) {
     const from = SP70[SEASON_NAMES[fromIdx]];
     const to = SP70[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother70(clamp0171(pp));
+      const k = smoother72(clamp0172(pp));
       paint70(ctx, lerpP70(from, to, k), 0, 0);
     };
   }
-  var springToSummer64 = makeTransition67(0);
-  var summerToAutumn64 = makeTransition67(1);
-  var autumnToWinter64 = makeTransition67(2);
+  var springToSummer64 = makeTransition66(0);
+  var summerToAutumn64 = makeTransition66(1);
+  var autumnToWinter64 = makeTransition66(2);
   var VARIANTS72 = {
     Spring: { draw: draw60("Spring"), anim: anim60("Spring") },
     Summer: { draw: draw60("Summer"), anim: anim60("Summer") },
@@ -40646,12 +41108,12 @@
   };
 
   // src/textures/seasonal/fish/jade.ts
-  function clamp0172(x) {
+  function clamp0173(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother71 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother73 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp76(a, b, t) {
     return a + (b - a) * t;
   }
@@ -40662,7 +41124,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba39(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0172(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0173(a)})`;
   }
   function lerpP71(a, b, t) {
     return {
@@ -40687,13 +41149,13 @@
   function clampP60(p) {
     return {
       ...p,
-      lightAmt: clamp0172(p.lightAmt),
-      translucency: clamp0172(p.translucency),
-      gloss: clamp0172(p.gloss),
-      iceAmt: clamp0172(p.iceAmt),
-      frostAmt: clamp0172(p.frostAmt),
-      blossomAmt: clamp0172(p.blossomAmt),
-      fallenLeafAmt: clamp0172(p.fallenLeafAmt)
+      lightAmt: clamp0173(p.lightAmt),
+      translucency: clamp0173(p.translucency),
+      gloss: clamp0173(p.gloss),
+      iceAmt: clamp0173(p.iceAmt),
+      frostAmt: clamp0173(p.frostAmt),
+      blossomAmt: clamp0173(p.blossomAmt),
+      fallenLeafAmt: clamp0173(p.fallenLeafAmt)
     };
   }
   var SP71 = {
@@ -41085,7 +41547,7 @@
       ctx.fill();
     }
   }
-  function bobAt71(t, amp = 0.7, w = 1.4) {
+  function bobAt73(t, amp = 0.7, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw61(season) {
@@ -41100,7 +41562,7 @@
   }
   function anim61(season) {
     return (ctx, t) => {
-      const bob = bobAt71(t);
+      const bob = bobAt73(t);
       paint71(ctx, SP71[season], bob);
       ctx.save();
       try {
@@ -41123,7 +41585,7 @@
         ctx.ellipse(gx, gy, gr, gr * 0.7, -0.4, 0, Math.PI * 2);
         ctx.fill();
         const ripPhase = t * 0.35 % 1;
-        const iceMute = 1 - 0.55 * clamp0172(SP71[season].iceAmt);
+        const iceMute = 1 - 0.55 * clamp0173(SP71[season].iceAmt);
         ctx.strokeStyle = `rgba(255,255,255,${(0.12 + 0.12 * (0.5 + 0.5 * Math.sin(t * 1.3))) * iceMute})`;
         ctx.lineWidth = 0.8;
         ctx.beginPath();
@@ -41184,17 +41646,17 @@
       }
     };
   }
-  function makeTransition68(fromIdx) {
+  function makeTransition67(fromIdx) {
     const from = SP71[SEASON_NAMES[fromIdx]];
     const to = SP71[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother71(clamp0172(pp));
+      const k = smoother73(clamp0173(pp));
       paint71(ctx, lerpP71(from, to, k), 0);
     };
   }
-  var springToSummer65 = makeTransition68(0);
-  var summerToAutumn65 = makeTransition68(1);
-  var autumnToWinter65 = makeTransition68(2);
+  var springToSummer65 = makeTransition67(0);
+  var summerToAutumn65 = makeTransition67(1);
+  var autumnToWinter65 = makeTransition67(2);
   var VARIANTS73 = {
     Spring: { draw: draw61("Spring"), anim: anim61("Spring") },
     Summer: { draw: draw61("Summer"), anim: anim61("Summer") },
@@ -41208,12 +41670,12 @@
   };
 
   // src/textures/seasonal/fruit/melon.ts
-  function clamp0173(x) {
+  function clamp0174(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother72 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother74 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp77(a, b, t) {
     return a + (b - a) * t;
   }
@@ -41224,7 +41686,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba40(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0173(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0174(a)})`;
   }
   function lerpP72(a, b, t) {
     return {
@@ -41255,17 +41717,17 @@
   function clampP61(p) {
     return {
       ...p,
-      lightAmt: clamp0173(p.lightAmt),
-      ripeness: clamp0173(p.ripeness),
-      scale: clamp0173(p.scale),
-      gloss: clamp0173(p.gloss),
-      stripeAmt: clamp0173(p.stripeAmt),
-      leafYellow: clamp0173(p.leafYellow),
-      frostAmt: clamp0173(p.frostAmt),
-      snowCapAmt: clamp0173(p.snowCapAmt),
-      padSnowAmt: clamp0173(p.padSnowAmt),
-      blossomAmt: clamp0173(p.blossomAmt),
-      fallenLeafAmt: clamp0173(p.fallenLeafAmt)
+      lightAmt: clamp0174(p.lightAmt),
+      ripeness: clamp0174(p.ripeness),
+      scale: clamp0174(p.scale),
+      gloss: clamp0174(p.gloss),
+      stripeAmt: clamp0174(p.stripeAmt),
+      leafYellow: clamp0174(p.leafYellow),
+      frostAmt: clamp0174(p.frostAmt),
+      snowCapAmt: clamp0174(p.snowCapAmt),
+      padSnowAmt: clamp0174(p.padSnowAmt),
+      blossomAmt: clamp0174(p.blossomAmt),
+      fallenLeafAmt: clamp0174(p.fallenLeafAmt)
     };
   }
   var SP72 = {
@@ -41379,7 +41841,7 @@
   var MEL_RX = 14;
   var MEL_RY = 13;
   function bodyR(p) {
-    const s = 0.85 + 0.15 * clamp0173(p.scale);
+    const s = 0.85 + 0.15 * clamp0174(p.scale);
     return { rx: MEL_RX * s, ry: MEL_RY * s };
   }
   function melonBodyPath(ctx, cy, rx, ry) {
@@ -41617,8 +42079,8 @@
       ctx.bezierCurveTo(stemX + 5.4, stemY - 6, stemX + 5.8, stemY - 2.4, stemX + 3.4, stemY - 2);
       ctx.bezierCurveTo(stemX + 1.6, stemY - 1.8, stemX + 2, stemY - 4, stemX + 3.6, stemY - 3.8);
       ctx.stroke();
-      const leafCol = lerpRGB65(p.leaf, [206, 180, 70], clamp0173(p.leafYellow));
-      const leafDark = lerpRGB65(p.outline, [120, 96, 24], clamp0173(p.leafYellow) * 0.7);
+      const leafCol = lerpRGB65(p.leaf, [206, 180, 70], clamp0174(p.leafYellow));
+      const leafDark = lerpRGB65(p.outline, [120, 96, 24], clamp0174(p.leafYellow) * 0.7);
       ctx.save();
       ctx.translate(stemX - 4.4, stemY - 2.2);
       ctx.rotate(-0.95);
@@ -41654,7 +42116,7 @@
       ctx.restore();
     }
   }
-  function bobAt72(t, amp = 0.85, w = 1.5) {
+  function bobAt74(t, amp = 0.85, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw62(season) {
@@ -41662,7 +42124,7 @@
   }
   function anim62(season) {
     return (ctx, t) => {
-      const bob = bobAt72(t);
+      const bob = bobAt74(t);
       paint72(ctx, SP72[season], bob);
       ctx.save();
       try {
@@ -41724,17 +42186,17 @@
       }
     };
   }
-  function makeTransition69(fromIdx) {
+  function makeTransition68(fromIdx) {
     const from = SP72[SEASON_NAMES[fromIdx]];
     const to = SP72[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother72(clamp0173(pp));
+      const k = smoother74(clamp0174(pp));
       paint72(ctx, lerpP72(from, to, k), 0);
     };
   }
-  var springToSummer66 = makeTransition69(0);
-  var summerToAutumn66 = makeTransition69(1);
-  var autumnToWinter66 = makeTransition69(2);
+  var springToSummer66 = makeTransition68(0);
+  var summerToAutumn66 = makeTransition68(1);
+  var autumnToWinter66 = makeTransition68(2);
   var VARIANTS74 = {
     Spring: { draw: draw62("Spring"), anim: anim62("Spring") },
     Summer: { draw: draw62("Summer"), anim: anim62("Summer") },
@@ -41748,12 +42210,12 @@
   };
 
   // src/textures/seasonal/bird/wildGoose.ts
-  function clamp0174(x) {
+  function clamp0175(x) {
     if (!(x >= 0)) return 0;
     if (x > 1) return 1;
     return x;
   }
-  var smoother73 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother75 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   function lerp78(a, b, t) {
     return a + (b - a) * t;
   }
@@ -41764,7 +42226,7 @@
     return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
   }
   function rgba41(c, a) {
-    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0174(a)})`;
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0175(a)})`;
   }
   function lerpP73(a, b, t) {
     return {
@@ -41798,14 +42260,14 @@
   function clampP62(p) {
     return {
       ...p,
-      lightAmt: clamp0174(p.lightAmt),
-      plumage: clamp0174(p.plumage),
-      fluff: clamp0174(p.fluff),
-      snowCapAmt: clamp0174(p.snowCapAmt),
-      frostAmt: clamp0174(p.frostAmt),
-      padSnowAmt: clamp0174(p.padSnowAmt),
-      blossomAmt: clamp0174(p.blossomAmt),
-      fallenLeafAmt: clamp0174(p.fallenLeafAmt)
+      lightAmt: clamp0175(p.lightAmt),
+      plumage: clamp0175(p.plumage),
+      fluff: clamp0175(p.fluff),
+      snowCapAmt: clamp0175(p.snowCapAmt),
+      frostAmt: clamp0175(p.frostAmt),
+      padSnowAmt: clamp0175(p.padSnowAmt),
+      blossomAmt: clamp0175(p.blossomAmt),
+      fallenLeafAmt: clamp0175(p.fallenLeafAmt)
     };
   }
   var SP73 = {
@@ -42295,7 +42757,7 @@
       ctx.restore();
     }
   }
-  function bobAt73(t, amp = 0.9, w = 1.4) {
+  function bobAt75(t, amp = 0.9, w = 1.4) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   function draw63(season) {
@@ -42303,7 +42765,7 @@
   }
   function anim63(season) {
     return (ctx, t) => {
-      const breathe = bobAt73(t);
+      const breathe = bobAt75(t);
       const dip = 0.7 * (1 - Math.cos(t * 0.55)) * 0.5;
       paint73(ctx, SP73[season], breathe + dip);
       ctx.save();
@@ -42378,17 +42840,17 @@
       }
     };
   }
-  function makeTransition70(fromIdx) {
+  function makeTransition69(fromIdx) {
     const from = SP73[SEASON_NAMES[fromIdx]];
     const to = SP73[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother73(clamp0174(pp));
+      const k = smoother75(clamp0175(pp));
       paint73(ctx, lerpP73(from, to, k), 0);
     };
   }
-  var springToSummer67 = makeTransition70(0);
-  var summerToAutumn67 = makeTransition70(1);
-  var autumnToWinter67 = makeTransition70(2);
+  var springToSummer67 = makeTransition69(0);
+  var summerToAutumn67 = makeTransition69(1);
+  var autumnToWinter67 = makeTransition69(2);
   var VARIANTS75 = {
     Spring: { draw: draw63("Spring"), anim: anim63("Spring") },
     Summer: { draw: draw63("Summer"), anim: anim63("Summer") },
@@ -42402,7 +42864,7 @@
   };
 
   // src/textures/seasonal/bird/pigInDisguise.ts
-  function clamp0175(x) {
+  function clamp0176(x) {
     if (!(x >= 0)) return 0;
     return x > 1 ? 1 : x;
   }
@@ -42413,13 +42875,13 @@
     return [lerp79(a[0], b[0], t), lerp79(a[1], b[1], t), lerp79(a[2], b[2], t)];
   }
   function rgb74(c, a = 1) {
-    const r = Math.round(clamp0175(c[0] / 255) * 255);
-    const g = Math.round(clamp0175(c[1] / 255) * 255);
-    const b = Math.round(clamp0175(c[2] / 255) * 255);
-    return `rgba(${r},${g},${b},${clamp0175(a)})`;
+    const r = Math.round(clamp0176(c[0] / 255) * 255);
+    const g = Math.round(clamp0176(c[1] / 255) * 255);
+    const b = Math.round(clamp0176(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0176(a)})`;
   }
-  var smoother74 = (x) => x * x * x * (x * (6 * x - 15) + 10);
-  function bobAt74(t, amp = 0.9, w = 1.5) {
+  var smoother76 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt76(t, amp = 0.9, w = 1.5) {
     return amp * (1 - Math.cos(w * t)) * 0.5;
   }
   var SCARF = [206, 78, 72];
@@ -42581,17 +43043,17 @@
   function clampP63(p) {
     return {
       ...p,
-      lightWashAmt: clamp0175(p.lightWashAmt),
-      featherSheen: clamp0175(p.featherSheen),
+      lightWashAmt: clamp0176(p.lightWashAmt),
+      featherSheen: clamp0176(p.featherSheen),
       // maskTilt is a small angle, not a 0..1 amount — clamp to a sane range
       maskTilt: Math.max(-0.6, Math.min(0.6, p.maskTilt)),
-      scarfAmt: clamp0175(p.scarfAmt),
-      capeSnowAmt: clamp0175(p.capeSnowAmt),
-      frostAmt: clamp0175(p.frostAmt),
-      padSnowAmt: clamp0175(p.padSnowAmt),
-      breathFogAmt: clamp0175(p.breathFogAmt),
-      blossomAmt: clamp0175(p.blossomAmt),
-      fallenLeafAmt: clamp0175(p.fallenLeafAmt)
+      scarfAmt: clamp0176(p.scarfAmt),
+      capeSnowAmt: clamp0176(p.capeSnowAmt),
+      frostAmt: clamp0176(p.frostAmt),
+      padSnowAmt: clamp0176(p.padSnowAmt),
+      breathFogAmt: clamp0176(p.breathFogAmt),
+      blossomAmt: clamp0176(p.blossomAmt),
+      fallenLeafAmt: clamp0176(p.fallenLeafAmt)
     };
   }
   var BODY_CX6 = 0;
@@ -42968,7 +43430,7 @@
   }
   function drawScarf(ctx, p, hx, hy, amt) {
     ctx.save();
-    ctx.globalAlpha = clamp0175(amt);
+    ctx.globalAlpha = clamp0176(amt);
     ctx.lineCap = "round";
     ctx.strokeStyle = rgb74(SCARF_DARK);
     ctx.lineWidth = 5.2;
@@ -43052,7 +43514,7 @@
   function anim64(season) {
     return (ctx, t) => {
       const p = clampP63(SP74[season]);
-      const bob = bobAt74(t);
+      const bob = bobAt76(t);
       const flutter = Math.sin(t * 1.5) * 0.14 * (1 - Math.cos(t * 1.5)) * 0.5;
       const maskWobble = Math.sin(t * 2) * 0.06 * (1 - Math.cos(t * 1.5)) * 0.5;
       ctx.save();
@@ -43120,17 +43582,17 @@
       }
     };
   }
-  function makeTransition71(fromIdx) {
+  function makeTransition70(fromIdx) {
     const from = SP74[SEASON_NAMES[fromIdx]];
     const to = SP74[SEASON_NAMES[fromIdx + 1]];
     return (ctx, pp) => {
-      const k = smoother74(clamp0175(pp));
+      const k = smoother76(clamp0176(pp));
       paint74(ctx, lerpP74(from, to, k), 0);
     };
   }
-  var springToSummer68 = makeTransition71(0);
-  var summerToAutumn68 = makeTransition71(1);
-  var autumnToWinter68 = makeTransition71(2);
+  var springToSummer68 = makeTransition70(0);
+  var summerToAutumn68 = makeTransition70(1);
+  var autumnToWinter68 = makeTransition70(2);
   var VARIANTS76 = {
     Spring: { draw: draw64("Spring"), anim: anim64("Spring") },
     Summer: { draw: draw64("Summer"), anim: anim64("Summer") },
@@ -43238,7 +43700,7 @@
       gloss: 0.35
     }
   };
-  function clamp0176(x) {
+  function clamp0177(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
   function rgb75([r, g, b], a = 1) {
@@ -43276,20 +43738,20 @@
   function clampP64(p) {
     return {
       ...p,
-      shadowAmt: clamp0176(p.shadowAmt),
-      padSnowAmt: clamp0176(p.padSnowAmt),
-      blossomAmt: clamp0176(p.blossomAmt),
-      fallenLeafAmt: clamp0176(p.fallenLeafAmt),
-      plump: clamp0176(p.plump),
-      spread: clamp0176(p.spread),
-      shedAmt: clamp0176(p.shedAmt),
-      awnPale: clamp0176(p.awnPale),
-      frostAmt: clamp0176(p.frostAmt),
-      snowCapAmt: clamp0176(p.snowCapAmt),
-      gloss: clamp0176(p.gloss)
+      shadowAmt: clamp0177(p.shadowAmt),
+      padSnowAmt: clamp0177(p.padSnowAmt),
+      blossomAmt: clamp0177(p.blossomAmt),
+      fallenLeafAmt: clamp0177(p.fallenLeafAmt),
+      plump: clamp0177(p.plump),
+      spread: clamp0177(p.spread),
+      shedAmt: clamp0177(p.shedAmt),
+      awnPale: clamp0177(p.awnPale),
+      frostAmt: clamp0177(p.frostAmt),
+      snowCapAmt: clamp0177(p.snowCapAmt),
+      gloss: clamp0177(p.gloss)
     };
   }
-  var smoother75 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother77 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   var TIE_Y = 13;
   var TIE_X = 0;
   var EARS = [
@@ -43630,7 +44092,7 @@
     }
     ctx.globalAlpha = 1;
   }
-  function bobAt75(t) {
+  function bobAt77(t) {
     const A = 1.4;
     const w = 1.5;
     return -A * (1 - Math.cos(w * t)) * 0.5;
@@ -43649,21 +44111,21 @@
   }
   function animWheatSpring(ctx, t) {
     const dew = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.8));
-    paint75(ctx, SP75.Spring, bobAt75(t), {
+    paint75(ctx, SP75.Spring, bobAt77(t), {
       awnSway: Math.sin(t * 1.5) * 1.4,
       dew
     });
   }
   function animWheatSummer(ctx, t) {
     const glint = t * 0.45 % 1;
-    paint75(ctx, SP75.Summer, bobAt75(t), {
+    paint75(ctx, SP75.Summer, bobAt77(t), {
       awnSway: Math.sin(t * 1.4) * 1.2,
       glint
     });
   }
   function animWheatAutumn(ctx, t) {
     const shedFall = t / 3.4 % 1;
-    paint75(ctx, SP75.Autumn, bobAt75(t), {
+    paint75(ctx, SP75.Autumn, bobAt77(t), {
       awnSway: Math.sin(t * 1.2) * 1.6,
       shedFall
     });
@@ -43681,21 +44143,21 @@
       return [driftX, fy, r];
     });
     const coldSheen = 0.5 + 0.5 * Math.sin(t * 0.8);
-    paint75(ctx, SP75.Winter, bobAt75(t), {
+    paint75(ctx, SP75.Winter, bobAt77(t), {
       awnSway: Math.sin(t * 0.9) * 0.8,
       extraFlakes: flakes,
       coldSheen
     });
   }
-  function makeTransition72(from, to) {
+  function makeTransition71(from, to) {
     return (ctx, pp) => {
-      const t = smoother75(clamp0176(pp));
+      const t = smoother77(clamp0177(pp));
       paint75(ctx, lerpP75(SP75[from], SP75[to], t), 0);
     };
   }
-  var springToSummer69 = makeTransition72("Spring", "Summer");
-  var summerToAutumn69 = makeTransition72("Summer", "Autumn");
-  var autumnToWinter69 = makeTransition72("Autumn", "Winter");
+  var springToSummer69 = makeTransition71("Spring", "Summer");
+  var summerToAutumn69 = makeTransition71("Summer", "Autumn");
+  var autumnToWinter69 = makeTransition71("Autumn", "Winter");
   var VARIANTS77 = {
     Spring: { draw: drawWheatSpring, anim: animWheatSpring },
     Summer: { draw: drawWheatSummer, anim: animWheatSummer },
@@ -43803,7 +44265,7 @@
       gloss: 0.35
     }
   };
-  function clamp0177(x) {
+  function clamp0178(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
   function rgb76([r, g, b], a = 1) {
@@ -43841,19 +44303,19 @@
   function clampP65(p) {
     return {
       ...p,
-      shadowAmt: clamp0177(p.shadowAmt),
-      padSnowAmt: clamp0177(p.padSnowAmt),
-      blossomAmt: clamp0177(p.blossomAmt),
-      fallenLeafAmt: clamp0177(p.fallenLeafAmt),
-      droop: clamp0177(p.droop),
-      shedAmt: clamp0177(p.shedAmt),
-      grainPlump: clamp0177(p.grainPlump),
-      frostAmt: clamp0177(p.frostAmt),
-      snowCapAmt: clamp0177(p.snowCapAmt),
-      gloss: clamp0177(p.gloss)
+      shadowAmt: clamp0178(p.shadowAmt),
+      padSnowAmt: clamp0178(p.padSnowAmt),
+      blossomAmt: clamp0178(p.blossomAmt),
+      fallenLeafAmt: clamp0178(p.fallenLeafAmt),
+      droop: clamp0178(p.droop),
+      shedAmt: clamp0178(p.shedAmt),
+      grainPlump: clamp0178(p.grainPlump),
+      frostAmt: clamp0178(p.frostAmt),
+      snowCapAmt: clamp0178(p.snowCapAmt),
+      gloss: clamp0178(p.gloss)
     };
   }
-  var smoother76 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother78 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   var TIE_Y2 = 12;
   var TIE_X2 = 0;
   var PANICLES = [
@@ -44098,7 +44560,7 @@
   function shedGrains2(ctx, p) {
     if (p.shedAmt < 0.3) return;
     ctx.save();
-    ctx.globalAlpha = clamp0177(p.shedAmt);
+    ctx.globalAlpha = clamp0178(p.shedAmt);
     const drops = [
       [7, 17, 0.6],
       [-6, 18.5, -0.4],
@@ -44213,7 +44675,7 @@
     }
     ctx.globalAlpha = 1;
   }
-  function bobAt76(t) {
+  function bobAt78(t) {
     const A = 1.4;
     const w = 1.5;
     return -A * (1 - Math.cos(w * t)) * 0.5;
@@ -44232,20 +44694,20 @@
   }
   function animRiceSpring(ctx, t) {
     const dew = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.8));
-    paint76(ctx, SP76.Spring, bobAt76(t), {
+    paint76(ctx, SP76.Spring, bobAt78(t), {
       sway: Math.sin(t * 1.5) * 1.1,
       dew
     });
   }
   function animRiceSummer(ctx, t) {
     const glint = t * 0.4 % 1;
-    paint76(ctx, SP76.Summer, bobAt76(t), {
+    paint76(ctx, SP76.Summer, bobAt78(t), {
       sway: Math.sin(t * 1.3) * 1.3,
       glint
     });
   }
   function animRiceAutumn(ctx, t) {
-    paint76(ctx, SP76.Autumn, bobAt76(t), {
+    paint76(ctx, SP76.Autumn, bobAt78(t), {
       sway: Math.sin(t * 1.1) * 1
     });
   }
@@ -44262,21 +44724,21 @@
       return [driftX, fy, r];
     });
     const coldSheen = 0.5 + 0.5 * Math.sin(t * 0.8);
-    paint76(ctx, SP76.Winter, bobAt76(t), {
+    paint76(ctx, SP76.Winter, bobAt78(t), {
       sway: Math.sin(t * 0.9) * 0.7,
       extraFlakes: flakes,
       coldSheen
     });
   }
-  function makeTransition73(from, to) {
+  function makeTransition72(from, to) {
     return (ctx, pp) => {
-      const t = smoother76(clamp0177(pp));
+      const t = smoother78(clamp0178(pp));
       paint76(ctx, lerpP76(SP76[from], SP76[to], t), 0);
     };
   }
-  var springToSummer70 = makeTransition73("Spring", "Summer");
-  var summerToAutumn70 = makeTransition73("Summer", "Autumn");
-  var autumnToWinter70 = makeTransition73("Autumn", "Winter");
+  var springToSummer70 = makeTransition72("Spring", "Summer");
+  var summerToAutumn70 = makeTransition72("Summer", "Autumn");
+  var autumnToWinter70 = makeTransition72("Autumn", "Winter");
   var VARIANTS78 = {
     Spring: { draw: drawRiceSpring, anim: animRiceSpring },
     Summer: { draw: drawRiceSummer, anim: animRiceSummer },
@@ -44401,7 +44863,7 @@
       gloss: 0.35
     }
   };
-  function clamp0178(x) {
+  function clamp0179(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
   function rgb77([r, g, b], a = 1) {
@@ -44442,20 +44904,20 @@
   function clampP66(p) {
     return {
       ...p,
-      shadowAmt: clamp0178(p.shadowAmt),
-      padSnowAmt: clamp0178(p.padSnowAmt),
-      blossomAmt: clamp0178(p.blossomAmt),
-      fallenLeafAmt: clamp0178(p.fallenLeafAmt),
-      leafRedAmt: clamp0178(p.leafRedAmt),
-      flowerAmt: clamp0178(p.flowerAmt),
-      seedAmt: clamp0178(p.seedAmt),
-      budAmt: clamp0178(p.budAmt),
-      frostAmt: clamp0178(p.frostAmt),
-      snowCapAmt: clamp0178(p.snowCapAmt),
-      gloss: clamp0178(p.gloss)
+      shadowAmt: clamp0179(p.shadowAmt),
+      padSnowAmt: clamp0179(p.padSnowAmt),
+      blossomAmt: clamp0179(p.blossomAmt),
+      fallenLeafAmt: clamp0179(p.fallenLeafAmt),
+      leafRedAmt: clamp0179(p.leafRedAmt),
+      flowerAmt: clamp0179(p.flowerAmt),
+      seedAmt: clamp0179(p.seedAmt),
+      budAmt: clamp0179(p.budAmt),
+      frostAmt: clamp0179(p.frostAmt),
+      snowCapAmt: clamp0179(p.snowCapAmt),
+      gloss: clamp0179(p.gloss)
     };
   }
-  var smoother77 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother79 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   var BASE_Y = 16;
   var BASE_X = 1;
   var MAIN_TIP = [-1, -19];
@@ -44722,7 +45184,7 @@
       }
       if (p.seedAmt > 0.03) {
         ctx.save();
-        ctx.globalAlpha = clamp0178(p.seedAmt);
+        ctx.globalAlpha = clamp0179(p.seedAmt);
         spray.forEach(([ox, oy]) => {
           seedTri(ctx, p, nx + ox, ny + oy + 0.4, 1.9 * (0.55 + 0.45 * p.seedAmt));
         });
@@ -44730,7 +45192,7 @@
       }
       if (p.flowerAmt > 0.03) {
         ctx.save();
-        ctx.globalAlpha = clamp0178(p.flowerAmt + 0.15);
+        ctx.globalAlpha = clamp0179(p.flowerAmt + 0.15);
         spray.forEach(([ox, oy]) => {
           floret(ctx, p, nx + ox, ny + oy, p.flowerAmt, twinkles[ni]);
         });
@@ -44849,7 +45311,7 @@
     }
     ctx.globalAlpha = 1;
   }
-  function bobAt77(t) {
+  function bobAt79(t) {
     const A = 1.4;
     const w = 1.5;
     return -A * (1 - Math.cos(w * t)) * 0.5;
@@ -44868,7 +45330,7 @@
   }
   function animBuckwheatSpring(ctx, t) {
     const dew = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.8));
-    paint77(ctx, SP77.Spring, bobAt77(t), {
+    paint77(ctx, SP77.Spring, bobAt79(t), {
       stemSway: Math.sin(t * 1.3) * 0.8,
       leafFlutter: Math.sin(t * 1.6) * 0.9,
       dew
@@ -44876,7 +45338,7 @@
   }
   function animBuckwheatSummer(ctx, t) {
     const tw = (ph) => 0.2 + 0.5 * Math.max(0, Math.sin(t * 2.4 + ph));
-    paint77(ctx, SP77.Summer, bobAt77(t), {
+    paint77(ctx, SP77.Summer, bobAt79(t), {
       stemSway: Math.sin(t * 1.3) * 1,
       leafFlutter: Math.sin(t * 1.7) * 0.8,
       florTwinkA: tw(0),
@@ -44886,7 +45348,7 @@
   }
   function animBuckwheatAutumn(ctx, t) {
     const leafFlutter = Math.sin(t * 2.2) * 1.3;
-    paint77(ctx, SP77.Autumn, bobAt77(t), {
+    paint77(ctx, SP77.Autumn, bobAt79(t), {
       leafFlutter,
       stemSway: Math.sin(t * 1.1) * 0.8
     });
@@ -44904,21 +45366,21 @@
       return [driftX, fy, r];
     });
     const coldSheen = 0.5 + 0.5 * Math.sin(t * 0.8);
-    paint77(ctx, SP77.Winter, bobAt77(t), {
+    paint77(ctx, SP77.Winter, bobAt79(t), {
       stemSway: Math.sin(t * 0.9) * 0.5,
       extraFlakes: flakes,
       coldSheen
     });
   }
-  function makeTransition74(from, to) {
+  function makeTransition73(from, to) {
     return (ctx, pp) => {
-      const t = smoother77(clamp0178(pp));
+      const t = smoother79(clamp0179(pp));
       paint77(ctx, lerpP77(SP77[from], SP77[to], t), 0);
     };
   }
-  var springToSummer71 = makeTransition74("Spring", "Summer");
-  var summerToAutumn71 = makeTransition74("Summer", "Autumn");
-  var autumnToWinter71 = makeTransition74("Autumn", "Winter");
+  var springToSummer71 = makeTransition73("Spring", "Summer");
+  var summerToAutumn71 = makeTransition73("Summer", "Autumn");
+  var autumnToWinter71 = makeTransition73("Autumn", "Winter");
   var VARIANTS79 = {
     Spring: { draw: drawBuckwheatSpring, anim: animBuckwheatSpring },
     Summer: { draw: drawBuckwheatSummer, anim: animBuckwheatSummer },
@@ -45019,7 +45481,7 @@
       snowCapAmt: 1
     }
   };
-  function clamp0179(x) {
+  function clamp0180(x) {
     return x < 0 ? 0 : x > 1 ? 1 : x;
   }
   function rgb78([r, g, b], a = 1) {
@@ -45055,18 +45517,18 @@
   function clampP67(p) {
     return {
       ...p,
-      shadowAmt: clamp0179(p.shadowAmt),
-      padSnowAmt: clamp0179(p.padSnowAmt),
-      blossomAmt: clamp0179(p.blossomAmt),
-      fallenLeafAmt: clamp0179(p.fallenLeafAmt),
-      glowAmt: clamp0179(p.glowAmt),
-      gloss: clamp0179(p.gloss),
-      sparkle: clamp0179(p.sparkle),
-      frostAmt: clamp0179(p.frostAmt),
-      snowCapAmt: clamp0179(p.snowCapAmt)
+      shadowAmt: clamp0180(p.shadowAmt),
+      padSnowAmt: clamp0180(p.padSnowAmt),
+      blossomAmt: clamp0180(p.blossomAmt),
+      fallenLeafAmt: clamp0180(p.fallenLeafAmt),
+      glowAmt: clamp0180(p.glowAmt),
+      gloss: clamp0180(p.gloss),
+      sparkle: clamp0180(p.sparkle),
+      frostAmt: clamp0180(p.frostAmt),
+      snowCapAmt: clamp0180(p.snowCapAmt)
     };
   }
-  var smoother78 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var smoother80 = (x) => x * x * x * (x * (6 * x - 15) + 10);
   var BUMPS = [
     { x: -10, y: 6, r: 10 },
     { x: 10, y: 7, r: 9.5 },
@@ -45345,7 +45807,7 @@
     }
     ctx.globalAlpha = 1;
   }
-  function bobAt78(t) {
+  function bobAt80(t) {
     const A = 1.3;
     const w = 1.4;
     return -A * (1 - Math.cos(w * t)) * 0.5;
@@ -45363,19 +45825,19 @@
     paint78(ctx, SP78.Winter, 0);
   }
   function animMannaSpring(ctx, t) {
-    paint78(ctx, SP78.Spring, bobAt78(t), {
+    paint78(ctx, SP78.Spring, bobAt80(t), {
       glowPulse: 1 + 0.12 * Math.sin(t * 1.4),
       twinkle: 0.4 + 0.4 * (0.5 + 0.5 * Math.sin(t * 1.8))
     });
   }
   function animMannaSummer(ctx, t) {
-    paint78(ctx, SP78.Summer, bobAt78(t), {
+    paint78(ctx, SP78.Summer, bobAt80(t), {
       glowPulse: 1 + 0.16 * Math.sin(t * 1.6),
       twinkle: 0.5 + 0.5 * (0.5 + 0.5 * Math.sin(t * 2.2))
     });
   }
   function animMannaAutumn(ctx, t) {
-    paint78(ctx, SP78.Autumn, bobAt78(t), {
+    paint78(ctx, SP78.Autumn, bobAt80(t), {
       glowPulse: 1 + 0.12 * Math.sin(t * 1.3),
       twinkle: 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.7))
     });
@@ -45392,21 +45854,21 @@
       const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
       return [driftX, fy, r];
     });
-    paint78(ctx, SP78.Winter, bobAt78(t), {
+    paint78(ctx, SP78.Winter, bobAt80(t), {
       glowPulse: 1 + 0.12 * Math.sin(t * 1.5),
       twinkle: 0.3 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2)),
       extraFlakes: flakes
     });
   }
-  function makeTransition75(from, to) {
+  function makeTransition74(from, to) {
     return (ctx, pp) => {
-      const t = smoother78(clamp0179(pp));
+      const t = smoother80(clamp0180(pp));
       paint78(ctx, lerpP78(SP78[from], SP78[to], t), 0);
     };
   }
-  var springToSummer72 = makeTransition75("Spring", "Summer");
-  var summerToAutumn72 = makeTransition75("Summer", "Autumn");
-  var autumnToWinter72 = makeTransition75("Autumn", "Winter");
+  var springToSummer72 = makeTransition74("Spring", "Summer");
+  var summerToAutumn72 = makeTransition74("Summer", "Autumn");
+  var autumnToWinter72 = makeTransition74("Autumn", "Winter");
   var VARIANTS80 = {
     Spring: { draw: drawMannaSpring, anim: animMannaSpring },
     Summer: { draw: drawMannaSummer, anim: animMannaSummer },
