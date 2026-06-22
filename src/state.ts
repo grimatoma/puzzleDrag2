@@ -310,6 +310,11 @@ function coreReducer(state: GameState, action: Action): GameState {
       //  rather than a separate COMMIT_CHAIN)
       const chainTiles = (payload?.chain ?? null) as Tile[] | null;
       const currentBiome = state.biome ?? state.biomeKey;
+      // Aggregate worker/building abilities once per collected chain. Hoisted to
+      // the top of the handler so the rune-mint gates below (which return early)
+      // can honour Rune Seeker's support-tile reduction, and the income + coin
+      // blocks downstream reuse the same aggregate.
+      const chainAgg = computeWorkerEffects(state);
       type FireExtinguishPatch = { hazards: Record<string, unknown>; coinsBonus: number };
       type DeadlyPatch = { hazards: { rats: unknown[]; [k: string]: unknown }; coins: number; _deadlyKills?: number; _deadlyFloater?: string };
       let fireExtinguishPatch: FireExtinguishPatch | null = null;
@@ -335,7 +340,7 @@ function coreReducer(state: GameState, action: Action): GameState {
           // Mysterious ore capture
           const hasOre = chainTiles.some((t: Tile) => t.key === "mysterious_ore");
           if (hasOre) {
-            if (!isMysteriousChainValid(chainTiles)) return state;
+            if (!isMysteriousChainValid(chainTiles, chainAgg.runeSupportReduce ?? 0)) return state;
             return {
               ...state,
               runes: (state.runes ?? 0) + 1,
@@ -345,7 +350,7 @@ function coreReducer(state: GameState, action: Action): GameState {
         } else if (currentBiome === "fish") {
           // Pearl capture — chain pearl + ≥2 other fish-category tiles → +1 rune
           const hasPearl = chainTiles.some((t: Tile) => t.key === PEARL_KEY);
-          if (hasPearl && isPearlChainValid(chainTiles)) {
+          if (hasPearl && isPearlChainValid(chainTiles, chainAgg.runeSupportReduce ?? 0)) {
             return {
               ...state,
               runes: (state.runes ?? 0) + 1,
@@ -384,7 +389,6 @@ function coreReducer(state: GameState, action: Action): GameState {
       // crosses TILES_PER_RESOURCE[key] (the income divisor — decoupled from the
       // board-tier-upgrade threshold). Tile keys no longer enter state.inventory.
       // Worker/building reductions are applied via effectiveTilesPerResource.
-      const chainAgg = computeWorkerEffects(state);
       const progress: Partial<Record<ResourceKey, number>> = { ...zoneResourceProgress(state) };
       if (resourceKey) {
         const threshold = effectiveTilesPerResource(state, key, chainAgg);
@@ -438,8 +442,10 @@ function coreReducer(state: GameState, action: Action): GameState {
 
       // Power-hook coin bonuses (set via Dev Panel → Tile Powers).
       const chainTileEffects = (TILE_TYPES_MAP[key]?.effects ?? {}) as { coinBonusFlat?: number; coinBonusPerTile?: number };
-      const hookFlat = chainTileEffects.coinBonusFlat || 0;
-      const hookPerTile = chainTileEffects.coinBonusPerTile || 0;
+      // Tile-power coin hooks PLUS worker-aggregated coin bonuses (Tax Collector,
+      // Florist). Zero coin workers => chainAgg contributes 0 (no change).
+      const hookFlat = (chainTileEffects.coinBonusFlat || 0) + (chainAgg.coinBonusFlat || 0);
+      const hookPerTile = (chainTileEffects.coinBonusPerTile || 0) + (chainAgg.coinBonusPerTile || 0);
       const coinHookBonus = hookFlat + hookPerTile * effectiveChain;
 
       // Economy balance pass: chain coin yield raised ~2x (was floor(gained*value/2))

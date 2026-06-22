@@ -117,12 +117,14 @@ export function tickPearl(state: GameState): GameState {
 
 /**
  * True iff the chain contains the pearl tile AND at least
- * REQUIRED_FISH_IN_CHAIN other fish-category tiles.
+ * REQUIRED_FISH_IN_CHAIN other fish-category tiles. `supportReduce` (from Rune
+ * Seeker workers) lowers the required fish count, floored at 1.
  */
-export function isPearlChainValid(chain: ChainCell[]): boolean {
+export function isPearlChainValid(chain: ChainCell[], supportReduce = 0): boolean {
   if (!Array.isArray(chain) || chain.length === 0) return false;
   const hasPearl = chain.some((t: ChainCell) => t.key === PEARL_KEY);
   if (!hasPearl) return false;
   const fishCount = chain.filter((t: ChainCell) => !!t.key && FISH_CATEGORY_KEYS.has(t.key)).length;
-  return fishCount >= REQUIRED_FISH_IN_CHAIN;
+  const required = Math.max(1, REQUIRED_FISH_IN_CHAIN - (supportReduce | 0));
+  return fishCount >= required;
 }

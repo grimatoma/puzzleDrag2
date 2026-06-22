@@ -21,20 +21,22 @@ function withCoins(coins, villagers = 10) {
 }
 
 describe("Phase 4 — TYPE_WORKERS data shape", () => {
-  it("ships the four base type-tier workers plus 14 production-line workers plus 8 promotion workers", () => {
+  it("ships 4 base + 14 production-line + 8 promotion + 3 coin/rune workers", () => {
     const ids = new Set(TYPE_WORKERS.map((w) => w.id));
     expect(ids.has("baker")).toBe(true);
     expect(ids.has("farmer")).toBe(true);
     expect(ids.has("lumberjack")).toBe(true);
     expect(ids.has("miner")).toBe(true);
     expect(ids.has("steward")).toBe(true);
-    expect(TYPE_WORKERS.length).toBe(26);
+    expect(ids.has("tax_collector")).toBe(true);
+    expect(ids.has("rune_seeker")).toBe(true);
+    expect(TYPE_WORKERS.length).toBe(29);
   });
 
-  it("each worker has maxCount >= 10 and a non-zero coin cost", () => {
+  it("each worker is hireable (positive maxCount and coin cost)", () => {
     for (const w of TYPE_WORKERS) {
-      expect(w.maxCount).toBeGreaterThanOrEqual(10);
-      expect(w.hireCost.coins).toBeGreaterThan(0);
+      expect(w.maxCount, w.id).toBeGreaterThan(0);
+      expect(w.hireCost.coins, w.id).toBeGreaterThan(0);
     }
   });
 

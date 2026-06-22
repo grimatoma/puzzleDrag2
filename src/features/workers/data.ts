@@ -169,10 +169,43 @@ function promotionWorkers(): WorkerDef[] {
   }));
 }
 
+// Coin & rune workers — coin-only hire cost; they add coins per chain or lower
+// the supporting-tile count needed to mint a rune. (Hand-authored: only three,
+// and each maps to a distinct channel rather than a per-line pattern.)
+function coinRuneWorkers(): WorkerDef[] {
+  return [
+    {
+      id: WorkerTypeId.TaxCollector, name: "Tax Collector", role: "Collector",
+      look: { iconKey: "worker_farmer", color: "#f0a83a" },
+      hireCost: { coins: 100, coinsStep: 50 }, maxCount: 10,
+      abilities: [{ id: "coin_bonus_flat", params: { amount: 2 } }],
+      description: "Each Tax Collector adds flat coins to every chain you complete.",
+      flavor: "Never smiles, never misses a copper.",
+    },
+    {
+      id: WorkerTypeId.Florist, name: "Florist", role: "Florist",
+      look: { iconKey: "worker_farmer", color: "#d96bb0" },
+      hireCost: { coins: 120, coinsStep: 60 }, maxCount: 10,
+      abilities: [{ id: "coin_bonus_per_tile", params: { amount: 1 } }],
+      description: "Each Florist adds a coin per tile to the chains you complete.",
+      flavor: "Sells posies at the gate and pockets every petal's worth.",
+    },
+    {
+      id: WorkerTypeId.RuneSeeker, name: "Rune Seeker", role: "Seeker",
+      look: { iconKey: "worker_miner", color: "#9b59c4" },
+      hireCost: { coins: 200, coinsStep: 100 }, maxCount: 5,
+      abilities: [{ id: "rune_support_reduce", params: { amount: 1 } }],
+      description: "Each Rune Seeker lowers the supporting tiles needed to mint a rune.",
+      flavor: "Hears the hum of buried runes through solid rock.",
+    },
+  ];
+}
+
 export const TYPE_WORKERS: WorkerDef[] = [
   ...BASE_WORKERS,
   ...productionLineWorkers(),
   ...promotionWorkers(),
+  ...coinRuneWorkers(),
 ];
 
 export const TYPE_WORKER_MAP = Object.fromEntries(TYPE_WORKERS.map((w) => [w.id, w]));

@@ -150,3 +150,20 @@ describe("CHAIN_COLLECTED: Perfumer promotion awards honey not eggs (Bug-1 guard
     expect(inv(next).eggs ?? 0).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Coin worker bonus (Unit 6): Tax Collector adds flat coins per chain.
+// coin_bonus_flat amount 2, maxCount 10 → 10 hired (weight 1.0) → +2 coins.
+// ---------------------------------------------------------------------------
+
+describe("CHAIN_COLLECTED: coin workers increase coins banked", () => {
+  it("hiring Tax Collectors banks more coins from the same chain", () => {
+    const coinsFrom = (hired: Record<string, number>) => {
+      const next = dispatchGrainChain(mergeTestState({ workers: { hired } })) as { coins: number };
+      return next.coins;
+    };
+    const none = coinsFrom({ farmer: 0 });
+    const taxed = coinsFrom({ tax_collector: 10 });
+    expect(taxed).toBeGreaterThan(none);
+  });
+});

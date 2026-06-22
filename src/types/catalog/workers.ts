@@ -30,6 +30,9 @@ export enum WorkerTypeId {
   Equerry = "equerry",                  // cattle -> mounts
   Smelter = "smelter",                  // mine_iron_ore -> mine_gem
   Assayer = "assayer",                  // mine_gem -> mine_gold
+  TaxCollector = "tax_collector",       // flat coins per chain
+  Florist = "florist",                  // per-tile coins per chain
+  RuneSeeker = "rune_seeker",           // lowers rune-support tile requirement
 }
 
 export const WORKER_TYPE_ID_VALUES = Object.values(WorkerTypeId);
