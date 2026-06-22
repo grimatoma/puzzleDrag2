@@ -7,8 +7,8 @@
 // constant identity across all four seasons (only colour / frost / pad-dressing
 // change) and every morph starts/ends exactly on the neighbouring season still.
 //
-// 63 tiles spanning every board category (tree · fruit · grain · veg · grass ·
-// flower · bird · herd · cattle · mount · fish · mineral · special). Each module
+// 80 tiles spanning every board category (tree · fruit · grain · veg · grass ·
+// flower · bird · herd · cattle · mount · fish · mineral · coin · special). Each module
 // exports `VARIANTS` (4 seasons of {draw, anim}) and `TRANSITIONS` (forward
 // morphs keyed by from-season index). `seasonalTiles.ts` merges them into the
 // registry and the engine gives these keys vector precedence over any baked PNG
@@ -83,6 +83,27 @@ import { VARIANTS as KELP, TRANSITIONS as KELP_T } from "./fish/kelp.js";
 import { VARIANTS as GEM, TRANSITIONS as GEM_T } from "./mine/gem.js";
 import { VARIANTS as GOLD, TRANSITIONS as GOLD_T } from "./mine/gold.js";
 import { VARIANTS as GIANTPEARL, TRANSITIONS as GIANTPEARL_T } from "./special/giantPearl.js";
+// ── Roster-completing batch: mine · coin · sea-resource · melon · grain upgrades ──
+import { VARIANTS as STONE, TRANSITIONS as STONE_T } from "./mine/stone.js";
+import { VARIANTS as IRON_ORE, TRANSITIONS as IRON_ORE_T } from "./mine/ironOre.js";
+import { VARIANTS as COPPER_ORE, TRANSITIONS as COPPER_ORE_T } from "./mine/copperOre.js";
+import { VARIANTS as SILVER, TRANSITIONS as SILVER_T } from "./mine/silver.js";
+import { VARIANTS as COAL, TRANSITIONS as COAL_T } from "./mine/coal.js";
+import { VARIANTS as GOLDEN_COIN, TRANSITIONS as GOLDEN_COIN_T } from "./coin/golden.js";
+import { VARIANTS as SARDINE, TRANSITIONS as SARDINE_T } from "./fish/sardine.js";
+import { VARIANTS as COCOA, TRANSITIONS as COCOA_T } from "./fish/cocoa.js";
+import { VARIANTS as INK, TRANSITIONS as INK_T } from "./fish/ink.js";
+import { VARIANTS as JADE, TRANSITIONS as JADE_T } from "./fish/jade.js";
+// Melon is a fruit (round green melon) but its board key lives in the bird family.
+import { VARIANTS as MELON, TRANSITIONS as MELON_T } from "./fruit/melon.js";
+import { VARIANTS as WILD_GOOSE, TRANSITIONS as WILD_GOOSE_T } from "./bird/wildGoose.js";
+import { VARIANTS as PIG_IN_DISGUISE, TRANSITIONS as PIG_IN_DISGUISE_T } from "./bird/pigInDisguise.js";
+// Grain upgrades: wheat/rice/buckwheat/manna graduate from the idle-only pilot to
+// full vector-transition tiles (same module, same VARIANTS export) — like corn.
+import { VARIANTS as WHEAT, TRANSITIONS as WHEAT_T } from "./grain/wheat.js";
+import { VARIANTS as RICE, TRANSITIONS as RICE_T } from "./grain/rice.js";
+import { VARIANTS as BUCKWHEAT, TRANSITIONS as BUCKWHEAT_T } from "./grain/buckwheat.js";
+import { VARIANTS as MANNA, TRANSITIONS as MANNA_T } from "./grain/manna.js";
 
 export const SHOWCASE_TILES: Record<string, SeasonalTileEntry> = {
   tile_tree_oak: OAK,
@@ -148,6 +169,24 @@ export const SHOWCASE_TILES: Record<string, SeasonalTileEntry> = {
   tile_mine_gem: GEM,
   tile_mine_gold: GOLD,
   tile_special_giant_pearl: GIANTPEARL,
+  // ── Roster-completing batch ──
+  tile_mine_stone: STONE,
+  tile_mine_iron_ore: IRON_ORE,
+  tile_mine_copper_ore: COPPER_ORE,
+  tile_mine_silver: SILVER,
+  tile_mine_coal: COAL,
+  tile_coin_golden: GOLDEN_COIN,
+  tile_fish_sardine: SARDINE,
+  tile_fish_cocoa: COCOA,
+  tile_fish_ink: INK,
+  tile_fish_jade: JADE,
+  tile_bird_melon: MELON,
+  tile_bird_wild_goose: WILD_GOOSE,
+  tile_bird_pig_in_disguise: PIG_IN_DISGUISE,
+  tile_grain_wheat: WHEAT,
+  tile_grain_rice: RICE,
+  tile_grain_buckwheat: BUCKWHEAT,
+  tile_grain_manna: MANNA,
 };
 
 export const SHOWCASE_TRANSITIONS: Record<string, SeasonalTransitionSet> = {
@@ -214,4 +253,22 @@ export const SHOWCASE_TRANSITIONS: Record<string, SeasonalTransitionSet> = {
   tile_mine_gem: GEM_T,
   tile_mine_gold: GOLD_T,
   tile_special_giant_pearl: GIANTPEARL_T,
+  // ── Roster-completing batch ──
+  tile_mine_stone: STONE_T,
+  tile_mine_iron_ore: IRON_ORE_T,
+  tile_mine_copper_ore: COPPER_ORE_T,
+  tile_mine_silver: SILVER_T,
+  tile_mine_coal: COAL_T,
+  tile_coin_golden: GOLDEN_COIN_T,
+  tile_fish_sardine: SARDINE_T,
+  tile_fish_cocoa: COCOA_T,
+  tile_fish_ink: INK_T,
+  tile_fish_jade: JADE_T,
+  tile_bird_melon: MELON_T,
+  tile_bird_wild_goose: WILD_GOOSE_T,
+  tile_bird_pig_in_disguise: PIG_IN_DISGUISE_T,
+  tile_grain_wheat: WHEAT_T,
+  tile_grain_rice: RICE_T,
+  tile_grain_buckwheat: BUCKWHEAT_T,
+  tile_grain_manna: MANNA_T,
 };

@@ -1,6 +1,6 @@
 // Tile keys whose hand-drawn VECTOR seasonal art (per-season draw + idle anim +
 // forward season transitions) takes precedence over any baked PNG anchor of the
-// same key — the all-vector showcase set (63 tiles).
+// same key — the all-vector showcase set (80 tiles).
 //
 // Standalone with NO imports so both the vector registry (`seasonalTiles.ts`) and
 // the baked-art manifest (`seasonalArt.ts`) can read it without an import cycle.
@@ -71,4 +71,22 @@ export const VECTOR_PREFER_KEYS: ReadonlySet<string> = new Set<string>([
   "tile_mine_gem",
   "tile_mine_gold",
   "tile_special_giant_pearl",
+  // ── Roster-completing batch: mine · coin · sea-resource · melon · grain upgrades ──
+  "tile_mine_stone",
+  "tile_mine_iron_ore",
+  "tile_mine_copper_ore",
+  "tile_mine_silver",
+  "tile_mine_coal",
+  "tile_coin_golden",
+  "tile_fish_sardine",
+  "tile_fish_cocoa",
+  "tile_fish_ink",
+  "tile_fish_jade",
+  "tile_bird_melon",
+  "tile_bird_wild_goose",
+  "tile_bird_pig_in_disguise",
+  "tile_grain_wheat",
+  "tile_grain_rice",
+  "tile_grain_buckwheat",
+  "tile_grain_manna",
 ]);
