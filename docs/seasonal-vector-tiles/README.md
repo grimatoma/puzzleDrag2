@@ -1,8 +1,8 @@
 # Seasonal vector tiles — animation preview
 
-A standalone, self-contained preview of the all-vector seasonal tiles (63 of
+A standalone, self-contained preview of the all-vector seasonal tiles (80 of
 them, across every board category — tree / fruit / grain / veg / grass / flower /
-bird / herd / cattle / mount / fish / mineral / special) — four per-season
+bird / herd / cattle / mount / fish / mineral / coin / special) — four per-season
 redraws, subtle idle loops, and forward season→season transition morphs. It runs
 the **actual** tile-drawing code from `src/`, so it's a faithful "before
 integration" sign-off surface for the motion.

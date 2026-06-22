@@ -269,12 +269,12 @@
       canopyBlob(ctx, x + s, y, r, autumnColors(hue), 0.95);
     });
     acorns(ctx);
-    const leaves = [
+    const leaves2 = [
       // [startX, hue, phase, swayAmp]
       [-6, 0.3, 0, 6],
       [9, 0.8, 0.5, 5]
     ];
-    leaves.forEach(([sx, hue, phase, amp]) => {
+    leaves2.forEach(([sx, hue, phase, amp]) => {
       const prog = ((fall + phase) % 1 + 1) % 1;
       const ly = -6 + prog * 26;
       const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * amp;
@@ -303,7 +303,7 @@
     const fall = t * 0.28 % 1;
     autumnOak(ctx, sway, fall);
   }
-  function winterOak(ctx, sway, flakes, sheen2) {
+  function winterOak(ctx, sway, flakes, sheen3) {
     groundShadow(ctx, 16, 0.18);
     const snow = ctx.createLinearGradient(0, 16, 0, 24);
     snow.addColorStop(0, "#eef4fb");
@@ -314,7 +314,7 @@
     ctx.fill();
     trunk(ctx, true);
     branchSilhouette(ctx, "#2e2114", sway, true);
-    ctx.fillStyle = `rgba(200,224,255,${0.16 + sheen2 * 0.16})`;
+    ctx.fillStyle = `rgba(200,224,255,${0.16 + sheen3 * 0.16})`;
     ctx.beginPath();
     ctx.ellipse(-3, 19, 10, 2.4, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -355,8 +355,8 @@
       const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
       return [driftX, fy, r];
     });
-    const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.7);
-    winterOak(ctx, sway, flakes, sheen2);
+    const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.7);
+    winterOak(ctx, sway, flakes, sheen3);
   }
   function lerp(a, b, f) {
     return a + (b - a) * f;
@@ -418,11 +418,11 @@
     }
     if (q > 0.65) {
       const d = (q - 0.65) / 0.35;
-      const leaves = [
+      const leaves2 = [
         [-6, -6, 0.4],
         [9, -8, 0.8]
       ];
-      leaves.forEach(([sx, sy, hue]) => {
+      leaves2.forEach(([sx, sy, hue]) => {
         const lx = sx + d * 2;
         const ly = sy + d * 5;
         ctx.fillStyle = autumnColors(hue)[1];
@@ -472,12 +472,12 @@
       }
     });
     if (shed > 0.05 && shed < 0.98) {
-      const leaves = [
+      const leaves2 = [
         [-6, 0.3, 0, 6],
         [9, 0.8, 0.4, 5],
         [2, 0.6, 0.7, 5]
       ];
-      leaves.forEach(([sx, hue, phase, amp]) => {
+      leaves2.forEach(([sx, hue, phase, amp]) => {
         const prog = Math.min(1, shed + phase * 0.3);
         const ly = -8 + prog * 30;
         const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * amp;
@@ -710,14 +710,14 @@
       });
     }
     if (p.fallenLeafAmt > 0.02) {
-      const leaves = [
+      const leaves2 = [
         [-8, 20.4, 0.5],
         [6, 21.4, -0.4],
         [-1, 22, 0.2],
         [11, 20, 0.8]
       ];
-      leaves.forEach(([lx, ly, rot], i) => {
-        if (i / leaves.length > p.fallenLeafAmt + 0.05) return;
+      leaves2.forEach(([lx, ly, rot], i) => {
+        if (i / leaves2.length > p.fallenLeafAmt + 0.05) return;
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -1001,12 +1001,12 @@
     ctx.save();
     try {
       const p = SP.Autumn;
-      const leaves = [
+      const leaves2 = [
         [-6, 0, 0.55],
         // [startX, phase, hueBlend]
         [9, 0.5, 0.35]
       ];
-      leaves.forEach(([sx, phase, hb]) => {
+      leaves2.forEach(([sx, phase, hb]) => {
         const prog = ((t * 0.28 + phase) % 1 + 1) % 1;
         const ly = -8 + prog * 28;
         const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * 6;
@@ -1046,8 +1046,8 @@
         ctx.arc(driftX, fy, r, 0, Math.PI * 2);
         ctx.fill();
       });
-      const sheen2 = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7));
-      ctx.fillStyle = `rgba(200,224,255,${sheen2})`;
+      const sheen3 = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7));
+      ctx.fillStyle = `rgba(200,224,255,${sheen3})`;
       ctx.beginPath();
       ctx.ellipse(-3, 18.6, 11, 2.6, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -1253,14 +1253,14 @@
       });
     }
     if (p.fallenLeafAmt > 0.02) {
-      const leaves = [
+      const leaves2 = [
         [-9, 20.4, 0.5],
         [7, 21.4, -0.4],
         [-1, 22, 0.2],
         [12, 20, 0.8]
       ];
-      leaves.forEach(([lx, ly, rot], i) => {
-        if (i / leaves.length > p.fallenLeafAmt + 0.05) return;
+      leaves2.forEach(([lx, ly, rot], i) => {
+        if (i / leaves2.length > p.fallenLeafAmt + 0.05) return;
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -1547,8 +1547,8 @@
         ctx.arc(driftX, fy, r, 0, Math.PI * 2);
         ctx.fill();
       });
-      const sheen2 = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7));
-      ctx.fillStyle = `rgba(200,224,255,${clamp012(sheen2)})`;
+      const sheen3 = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7));
+      ctx.fillStyle = `rgba(200,224,255,${clamp012(sheen3)})`;
       ctx.beginPath();
       ctx.ellipse(-3, 18.6, 11, 2.6, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -1768,13 +1768,13 @@
       });
     }
     if (p.fallenLeafAmt > 0.02) {
-      const leaves = [
+      const leaves2 = [
         [-9, 20.4, 0.5, [196, 120, 40]],
         [7, 21.4, -0.4, [176, 72, 32]],
         [-1, 22, 0.2, [182, 132, 46]]
       ];
-      leaves.forEach(([lx, ly, rot, col], i) => {
-        if (i / leaves.length > p.fallenLeafAmt + 0.05) return;
+      leaves2.forEach(([lx, ly, rot, col], i) => {
+        if (i / leaves2.length > p.fallenLeafAmt + 0.05) return;
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -2127,8 +2127,8 @@
         ctx.arc(driftX, fy, r, 0, Math.PI * 2);
         ctx.fill();
       });
-      const sheen2 = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7));
-      ctx.fillStyle = `rgba(200,224,255,${clamp013(sheen2)})`;
+      const sheen3 = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7));
+      ctx.fillStyle = `rgba(200,224,255,${clamp013(sheen3)})`;
       ctx.beginPath();
       ctx.ellipse(-3, 18.6, 11, 2.6, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -2534,11 +2534,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 150, 60]],
           [12, 18.6, 0.7, [176, 120, 44]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -2973,14 +2973,14 @@
       });
     }
     if (p.fallenLeafAmt > 0.02) {
-      const leaves = [
+      const leaves2 = [
         [-8, 20.4, 0.5],
         [6, 21.4, -0.4],
         [-1, 22, 0.2],
         [11, 20, 0.8]
       ];
-      leaves.forEach(([lx, ly, rot], i) => {
-        if (i / leaves.length > p.fallenLeafAmt + 0.05) return;
+      leaves2.forEach(([lx, ly, rot], i) => {
+        if (i / leaves2.length > p.fallenLeafAmt + 0.05) return;
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -3264,12 +3264,12 @@
     ctx.save();
     try {
       const p = SP5.Autumn;
-      const leaves = [
+      const leaves2 = [
         [-6, 0, 0.55],
         // [startX, phase, hueBlend]
         [9, 0.5, 0.35]
       ];
-      leaves.forEach(([sx, phase, hb]) => {
+      leaves2.forEach(([sx, phase, hb]) => {
         const prog = ((t * 0.26 + phase) % 1 + 1) % 1;
         const ly = -6 + prog * 28;
         const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * 6;
@@ -3309,8 +3309,8 @@
         ctx.arc(driftX, fy, r, 0, Math.PI * 2);
         ctx.fill();
       });
-      const sheen2 = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7));
-      ctx.fillStyle = `rgba(200,224,255,${sheen2})`;
+      const sheen3 = 0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.7));
+      ctx.fillStyle = `rgba(200,224,255,${sheen3})`;
       ctx.beginPath();
       ctx.ellipse(-3, 18.6, 11, 2.6, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -3558,7 +3558,7 @@
     };
     appleAutumn(ctx, bob, glint, leafFall);
   }
-  function appleWinter(ctx, flakes, sheen2, sway) {
+  function appleWinter(ctx, flakes, sheen3, sway) {
     groundShadow2(ctx, 14, 0.18);
     const snow = ctx.createLinearGradient(0, 16, 0, 24);
     snow.addColorStop(0, "#eef4fb");
@@ -3586,7 +3586,7 @@
     ctx.beginPath();
     ctx.ellipse(-1 + sway * 0.5, -5, 6, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = `rgba(200,224,255,${0.3 + sheen2 * 0.25})`;
+    ctx.fillStyle = `rgba(200,224,255,${0.3 + sheen3 * 0.25})`;
     ctx.beginPath();
     ctx.arc(-4 + sway * 0.5, -1, 1.2, 0, Math.PI * 2);
     ctx.fill();
@@ -3626,9 +3626,9 @@
       const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
       return [driftX, fy, r];
     });
-    const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+    const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
     const sway = Math.sin(t * 0.7) * 0.8;
-    appleWinter(ctx, flakes, sheen2, sway);
+    appleWinter(ctx, flakes, sheen3, sway);
   }
   function lerp8(a, b, p) {
     return a + (b - a) * p;
@@ -3856,11 +3856,11 @@
       }
     }
     if (p.fallenLeafAmt > 0.01) {
-      const leaves = [
+      const leaves2 = [
         [-11, 19, -0.5, [196, 120, 36]],
         [9, 20.5, 0.7, [176, 92, 28]]
       ];
-      leaves.forEach(([lx, ly, rot, col]) => {
+      leaves2.forEach(([lx, ly, rot, col]) => {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -4153,8 +4153,8 @@
       ctx.arc(dx, fy, r, 0, Math.PI * 2);
       ctx.fill();
     });
-    const sheen2 = 0.08 + 0.06 * (0.5 + 0.5 * Math.sin(t * 0.9));
-    ctx.fillStyle = rgb6([210, 228, 246], sheen2);
+    const sheen3 = 0.08 + 0.06 * (0.5 + 0.5 * Math.sin(t * 0.9));
+    ctx.fillStyle = rgb6([210, 228, 246], sheen3);
     ctx.beginPath();
     ctx.ellipse(-3, 0, 6, 9, -0.2, 0, Math.PI * 2);
     ctx.fill();
@@ -4446,11 +4446,11 @@
     }
     if (p.fallenLeafAmt > 0.02) {
       const a = clamp018(p.fallenLeafAmt);
-      const leaves = [
+      const leaves2 = [
         [-11, 19.5, 0.5, [206, 120, 42]],
         [12, 18.5, -0.7, [190, 92, 36]]
       ];
-      leaves.forEach(([lx, ly, rot, col]) => {
+      leaves2.forEach(([lx, ly, rot, col]) => {
         ctx.save();
         ctx.globalAlpha = a;
         ctx.translate(lx, ly);
@@ -4656,8 +4656,8 @@
           ctx.arc(dx, fy, 1, 0, Math.PI * 2);
           ctx.fill();
         });
-        const sheen2 = 0.1 + 0.12 * (0.5 + 0.5 * Math.sin(t * 0.9));
-        ctx.fillStyle = `rgba(200,224,255,${sheen2})`;
+        const sheen3 = 0.1 + 0.12 * (0.5 + 0.5 * Math.sin(t * 0.9));
+        ctx.fillStyle = `rgba(200,224,255,${sheen3})`;
         ctx.beginPath();
         ctx.ellipse(-3, BODY_CY - 4, 7, 3, TILT, 0, Math.PI * 2);
         ctx.fill();
@@ -5041,11 +5041,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -5483,11 +5483,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -5982,11 +5982,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -6491,11 +6491,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -7050,11 +7050,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -7495,11 +7495,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -8056,11 +8056,11 @@
     if (p.fallenLeafAmt < 0.02) return;
     ctx.save();
     ctx.globalAlpha = p.fallenLeafAmt;
-    const leaves = [
+    const leaves2 = [
       [-12, 20, -0.5, "#c8772b"],
       [11, 20.5, 0.7, "#b8531f"]
     ];
-    leaves.forEach(([lx, ly, rot, col]) => {
+    leaves2.forEach(([lx, ly, rot, col]) => {
       ctx.save();
       ctx.translate(lx, ly);
       ctx.rotate(rot);
@@ -8152,13 +8152,13 @@
     ctx.fillStyle = rgb14(dark);
     huskBackPath(ctx);
     ctx.fill();
-    const leaves = [
+    const leaves2 = [
       [-1, -7.5, 1],
       [-1, -4, 0.3],
       [1, 7.5, 1],
       [1, 4, 0.3]
     ];
-    leaves.forEach(([side, baseX, fw]) => {
+    leaves2.forEach(([side, baseX, fw]) => {
       const open = p.huskOpen * (0.45 + 0.55 * Math.abs(baseX) / 7.5);
       const tipX = baseX + side * (2 + open * 9);
       const tipY = COB_TOP + 5 - open * 7 + leafFlutter * fw;
@@ -8624,11 +8624,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -9080,11 +9080,11 @@
     }
     if (p.fallenLeafAmt > 0.01) {
       const a = clamp0117(p.fallenLeafAmt);
-      const leaves = [
+      const leaves2 = [
         [-12, 20, 0.5, [196, 120, 40]],
         [11, 21, -0.7, [168, 70, 36]]
       ];
-      leaves.forEach(([lx, ly, rot, col]) => {
+      leaves2.forEach(([lx, ly, rot, col]) => {
         ctx.save();
         ctx.globalAlpha = a;
         ctx.translate(lx, ly);
@@ -9566,14 +9566,14 @@
     ctx.stroke();
     ctx.lineCap = "butt";
     const crownY = cy - bh * 1.18;
-    const leaves = [
+    const leaves2 = [
       [-5.4, -8, -18.5],
       [-2.6, -4, -22],
       [0, 0, -23.5],
       [2.6, 4, -22],
       [5.4, 8, -18.5]
     ];
-    leaves.forEach(([bx, lean, ty], i) => {
+    leaves2.forEach(([bx, lean, ty], i) => {
       const baseX = bx * 0.5;
       const baseY = crownY + 1;
       const cpx = bx + lean * 0.4;
@@ -9730,8 +9730,8 @@
         const flutter = (1 - Math.cos(t * 1.6)) * 0.5;
         p2 = { ...base, leafYellow: clamp0118(base.leafYellow + flutter * 0.18) };
       } else if (season === "Winter") {
-        const sheen2 = (1 - Math.cos(t * 0.9)) * 0.5;
-        p2 = { ...base, frostAmt: clamp0118(base.frostAmt + sheen2 * 0.12) };
+        const sheen3 = (1 - Math.cos(t * 0.9)) * 0.5;
+        p2 = { ...base, frostAmt: clamp0118(base.frostAmt + sheen3 * 0.12) };
       } else if (season === "Spring") {
         const dew = (1 - Math.cos(t * 1.8)) * 0.5;
         p2 = { ...base, lightAmt: clamp0118(base.lightAmt + dew * 0.12) };
@@ -10076,11 +10076,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -10635,11 +10635,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [13, 18.4, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -11146,11 +11146,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -11736,11 +11736,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -12268,11 +12268,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -12799,11 +12799,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -12952,7 +12952,7 @@
     }
   }
   function drawLeaves(ctx, p, topY, sway) {
-    const leaves = [
+    const leaves2 = [
       [-0.62, 12, 3],
       [-0.26, 15, 3.4],
       [0.04, 16, 3.6],
@@ -12961,7 +12961,7 @@
     ];
     ctx.save();
     ctx.translate(0, topY - 1);
-    leaves.forEach(([baseAng, len, w], i) => {
+    leaves2.forEach(([baseAng, len, w], i) => {
       const lean = sway * (0.6 + 0.4 * Math.abs(baseAng) / 0.66);
       const ang = baseAng + lean;
       const tipX = Math.sin(ang) * len;
@@ -13340,11 +13340,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -13843,11 +13843,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -14324,11 +14324,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -15506,13 +15506,13 @@
       });
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [184, 108, 44]],
         [10, 20.5, 0.7, [156, 76, 36]],
         [2, 22, 0.2, [196, 140, 56]]
       ];
-      leaves.forEach(([lx, ly, rot, col], i) => {
-        if (i / leaves.length < p.fallenLeafAmt + 0.05) {
+      leaves2.forEach(([lx, ly, rot, col], i) => {
+        if (i / leaves2.length < p.fallenLeafAmt + 0.05) {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -15977,13 +15977,13 @@
       });
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [184, 108, 44]],
         [10, 20.5, 0.7, [156, 76, 36]],
         [2, 22, 0.2, [196, 140, 56]]
       ];
-      leaves.forEach(([lx, ly, rot, col], i) => {
-        if (i / leaves.length < p.fallenLeafAmt + 0.05) {
+      leaves2.forEach(([lx, ly, rot, col], i) => {
+        if (i / leaves2.length < p.fallenLeafAmt + 0.05) {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -16304,13 +16304,13 @@
         ctx.lineTo(6, poolCy + 1.6);
         ctx.lineTo(14, poolCy - 0.8);
         ctx.stroke();
-        const sheen2 = 0.18 + micro.iceSheen * 0.28;
-        ctx.fillStyle = rgb30([255, 255, 255], sheen2 * p.iceAmt);
+        const sheen3 = 0.18 + micro.iceSheen * 0.28;
+        ctx.fillStyle = rgb30([255, 255, 255], sheen3 * p.iceAmt);
         ctx.beginPath();
         ctx.ellipse(-4, poolCy - 1.6, 11, 1.8, -0.08, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = rgb30([255, 255, 255], 0.8 * p.frostAmt);
-        const sparkles = [
+        const sparkles2 = [
           [-13, 20],
           [-6, 17.5],
           [3, 21],
@@ -16318,7 +16318,7 @@
           [15, 20.5],
           [-1, 18]
         ];
-        for (const [sx, sy] of sparkles) {
+        for (const [sx, sy] of sparkles2) {
           ctx.beginPath();
           ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
           ctx.fill();
@@ -16867,11 +16867,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -17550,12 +17550,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [11, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -18217,11 +18217,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-13, 19.6, -0.5, [196, 120, 40]],
           [13, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -18842,12 +18842,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -19205,10 +19205,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb34([206, 224, 255], 0.1 + sheen2 * 0.12);
+          ctx.fillStyle = rgb34([206, 224, 255], 0.1 + sheen3 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 12, 10, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -19490,11 +19490,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -20072,12 +20072,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -20405,10 +20405,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb36([206, 224, 255], 0.1 + sheen2 * 0.12);
+          ctx.fillStyle = rgb36([206, 224, 255], 0.1 + sheen3 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 11, 8, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -20680,12 +20680,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -21024,10 +21024,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb37([206, 224, 255], 0.1 + sheen2 * 0.12);
+          ctx.fillStyle = rgb37([206, 224, 255], 0.1 + sheen3 * 0.12);
           ctx.beginPath();
           ctx.ellipse(cx - 2, cy, 11, 13, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -21295,12 +21295,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-12, 20, -0.5, [196, 96, 36]],
         [11, 20.5, 0.7, [212, 150, 52]],
         [1, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -21863,12 +21863,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -22202,10 +22202,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb39([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb39([206, 224, 255], 0.12 + sheen3 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 11.5, 12.5, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -22434,12 +22434,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -22692,10 +22692,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb40([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb40([206, 224, 255], 0.12 + sheen3 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13, 9, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -22953,12 +22953,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -23300,10 +23300,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb41([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb41([206, 224, 255], 0.12 + sheen3 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13.4, 10.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -23560,12 +23560,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -23898,10 +23898,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb42([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb42([206, 224, 255], 0.12 + sheen3 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 14.5, 9.6, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -24155,12 +24155,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -24476,10 +24476,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb43([206, 224, 255], 0.1 + sheen2 * 0.12);
+          ctx.fillStyle = rgb43([206, 224, 255], 0.1 + sheen3 * 0.12);
           ctx.beginPath();
           ctx.ellipse(cx, cy - 1, 14, 9, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -24722,12 +24722,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -25041,10 +25041,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb44([206, 224, 255], 0.1 + sheen2 * 0.12);
+          ctx.fillStyle = rgb44([206, 224, 255], 0.1 + sheen3 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13, 7.6, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -25282,12 +25282,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -25573,10 +25573,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb45([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb45([206, 224, 255], 0.12 + sheen3 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 11.5, 8.4, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -25839,12 +25839,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -26228,10 +26228,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb46([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb46([206, 224, 255], 0.12 + sheen3 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 12.5, 8, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -26485,12 +26485,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-11, 20, -0.5, [196, 96, 36]],
         [10, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -26844,10 +26844,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb47([206, 224, 255], 0.12 + sheen2 * 0.14);
+          ctx.fillStyle = rgb47([206, 224, 255], 0.12 + sheen3 * 0.14);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13.6, 9.8, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -27090,12 +27090,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-12, 20, -0.5, [196, 96, 36]],
         [11, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -27467,10 +27467,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb48([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb48([206, 224, 255], 0.12 + sheen3 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 14, 9, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -27730,12 +27730,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-12, 20, -0.5, [196, 96, 36]],
         [11, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -28137,10 +28137,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb49([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb49([206, 224, 255], 0.12 + sheen3 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 14, 9, 0, 0, Math.PI * 2);
           ctx.fill();
@@ -28391,11 +28391,11 @@
     }
     if (p.fallenLeafAmt > 0.01) {
       const a = p.fallenLeafAmt;
-      const leaves = [
+      const leaves2 = [
         [-12, 19.6, -0.5, [196, 120, 40]],
         [12, 18.6, 0.7, [176, 72, 32]]
       ];
-      leaves.forEach(([lx, ly, rot, col]) => {
+      leaves2.forEach(([lx, ly, rot, col]) => {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -29008,12 +29008,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-12, 20, -0.5, [196, 96, 36]],
         [11, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -29405,10 +29405,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb51([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb51([206, 224, 255], 0.12 + sheen3 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13, 8, -0.06, 0, Math.PI * 2);
           ctx.fill();
@@ -29668,12 +29668,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-12, 20, -0.5, [196, 96, 36]],
         [11, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -30087,10 +30087,10 @@
           ctx.beginPath();
           ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
           ctx.fill();
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb52([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb52([206, 224, 255], 0.12 + sheen3 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 12.5, 8.2, -0.05, 0, Math.PI * 2);
           ctx.fill();
@@ -30380,12 +30380,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-12, 20, -0.5, [196, 96, 36]],
         [11, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -30892,10 +30892,10 @@
             ctx.arc(gx, gy, 0.8, 0, Math.PI * 2);
             ctx.fill();
           }
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb53([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb53([206, 224, 255], 0.12 + sheen3 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 13, 8.6, -0.04, 0, Math.PI * 2);
           ctx.fill();
@@ -31169,12 +31169,12 @@
       }
     }
     if (p.fallenLeafAmt > 1e-3) {
-      const leaves = [
+      const leaves2 = [
         [-12, 20, -0.5, [196, 96, 36]],
         [11, 20.5, 0.7, [212, 150, 52]],
         [2, 21, 0.2, [168, 80, 40]]
       ];
-      for (const [lx, ly, rot, col] of leaves) {
+      for (const [lx, ly, rot, col] of leaves2) {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
@@ -31603,10 +31603,10 @@
             ctx.fill();
           }
           ctx.globalAlpha = 1;
-          const sheen2 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
           ctx.save();
           ctx.globalCompositeOperation = "soft-light";
-          ctx.fillStyle = rgb54([206, 224, 255], 0.12 + sheen2 * 0.12);
+          ctx.fillStyle = rgb54([206, 224, 255], 0.12 + sheen3 * 0.12);
           ctx.beginPath();
           ctx.ellipse(bx, by, 14, 9, -0.05, 0, Math.PI * 2);
           ctx.fill();
@@ -31897,11 +31897,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.6, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -32438,11 +32438,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.4, -0.5, [196, 120, 40]],
           [12, 18.8, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -33578,11 +33578,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.4, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -34309,11 +34309,11 @@
       ctx.restore();
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [9, rt + 6, 0.5, [196, 120, 40]],
           [-10, rb - 4, -0.6, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -34689,11 +34689,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-13, 19.6, -0.5, [196, 120, 40]],
           [13, 18.4, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -35223,11 +35223,11 @@
       }
       if (p.fallenLeafAmt > 0.01) {
         const a = p.fallenLeafAmt;
-        const leaves = [
+        const leaves2 = [
           [-12, 19.4, -0.5, [196, 120, 40]],
           [12, 18.6, 0.7, [176, 72, 32]]
         ];
-        leaves.forEach(([lx, ly, rot, col]) => {
+        leaves2.forEach(([lx, ly, rot, col]) => {
           ctx.save();
           ctx.translate(lx, ly);
           ctx.rotate(rot);
@@ -35516,6 +35516,9909 @@
     2: autumnToWinter55
   };
 
+  // src/textures/seasonal/mine/stone.ts
+  function clamp0163(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother62 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp67(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB55(a, b, t) {
+    return [lerp67(a[0], b[0], t), lerp67(a[1], b[1], t), lerp67(a[2], b[2], t)];
+  }
+  function rgb62(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba30(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0163(a)})`;
+  }
+  function lerpP62(a, b, t) {
+    return {
+      stoneLight: lerpRGB55(a.stoneLight, b.stoneLight, t),
+      stoneMid: lerpRGB55(a.stoneMid, b.stoneMid, t),
+      stoneDark: lerpRGB55(a.stoneDark, b.stoneDark, t),
+      padTop: lerpRGB55(a.padTop, b.padTop, t),
+      padDark: lerpRGB55(a.padDark, b.padDark, t),
+      soil: lerpRGB55(a.soil, b.soil, t),
+      outline: lerpRGB55(a.outline, b.outline, t),
+      light: lerpRGB55(a.light, b.light, t),
+      lightAmt: lerp67(a.lightAmt, b.lightAmt, t),
+      topHi: lerp67(a.topHi, b.topHi, t),
+      contact: lerp67(a.contact, b.contact, t),
+      mossAmt: lerp67(a.mossAmt, b.mossAmt, t),
+      frostAmt: lerp67(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp67(a.snowCapAmt, b.snowCapAmt, t),
+      padSnowAmt: lerp67(a.padSnowAmt, b.padSnowAmt, t),
+      dewAmt: lerp67(a.dewAmt, b.dewAmt, t),
+      fallenLeafAmt: lerp67(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP51(p) {
+    return {
+      ...p,
+      lightAmt: clamp0163(p.lightAmt),
+      topHi: clamp0163(p.topHi),
+      contact: clamp0163(p.contact),
+      mossAmt: clamp0163(p.mossAmt),
+      frostAmt: clamp0163(p.frostAmt),
+      snowCapAmt: clamp0163(p.snowCapAmt),
+      padSnowAmt: clamp0163(p.padSnowAmt),
+      dewAmt: clamp0163(p.dewAmt),
+      fallenLeafAmt: clamp0163(p.fallenLeafAmt)
+    };
+  }
+  var SP62 = {
+    // Spring — cool damp grey, faint dewy sheen on top, a small lime moss patch at
+    // the base; bright-ish cool light.
+    Spring: {
+      stoneLight: [160, 167, 174],
+      stoneMid: [112, 118, 125],
+      stoneDark: [62, 67, 74],
+      padTop: [150, 146, 130],
+      padDark: [96, 92, 78],
+      soil: [120, 102, 78],
+      outline: [40, 44, 50],
+      light: [226, 238, 246],
+      lightAmt: 0.15,
+      topHi: 0.5,
+      contact: 0.42,
+      mossAmt: 0.55,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0.6,
+      fallenLeafAmt: 0
+    },
+    // Summer — warm dry grey, strongest contact shadow, a tiny ochre lichen speck;
+    // warm light (PEAK contrast).
+    Summer: {
+      stoneLight: [166, 168, 168],
+      stoneMid: [116, 119, 121],
+      stoneDark: [60, 64, 68],
+      padTop: [166, 152, 122],
+      padDark: [110, 96, 70],
+      soil: [132, 106, 74],
+      outline: [42, 44, 48],
+      light: [255, 242, 208],
+      lightAmt: 0.17,
+      topHi: 0.62,
+      contact: 0.62,
+      mossAmt: 0.3,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — amber-lit grey, one fallen leaf resting against the base on the
+    // pad; low amber light.
+    Autumn: {
+      stoneLight: [164, 161, 156],
+      stoneMid: [115, 113, 110],
+      stoneDark: [62, 61, 60],
+      padTop: [156, 140, 96],
+      padDark: [108, 94, 60],
+      soil: [122, 94, 56],
+      outline: [50, 44, 38],
+      light: [248, 210, 148],
+      lightAmt: 0.2,
+      topHi: 0.46,
+      contact: 0.5,
+      mossAmt: 0.1,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — cool blue-grey light; snow cap on the boulder top + frost sparkle
+    // on upward faces, snow-dusted pad; the stone stays clearly grey underneath.
+    Winter: {
+      stoneLight: [158, 166, 178],
+      stoneMid: [108, 116, 128],
+      stoneDark: [60, 66, 78],
+      padTop: [176, 192, 210],
+      padDark: [120, 142, 166],
+      soil: [124, 116, 108],
+      outline: [46, 50, 60],
+      light: [208, 228, 252],
+      lightAmt: 0.3,
+      topHi: 0.4,
+      contact: 0.4,
+      mossAmt: 0,
+      frostAmt: 0.7,
+      snowCapAmt: 0.9,
+      padSnowAmt: 0.9,
+      dewAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var ROCK_TOP2 = -16;
+  var ROCK_BOT2 = 17;
+  function boulderPath(ctx, bob) {
+    const t = ROCK_TOP2 + bob;
+    const b = ROCK_BOT2 + bob;
+    ctx.beginPath();
+    ctx.moveTo(-13, b - 1);
+    ctx.quadraticCurveTo(-16, b - 8, -14, t + 13);
+    ctx.quadraticCurveTo(-12, t + 3, -6, t + 1);
+    ctx.quadraticCurveTo(0, t - 2.5, 7, t + 1);
+    ctx.quadraticCurveTo(14, t + 4, 15, t + 13);
+    ctx.quadraticCurveTo(16, b - 7, 12, b - 1);
+    ctx.quadraticCurveTo(6, b + 2, 0, b + 1.5);
+    ctx.quadraticCurveTo(-7, b + 2, -13, b - 1);
+    ctx.closePath();
+  }
+  var SMALL_OX = -13.5;
+  var SMALL_OY = 13.5;
+  function smallStonePath(ctx, bob) {
+    const ox = SMALL_OX;
+    const oy = SMALL_OY + bob;
+    ctx.beginPath();
+    ctx.moveTo(ox - 6, oy + 3);
+    ctx.quadraticCurveTo(ox - 7.5, oy - 1, ox - 4.5, oy - 4);
+    ctx.quadraticCurveTo(ox - 1, oy - 6.5, ox + 3, oy - 4);
+    ctx.quadraticCurveTo(ox + 6, oy - 1.5, ox + 5, oy + 3);
+    ctx.quadraticCurveTo(ox + 1, oy + 4.5, ox - 6, oy + 3);
+    ctx.closePath();
+  }
+  function shadeStone(ctx, p, cx, cy, rx, ry, topHiScale) {
+    ctx.fillStyle = rgb62(p.stoneMid);
+    ctx.fillRect(cx - rx - 4, cy - ry - 4, (rx + 4) * 2, (ry + 4) * 2);
+    const litGrad = ctx.createLinearGradient(cx - rx, cy - ry, cx + rx, cy + ry);
+    litGrad.addColorStop(0, rgb62(p.stoneLight));
+    litGrad.addColorStop(0.5, rgb62(p.stoneMid));
+    litGrad.addColorStop(1, rgb62(p.stoneDark));
+    ctx.fillStyle = litGrad;
+    ctx.globalAlpha = 0.95;
+    ctx.beginPath();
+    ctx.ellipse(cx - rx * 0.22, cy - ry * 0.12, rx + 2, ry * 0.96, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.fillStyle = rgba30(p.stoneDark, 0.55);
+    ctx.beginPath();
+    ctx.ellipse(cx + rx * 0.34, cy + ry * 0.42, rx * 0.82, ry * 0.72, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    const hi = clamp0163(p.topHi) * topHiScale;
+    if (hi > 0.01) {
+      ctx.fillStyle = rgba30(p.stoneLight, 0.45 * hi);
+      ctx.beginPath();
+      ctx.ellipse(cx - rx * 0.18, cy - ry * 0.62, rx * 0.62, ry * 0.34, -0.18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = rgba30(p.stoneDark, 0.18);
+    ctx.beginPath();
+    ctx.ellipse(cx - rx * 0.4, cy + ry * 0.1, rx * 0.22, ry * 0.16, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(cx + rx * 0.18, cy - ry * 0.1, rx * 0.18, ry * 0.14, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba30(p.stoneDark, 0.5);
+    ctx.beginPath();
+    ctx.ellipse(cx + 1, cy + ry * 0.84, rx * 0.92, ry * 0.22, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function paint62(ctx, raw, bob) {
+    const p = clampP51(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.fillStyle = rgba30(p.padDark, 0.4);
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb62(p.padDark);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb62(p.padTop);
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba30(p.padDark, 0.55);
+      const pebbles = [
+        [-12, 18.4, 1.2],
+        [-5, 20.6, 0.9],
+        [8, 18.2, 1.1],
+        [13, 19.8, 0.9],
+        [2, 21, 0.8]
+      ];
+      pebbles.forEach(([px, py, r]) => {
+        ctx.beginPath();
+        ctx.ellipse(px, py, r, r * 0.62, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      if (p.dewAmt > 0.01) {
+        ctx.fillStyle = rgba30([235, 246, 252], 0.28 * p.dewAmt);
+        ctx.beginPath();
+        ctx.ellipse(-4, 18.4, 12, 2.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (p.mossAmt > 0.01) {
+        const a = p.mossAmt;
+        ctx.fillStyle = rgba30([108, 168, 78], 0.5 * a);
+        const moss = [
+          [-15, 17.6, 3],
+          [-2, 20.2, 3.6],
+          [10, 18, 2.6]
+        ];
+        moss.forEach(([mx, my, r]) => {
+          ctx.beginPath();
+          ctx.ellipse(mx, my, r, r * 0.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.strokeStyle = rgba30([86, 150, 62], 0.75 * a);
+        ctx.lineWidth = 1;
+        [-15, -11, 9, 12].forEach((gx, i) => {
+          ctx.beginPath();
+          ctx.moveTo(gx, 18.2);
+          ctx.lineTo(gx + (i % 2 ? 1 : -1), 14.8);
+          ctx.stroke();
+        });
+      }
+      if (p.padSnowAmt > 0.01) {
+        ctx.fillStyle = rgba30([244, 250, 255], 0.9 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba30([210, 226, 244], 0.5 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba30([255, 255, 255], 0.8 * p.padSnowAmt);
+        [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      ctx.fillStyle = rgb62(p.soil);
+      ctx.beginPath();
+      ctx.ellipse(0, ROCK_BOT2 + bob + 1.5, 13, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba30(p.outline, 0.36 * p.contact + 0.12);
+      ctx.beginPath();
+      ctx.ellipse(4, ROCK_BOT2 + bob + 2, 14, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      smallStonePath(ctx, bob);
+      ctx.fillStyle = rgb62(p.outline);
+      ctx.fill();
+      ctx.save();
+      smallStonePath(ctx, bob);
+      ctx.clip();
+      shadeStone(ctx, p, SMALL_OX, SMALL_OY + bob, 6, 5, 0.7);
+      ctx.restore();
+      boulderPath(ctx, bob);
+      ctx.strokeStyle = rgb62(p.outline);
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+      ctx.fillStyle = rgb62(p.outline);
+      ctx.fill();
+      ctx.save();
+      boulderPath(ctx, bob);
+      ctx.clip();
+      const cy = lerp67(ROCK_TOP2, ROCK_BOT2, 0.5) + bob;
+      shadeStone(ctx, p, 0.5, cy, 15, (ROCK_BOT2 - ROCK_TOP2) * 0.5, 1);
+      if (p.frostAmt > 0.02) {
+        ctx.fillStyle = rgba30([210, 230, 250], 0.2 * p.frostAmt);
+        ctx.beginPath();
+        ctx.ellipse(-1, lerp67(ROCK_TOP2, ROCK_BOT2, 0.3) + bob, 14, (ROCK_BOT2 - ROCK_TOP2) * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba30([236, 246, 255], 0.65 * p.frostAmt);
+        const speck = [
+          [-9, ROCK_TOP2 + 6],
+          [-3, ROCK_TOP2 + 3],
+          [4, ROCK_TOP2 + 5],
+          [9, ROCK_TOP2 + 7],
+          [-6, lerp67(ROCK_TOP2, ROCK_BOT2, 0.4)],
+          [6, lerp67(ROCK_TOP2, ROCK_BOT2, 0.42)],
+          [0, lerp67(ROCK_TOP2, ROCK_BOT2, 0.3)]
+        ];
+        speck.forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy + bob, 0.65, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+      if (p.snowCapAmt > 0.02) {
+        const a = p.snowCapAmt;
+        const t = ROCK_TOP2 + bob;
+        ctx.fillStyle = rgba30([246, 251, 255], 0.95 * a);
+        ctx.beginPath();
+        ctx.moveTo(-9, t + 6);
+        ctx.quadraticCurveTo(-10, t - 1, -5, t + 1);
+        ctx.quadraticCurveTo(0, t - 3.5, 7, t + 1);
+        ctx.quadraticCurveTo(13, t + 3, 13, t + 8);
+        ctx.quadraticCurveTo(8, t + 5.5, 4, t + 6.5);
+        ctx.quadraticCurveTo(-2, t + 4.5, -9, t + 6);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = rgba30([205, 222, 242], 0.5 * a);
+        ctx.beginPath();
+        ctx.ellipse(-0.5, t + 5.5, 9.5, 1.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba30([246, 251, 255], 0.92 * a);
+        ctx.beginPath();
+        const sx = SMALL_OX, sy = SMALL_OY + bob;
+        ctx.moveTo(sx - 5, sy - 2.5);
+        ctx.quadraticCurveTo(sx - 1, sy - 6, sx + 3.5, sy - 3.5);
+        ctx.quadraticCurveTo(sx + 1, sy - 1.5, sx - 5, sy - 2.5);
+        ctx.closePath();
+        ctx.fill();
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const leaves2 = [
+          [11, ROCK_BOT2 + bob - 1, 0.55, [196, 120, 40]],
+          [-16, ROCK_BOT2 + bob + 0.5, -0.5, [176, 72, 32]]
+        ];
+        leaves2.forEach(([lx, ly, rot, col], idx) => {
+          ctx.save();
+          ctx.translate(lx, ly);
+          ctx.rotate(rot);
+          ctx.fillStyle = rgba30(col, a);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, idx === 0 ? 3.6 : 2.6, idx === 0 ? 2 : 1.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = rgba30([90, 44, 16], a);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(idx === 0 ? -3.4 : -2.4, 0);
+          ctx.lineTo(idx === 0 ? 3.4 : 2.4, 0);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lg.addColorStop(0, rgba30(p.light, p.lightAmt));
+        lg.addColorStop(1, rgba30(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lg;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function bobAt62(t, amp = 0.6, w = 1.3) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function draw52(season) {
+    return (ctx) => paint62(ctx, SP62[season], 0);
+  }
+  function anim52(season) {
+    return (ctx, t) => {
+      const bob = bobAt62(t);
+      paint62(ctx, SP62[season], bob);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const prog = t * 0.32 % 1;
+        const sx = lerp67(-9, 9, prog);
+        const sy = ROCK_TOP2 + bob + 3 + (prog - 0.5) * (prog - 0.5) * 6;
+        const fade = Math.sin(prog * Math.PI);
+        let sweepA = 0.16;
+        if (season === "Summer") sweepA = 0.24;
+        else if (season === "Spring") sweepA = 0.2;
+        else if (season === "Autumn") sweepA = 0.15;
+        else sweepA = 0.18;
+        const sweepCol = season === "Winter" ? "224,238,255" : season === "Autumn" ? "255,236,196" : "255,255,255";
+        ctx.fillStyle = `rgba(${sweepCol},${sweepA * fade})`;
+        ctx.save();
+        ctx.translate(sx, sy);
+        ctx.rotate(-0.18);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 4.2, 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        if (season === "Spring") {
+          const g = 0.18 + 0.24 * (0.5 + 0.5 * Math.sin(t * 2.2));
+          ctx.fillStyle = `rgba(235,248,255,${g})`;
+          ctx.beginPath();
+          ctx.arc(-7, 18.4 + Math.sin(t * 1.1) * 0.5, 1 + g * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Autumn") {
+          const sway = Math.sin(t * 1.4) * 0.2;
+          ctx.save();
+          ctx.translate(11, ROCK_BOT2 + bob - 1);
+          ctx.rotate(0.55 + sway);
+          ctx.fillStyle = "rgba(196,120,40,0.9)";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.6, 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(90,44,16,0.9)";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3.4, 0);
+          ctx.lineTo(3.4, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else if (season === "Winter") {
+          const flProg = t / 3.2 % 1;
+          const fy = -22 + flProg * 38;
+          const fx = -1 + Math.sin(flProg * Math.PI * 2) * 3;
+          ctx.globalAlpha = 0.4 + 0.45 * Math.sin(flProg * Math.PI);
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(fx, fy, 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.08 + 0.07 * (0.5 + 0.5 * Math.sin(t * 0.8));
+          ctx.fillStyle = "rgba(210,232,255,1)";
+          ctx.beginPath();
+          ctx.ellipse(-0.5, ROCK_TOP2 + bob + 5, 9, 2.4, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition59(fromIdx) {
+    const from = SP62[SEASON_NAMES[fromIdx]];
+    const to = SP62[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother62(clamp0163(pp));
+      paint62(ctx, lerpP62(from, to, k), 0);
+    };
+  }
+  var springToSummer56 = makeTransition59(0);
+  var summerToAutumn56 = makeTransition59(1);
+  var autumnToWinter56 = makeTransition59(2);
+  var VARIANTS64 = {
+    Spring: { draw: draw52("Spring"), anim: anim52("Spring") },
+    Summer: { draw: draw52("Summer"), anim: anim52("Summer") },
+    Autumn: { draw: draw52("Autumn"), anim: anim52("Autumn") },
+    Winter: { draw: draw52("Winter"), anim: anim52("Winter") }
+  };
+  var TRANSITIONS64 = {
+    0: springToSummer56,
+    1: summerToAutumn56,
+    2: autumnToWinter56
+  };
+
+  // src/textures/seasonal/mine/ironOre.ts
+  function clamp0164(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother63 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp68(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB56(a, b, t) {
+    return [lerp68(a[0], b[0], t), lerp68(a[1], b[1], t), lerp68(a[2], b[2], t)];
+  }
+  function rgb63(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba31(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0164(a)})`;
+  }
+  function lerpP63(a, b, t) {
+    return {
+      rockLight: lerpRGB56(a.rockLight, b.rockLight, t),
+      rockMid: lerpRGB56(a.rockMid, b.rockMid, t),
+      rockDark: lerpRGB56(a.rockDark, b.rockDark, t),
+      oreLight: lerpRGB56(a.oreLight, b.oreLight, t),
+      oreMid: lerpRGB56(a.oreMid, b.oreMid, t),
+      oreDark: lerpRGB56(a.oreDark, b.oreDark, t),
+      steel: lerpRGB56(a.steel, b.steel, t),
+      padTop: lerpRGB56(a.padTop, b.padTop, t),
+      padDark: lerpRGB56(a.padDark, b.padDark, t),
+      soil: lerpRGB56(a.soil, b.soil, t),
+      outline: lerpRGB56(a.outline, b.outline, t),
+      light: lerpRGB56(a.light, b.light, t),
+      lightAmt: lerp68(a.lightAmt, b.lightAmt, t),
+      oreShine: lerp68(a.oreShine, b.oreShine, t),
+      mossAmt: lerp68(a.mossAmt, b.mossAmt, t),
+      frostAmt: lerp68(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp68(a.snowCapAmt, b.snowCapAmt, t),
+      padSnowAmt: lerp68(a.padSnowAmt, b.padSnowAmt, t),
+      dewAmt: lerp68(a.dewAmt, b.dewAmt, t),
+      fallenLeafAmt: lerp68(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP52(p) {
+    return {
+      ...p,
+      lightAmt: clamp0164(p.lightAmt),
+      oreShine: clamp0164(p.oreShine),
+      mossAmt: clamp0164(p.mossAmt),
+      frostAmt: clamp0164(p.frostAmt),
+      snowCapAmt: clamp0164(p.snowCapAmt),
+      padSnowAmt: clamp0164(p.padSnowAmt),
+      dewAmt: clamp0164(p.dewAmt),
+      fallenLeafAmt: clamp0164(p.fallenLeafAmt)
+    };
+  }
+  var SP63 = {
+    // Spring — cool damp light; cool grey host rock + clear rusty ore; a small
+    // lime moss fleck at the base; dewy pad.
+    Spring: {
+      rockLight: [168, 158, 152],
+      rockMid: [110, 98, 92],
+      rockDark: [74, 62, 58],
+      oreLight: [178, 102, 60],
+      oreMid: [148, 76, 44],
+      oreDark: [118, 56, 34],
+      steel: [176, 168, 166],
+      padTop: [148, 138, 122],
+      padDark: [94, 86, 72],
+      soil: [118, 98, 74],
+      outline: [46, 38, 36],
+      light: [226, 238, 246],
+      lightAmt: 0.15,
+      oreShine: 0.5,
+      mossAmt: 0.5,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0.65,
+      fallenLeafAmt: 0
+    },
+    // Summer — warm dry rock, strongest shadow, PEAK metallic glint on the ore;
+    // warm light, light moss.
+    Summer: {
+      rockLight: [178, 164, 154],
+      rockMid: [116, 102, 94],
+      rockDark: [76, 62, 56],
+      oreLight: [192, 112, 62],
+      oreMid: [158, 84, 46],
+      oreDark: [124, 60, 34],
+      steel: [188, 178, 172],
+      padTop: [162, 144, 110],
+      padDark: [108, 92, 64],
+      soil: [132, 106, 72],
+      outline: [48, 38, 34],
+      light: [255, 242, 206],
+      lightAmt: 0.18,
+      oreShine: 0.95,
+      mossAmt: 0.28,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — amber-lit rock; olive-tan earthy pad; a fallen leaf on the pad; low
+    // amber light; ore a touch deeper rust.
+    Autumn: {
+      rockLight: [172, 156, 142],
+      rockMid: [114, 100, 90],
+      rockDark: [74, 60, 52],
+      oreLight: [176, 96, 52],
+      oreMid: [146, 72, 38],
+      oreDark: [112, 52, 28],
+      steel: [178, 166, 158],
+      padTop: [156, 140, 96],
+      padDark: [110, 94, 58],
+      soil: [126, 98, 58],
+      outline: [54, 42, 34],
+      light: [248, 210, 148],
+      lightAmt: 0.2,
+      oreShine: 0.5,
+      mossAmt: 0.12,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — cool blue-grey light; snow cap + frost on the rock's upward faces,
+    // snow-dusted pad; iron veins still clearly rusty-red and glinting underneath.
+    Winter: {
+      rockLight: [170, 168, 172],
+      rockMid: [112, 108, 112],
+      rockDark: [72, 66, 70],
+      oreLight: [178, 100, 58],
+      oreMid: [148, 76, 44],
+      oreDark: [118, 56, 34],
+      steel: [186, 182, 184],
+      padTop: [172, 186, 204],
+      padDark: [118, 134, 156],
+      soil: [122, 116, 110],
+      outline: [44, 42, 50],
+      light: [208, 228, 252],
+      lightAmt: 0.3,
+      oreShine: 0.55,
+      mossAmt: 0,
+      frostAmt: 0.7,
+      snowCapAmt: 0.85,
+      padSnowAmt: 0.9,
+      dewAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var ROCK_TOP3 = -14;
+  var ROCK_BOT3 = 17;
+  var ROCK_HALF2 = 15;
+  function rockBodyPath2(ctx, bob) {
+    const t = ROCK_TOP3 + bob;
+    const b = ROCK_BOT3 + bob;
+    ctx.beginPath();
+    ctx.moveTo(-ROCK_HALF2, b - 1);
+    ctx.lineTo(-ROCK_HALF2 + 1.5, b - 11);
+    ctx.lineTo(-11.5, t + 12);
+    ctx.lineTo(-9, t + 4);
+    ctx.lineTo(-4.5, t + 1);
+    ctx.lineTo(-1, t);
+    ctx.lineTo(4, t + 3);
+    ctx.lineTo(8.5, t + 1.5);
+    ctx.lineTo(12, t + 11);
+    ctx.lineTo(ROCK_HALF2 - 1, b - 10);
+    ctx.lineTo(ROCK_HALF2, b - 1);
+    ctx.lineTo(8, b + 1.5);
+    ctx.lineTo(0, b + 0.5);
+    ctx.lineTo(-8, b + 1.5);
+    ctx.closePath();
+  }
+  var VEINS2 = [
+    [[-12, 11], [-6, 4], [-1, -1], [4, -8]],
+    [[-10, -5], [-3, 0], [4, 4], [11, 9]],
+    [[-2, 13], [1, 5], [-1, -1], [3, -9]]
+  ];
+  var NUGGETS2 = [
+    // [x, y, radius]
+    [-7, 1, 2.5],
+    [5, -3, 2],
+    [9, 7, 1.7],
+    [-3, 9, 1.6]
+  ];
+  function paint63(ctx, raw, bob) {
+    const p = clampP52(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.fillStyle = rgba31(p.padDark, 0.4);
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb63(p.padDark);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb63(p.padTop);
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba31(p.padDark, 0.55);
+      [[-13, 19.5], [12, 18.6], [-6, 21], [7, 20.6], [0, 18.4]].forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, 1.5, 0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      if (p.dewAmt > 0.01) {
+        ctx.fillStyle = rgba31([235, 248, 255], 0.28 * p.dewAmt);
+        ctx.beginPath();
+        ctx.ellipse(-3, 18.2, 14, 2.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (p.mossAmt > 0.01) {
+        const a = p.mossAmt;
+        ctx.fillStyle = rgba31([120, 176, 78], 0.6 * a);
+        [[-12, 18.6], [10, 18.3], [-3, 20], [5, 19.5]].forEach(([mx, my], idx) => {
+          ctx.beginPath();
+          ctx.ellipse(mx, my, 3 + idx % 2, 1.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.strokeStyle = rgba31([96, 162, 70], 0.8 * a);
+        ctx.lineWidth = 1;
+        [-10, -2, 6, 11].forEach((gx) => {
+          ctx.beginPath();
+          ctx.moveTo(gx, 18.6);
+          ctx.lineTo(gx - 0.8, 15.6);
+          ctx.stroke();
+        });
+      }
+      if (p.padSnowAmt > 0.01) {
+        ctx.fillStyle = rgba31([244, 250, 255], 0.92 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba31([210, 226, 244], 0.5 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba31([255, 255, 255], 0.8 * p.padSnowAmt);
+        [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const leaves2 = [
+          [-13, 19.6, -0.5, [196, 120, 40]],
+          [13, 18.4, 0.7, [176, 72, 32]]
+        ];
+        leaves2.forEach(([lx, ly, rot, col]) => {
+          ctx.save();
+          ctx.translate(lx, ly);
+          ctx.rotate(rot);
+          ctx.fillStyle = rgba31(col, a);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = rgba31([90, 44, 16], a);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+      ctx.fillStyle = rgb63(p.soil);
+      ctx.beginPath();
+      ctx.ellipse(0, ROCK_BOT3 + bob + 1.5, 12, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba31(p.outline, 0.3);
+      ctx.beginPath();
+      ctx.ellipse(3, ROCK_BOT3 + bob + 2, 13, 2.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      rockBodyPath2(ctx, bob);
+      ctx.strokeStyle = rgb63(p.outline);
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      ctx.fillStyle = rgb63(p.outline);
+      ctx.fill();
+      ctx.save();
+      rockBodyPath2(ctx, bob);
+      ctx.clip();
+      const top = ROCK_TOP3 + bob;
+      const bot = ROCK_BOT3 + bob;
+      ctx.fillStyle = rgb63(p.rockMid);
+      ctx.fillRect(-ROCK_HALF2 - 3, top - 4, (ROCK_HALF2 + 3) * 2, bot - top + 10);
+      const litGrad = ctx.createLinearGradient(-ROCK_HALF2, top, ROCK_HALF2, bot);
+      litGrad.addColorStop(0, rgb63(p.rockLight));
+      litGrad.addColorStop(0.5, rgb63(p.rockMid));
+      litGrad.addColorStop(1, rgb63(p.rockDark));
+      ctx.fillStyle = litGrad;
+      ctx.globalAlpha = 0.92;
+      ctx.beginPath();
+      ctx.ellipse(-2, lerp68(top, bot, 0.45), ROCK_HALF2 + 3, (bot - top) * 0.62, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = rgba31(p.rockDark, 0.8);
+      ctx.lineWidth = 1.8;
+      [
+        [[-9, top + 4], [-4, lerp68(top, bot, 0.5)], [-6, bot - 2]],
+        [[6, top + 5], [9, lerp68(top, bot, 0.55)], [11, bot - 3]]
+      ].forEach((seg) => {
+        ctx.beginPath();
+        ctx.moveTo(seg[0][0], seg[0][1]);
+        ctx.lineTo(seg[1][0], seg[1][1]);
+        ctx.lineTo(seg[2][0], seg[2][1]);
+        ctx.stroke();
+      });
+      ctx.strokeStyle = rgba31(p.rockLight, 0.5);
+      ctx.lineWidth = 1.1;
+      [
+        [[-10, top + 6], [-7, lerp68(top, bot, 0.4)]],
+        [[-2, top + 2], [0, lerp68(top, bot, 0.3)]]
+      ].forEach((seg) => {
+        ctx.beginPath();
+        ctx.moveTo(seg[0][0], seg[0][1]);
+        ctx.lineTo(seg[1][0], seg[1][1]);
+        ctx.stroke();
+      });
+      ctx.fillStyle = rgba31(p.rockDark, 0.6);
+      ctx.beginPath();
+      ctx.ellipse(0, bot - 2, ROCK_HALF2, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      VEINS2.forEach((pts) => {
+        ctx.strokeStyle = rgb63(p.oreDark);
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1] + bob);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1] + bob);
+        ctx.stroke();
+        ctx.strokeStyle = rgb63(p.oreMid);
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1] + bob);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1] + bob);
+        ctx.stroke();
+        ctx.strokeStyle = rgba31(p.oreLight, 0.9);
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0] - 0.4, pts[0][1] - 0.5 + bob);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0] - 0.4, pts[i][1] - 0.5 + bob);
+        ctx.stroke();
+      });
+      NUGGETS2.forEach(([nx, ny, nr]) => {
+        const ng = ctx.createRadialGradient(nx - nr * 0.4, ny - nr * 0.4 + bob, nr * 0.2, nx, ny + bob, nr);
+        ng.addColorStop(0, rgb63(p.oreLight));
+        ng.addColorStop(0.6, rgb63(p.oreMid));
+        ng.addColorStop(1, rgb63(p.oreDark));
+        ctx.fillStyle = ng;
+        ctx.beginPath();
+        ctx.arc(nx, ny + bob, nr, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba31(p.outline, 0.6);
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+        ctx.fillStyle = rgba31(p.steel, 0.55 + 0.4 * p.oreShine);
+        ctx.beginPath();
+        ctx.arc(nx - nr * 0.35, ny - nr * 0.35 + bob, nr * 0.34, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba31([255, 252, 248], 0.35 + 0.45 * p.oreShine);
+        ctx.beginPath();
+        ctx.arc(nx - nr * 0.4, ny - nr * 0.42 + bob, nr * 0.16, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      if (p.frostAmt > 0.02) {
+        ctx.fillStyle = rgba31([210, 230, 250], 0.24 * p.frostAmt);
+        ctx.beginPath();
+        ctx.ellipse(-1, lerp68(top, bot, 0.26), ROCK_HALF2, (bot - top) * 0.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba31([235, 246, 255], 0.6 * p.frostAmt);
+        const speck = [
+          [-9, top + 4],
+          [-4, top + 2],
+          [3, top + 4],
+          [9, top + 5],
+          [-11, lerp68(top, bot, 0.42)],
+          [11, lerp68(top, bot, 0.4)]
+        ];
+        speck.forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+      if (p.snowCapAmt > 0.02) {
+        const a = p.snowCapAmt;
+        ctx.fillStyle = rgba31([246, 251, 255], 0.95 * a);
+        ctx.beginPath();
+        ctx.moveTo(-10, top + 5);
+        ctx.quadraticCurveTo(-9, top - 2, -4.5, top - 1);
+        ctx.quadraticCurveTo(-1, top - 3, 4, top - 0.5);
+        ctx.quadraticCurveTo(8.5, top - 2, 11, top + 4);
+        ctx.quadraticCurveTo(6, top + 6, 4, top + 4);
+        ctx.quadraticCurveTo(-1, top + 3, -4, top + 5);
+        ctx.quadraticCurveTo(-7, top + 6.5, -10, top + 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = rgba31([205, 222, 242], 0.5 * a);
+        ctx.beginPath();
+        ctx.ellipse(0, top + 4.5, 9.5, 1.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lg.addColorStop(0, rgba31(p.light, p.lightAmt));
+        lg.addColorStop(1, rgba31(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lg;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function bobAt63(t, amp = 0.7, w = 1.3) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  var GLINT_PATH2 = VEINS2.flat();
+  function glintAt2(u) {
+    const n = GLINT_PATH2.length;
+    const f = clamp0164(u) * (n - 1);
+    const i = Math.min(n - 2, Math.floor(f));
+    const k = f - i;
+    const a = GLINT_PATH2[i];
+    const b = GLINT_PATH2[i + 1];
+    return [lerp68(a[0], b[0], k), lerp68(a[1], b[1], k)];
+  }
+  function draw53(season) {
+    return (ctx) => paint63(ctx, SP63[season], 0);
+  }
+  function anim53(season) {
+    return (ctx, t) => {
+      const bob = bobAt63(t);
+      paint63(ctx, SP63[season], bob);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const prog = t * 0.4 % 1;
+        const [gx, gy] = glintAt2(prog);
+        const base = season === "Summer" ? 0.7 : season === "Winter" ? 0.42 : 0.52;
+        const glintCol = season === "Summer" ? "255,244,212" : season === "Winter" ? "224,236,255" : "255,248,228";
+        const pulse = base * (0.55 + 0.45 * Math.sin(prog * Math.PI));
+        ctx.fillStyle = `rgba(${glintCol},${pulse})`;
+        ctx.beginPath();
+        ctx.ellipse(gx, gy + bob, 1.7, 1.2, -0.25, 0, Math.PI * 2);
+        ctx.fill();
+        if (season === "Spring") {
+          const g = 0.2 + 0.28 * (0.5 + 0.5 * Math.sin(t * 2.2));
+          ctx.fillStyle = `rgba(235,248,255,${g})`;
+          ctx.beginPath();
+          ctx.arc(-6, 18.4, 1.1 + g * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Summer") {
+          const s = 0.14 + 0.18 * (0.5 + 0.5 * Math.sin(t * 1.1));
+          ctx.fillStyle = `rgba(255,224,176,${s})`;
+          ctx.beginPath();
+          ctx.ellipse(-7, 1 + bob, 3.4, 2.6, -0.2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Autumn") {
+          const sway = Math.sin(t * 1.4) * 0.25;
+          ctx.save();
+          ctx.translate(13, 18.4);
+          ctx.rotate(0.7 + sway);
+          ctx.fillStyle = "rgba(176,72,32,0.9)";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(90,44,16,0.9)";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          const prog2 = t / 3.2 % 1;
+          const fy = -20 + prog2 * 36;
+          const dx = 4 + Math.sin(prog2 * Math.PI * 2) * 3;
+          ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog2 * Math.PI);
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(dx, fy, 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.8));
+          ctx.fillStyle = "rgba(210,232,255,1)";
+          ctx.beginPath();
+          ctx.ellipse(-3, -8 + bob, 8, 3.5, -0.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition60(fromIdx) {
+    const from = SP63[SEASON_NAMES[fromIdx]];
+    const to = SP63[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother63(clamp0164(pp));
+      paint63(ctx, lerpP63(from, to, k), 0);
+    };
+  }
+  var springToSummer57 = makeTransition60(0);
+  var summerToAutumn57 = makeTransition60(1);
+  var autumnToWinter57 = makeTransition60(2);
+  var VARIANTS65 = {
+    Spring: { draw: draw53("Spring"), anim: anim53("Spring") },
+    Summer: { draw: draw53("Summer"), anim: anim53("Summer") },
+    Autumn: { draw: draw53("Autumn"), anim: anim53("Autumn") },
+    Winter: { draw: draw53("Winter"), anim: anim53("Winter") }
+  };
+  var TRANSITIONS65 = {
+    0: springToSummer57,
+    1: summerToAutumn57,
+    2: autumnToWinter57
+  };
+
+  // src/textures/seasonal/mine/copperOre.ts
+  function clamp0165(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother64 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp69(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB57(a, b, t) {
+    return [lerp69(a[0], b[0], t), lerp69(a[1], b[1], t), lerp69(a[2], b[2], t)];
+  }
+  function rgb64(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba32(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0165(a)})`;
+  }
+  function lerpP64(a, b, t) {
+    return {
+      rockLight: lerpRGB57(a.rockLight, b.rockLight, t),
+      rockMid: lerpRGB57(a.rockMid, b.rockMid, t),
+      rockDark: lerpRGB57(a.rockDark, b.rockDark, t),
+      copperLight: lerpRGB57(a.copperLight, b.copperLight, t),
+      copperMid: lerpRGB57(a.copperMid, b.copperMid, t),
+      copperDark: lerpRGB57(a.copperDark, b.copperDark, t),
+      patina: lerpRGB57(a.patina, b.patina, t),
+      padTop: lerpRGB57(a.padTop, b.padTop, t),
+      padDark: lerpRGB57(a.padDark, b.padDark, t),
+      soil: lerpRGB57(a.soil, b.soil, t),
+      outline: lerpRGB57(a.outline, b.outline, t),
+      light: lerpRGB57(a.light, b.light, t),
+      lightAmt: lerp69(a.lightAmt, b.lightAmt, t),
+      copperShine: lerp69(a.copperShine, b.copperShine, t),
+      mossAmt: lerp69(a.mossAmt, b.mossAmt, t),
+      frostAmt: lerp69(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp69(a.snowCapAmt, b.snowCapAmt, t),
+      padSnowAmt: lerp69(a.padSnowAmt, b.padSnowAmt, t),
+      dewAmt: lerp69(a.dewAmt, b.dewAmt, t),
+      fallenLeafAmt: lerp69(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP53(p) {
+    return {
+      ...p,
+      lightAmt: clamp0165(p.lightAmt),
+      copperShine: clamp0165(p.copperShine),
+      mossAmt: clamp0165(p.mossAmt),
+      frostAmt: clamp0165(p.frostAmt),
+      snowCapAmt: clamp0165(p.snowCapAmt),
+      padSnowAmt: clamp0165(p.padSnowAmt),
+      dewAmt: clamp0165(p.dewAmt),
+      fallenLeafAmt: clamp0165(p.fallenLeafAmt)
+    };
+  }
+  var SP64 = {
+    // Spring — cool damp rock, cool-bright light; bright copper + clear patina;
+    // a small lime moss fleck at the base; dewy pad.
+    Spring: {
+      rockLight: [172, 178, 184],
+      rockMid: [126, 130, 138],
+      rockDark: [82, 84, 92],
+      copperLight: [203, 132, 86],
+      copperMid: [156, 92, 52],
+      copperDark: [104, 58, 26],
+      patina: [70, 182, 146],
+      padTop: [146, 140, 132],
+      padDark: [92, 88, 80],
+      soil: [118, 100, 76],
+      outline: [50, 48, 52],
+      light: [228, 240, 248],
+      lightAmt: 0.15,
+      copperShine: 0.55,
+      mossAmt: 0.55,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0.7,
+      fallenLeafAmt: 0
+    },
+    // Summer — warm dry rock, strongest shadow, PEAK copper glint; warm light.
+    Summer: {
+      rockLight: [180, 178, 172],
+      rockMid: [134, 130, 124],
+      rockDark: [82, 78, 72],
+      copperLight: [205, 130, 80],
+      copperMid: [160, 94, 50],
+      copperDark: [108, 58, 22],
+      patina: [60, 172, 134],
+      padTop: [160, 142, 110],
+      padDark: [104, 88, 60],
+      soil: [132, 106, 72],
+      outline: [54, 48, 44],
+      light: [255, 240, 204],
+      lightAmt: 0.18,
+      copperShine: 0.95,
+      mossAmt: 0.3,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — amber-lit rock, low amber light; olive-tan earthy pad; a fallen
+    // leaf on the pad.
+    Autumn: {
+      rockLight: [182, 174, 164],
+      rockMid: [136, 128, 120],
+      rockDark: [86, 80, 74],
+      copperLight: [204, 130, 80],
+      copperMid: [158, 92, 50],
+      copperDark: [106, 58, 24],
+      patina: [66, 176, 138],
+      padTop: [158, 140, 94],
+      padDark: [110, 94, 58],
+      soil: [126, 98, 58],
+      outline: [56, 48, 40],
+      light: [248, 210, 148],
+      lightAmt: 0.2,
+      copperShine: 0.55,
+      mossAmt: 0.12,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — snow cap + frost sparkle on the rock faces, snow-dusted pad, cool
+    // light; the copper veins stay bright orange with their teal patina.
+    Winter: {
+      rockLight: [180, 190, 202],
+      rockMid: [132, 142, 156],
+      rockDark: [84, 92, 108],
+      copperLight: [202, 130, 86],
+      copperMid: [154, 92, 56],
+      copperDark: [104, 58, 30],
+      patina: [70, 180, 148],
+      padTop: [172, 186, 204],
+      padDark: [118, 134, 156],
+      soil: [124, 118, 110],
+      outline: [50, 52, 62],
+      light: [208, 228, 252],
+      lightAmt: 0.3,
+      copperShine: 0.6,
+      mossAmt: 0,
+      frostAmt: 0.7,
+      snowCapAmt: 0.85,
+      padSnowAmt: 0.9,
+      dewAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var ROCK_TOP4 = -14;
+  var ROCK_BOT4 = 17;
+  var ROCK_HALF3 = 15;
+  function rockBodyPath3(ctx, bob) {
+    const t = ROCK_TOP4 + bob;
+    const b = ROCK_BOT4 + bob;
+    ctx.beginPath();
+    ctx.moveTo(-ROCK_HALF3, b - 1);
+    ctx.lineTo(-ROCK_HALF3 + 1.5, b - 11);
+    ctx.lineTo(-11.5, t + 12);
+    ctx.lineTo(-9, t + 4);
+    ctx.lineTo(-4.5, t + 1);
+    ctx.lineTo(-1, t);
+    ctx.lineTo(4, t + 3);
+    ctx.lineTo(8.5, t + 1.5);
+    ctx.lineTo(12, t + 11);
+    ctx.lineTo(ROCK_HALF3 - 1, b - 10);
+    ctx.lineTo(ROCK_HALF3, b - 1);
+    ctx.lineTo(8, b + 1.5);
+    ctx.lineTo(0, b + 0.5);
+    ctx.lineTo(-8, b + 1.5);
+    ctx.closePath();
+  }
+  var VEINS3 = [
+    [[-12, 12], [-6, 4], [-2, -2], [3, -8]],
+    [[-9, -6], [-3, -1], [4, 3], [11, 8]],
+    [[-1, 14], [1, 6], [-2, 0], [2, -10]]
+  ];
+  var NUGGETS3 = [
+    // [x, y, radius]
+    [-7, 2, 2.4],
+    [5, -3, 2],
+    [9, 6, 1.7],
+    [-3, 9, 1.5]
+  ];
+  var PATINA_FLECKS = [
+    // [x, y, radius]
+    [-9, 7, 1.3],
+    [1, -5, 1.1],
+    [7, 1, 1],
+    [-4, 0, 0.9],
+    [11, 8, 0.9]
+  ];
+  function paint64(ctx, raw, bob) {
+    const p = clampP53(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.fillStyle = rgba32(p.padDark, 0.4);
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb64(p.padDark);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb64(p.padTop);
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba32(p.padDark, 0.55);
+      [[-13, 19.5], [12, 18.6], [-6, 21], [7, 20.6], [0, 18.4]].forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, 1.5, 0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      if (p.dewAmt > 0.01) {
+        ctx.fillStyle = rgba32([235, 248, 255], 0.28 * p.dewAmt);
+        ctx.beginPath();
+        ctx.ellipse(-3, 18.2, 14, 2.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (p.mossAmt > 0.01) {
+        const a = p.mossAmt;
+        ctx.fillStyle = rgba32([120, 178, 84], 0.65 * a);
+        [[-12, 18.5], [10, 18.2], [-3, 20], [5, 19.4]].forEach(([mx, my], idx) => {
+          ctx.beginPath();
+          ctx.ellipse(mx, my, 3.2 + idx % 2, 1.6, 0, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.strokeStyle = rgba32([96, 162, 70], 0.8 * a);
+        ctx.lineWidth = 1;
+        [-10, -2, 6, 11].forEach((gx) => {
+          ctx.beginPath();
+          ctx.moveTo(gx, 18.6);
+          ctx.lineTo(gx - 0.8, 15.6);
+          ctx.stroke();
+        });
+      }
+      if (p.padSnowAmt > 0.01) {
+        ctx.fillStyle = rgba32([244, 250, 255], 0.92 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba32([210, 226, 244], 0.5 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba32([255, 255, 255], 0.8 * p.padSnowAmt);
+        [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const leaves2 = [
+          [-13, 19.6, -0.5, [196, 120, 40]],
+          [13, 18.4, 0.7, [176, 72, 32]]
+        ];
+        leaves2.forEach(([lx, ly, rot, col]) => {
+          ctx.save();
+          ctx.translate(lx, ly);
+          ctx.rotate(rot);
+          ctx.fillStyle = rgba32(col, a);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = rgba32([90, 44, 16], a);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+      ctx.fillStyle = rgb64(p.soil);
+      ctx.beginPath();
+      ctx.ellipse(0, ROCK_BOT4 + bob + 1.5, 12, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba32(p.outline, 0.3);
+      ctx.beginPath();
+      ctx.ellipse(3, ROCK_BOT4 + bob + 2, 13, 2.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      rockBodyPath3(ctx, bob);
+      ctx.strokeStyle = rgb64(p.outline);
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      ctx.fillStyle = rgb64(p.outline);
+      ctx.fill();
+      ctx.save();
+      rockBodyPath3(ctx, bob);
+      ctx.clip();
+      const top = ROCK_TOP4 + bob;
+      const bot = ROCK_BOT4 + bob;
+      ctx.fillStyle = rgb64(p.rockMid);
+      ctx.fillRect(-ROCK_HALF3 - 3, top - 4, (ROCK_HALF3 + 3) * 2, bot - top + 10);
+      const litGrad = ctx.createLinearGradient(-ROCK_HALF3, top, ROCK_HALF3, bot);
+      litGrad.addColorStop(0, rgb64(p.rockLight));
+      litGrad.addColorStop(0.5, rgb64(p.rockMid));
+      litGrad.addColorStop(1, rgb64(p.rockDark));
+      ctx.fillStyle = litGrad;
+      ctx.globalAlpha = 0.92;
+      ctx.beginPath();
+      ctx.ellipse(-2, lerp69(top, bot, 0.45), ROCK_HALF3 + 3, (bot - top) * 0.62, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = rgba32(p.rockDark, 0.8);
+      ctx.lineWidth = 1.8;
+      [
+        [[-9, top + 4], [-4, lerp69(top, bot, 0.5)], [-6, bot - 2]],
+        [[6, top + 5], [9, lerp69(top, bot, 0.55)], [11, bot - 3]]
+      ].forEach((seg) => {
+        ctx.beginPath();
+        ctx.moveTo(seg[0][0], seg[0][1]);
+        ctx.lineTo(seg[1][0], seg[1][1]);
+        ctx.lineTo(seg[2][0], seg[2][1]);
+        ctx.stroke();
+      });
+      ctx.strokeStyle = rgba32(p.rockLight, 0.5);
+      ctx.lineWidth = 1.1;
+      [
+        [[-10, top + 6], [-7, lerp69(top, bot, 0.4)]],
+        [[-2, top + 2], [0, lerp69(top, bot, 0.3)]]
+      ].forEach((seg) => {
+        ctx.beginPath();
+        ctx.moveTo(seg[0][0], seg[0][1]);
+        ctx.lineTo(seg[1][0], seg[1][1]);
+        ctx.stroke();
+      });
+      ctx.fillStyle = rgba32(p.rockDark, 0.6);
+      ctx.beginPath();
+      ctx.ellipse(0, bot - 2, ROCK_HALF3, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      VEINS3.forEach((pts) => {
+        ctx.strokeStyle = rgb64(p.copperDark);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1] + bob);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1] + bob);
+        ctx.stroke();
+        ctx.strokeStyle = rgb64(p.copperMid);
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1] + bob);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1] + bob);
+        ctx.stroke();
+        ctx.strokeStyle = rgba32(p.copperLight, 0.9);
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0] - 0.4, pts[0][1] - 0.5 + bob);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0] - 0.4, pts[i][1] - 0.5 + bob);
+        ctx.stroke();
+      });
+      NUGGETS3.forEach(([nx, ny, nr]) => {
+        const ng = ctx.createRadialGradient(nx - nr * 0.4, ny - nr * 0.4 + bob, nr * 0.2, nx, ny + bob, nr);
+        ng.addColorStop(0, rgb64(p.copperLight));
+        ng.addColorStop(0.6, rgb64(p.copperMid));
+        ng.addColorStop(1, rgb64(p.copperDark));
+        ctx.fillStyle = ng;
+        ctx.beginPath();
+        ctx.arc(nx, ny + bob, nr, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba32(p.outline, 0.6);
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+        ctx.fillStyle = rgba32([255, 246, 232], 0.4 + 0.45 * p.copperShine);
+        ctx.beginPath();
+        ctx.arc(nx - nr * 0.35, ny - nr * 0.35 + bob, nr * 0.32, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      PATINA_FLECKS.forEach(([fx, fy, fr]) => {
+        ctx.fillStyle = rgb64(p.patina);
+        ctx.beginPath();
+        ctx.ellipse(fx, fy + bob, fr, fr * 0.82, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba32([148, 214, 188], 0.6);
+        ctx.beginPath();
+        ctx.ellipse(fx - fr * 0.2, fy - fr * 0.2 + bob, fr * 0.5, fr * 0.42, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      if (p.frostAmt > 0.02) {
+        ctx.fillStyle = rgba32([210, 230, 250], 0.26 * p.frostAmt);
+        ctx.beginPath();
+        ctx.ellipse(-1, lerp69(top, bot, 0.28), ROCK_HALF3, (bot - top) * 0.32, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba32([235, 246, 255], 0.65 * p.frostAmt);
+        const speck = [
+          [-9, top + 4],
+          [-3, top + 2],
+          [4, top + 4],
+          [9, top + 5],
+          [-6, lerp69(top, bot, 0.4)],
+          [6, lerp69(top, bot, 0.45)],
+          [0, lerp69(top, bot, 0.32)]
+        ];
+        speck.forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+      if (p.snowCapAmt > 0.02) {
+        const a = p.snowCapAmt;
+        ctx.fillStyle = rgba32([246, 251, 255], 0.95 * a);
+        ctx.beginPath();
+        ctx.moveTo(-10, top + 5);
+        ctx.quadraticCurveTo(-9, top - 2, -4.5, top - 1);
+        ctx.quadraticCurveTo(-1, top - 3, 4, top - 0.5);
+        ctx.quadraticCurveTo(8.5, top - 2, 11, top + 4);
+        ctx.quadraticCurveTo(6, top + 6, 4, top + 4);
+        ctx.quadraticCurveTo(-1, top + 3, -4, top + 5);
+        ctx.quadraticCurveTo(-7, top + 6.5, -10, top + 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = rgba32([205, 222, 242], 0.5 * a);
+        ctx.beginPath();
+        ctx.ellipse(0, top + 4.5, 9.5, 1.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lg.addColorStop(0, rgba32(p.light, p.lightAmt));
+        lg.addColorStop(1, rgba32(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lg;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function bobAt64(t, amp = 0.7, w = 1.3) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  var GLINT_PATH3 = VEINS3.flat();
+  function glintAt3(u) {
+    const n = GLINT_PATH3.length;
+    const f = clamp0165(u) * (n - 1);
+    const i = Math.min(n - 2, Math.floor(f));
+    const k = f - i;
+    const a = GLINT_PATH3[i];
+    const b = GLINT_PATH3[i + 1];
+    return [lerp69(a[0], b[0], k), lerp69(a[1], b[1], k)];
+  }
+  function draw54(season) {
+    return (ctx) => paint64(ctx, SP64[season], 0);
+  }
+  function anim54(season) {
+    return (ctx, t) => {
+      const bob = bobAt64(t);
+      paint64(ctx, SP64[season], bob);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const prog = t * 0.4 % 1;
+        const [gx, gy] = glintAt3(prog);
+        const base = season === "Summer" ? 0.7 : season === "Winter" ? 0.45 : 0.55;
+        const warm = season === "Summer" ? "255,228,180" : season === "Winter" ? "224,238,255" : "255,236,206";
+        const pulse = base * (0.6 + 0.4 * Math.sin(prog * Math.PI));
+        ctx.fillStyle = `rgba(${warm},${pulse})`;
+        ctx.beginPath();
+        ctx.ellipse(gx, gy + bob, 1.6, 1.2, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        if (season === "Spring") {
+          const g = 0.2 + 0.28 * (0.5 + 0.5 * Math.sin(t * 2.2));
+          ctx.fillStyle = `rgba(235,248,255,${g})`;
+          ctx.beginPath();
+          ctx.arc(-6, 18.4, 1.1 + g * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Summer") {
+          const s = 0.16 + 0.2 * (0.5 + 0.5 * Math.sin(t * 1.1));
+          ctx.fillStyle = `rgba(255,206,150,${s})`;
+          ctx.beginPath();
+          ctx.ellipse(-7, 2 + bob, 3.4, 2.6, -0.2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Autumn") {
+          const sway = Math.sin(t * 1.4) * 0.25;
+          ctx.save();
+          ctx.translate(13, 18.4);
+          ctx.rotate(0.7 + sway);
+          ctx.fillStyle = "rgba(176,72,32,0.9)";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(90,44,16,0.9)";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          const prog2 = t / 3.2 % 1;
+          const fy = -20 + prog2 * 36;
+          const dx = 4 + Math.sin(prog2 * Math.PI * 2) * 3;
+          ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog2 * Math.PI);
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(dx, fy, 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.8));
+          ctx.fillStyle = "rgba(210,232,255,1)";
+          ctx.beginPath();
+          ctx.ellipse(-3, -2 + bob, 7, 4.5, -0.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition61(fromIdx) {
+    const from = SP64[SEASON_NAMES[fromIdx]];
+    const to = SP64[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother64(clamp0165(pp));
+      paint64(ctx, lerpP64(from, to, k), 0);
+    };
+  }
+  var springToSummer58 = makeTransition61(0);
+  var summerToAutumn58 = makeTransition61(1);
+  var autumnToWinter58 = makeTransition61(2);
+  var VARIANTS66 = {
+    Spring: { draw: draw54("Spring"), anim: anim54("Spring") },
+    Summer: { draw: draw54("Summer"), anim: anim54("Summer") },
+    Autumn: { draw: draw54("Autumn"), anim: anim54("Autumn") },
+    Winter: { draw: draw54("Winter"), anim: anim54("Winter") }
+  };
+  var TRANSITIONS66 = {
+    0: springToSummer58,
+    1: summerToAutumn58,
+    2: autumnToWinter58
+  };
+
+  // src/textures/seasonal/mine/silver.ts
+  function clamp0166(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother65 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp70(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB58(a, b, t) {
+    return [lerp70(a[0], b[0], t), lerp70(a[1], b[1], t), lerp70(a[2], b[2], t)];
+  }
+  function rgb65(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba33(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0166(a)})`;
+  }
+  function lerpP65(a, b, t) {
+    return {
+      rockLight: lerpRGB58(a.rockLight, b.rockLight, t),
+      rockMid: lerpRGB58(a.rockMid, b.rockMid, t),
+      rockDark: lerpRGB58(a.rockDark, b.rockDark, t),
+      silverLight: lerpRGB58(a.silverLight, b.silverLight, t),
+      silverMid: lerpRGB58(a.silverMid, b.silverMid, t),
+      silverDark: lerpRGB58(a.silverDark, b.silverDark, t),
+      padTop: lerpRGB58(a.padTop, b.padTop, t),
+      padDark: lerpRGB58(a.padDark, b.padDark, t),
+      soil: lerpRGB58(a.soil, b.soil, t),
+      outline: lerpRGB58(a.outline, b.outline, t),
+      light: lerpRGB58(a.light, b.light, t),
+      lightAmt: lerp70(a.lightAmt, b.lightAmt, t),
+      silverShine: lerp70(a.silverShine, b.silverShine, t),
+      mossAmt: lerp70(a.mossAmt, b.mossAmt, t),
+      frostAmt: lerp70(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp70(a.snowCapAmt, b.snowCapAmt, t),
+      padSnowAmt: lerp70(a.padSnowAmt, b.padSnowAmt, t),
+      dewAmt: lerp70(a.dewAmt, b.dewAmt, t),
+      fallenLeafAmt: lerp70(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP54(p) {
+    return {
+      ...p,
+      lightAmt: clamp0166(p.lightAmt),
+      silverShine: clamp0166(p.silverShine),
+      mossAmt: clamp0166(p.mossAmt),
+      frostAmt: clamp0166(p.frostAmt),
+      snowCapAmt: clamp0166(p.snowCapAmt),
+      padSnowAmt: clamp0166(p.padSnowAmt),
+      dewAmt: clamp0166(p.dewAmt),
+      fallenLeafAmt: clamp0166(p.fallenLeafAmt)
+    };
+  }
+  var SP65 = {
+    // Spring — cool damp rock; cool-bright light; bright silver; a small lime
+    // moss fleck at the base; dewy pad.
+    Spring: {
+      rockLight: [156, 158, 166],
+      rockMid: [112, 114, 122],
+      rockDark: [62, 64, 72],
+      silverLight: [236, 240, 246],
+      silverMid: [212, 217, 224],
+      silverDark: [104, 110, 119],
+      padTop: [150, 142, 122],
+      padDark: [96, 88, 72],
+      soil: [120, 100, 76],
+      outline: [50, 52, 60],
+      light: [228, 240, 248],
+      lightAmt: 0.15,
+      silverShine: 0.62,
+      mossAmt: 0.5,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0.7,
+      fallenLeafAmt: 0
+    },
+    // Summer — warm-lit rock, strongest shadow, PEAK specular sparkle; the silver
+    // still reads COOL. Warm light, dry rocky pad, light moss fleck.
+    Summer: {
+      rockLight: [162, 160, 158],
+      rockMid: [118, 116, 116],
+      rockDark: [60, 60, 62],
+      silverLight: [238, 241, 246],
+      silverMid: [216, 220, 226],
+      silverDark: [108, 112, 120],
+      padTop: [162, 144, 110],
+      padDark: [108, 92, 64],
+      soil: [134, 108, 74],
+      outline: [52, 50, 50],
+      light: [255, 240, 200],
+      lightAmt: 0.18,
+      silverShine: 0.95,
+      mossAmt: 0.28,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — amber-lit rock; low amber light; olive-tan earthy pad; a fallen
+    // leaf on the pad. Silver still bright white-grey.
+    Autumn: {
+      rockLight: [156, 152, 148],
+      rockMid: [114, 110, 108],
+      rockDark: [62, 60, 60],
+      silverLight: [236, 238, 242],
+      silverMid: [214, 217, 222],
+      silverDark: [106, 110, 117],
+      padTop: [158, 142, 96],
+      padDark: [110, 96, 58],
+      soil: [128, 100, 60],
+      outline: [56, 48, 42],
+      light: [248, 210, 148],
+      lightAmt: 0.2,
+      silverShine: 0.6,
+      mossAmt: 0.1,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — cool blue light; snow cap + frost sparkle on the rock, snow-dusted
+    // pad; the silver veins stay bright (they harmonize with winter). NO white-out
+    // — the rock is clearly still a rock under the dusting.
+    Winter: {
+      rockLight: [160, 168, 182],
+      rockMid: [114, 122, 136],
+      rockDark: [64, 70, 82],
+      silverLight: [240, 244, 250],
+      silverMid: [216, 221, 230],
+      silverDark: [108, 114, 124],
+      padTop: [172, 186, 204],
+      padDark: [118, 134, 156],
+      soil: [124, 118, 110],
+      outline: [48, 50, 60],
+      light: [206, 226, 252],
+      lightAmt: 0.3,
+      silverShine: 0.68,
+      mossAmt: 0,
+      frostAmt: 0.7,
+      snowCapAmt: 0.8,
+      padSnowAmt: 0.85,
+      dewAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var ROCK_TOP5 = -14;
+  var ROCK_BOT5 = 17;
+  var ROCK_HALF4 = 15;
+  function rockBodyPath4(ctx, bob) {
+    const t = ROCK_TOP5 + bob;
+    const b = ROCK_BOT5 + bob;
+    ctx.beginPath();
+    ctx.moveTo(-ROCK_HALF4, b - 1);
+    ctx.lineTo(-ROCK_HALF4 + 1.5, b - 11);
+    ctx.lineTo(-11.5, t + 12);
+    ctx.lineTo(-9, t + 4);
+    ctx.lineTo(-4.5, t + 1);
+    ctx.lineTo(-1, t);
+    ctx.lineTo(4, t + 3);
+    ctx.lineTo(8.5, t + 1.5);
+    ctx.lineTo(12, t + 11);
+    ctx.lineTo(ROCK_HALF4 - 1, b - 10);
+    ctx.lineTo(ROCK_HALF4, b - 1);
+    ctx.lineTo(8, b + 1.5);
+    ctx.lineTo(0, b + 0.5);
+    ctx.lineTo(-8, b + 1.5);
+    ctx.closePath();
+  }
+  var VEINS4 = [
+    [[-12, 12], [-6, 4], [-2, -2], [3, -8]],
+    [[-9, -6], [-3, -1], [4, 3], [11, 8]],
+    [[-1, 14], [1, 6], [-2, 0], [2, -10]]
+  ];
+  var NUGGETS4 = [
+    // [x, y, radius]
+    [-7, 2, 2.4],
+    [5, -3, 2],
+    [9, 6, 1.7],
+    [-3, 9, 1.5]
+  ];
+  function paint65(ctx, raw, bob) {
+    const p = clampP54(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.fillStyle = rgba33(p.padDark, 0.4);
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb65(p.padDark);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb65(p.padTop);
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba33(p.padDark, 0.55);
+      [[-13, 19.5], [12, 18.6], [-6, 21], [7, 20.6], [0, 18.4]].forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, 1.5, 0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      if (p.dewAmt > 0.01) {
+        ctx.fillStyle = rgba33([235, 248, 255], 0.28 * p.dewAmt);
+        ctx.beginPath();
+        ctx.ellipse(-3, 18.2, 14, 2.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (p.mossAmt > 0.01) {
+        const a = p.mossAmt;
+        ctx.fillStyle = rgba33([120, 178, 84], 0.65 * a);
+        [[-12, 18.5], [10, 18.2], [-3, 20], [5, 19.4]].forEach(([mx, my], idx) => {
+          ctx.beginPath();
+          ctx.ellipse(mx, my, 3.2 + idx % 2, 1.6, 0, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.strokeStyle = rgba33([96, 162, 70], 0.8 * a);
+        ctx.lineWidth = 1;
+        [-10, -2, 6, 11].forEach((gx) => {
+          ctx.beginPath();
+          ctx.moveTo(gx, 18.6);
+          ctx.lineTo(gx - 0.8, 15.6);
+          ctx.stroke();
+        });
+      }
+      if (p.padSnowAmt > 0.01) {
+        ctx.fillStyle = rgba33([244, 250, 255], 0.9 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba33([210, 226, 244], 0.5 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba33([255, 255, 255], 0.8 * p.padSnowAmt);
+        [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const leaves2 = [
+          [-13, 19.6, -0.5, [196, 120, 40]],
+          [13, 18.4, 0.7, [176, 72, 32]]
+        ];
+        leaves2.forEach(([lx, ly, rot, col]) => {
+          ctx.save();
+          ctx.translate(lx, ly);
+          ctx.rotate(rot);
+          ctx.fillStyle = rgba33(col, a);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = rgba33([90, 44, 16], a);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+      ctx.fillStyle = rgb65(p.soil);
+      ctx.beginPath();
+      ctx.ellipse(0, ROCK_BOT5 + bob + 1.5, 12, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba33(p.outline, 0.3);
+      ctx.beginPath();
+      ctx.ellipse(3, ROCK_BOT5 + bob + 2, 13, 2.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      rockBodyPath4(ctx, bob);
+      ctx.strokeStyle = rgb65(p.outline);
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+      ctx.fillStyle = rgb65(p.outline);
+      ctx.fill();
+      ctx.save();
+      rockBodyPath4(ctx, bob);
+      ctx.clip();
+      const top = ROCK_TOP5 + bob;
+      const bot = ROCK_BOT5 + bob;
+      ctx.fillStyle = rgb65(p.rockMid);
+      ctx.fillRect(-ROCK_HALF4 - 3, top - 4, (ROCK_HALF4 + 3) * 2, bot - top + 10);
+      const litGrad = ctx.createLinearGradient(-ROCK_HALF4, top, ROCK_HALF4, bot);
+      litGrad.addColorStop(0, rgb65(p.rockLight));
+      litGrad.addColorStop(0.5, rgb65(p.rockMid));
+      litGrad.addColorStop(1, rgb65(p.rockDark));
+      ctx.fillStyle = litGrad;
+      ctx.globalAlpha = 0.92;
+      ctx.beginPath();
+      ctx.ellipse(-2, lerp70(top, bot, 0.45), ROCK_HALF4 + 3, (bot - top) * 0.62, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = rgba33(p.rockDark, 0.8);
+      ctx.lineWidth = 1.8;
+      [
+        [[-9, top + 4], [-4, lerp70(top, bot, 0.5)], [-6, bot - 2]],
+        [[6, top + 5], [9, lerp70(top, bot, 0.55)], [11, bot - 3]]
+      ].forEach((seg) => {
+        ctx.beginPath();
+        ctx.moveTo(seg[0][0], seg[0][1]);
+        ctx.lineTo(seg[1][0], seg[1][1]);
+        ctx.lineTo(seg[2][0], seg[2][1]);
+        ctx.stroke();
+      });
+      ctx.strokeStyle = rgba33(p.rockLight, 0.5);
+      ctx.lineWidth = 1.1;
+      [
+        [[-10, top + 6], [-7, lerp70(top, bot, 0.4)]],
+        [[-2, top + 2], [0, lerp70(top, bot, 0.3)]]
+      ].forEach((seg) => {
+        ctx.beginPath();
+        ctx.moveTo(seg[0][0], seg[0][1]);
+        ctx.lineTo(seg[1][0], seg[1][1]);
+        ctx.stroke();
+      });
+      ctx.fillStyle = rgba33(p.rockDark, 0.6);
+      ctx.beginPath();
+      ctx.ellipse(0, bot - 2, ROCK_HALF4, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      VEINS4.forEach((pts) => {
+        ctx.strokeStyle = rgb65(p.silverDark);
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1] + bob);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1] + bob);
+        ctx.stroke();
+        ctx.strokeStyle = rgb65(p.silverMid);
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0], pts[0][1] + bob);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1] + bob);
+        ctx.stroke();
+        ctx.strokeStyle = rgba33(p.silverLight, 0.9);
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(pts[0][0] - 0.4, pts[0][1] - 0.5 + bob);
+        for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0] - 0.4, pts[i][1] - 0.5 + bob);
+        ctx.stroke();
+      });
+      NUGGETS4.forEach(([nx, ny, nr]) => {
+        const ng = ctx.createRadialGradient(nx - nr * 0.4, ny - nr * 0.4 + bob, nr * 0.2, nx, ny + bob, nr);
+        ng.addColorStop(0, rgb65(p.silverLight));
+        ng.addColorStop(0.6, rgb65(p.silverMid));
+        ng.addColorStop(1, rgb65(p.silverDark));
+        ctx.fillStyle = ng;
+        ctx.beginPath();
+        ctx.arc(nx, ny + bob, nr, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba33(p.outline, 0.6);
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+        ctx.fillStyle = rgba33([255, 255, 255], 0.45 + 0.5 * p.silverShine);
+        ctx.beginPath();
+        ctx.arc(nx - nr * 0.35, ny - nr * 0.35 + bob, nr * 0.32, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      if (p.frostAmt > 0.02) {
+        ctx.fillStyle = rgba33([210, 230, 250], 0.26 * p.frostAmt);
+        ctx.beginPath();
+        ctx.ellipse(-1, lerp70(top, bot, 0.28), ROCK_HALF4, (bot - top) * 0.32, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba33([235, 246, 255], 0.65 * p.frostAmt);
+        const speck = [
+          [-9, top + 4],
+          [-3, top + 2],
+          [4, top + 4],
+          [9, top + 5],
+          [-6, lerp70(top, bot, 0.4)],
+          [6, lerp70(top, bot, 0.45)],
+          [0, lerp70(top, bot, 0.32)]
+        ];
+        speck.forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+      if (p.snowCapAmt > 0.02) {
+        const a = p.snowCapAmt;
+        ctx.fillStyle = rgba33([246, 251, 255], 0.95 * a);
+        ctx.beginPath();
+        ctx.moveTo(-10, top + 5);
+        ctx.quadraticCurveTo(-9, top - 2, -4.5, top - 1);
+        ctx.quadraticCurveTo(-1, top - 3, 4, top - 0.5);
+        ctx.quadraticCurveTo(8.5, top - 2, 11, top + 4);
+        ctx.quadraticCurveTo(6, top + 6, 4, top + 4);
+        ctx.quadraticCurveTo(-1, top + 3, -4, top + 5);
+        ctx.quadraticCurveTo(-7, top + 6.5, -10, top + 5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = rgba33([205, 222, 242], 0.5 * a);
+        ctx.beginPath();
+        ctx.ellipse(0, top + 4.5, 9.5, 1.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lg.addColorStop(0, rgba33(p.light, p.lightAmt));
+        lg.addColorStop(1, rgba33(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lg;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function bobAt65(t, amp = 0.7, w = 1.3) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  var GLINT_PATH4 = VEINS4.flat();
+  function glintAt4(u) {
+    const n = GLINT_PATH4.length;
+    const f = clamp0166(u) * (n - 1);
+    const i = Math.min(n - 2, Math.floor(f));
+    const k = f - i;
+    const a = GLINT_PATH4[i];
+    const b = GLINT_PATH4[i + 1];
+    return [lerp70(a[0], b[0], k), lerp70(a[1], b[1], k)];
+  }
+  function draw55(season) {
+    return (ctx) => paint65(ctx, SP65[season], 0);
+  }
+  function anim55(season) {
+    return (ctx, t) => {
+      const bob = bobAt65(t);
+      paint65(ctx, SP65[season], bob);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const prog = t * 0.4 % 1;
+        const [gx, gy] = glintAt4(prog);
+        const base = season === "Summer" ? 0.78 : season === "Winter" ? 0.5 : 0.6;
+        const tint = season === "Winter" ? "224,238,255" : season === "Autumn" ? "244,248,255" : "248,252,255";
+        const pulse = base * (0.6 + 0.4 * Math.sin(prog * Math.PI));
+        ctx.fillStyle = `rgba(${tint},${pulse})`;
+        ctx.beginPath();
+        ctx.ellipse(gx, gy + bob, 1.6, 1.2, -0.2, 0, Math.PI * 2);
+        ctx.fill();
+        if (season === "Spring") {
+          const g = 0.2 + 0.28 * (0.5 + 0.5 * Math.sin(t * 2.2));
+          ctx.fillStyle = `rgba(235,248,255,${g})`;
+          ctx.beginPath();
+          ctx.arc(-6, 18.4, 1.1 + g * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Summer") {
+          const s = 0.16 + 0.2 * (0.5 + 0.5 * Math.sin(t * 1.1));
+          ctx.fillStyle = `rgba(228,238,252,${s})`;
+          ctx.beginPath();
+          ctx.ellipse(-7, 2 + bob, 3.4, 2.6, -0.2, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Autumn") {
+          const sway = Math.sin(t * 1.4) * 0.25;
+          ctx.save();
+          ctx.translate(13, 18.4);
+          ctx.rotate(0.7 + sway);
+          ctx.fillStyle = "rgba(176,72,32,0.9)";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(90,44,16,0.9)";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          const prog2 = t / 3.2 % 1;
+          const fy = -20 + prog2 * 36;
+          const dx = 4 + Math.sin(prog2 * Math.PI * 2) * 3;
+          ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog2 * Math.PI);
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(dx, fy, 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.8));
+          ctx.fillStyle = "rgba(210,232,255,1)";
+          ctx.beginPath();
+          ctx.ellipse(-3, -2 + bob, 7, 4.5, -0.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition62(fromIdx) {
+    const from = SP65[SEASON_NAMES[fromIdx]];
+    const to = SP65[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother65(clamp0166(pp));
+      paint65(ctx, lerpP65(from, to, k), 0);
+    };
+  }
+  var springToSummer59 = makeTransition62(0);
+  var summerToAutumn59 = makeTransition62(1);
+  var autumnToWinter59 = makeTransition62(2);
+  var VARIANTS67 = {
+    Spring: { draw: draw55("Spring"), anim: anim55("Spring") },
+    Summer: { draw: draw55("Summer"), anim: anim55("Summer") },
+    Autumn: { draw: draw55("Autumn"), anim: anim55("Autumn") },
+    Winter: { draw: draw55("Winter"), anim: anim55("Winter") }
+  };
+  var TRANSITIONS67 = {
+    0: springToSummer59,
+    1: summerToAutumn59,
+    2: autumnToWinter59
+  };
+
+  // src/textures/seasonal/mine/coal.ts
+  function clamp0167(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother66 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp71(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB59(a, b, t) {
+    return [lerp71(a[0], b[0], t), lerp71(a[1], b[1], t), lerp71(a[2], b[2], t)];
+  }
+  function rgb66(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba34(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0167(a)})`;
+  }
+  function lerpP66(a, b, t) {
+    return {
+      coalLight: lerpRGB59(a.coalLight, b.coalLight, t),
+      coalMid: lerpRGB59(a.coalMid, b.coalMid, t),
+      coalDark: lerpRGB59(a.coalDark, b.coalDark, t),
+      specTint: lerpRGB59(a.specTint, b.specTint, t),
+      padRock: lerpRGB59(a.padRock, b.padRock, t),
+      padDark: lerpRGB59(a.padDark, b.padDark, t),
+      soil: lerpRGB59(a.soil, b.soil, t),
+      outline: lerpRGB59(a.outline, b.outline, t),
+      light: lerpRGB59(a.light, b.light, t),
+      lightAmt: lerp71(a.lightAmt, b.lightAmt, t),
+      gloss: lerp71(a.gloss, b.gloss, t),
+      shadowAmt: lerp71(a.shadowAmt, b.shadowAmt, t),
+      mossAmt: lerp71(a.mossAmt, b.mossAmt, t),
+      frostAmt: lerp71(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp71(a.snowCapAmt, b.snowCapAmt, t),
+      padSnowAmt: lerp71(a.padSnowAmt, b.padSnowAmt, t),
+      dewAmt: lerp71(a.dewAmt, b.dewAmt, t),
+      fallenLeafAmt: lerp71(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP55(p) {
+    return {
+      ...p,
+      lightAmt: clamp0167(p.lightAmt),
+      gloss: clamp0167(p.gloss),
+      shadowAmt: clamp0167(p.shadowAmt),
+      mossAmt: clamp0167(p.mossAmt),
+      frostAmt: clamp0167(p.frostAmt),
+      snowCapAmt: clamp0167(p.snowCapAmt),
+      padSnowAmt: clamp0167(p.padSnowAmt),
+      dewAmt: clamp0167(p.dewAmt),
+      fallenLeafAmt: clamp0167(p.fallenLeafAmt)
+    };
+  }
+  var SP66 = {
+    // Spring — cool blue-ish facet sheen, slightly damp; lime moss fleck at base;
+    // cool-bright light; dewy pad.
+    Spring: {
+      coalLight: [108, 116, 132],
+      // cool steel sheen (blue-ish)
+      coalMid: [42, 43, 49],
+      coalDark: [9, 9, 14],
+      specTint: [212, 230, 248],
+      // cool catch-light
+      padRock: [150, 150, 142],
+      padDark: [96, 94, 88],
+      soil: [120, 102, 78],
+      outline: [16, 16, 20],
+      light: [228, 240, 246],
+      lightAmt: 0.15,
+      gloss: 0.6,
+      shadowAmt: 0.5,
+      mossAmt: 0.55,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0.6,
+      fallenLeafAmt: 0
+    },
+    // Summer — warm hard highlights, strongest shadow, PEAK gloss; warm light;
+    // dry rocky pad, light moss.
+    Summer: {
+      coalLight: [118, 120, 126],
+      // warmer/brighter steel sheen
+      coalMid: [40, 40, 43],
+      coalDark: [8, 8, 11],
+      specTint: [255, 250, 232],
+      // warm hard catch-light
+      padRock: [168, 158, 132],
+      padDark: [110, 102, 80],
+      soil: [128, 104, 74],
+      outline: [14, 14, 17],
+      light: [255, 242, 210],
+      lightAmt: 0.17,
+      gloss: 1,
+      shadowAmt: 1,
+      mossAmt: 0.3,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — amber-tinted highlights, low amber light; olive-tan earthy pad; a
+    // fallen leaf on the pad.
+    Autumn: {
+      coalLight: [114, 110, 110],
+      // amber-warmed steel sheen
+      coalMid: [41, 40, 42],
+      coalDark: [9, 9, 12],
+      specTint: [252, 224, 176],
+      // amber catch-light
+      padRock: [156, 140, 96],
+      padDark: [108, 94, 60],
+      soil: [120, 92, 56],
+      outline: [18, 15, 13],
+      light: [248, 208, 146],
+      lightAmt: 0.2,
+      gloss: 0.55,
+      shadowAmt: 0.6,
+      mossAmt: 0.1,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      dewAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — cool blue-grey light; snow cap on top of the chunks + frost on the
+    // upward faces; coal stays glossy black underneath; snow-dusted pad.
+    Winter: {
+      coalLight: [110, 120, 138],
+      // cold steel sheen
+      coalMid: [40, 41, 47],
+      coalDark: [9, 10, 16],
+      specTint: [214, 232, 252],
+      // cold catch-light
+      padRock: [178, 196, 214],
+      padDark: [120, 144, 170],
+      soil: [126, 118, 110],
+      outline: [18, 19, 26],
+      light: [208, 228, 252],
+      lightAmt: 0.3,
+      gloss: 0.55,
+      shadowAmt: 0.45,
+      mossAmt: 0,
+      frostAmt: 0.7,
+      snowCapAmt: 0.9,
+      padSnowAmt: 0.9,
+      dewAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var CLUSTER_BASE_Y = 16;
+  var CHUNK_A = {
+    outline: [
+      [-16, 15],
+      // base-left foot
+      [-17, 8],
+      // lower-left shoulder
+      [-13, -4],
+      // up the lit left face
+      [-9, -12],
+      // tall left crown tip
+      [-3, -8],
+      // crown notch
+      [-1, -13],
+      // second crown peak
+      [3, -5],
+      // right crown shoulder
+      [4, 6],
+      // right face
+      [1, 15],
+      // base-right foot (tucks behind front chunk)
+      [-8, 16]
+      // base centre
+    ],
+    facets: [
+      // lit upper-left face (catches the upper-left light)
+      { pts: [[-13, -4], [-9, -12], [-3, -8], [-7, 2]], tone: 0 },
+      // lit crown wedge
+      { pts: [[-9, -12], [-3, -8], [-1, -13]], tone: 0 },
+      // mid front body
+      { pts: [[-7, 2], [-3, -8], [3, -5], [1, 8]], tone: 1 },
+      // shadowed right face
+      { pts: [[3, -5], [4, 6], [1, 15], [1, 8]], tone: 2 },
+      // shadowed lower-left underside
+      { pts: [[-16, 15], [-17, 8], [-13, -4], [-7, 2], [-8, 16]], tone: 2 },
+      // mid base block
+      { pts: [[-7, 2], [1, 8], [1, 15], [-8, 16]], tone: 1 }
+    ],
+    spec: [[-9, -12], [-3, -8]],
+    // bright ridge along the crown
+    glint: [-7, -7]
+    // sharp specular dot on the lit facet
+  };
+  var CHUNK_B = {
+    outline: [
+      [2, 16],
+      // base-left foot (overlaps chunk A base)
+      [3, 5],
+      // lower-left shoulder
+      [7, -3],
+      // up the lit face
+      [11, -8],
+      // crown tip
+      [15, -3],
+      // right crown shoulder
+      [17, 6],
+      // right face
+      [16, 14],
+      // base-right foot
+      [9, 16]
+      // base centre
+    ],
+    facets: [
+      // lit upper-left face
+      { pts: [[7, -3], [11, -8], [15, -3], [12, 4]], tone: 0 },
+      // mid front
+      { pts: [[3, 5], [7, -3], [12, 4], [9, 12]], tone: 1 },
+      // shadowed right face
+      { pts: [[15, -3], [17, 6], [16, 14], [12, 4]], tone: 2 },
+      // shadowed base
+      { pts: [[2, 16], [3, 5], [9, 12], [9, 16]], tone: 2 },
+      // mid base block
+      { pts: [[9, 12], [12, 4], [16, 14], [9, 16]], tone: 1 }
+    ],
+    spec: [[7, -3], [11, -8]],
+    // bright ridge on the crown
+    glint: [9, -4]
+  };
+  var CHUNK_C = {
+    outline: [
+      [-9, 17],
+      // base-left
+      [-8, 11],
+      // shoulder
+      [-3, 4],
+      // crown tip
+      [3, 8],
+      // crown notch
+      [6, 13],
+      // right shoulder
+      [5, 18],
+      // base-right
+      [-3, 18]
+      // base centre
+    ],
+    facets: [
+      // lit upper-left face
+      { pts: [[-8, 11], [-3, 4], [3, 8], [-1, 12]], tone: 0 },
+      // mid front body
+      { pts: [[-9, 17], [-8, 11], [-1, 12], [-3, 18]], tone: 1 },
+      // shadowed right face
+      { pts: [[3, 8], [6, 13], [5, 18], [-1, 12]], tone: 2 },
+      // base block
+      { pts: [[-1, 12], [5, 18], [-3, 18]], tone: 1 }
+    ],
+    spec: [[-3, 4], [3, 8]],
+    // bright ridge along the front crown
+    glint: [-1, 8]
+  };
+  var CHUNKS = [CHUNK_A, CHUNK_B, CHUNK_C];
+  function chunkOutlinePath(ctx, ch, bob) {
+    ctx.beginPath();
+    ch.outline.forEach(([x, y], i) => {
+      const py = y + bob;
+      if (i === 0) ctx.moveTo(x, py);
+      else ctx.lineTo(x, py);
+    });
+    ctx.closePath();
+  }
+  function paintChunk(ctx, ch, p, bob) {
+    chunkOutlinePath(ctx, ch, bob);
+    ctx.strokeStyle = rgb66(p.outline);
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+    ctx.fillStyle = rgb66(p.outline);
+    ctx.fill();
+    ctx.save();
+    chunkOutlinePath(ctx, ch, bob);
+    ctx.clip();
+    ch.facets.forEach(({ pts, tone }) => {
+      const col = tone === 0 ? p.coalLight : tone === 1 ? p.coalMid : p.coalDark;
+      ctx.fillStyle = rgb66(col);
+      ctx.beginPath();
+      pts.forEach(([x, y], i) => {
+        const py = y + bob;
+        if (i === 0) ctx.moveTo(x, py);
+        else ctx.lineTo(x, py);
+      });
+      ctx.closePath();
+      ctx.fill();
+    });
+    ctx.strokeStyle = rgba34(p.coalDark, 0.9);
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.moveTo(ch.spec[0][0], ch.spec[0][1] + 6 + bob);
+    ctx.lineTo(ch.spec[1][0], ch.spec[1][1] + 9 + bob);
+    ctx.stroke();
+    ctx.strokeStyle = rgba34(p.specTint, 0.55 + 0.4 * p.gloss);
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.moveTo(ch.spec[0][0], ch.spec[0][1] + bob);
+    ctx.lineTo(ch.spec[1][0], ch.spec[1][1] + bob);
+    ctx.stroke();
+    ctx.strokeStyle = rgba34([255, 255, 255], 0.35 + 0.5 * p.gloss);
+    ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(ch.spec[0][0], ch.spec[0][1] - 0.3 + bob);
+    ctx.lineTo(lerp71(ch.spec[0][0], ch.spec[1][0], 0.7), lerp71(ch.spec[0][1], ch.spec[1][1], 0.7) - 0.3 + bob);
+    ctx.stroke();
+    if (p.gloss > 0.02) {
+      ctx.fillStyle = rgba34([255, 255, 255], 0.4 + 0.5 * p.gloss);
+      ctx.beginPath();
+      ctx.ellipse(ch.glint[0], ch.glint[1] + bob, 0.9, 1.6, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba34(p.specTint, 0.22 * p.gloss);
+      ctx.beginPath();
+      ctx.ellipse(ch.glint[0], ch.glint[1] + bob, 2.4, 3.2, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (p.frostAmt > 0.02) {
+      ctx.fillStyle = rgba34([214, 232, 250], 0.18 * p.frostAmt);
+      ctx.beginPath();
+      ch.outline.forEach(([x, y], i) => {
+        const py = y + bob;
+        if (i === 0) ctx.moveTo(x, py);
+        else ctx.lineTo(x, py);
+      });
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = rgba34([236, 246, 255], 0.7 * p.frostAmt);
+      const fx0 = ch.spec[0][0], fy0 = ch.spec[0][1];
+      const fx1 = ch.spec[1][0], fy1 = ch.spec[1][1];
+      [0.15, 0.45, 0.8].forEach((u, k) => {
+        const sx = lerp71(fx0, fx1, u) + (k % 2 ? 1.6 : -1.4);
+        const sy = lerp71(fy0, fy1, u) + 2 + k;
+        ctx.beginPath();
+        ctx.arc(sx, sy + bob, 0.6, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    ctx.restore();
+  }
+  function paintSnowCap(ctx, ch, p, bob) {
+    if (p.snowCapAmt <= 0.02) return;
+    const a = p.snowCapAmt;
+    const [ax, ay] = ch.spec[0];
+    const [bx, by] = ch.spec[1];
+    ctx.fillStyle = rgba34([246, 251, 255], 0.95 * a);
+    ctx.beginPath();
+    ctx.moveTo(ax - 3, ay + 3 + bob);
+    ctx.quadraticCurveTo(ax - 1, ay - 3 + bob, lerp71(ax, bx, 0.5), Math.min(ay, by) - 2.5 + bob);
+    ctx.quadraticCurveTo(bx + 1, by - 3 + bob, bx + 3, by + 3 + bob);
+    ctx.quadraticCurveTo(lerp71(ax, bx, 0.5), by + 4.5 + bob, ax - 3, ay + 3 + bob);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = rgba34([205, 222, 242], 0.5 * a);
+    ctx.beginPath();
+    ctx.ellipse(lerp71(ax, bx, 0.5), lerp71(ay, by, 0.5) + 3 + bob, 4.4, 1.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function paint66(ctx, raw, bob) {
+    const p = clampP55(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.fillStyle = rgba34(p.padDark, 0.4 * (0.6 + 0.4 * p.shadowAmt));
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb66(p.padDark);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb66(p.padRock);
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba34(p.padDark, 0.55);
+      const pebbles = [
+        [-12, 18.4, 1.2],
+        [-6, 20.4, 0.9],
+        [7, 18.2, 1.1],
+        [13, 19.8, 0.9],
+        [1, 21, 0.8]
+      ];
+      pebbles.forEach(([px, py, r]) => {
+        ctx.beginPath();
+        ctx.ellipse(px, py, r, r * 0.62, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = rgb66(p.coalMid);
+      const crumbs = [
+        [-15, 20, 1.1],
+        [15, 19.4, 1],
+        [-2, 21.4, 0.8]
+      ];
+      crumbs.forEach(([cx, cy, r]) => {
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, r, r * 0.66, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba34(p.specTint, 0.5);
+        ctx.beginPath();
+        ctx.arc(cx - r * 0.3, cy - r * 0.3, r * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgb66(p.coalMid);
+      });
+      if (p.dewAmt > 0.01) {
+        ctx.fillStyle = rgba34([235, 246, 252], 0.3 * p.dewAmt);
+        ctx.beginPath();
+        ctx.ellipse(-4, 18.4, 12, 2.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (p.mossAmt > 0.01) {
+        const a = p.mossAmt;
+        ctx.fillStyle = rgba34([108, 168, 78], 0.5 * a);
+        const moss = [
+          [-14, 18, 3.2],
+          [13, 18, 2.8],
+          [-3, 20.4, 3.6]
+        ];
+        moss.forEach(([mx, my, r]) => {
+          ctx.beginPath();
+          ctx.ellipse(mx, my, r, r * 0.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.strokeStyle = rgba34([86, 150, 62], 0.8 * a);
+        ctx.lineWidth = 1;
+        [-15, -11, 12, 15].forEach((gx, i) => {
+          ctx.beginPath();
+          ctx.moveTo(gx, 18.5);
+          ctx.lineTo(gx + (i % 2 ? 1 : -1), 14.8);
+          ctx.stroke();
+        });
+      }
+      if (p.padSnowAmt > 0.01) {
+        ctx.fillStyle = rgba34([244, 250, 255], 0.92 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba34([210, 226, 244], 0.5 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba34([255, 255, 255], 0.8 * p.padSnowAmt);
+        [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const leaves2 = [
+          [-13, 20, -0.5, [196, 120, 40]],
+          [13, 18.6, 0.7, [176, 72, 32]]
+        ];
+        leaves2.forEach(([lx, ly, rot, col]) => {
+          ctx.save();
+          ctx.translate(lx, ly);
+          ctx.rotate(rot);
+          ctx.fillStyle = rgba34(col, a);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = rgba34([90, 44, 16], a);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+      ctx.fillStyle = rgb66(p.soil);
+      ctx.beginPath();
+      ctx.ellipse(0, CLUSTER_BASE_Y + bob + 1.5, 14, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba34(p.outline, 0.22 + 0.18 * p.shadowAmt);
+      ctx.beginPath();
+      ctx.ellipse(4, CLUSTER_BASE_Y + bob + 2.2, 15, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      CHUNKS.forEach((ch) => paintChunk(ctx, ch, p, bob));
+      CHUNKS.forEach((ch) => paintSnowCap(ctx, ch, p, bob));
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lg.addColorStop(0, rgba34(p.light, p.lightAmt));
+        lg.addColorStop(1, rgba34(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lg;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function bobAt66(t, amp = 0.6, w = 1.4) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function draw56(season) {
+    return (ctx) => paint66(ctx, SP66[season], 0);
+  }
+  var GLINT_CHUNK = CHUNK_A;
+  function glintPoint2(prog, bob) {
+    const a = GLINT_CHUNK.spec[0];
+    const b = GLINT_CHUNK.spec[1];
+    const g = GLINT_CHUNK.glint;
+    if (prog < 0.5) {
+      const k2 = prog / 0.5;
+      return [lerp71(a[0], b[0], k2), lerp71(a[1], b[1], k2) + bob];
+    }
+    const k = (prog - 0.5) / 0.5;
+    return [lerp71(b[0], g[0], k), lerp71(b[1], g[1], k) + bob];
+  }
+  function anim56(season) {
+    return (ctx, t) => {
+      const bob = bobAt66(t);
+      paint66(ctx, SP66[season], bob);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const prog = t * 0.45 % 1;
+        const [gx, gy] = glintPoint2(prog, bob);
+        const fade = Math.sin(prog * Math.PI);
+        let glintAlpha = 0.5;
+        if (season === "Summer") glintAlpha = 0.95;
+        else if (season === "Spring") glintAlpha = 0.6;
+        else if (season === "Autumn") glintAlpha = 0.5;
+        else glintAlpha = 0.55;
+        const glintCol = season === "Winter" ? "214,232,252" : season === "Autumn" ? "252,224,176" : season === "Spring" ? "220,234,250" : "255,250,232";
+        ctx.fillStyle = `rgba(${glintCol},${glintAlpha * fade})`;
+        ctx.beginPath();
+        ctx.ellipse(gx, gy, 1.1, 1.9, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = `rgba(255,255,255,${0.6 * glintAlpha * fade})`;
+        ctx.beginPath();
+        ctx.ellipse(gx, gy, 0.5, 0.9, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        if (season === "Spring") {
+          const g = 0.2 + 0.25 * (0.5 + 0.5 * Math.sin(t * 2.2));
+          ctx.fillStyle = `rgba(235,246,252,${g})`;
+          ctx.beginPath();
+          ctx.arc(-8, 18 + Math.sin(t * 1.1) * 0.6, 1 + g * 0.6, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Summer") {
+          const s = 0.12 + 0.16 * (0.5 + 0.5 * Math.sin(t * 1.1));
+          ctx.fillStyle = `rgba(255,248,226,${s})`;
+          ctx.beginPath();
+          ctx.ellipse(CHUNK_A.glint[0], CHUNK_A.glint[1] + bob, 3, 3.8, -0.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Autumn") {
+          ctx.save();
+          ctx.translate(13, 18.6);
+          ctx.rotate(0.7 + Math.sin(t * 1.3) * 0.2);
+          ctx.fillStyle = "rgba(176,72,32,0.9)";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(90,44,16,0.9)";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else if (season === "Winter") {
+          const flProg = t / 3.2 % 1;
+          const fy = -22 + flProg * 38;
+          const fx = -2 + Math.sin(flProg * Math.PI * 2) * 3;
+          ctx.globalAlpha = 0.4 + 0.45 * Math.sin(flProg * Math.PI);
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(fx, fy, 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition63(fromIdx) {
+    const from = SP66[SEASON_NAMES[fromIdx]];
+    const to = SP66[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother66(clamp0167(pp));
+      paint66(ctx, lerpP66(from, to, k), 0);
+    };
+  }
+  var springToSummer60 = makeTransition63(0);
+  var summerToAutumn60 = makeTransition63(1);
+  var autumnToWinter60 = makeTransition63(2);
+  var VARIANTS68 = {
+    Spring: { draw: draw56("Spring"), anim: anim56("Spring") },
+    Summer: { draw: draw56("Summer"), anim: anim56("Summer") },
+    Autumn: { draw: draw56("Autumn"), anim: anim56("Autumn") },
+    Winter: { draw: draw56("Winter"), anim: anim56("Winter") }
+  };
+  var TRANSITIONS68 = {
+    0: springToSummer60,
+    1: summerToAutumn60,
+    2: autumnToWinter60
+  };
+
+  // src/textures/seasonal/coin/golden.ts
+  function clamp0168(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother67 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp72(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB60(a, b, t) {
+    return [lerp72(a[0], b[0], t), lerp72(a[1], b[1], t), lerp72(a[2], b[2], t)];
+  }
+  function rgb67(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba35(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0168(a)})`;
+  }
+  function lerpP67(a, b, t) {
+    return {
+      goldLight: lerpRGB60(a.goldLight, b.goldLight, t),
+      goldMid: lerpRGB60(a.goldMid, b.goldMid, t),
+      goldDeep: lerpRGB60(a.goldDeep, b.goldDeep, t),
+      goldSpec: lerpRGB60(a.goldSpec, b.goldSpec, t),
+      rimLight: lerpRGB60(a.rimLight, b.rimLight, t),
+      rimDark: lerpRGB60(a.rimDark, b.rimDark, t),
+      padTop: lerpRGB60(a.padTop, b.padTop, t),
+      padDark: lerpRGB60(a.padDark, b.padDark, t),
+      soil: lerpRGB60(a.soil, b.soil, t),
+      outline: lerpRGB60(a.outline, b.outline, t),
+      light: lerpRGB60(a.light, b.light, t),
+      lightAmt: lerp72(a.lightAmt, b.lightAmt, t),
+      shadowAmt: lerp72(a.shadowAmt, b.shadowAmt, t),
+      shine: lerp72(a.shine, b.shine, t),
+      mossAmt: lerp72(a.mossAmt, b.mossAmt, t),
+      frostAmt: lerp72(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp72(a.snowCapAmt, b.snowCapAmt, t),
+      padSnowAmt: lerp72(a.padSnowAmt, b.padSnowAmt, t),
+      fallenLeafAmt: lerp72(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP56(p) {
+    return {
+      ...p,
+      lightAmt: clamp0168(p.lightAmt),
+      shadowAmt: clamp0168(p.shadowAmt),
+      shine: clamp0168(p.shine),
+      mossAmt: clamp0168(p.mossAmt),
+      frostAmt: clamp0168(p.frostAmt),
+      snowCapAmt: clamp0168(p.snowCapAmt),
+      padSnowAmt: clamp0168(p.padSnowAmt),
+      fallenLeafAmt: clamp0168(p.fallenLeafAmt)
+    };
+  }
+  var _GOLD_S = [255, 250, 214];
+  var SP67 = {
+    // Spring — cool-bright light; gold bright with a soft sheen; faint moss fleck
+    // at the pad base.
+    Spring: {
+      goldLight: [255, 214, 88],
+      goldMid: [228, 172, 44],
+      goldDeep: [140, 92, 16],
+      goldSpec: _GOLD_S,
+      rimLight: [255, 228, 138],
+      rimDark: [168, 118, 28],
+      padTop: [150, 142, 122],
+      padDark: [96, 88, 72],
+      soil: [120, 100, 76],
+      outline: [56, 48, 30],
+      light: [232, 242, 248],
+      lightAmt: 0.15,
+      shadowAmt: 0.55,
+      shine: 0.62,
+      mossAmt: 0.5,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Summer — gold most brilliant (PEAK); warm light, STRONGEST shadow, peak
+    // star-glint; dry rocky pad with a little moss.
+    Summer: {
+      goldLight: [255, 218, 96],
+      goldMid: [234, 178, 48],
+      goldDeep: [146, 96, 16],
+      goldSpec: _GOLD_S,
+      rimLight: [255, 232, 150],
+      rimDark: [176, 124, 30],
+      padTop: [162, 144, 110],
+      padDark: [108, 92, 64],
+      soil: [134, 108, 74],
+      outline: [58, 48, 28],
+      light: [255, 242, 206],
+      lightAmt: 0.18,
+      shadowAmt: 1,
+      shine: 1,
+      mossAmt: 0.28,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — low amber light; gold a touch warmer/duller; olive-tan earthy pad;
+    // a fallen leaf on the pad.
+    Autumn: {
+      goldLight: [250, 204, 78],
+      goldMid: [222, 164, 40],
+      goldDeep: [134, 86, 14],
+      goldSpec: [252, 240, 196],
+      rimLight: [250, 216, 122],
+      rimDark: [162, 110, 24],
+      padTop: [158, 142, 96],
+      padDark: [110, 96, 58],
+      soil: [128, 100, 60],
+      outline: [60, 48, 30],
+      light: [248, 212, 150],
+      lightAmt: 0.2,
+      shadowAmt: 0.6,
+      shine: 0.55,
+      mossAmt: 0.1,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — cool blue-grey light; a snow cap on the coin's upper rim + frost
+    // sparkle on the embossing, snow-dusted pad; the gold stays clearly bright
+    // underneath (NO white-out).
+    Winter: {
+      goldLight: [252, 212, 96],
+      goldMid: [226, 172, 50],
+      goldDeep: [138, 92, 22],
+      goldSpec: [248, 244, 214],
+      rimLight: [252, 224, 140],
+      rimDark: [164, 116, 32],
+      padTop: [172, 186, 204],
+      padDark: [118, 134, 156],
+      soil: [124, 118, 110],
+      outline: [50, 50, 56],
+      light: [208, 228, 252],
+      lightAmt: 0.3,
+      shadowAmt: 0.5,
+      shine: 0.6,
+      mossAmt: 0,
+      frostAmt: 0.7,
+      snowCapAmt: 0.85,
+      padSnowAmt: 0.9,
+      fallenLeafAmt: 0
+    }
+  };
+  var COIN_CX = 2.5;
+  var COIN_CY = 1;
+  var COIN_RX = 13.5;
+  var COIN_RY = 15;
+  var RIM_W = 2.4;
+  var STACK_CX = -9.5;
+  var STACK_CY = 6.5;
+  var STACK_RX = 9.5;
+  var STACK_RY = 4;
+  var STACK_THICK = 3.2;
+  var STACK_GAP = 5;
+  function coinFacePath(ctx, bob, grow = 0) {
+    ctx.beginPath();
+    ctx.ellipse(COIN_CX, COIN_CY + bob, COIN_RX + grow, COIN_RY + grow, 0, 0, Math.PI * 2);
+  }
+  function drawStackCoin(ctx, p, bob, oy) {
+    const cx = STACK_CX;
+    const cy = STACK_CY + oy + bob;
+    ctx.fillStyle = rgb67(p.outline);
+    ctx.strokeStyle = rgb67(p.outline);
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, STACK_RX + 0.6, STACK_RY + 0.6, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx - STACK_RX - 0.6, cy);
+    ctx.lineTo(cx - STACK_RX - 0.6, cy + STACK_THICK);
+    ctx.quadraticCurveTo(cx, cy + STACK_THICK + STACK_RY + 0.6, cx + STACK_RX + 0.6, cy + STACK_THICK);
+    ctx.lineTo(cx + STACK_RX + 0.6, cy);
+    ctx.quadraticCurveTo(cx, cy + STACK_RY + 0.6, cx - STACK_RX - 0.6, cy);
+    ctx.closePath();
+    ctx.fill();
+    const eg = ctx.createLinearGradient(cx, cy, cx, cy + STACK_THICK);
+    eg.addColorStop(0, rgb67(p.goldMid));
+    eg.addColorStop(1, rgb67(p.goldDeep));
+    ctx.fillStyle = eg;
+    ctx.beginPath();
+    ctx.moveTo(cx - STACK_RX, cy);
+    ctx.lineTo(cx - STACK_RX, cy + STACK_THICK);
+    ctx.quadraticCurveTo(cx, cy + STACK_THICK + STACK_RY, cx + STACK_RX, cy + STACK_THICK);
+    ctx.lineTo(cx + STACK_RX, cy);
+    ctx.quadraticCurveTo(cx, cy + STACK_RY, cx - STACK_RX, cy);
+    ctx.closePath();
+    ctx.fill();
+    const fg = ctx.createLinearGradient(cx - STACK_RX, cy - STACK_RY, cx + STACK_RX, cy + STACK_RY);
+    fg.addColorStop(0, rgb67(p.goldLight));
+    fg.addColorStop(0.55, rgb67(p.goldMid));
+    fg.addColorStop(1, rgb67(p.goldDeep));
+    ctx.fillStyle = fg;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, STACK_RX, STACK_RY, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgba35(p.rimDark, 0.75);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, STACK_RX - 2, STACK_RY - 1, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = rgba35(p.rimLight, 0.7);
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, STACK_RX - 1, STACK_RY - 0.5, 0, Math.PI * 0.95, Math.PI * 1.7);
+    ctx.stroke();
+  }
+  function starPath(ctx, cx, cy, rOut) {
+    const rIn = rOut * 0.46;
+    ctx.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? rOut : rIn;
+      const ang = -Math.PI / 2 + i * Math.PI / 5;
+      const x = cx + Math.cos(ang) * r;
+      const y = cy + Math.sin(ang) * r;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  }
+  function paint67(ctx, raw, bob) {
+    const p = clampP56(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.fillStyle = rgba35(p.padDark, 0.32 + 0.18 * p.shadowAmt);
+      ctx.beginPath();
+      ctx.ellipse(4, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb67(p.padDark);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb67(p.padTop);
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba35(p.padDark, 0.55);
+      [[-13, 19.6], [13, 18.8], [-7, 21], [8, 20.6], [1, 18.4]].forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.ellipse(sx, sy, 1.5, 0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      if (p.mossAmt > 0.01) {
+        const a = p.mossAmt;
+        ctx.fillStyle = rgba35([110, 168, 78], 0.62 * a);
+        [[-14, 18.6], [11, 18.4], [-4, 20.2], [5, 19.6]].forEach(([mx, my], idx) => {
+          ctx.beginPath();
+          ctx.ellipse(mx, my, 2.8 + idx % 2, 1.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.strokeStyle = rgba35([86, 150, 64], 0.8 * a);
+        ctx.lineWidth = 1;
+        [-12, 12].forEach((gx) => {
+          ctx.beginPath();
+          ctx.moveTo(gx, 18.8);
+          ctx.lineTo(gx - 0.8, 15.8);
+          ctx.stroke();
+        });
+      }
+      if (p.padSnowAmt > 0.01) {
+        ctx.fillStyle = rgba35([244, 250, 255], 0.92 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba35([210, 226, 244], 0.5 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba35([255, 255, 255], 0.8 * p.padSnowAmt);
+        [[-10, 17.6], [6, 19], [12, 17.6], [-3, 20]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const leaves2 = [
+          [-14, 19.8, -0.5, [196, 120, 40]],
+          [14, 18.6, 0.7, [176, 72, 32]]
+        ];
+        leaves2.forEach(([lx, ly, rot, col]) => {
+          ctx.save();
+          ctx.translate(lx, ly);
+          ctx.rotate(rot);
+          ctx.fillStyle = rgba35(col, a);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = rgba35([90, 44, 16], a);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+      ctx.fillStyle = rgb67(p.soil);
+      ctx.beginPath();
+      ctx.ellipse(0, 17.5, 13, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba35(p.outline, 0.22 + 0.22 * p.shadowAmt);
+      ctx.beginPath();
+      ctx.ellipse(5, 18.6 + bob * 0.3, 14, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      drawStackCoin(ctx, p, bob, STACK_GAP);
+      drawStackCoin(ctx, p, bob, 0);
+      coinFacePath(ctx, bob, 0.8);
+      ctx.fillStyle = rgb67(p.outline);
+      ctx.strokeStyle = rgb67(p.outline);
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
+      ctx.fill();
+      const cx = COIN_CX;
+      const cy = COIN_CY + bob;
+      const rimGrad = ctx.createLinearGradient(cx - COIN_RX, cy - COIN_RY, cx + COIN_RX, cy + COIN_RY);
+      rimGrad.addColorStop(0, rgb67(p.rimLight));
+      rimGrad.addColorStop(0.5, rgb67(p.goldMid));
+      rimGrad.addColorStop(1, rgb67(p.rimDark));
+      ctx.fillStyle = rimGrad;
+      coinFacePath(ctx, bob, 0);
+      ctx.fill();
+      ctx.save();
+      coinFacePath(ctx, bob, 0);
+      ctx.clip();
+      const faceGrad = ctx.createRadialGradient(
+        cx - COIN_RX * 0.4,
+        cy - COIN_RY * 0.42,
+        COIN_RX * 0.2,
+        cx,
+        cy,
+        COIN_RX
+      );
+      faceGrad.addColorStop(0, rgb67(p.goldLight));
+      faceGrad.addColorStop(0.55, rgb67(p.goldMid));
+      faceGrad.addColorStop(1, rgb67(p.goldDeep));
+      ctx.fillStyle = faceGrad;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, COIN_RX - RIM_W, COIN_RY - RIM_W, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = rgba35(p.goldDeep, 0.55);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, COIN_RX - RIM_W + 0.4, COIN_RY - RIM_W + 0.4, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.fillStyle = rgba35(p.goldDeep, 0.42);
+      ctx.beginPath();
+      ctx.ellipse(cx + COIN_RX * 0.45, cy + COIN_RY * 0.5, COIN_RX * 0.78, COIN_RY * 0.72, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      const starCx = cx;
+      const starCy = cy + 0.5;
+      const starR = 7.6;
+      starPath(ctx, starCx + 0.7, starCy + 0.8, starR);
+      ctx.fillStyle = rgba35(p.goldDeep, 0.7);
+      ctx.fill();
+      starPath(ctx, starCx, starCy, starR);
+      ctx.fillStyle = rgb67(p.goldMid);
+      ctx.fill();
+      starPath(ctx, starCx - 0.5, starCy - 0.6, starR - 0.6);
+      ctx.fillStyle = rgba35(p.goldLight, 0.85);
+      ctx.fill();
+      starPath(ctx, starCx - 0.7, starCy - 0.9, starR * 0.5);
+      ctx.fillStyle = rgba35(p.goldSpec, 0.4 + 0.4 * p.shine);
+      ctx.fill();
+      if (p.frostAmt > 0.02) {
+        ctx.fillStyle = rgba35([235, 246, 255], 0.7 * p.frostAmt);
+        for (let i = 0; i < 5; i++) {
+          const ang = -Math.PI / 2 + i * 2 * Math.PI / 5;
+          const fx = starCx + Math.cos(ang) * starR * 0.92;
+          const fy = starCy + Math.sin(ang) * starR * 0.92;
+          ctx.beginPath();
+          ctx.arc(fx, fy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = rgba35([214, 232, 252], 0.16 * p.frostAmt);
+        ctx.beginPath();
+        ctx.ellipse(cx, cy - COIN_RY * 0.3, COIN_RX * 0.8, COIN_RY * 0.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      ctx.strokeStyle = rgba35(p.rimLight, 0.85);
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, COIN_RX - RIM_W * 0.5, COIN_RY - RIM_W * 0.5, 0, Math.PI * 0.92, Math.PI * 1.62);
+      ctx.stroke();
+      ctx.fillStyle = rgba35(p.goldSpec, 0.5 + 0.4 * p.shine);
+      ctx.beginPath();
+      ctx.ellipse(cx - COIN_RX * 0.5, cy - COIN_RY * 0.55, 1.8, 2.4, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      if (p.snowCapAmt > 0.02) {
+        const a = p.snowCapAmt;
+        const topY = cy - COIN_RY;
+        ctx.fillStyle = rgba35([246, 251, 255], 0.95 * a);
+        ctx.beginPath();
+        ctx.moveTo(cx - COIN_RX * 0.72, topY + 5.5);
+        ctx.quadraticCurveTo(cx - COIN_RX * 0.5, topY - 1.5, cx - COIN_RX * 0.1, topY + 0.5);
+        ctx.quadraticCurveTo(cx + COIN_RX * 0.2, topY - 1.2, cx + COIN_RX * 0.55, topY + 1.5);
+        ctx.quadraticCurveTo(cx + COIN_RX * 0.74, topY + 3.5, cx + COIN_RX * 0.62, topY + 6.5);
+        ctx.quadraticCurveTo(cx + COIN_RX * 0.2, topY + 4.5, cx - COIN_RX * 0.05, topY + 5.5);
+        ctx.quadraticCurveTo(cx - COIN_RX * 0.4, topY + 6.8, cx - COIN_RX * 0.72, topY + 5.5);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = rgba35([205, 222, 242], 0.5 * a);
+        ctx.beginPath();
+        ctx.ellipse(cx - COIN_RX * 0.08, topY + 5.6, COIN_RX * 0.62, 1.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba35([246, 251, 255], 0.85 * a);
+        ctx.beginPath();
+        ctx.ellipse(STACK_CX, STACK_CY - STACK_RY + bob, STACK_RX * 0.7, 1.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lg.addColorStop(0, rgba35(p.light, p.lightAmt));
+        lg.addColorStop(1, rgba35(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lg;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function bobAt67(t, amp = 0.6, w = 1.3) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function drawSparkle(ctx, gx, gy, r, a, spec) {
+    const bg = ctx.createRadialGradient(gx, gy, 0, gx, gy, r * 1.6);
+    bg.addColorStop(0, rgba35(spec, a));
+    bg.addColorStop(1, rgba35(spec, 0));
+    ctx.fillStyle = bg;
+    ctx.beginPath();
+    ctx.arc(gx, gy, r * 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba35([255, 255, 255], a);
+    ctx.beginPath();
+    ctx.moveTo(gx, gy - r);
+    ctx.lineTo(gx + r * 0.28, gy - r * 0.28);
+    ctx.lineTo(gx + r, gy);
+    ctx.lineTo(gx + r * 0.28, gy + r * 0.28);
+    ctx.lineTo(gx, gy + r);
+    ctx.lineTo(gx - r * 0.28, gy + r * 0.28);
+    ctx.lineTo(gx - r, gy);
+    ctx.lineTo(gx - r * 0.28, gy - r * 0.28);
+    ctx.closePath();
+    ctx.fill();
+  }
+  function draw57(season) {
+    return (ctx) => paint67(ctx, SP67[season], 0);
+  }
+  function anim57(season) {
+    return (ctx, t) => {
+      const bob = bobAt67(t);
+      paint67(ctx, SP67[season], bob);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const cx = COIN_CX;
+        const cy = COIN_CY + bob;
+        const spec = SP67[season].goldSpec;
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, COIN_RX - 1, COIN_RY - 1, 0, 0, Math.PI * 2);
+        ctx.clip();
+        const sweep = t * 0.45 % 1;
+        const gx = cx + lerp72(-COIN_RX * 0.62, COIN_RX * 0.62, sweep);
+        const gy = cy + lerp72(-COIN_RY * 0.58, COIN_RY * 0.5, sweep);
+        const base = season === "Summer" ? 0.95 : season === "Winter" ? 0.7 : 0.8;
+        const env = Math.sin(clamp0168(sweep) * Math.PI);
+        drawSparkle(ctx, gx, gy, 2.6 + 1 * SP67[season].shine, base * env, spec);
+        ctx.restore();
+        if (season === "Spring") {
+          const g = 0.16 + 0.2 * (0.5 + 0.5 * Math.sin(t * 2));
+          ctx.fillStyle = `rgba(235,248,255,${g})`;
+          ctx.beginPath();
+          ctx.arc(-8, 18.4, 1 + g * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Summer") {
+          const tw = 0.3 + 0.45 * (0.5 + 0.5 * Math.sin(t * 3.1 + 1.2));
+          drawSparkle(ctx, cx - COIN_RX * 0.52, cy - COIN_RY * 0.5, 1.6, tw, spec);
+        } else if (season === "Autumn") {
+          const sway = Math.sin(t * 1.4) * 0.25;
+          ctx.save();
+          ctx.translate(14, 18.6);
+          ctx.rotate(0.7 + sway);
+          ctx.fillStyle = "rgba(176,72,32,0.9)";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(90,44,16,0.9)";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          const prog = (t / 3.2 % 1 + 1) % 1;
+          const fy = -20 + prog * 36;
+          const fx = 6 + Math.sin(prog * Math.PI * 2) * 3;
+          ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog * Math.PI);
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(fx, fy, 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition64(fromIdx) {
+    const from = SP67[SEASON_NAMES[fromIdx]];
+    const to = SP67[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother67(clamp0168(pp));
+      paint67(ctx, lerpP67(from, to, k), 0);
+    };
+  }
+  var springToSummer61 = makeTransition64(0);
+  var summerToAutumn61 = makeTransition64(1);
+  var autumnToWinter61 = makeTransition64(2);
+  var VARIANTS69 = {
+    Spring: { draw: draw57("Spring"), anim: anim57("Spring") },
+    Summer: { draw: draw57("Summer"), anim: anim57("Summer") },
+    Autumn: { draw: draw57("Autumn"), anim: anim57("Autumn") },
+    Winter: { draw: draw57("Winter"), anim: anim57("Winter") }
+  };
+  var TRANSITIONS69 = {
+    0: springToSummer61,
+    1: summerToAutumn61,
+    2: autumnToWinter61
+  };
+
+  // src/textures/seasonal/fish/sardine.ts
+  function clamp0169(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother68 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp73(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB61(a, b, t) {
+    return [lerp73(a[0], b[0], t), lerp73(a[1], b[1], t), lerp73(a[2], b[2], t)];
+  }
+  function rgb68(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba36(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0169(a)})`;
+  }
+  function lerpP68(a, b, t) {
+    return {
+      backDark: lerpRGB61(a.backDark, b.backDark, t),
+      backMid: lerpRGB61(a.backMid, b.backMid, t),
+      flank: lerpRGB61(a.flank, b.flank, t),
+      belly: lerpRGB61(a.belly, b.belly, t),
+      bellyLit: lerpRGB61(a.bellyLit, b.bellyLit, t),
+      line: lerpRGB61(a.line, b.line, t),
+      fin: lerpRGB61(a.fin, b.fin, t),
+      eye: lerpRGB61(a.eye, b.eye, t),
+      water: lerpRGB61(a.water, b.water, t),
+      waterDeep: lerpRGB61(a.waterDeep, b.waterDeep, t),
+      outline: lerpRGB61(a.outline, b.outline, t),
+      light: lerpRGB61(a.light, b.light, t),
+      lightAmt: lerp73(a.lightAmt, b.lightAmt, t),
+      sheen: lerp73(a.sheen, b.sheen, t),
+      gloss: lerp73(a.gloss, b.gloss, t),
+      iceAmt: lerp73(a.iceAmt, b.iceAmt, t),
+      frostAmt: lerp73(a.frostAmt, b.frostAmt, t),
+      blossomAmt: lerp73(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp73(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP57(p) {
+    return {
+      ...p,
+      lightAmt: clamp0169(p.lightAmt),
+      sheen: clamp0169(p.sheen),
+      gloss: clamp0169(p.gloss),
+      iceAmt: clamp0169(p.iceAmt),
+      frostAmt: clamp0169(p.frostAmt),
+      blossomAmt: clamp0169(p.blossomAmt),
+      fallenLeafAmt: clamp0169(p.fallenLeafAmt)
+    };
+  }
+  var SP68 = {
+    // Spring — bright fish; fresh blue dewy water; a tiny blossom petal; cool-bright.
+    Spring: {
+      backDark: [60, 112, 122],
+      backMid: [86, 140, 150],
+      flank: [154, 184, 196],
+      belly: [228, 240, 246],
+      bellyLit: [246, 250, 252],
+      line: [74, 94, 104],
+      fin: [120, 160, 172],
+      eye: [34, 48, 56],
+      water: [120, 192, 220],
+      waterDeep: [70, 134, 170],
+      outline: [40, 58, 66],
+      light: [232, 246, 248],
+      lightAmt: 0.16,
+      sheen: 0.55,
+      gloss: 0.45,
+      iceAmt: 0,
+      frostAmt: 0,
+      blossomAmt: 0.85,
+      fallenLeafAmt: 0
+    },
+    // Summer — PEAK: most silvery/iridescent flank; bright saturated water; warm.
+    Summer: {
+      backDark: [54, 124, 130],
+      backMid: [82, 154, 158],
+      flank: [168, 198, 208],
+      belly: [240, 248, 250],
+      bellyLit: [252, 255, 255],
+      line: [66, 88, 100],
+      fin: [112, 166, 176],
+      eye: [28, 44, 52],
+      water: [78, 178, 226],
+      waterDeep: [40, 122, 180],
+      outline: [34, 54, 62],
+      light: [255, 244, 214],
+      lightAmt: 0.18,
+      sheen: 1,
+      gloss: 0.95,
+      iceAmt: 0,
+      frostAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — fish a touch duller; olive-tinged water + a floating fallen leaf.
+    Autumn: {
+      backDark: [70, 102, 100],
+      backMid: [96, 134, 130],
+      flank: [156, 174, 174],
+      belly: [220, 226, 218],
+      bellyLit: [238, 240, 230],
+      line: [72, 86, 86],
+      fin: [118, 148, 142],
+      eye: [38, 46, 46],
+      water: [120, 158, 150],
+      waterDeep: [82, 116, 104],
+      outline: [48, 58, 54],
+      light: [248, 214, 156],
+      lightAmt: 0.2,
+      sheen: 0.45,
+      gloss: 0.4,
+      iceAmt: 0,
+      frostAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — water FROZEN to pale blue-white ICE + frost sparkle; a little frost
+    // on the fish; blue-green back still clearly visible; cool light.
+    Winter: {
+      backDark: [64, 110, 120],
+      backMid: [90, 142, 150],
+      flank: [160, 188, 200],
+      belly: [228, 240, 248],
+      bellyLit: [248, 252, 255],
+      line: [70, 92, 104],
+      fin: [122, 162, 174],
+      eye: [38, 54, 62],
+      water: [216, 234, 244],
+      waterDeep: [168, 198, 218],
+      outline: [50, 66, 76],
+      light: [212, 230, 252],
+      lightAmt: 0.3,
+      sheen: 0.5,
+      gloss: 0.3,
+      iceAmt: 0.92,
+      frostAmt: 0.6,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var FISH_CY2 = 9.5;
+  var HEAD_X3 = -13.5;
+  var TAIL_X3 = 14;
+  var BODY_HALF2 = 4.6;
+  function spineY2(u, bob, flex, cy = FISH_CY2) {
+    const arch = Math.sin(u * Math.PI) * 1.2;
+    const wave = Math.sin(u * Math.PI * 1.7 - 0.6) * flex;
+    return cy + bob - arch + wave;
+  }
+  function bodyHalf2(u, scale = 1) {
+    const shape = Math.sin(Math.pow(clamp0169(u), 0.82) * Math.PI);
+    const taper = 1 - clamp0169((u - 0.5) / 0.5) * 0.78;
+    return BODY_HALF2 * scale * shape * Math.max(0.24, taper);
+  }
+  function xAt2(u, headX = HEAD_X3, tailX = TAIL_X3) {
+    return lerp73(headX, tailX, clamp0169(u));
+  }
+  function fishBodyPath2(ctx, bob, flex, cy, headX, tailX, scale) {
+    const N = 14;
+    ctx.beginPath();
+    ctx.moveTo(headX, spineY2(0, bob, flex, cy));
+    for (let i = 1; i <= N; i++) {
+      const u = i / N;
+      ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) - bodyHalf2(u, scale));
+    }
+    for (let i = N; i >= 0; i--) {
+      const u = i / N;
+      ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) + bodyHalf2(u, scale));
+    }
+    ctx.closePath();
+  }
+  function tailFin2(ctx, bob, flex, col, oc, cy, tailX, scale) {
+    const wristY = spineY2(1, bob, flex, cy);
+    const wx = tailX;
+    const s = scale;
+    ctx.fillStyle = rgb68(col);
+    ctx.strokeStyle = rgb68(oc);
+    ctx.lineWidth = 1 * s;
+    ctx.beginPath();
+    ctx.moveTo(wx - 1 * s, wristY - 1.1 * s);
+    ctx.quadraticCurveTo(wx + 4 * s, wristY - 5.4 * s, wx + 6 * s, wristY - 5.6 * s);
+    ctx.quadraticCurveTo(wx + 3.8 * s, wristY - 2.2 * s, wx + 3.4 * s, wristY);
+    ctx.quadraticCurveTo(wx + 3.8 * s, wristY + 2.2 * s, wx + 6 * s, wristY + 5.6 * s);
+    ctx.quadraticCurveTo(wx + 4 * s, wristY + 5.4 * s, wx - 1 * s, wristY + 1.1 * s);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  function drawSardineBody(ctx, p, bob, flex, cy, headX, tailX, scale, lit) {
+    tailFin2(ctx, bob, flex, p.fin, p.outline, cy, tailX, scale);
+    ctx.save();
+    ctx.lineWidth = 2 * scale;
+    ctx.strokeStyle = rgb68(p.outline);
+    fishBodyPath2(ctx, bob, flex, cy, headX, tailX, scale);
+    ctx.stroke();
+    ctx.restore();
+    ctx.save();
+    fishBodyPath2(ctx, bob, flex, cy, headX, tailX, scale);
+    ctx.clip();
+    const spanX = tailX - headX;
+    ctx.fillStyle = rgb68(p.flank);
+    ctx.fillRect(headX - 4, cy + bob - 12, spanX + 10, 24);
+    ctx.fillStyle = rgb68(p.belly);
+    ctx.beginPath();
+    for (let i = 0; i <= 14; i++) {
+      const u = i / 14;
+      ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) + bodyHalf2(u, scale));
+    }
+    for (let i = 14; i >= 0; i--) {
+      const u = i / 14;
+      ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) + bodyHalf2(u, scale) * 0.18);
+    }
+    ctx.closePath();
+    ctx.fill();
+    if (lit > 0.01) {
+      ctx.fillStyle = rgba36(p.bellyLit, lit);
+      ctx.beginPath();
+      for (let i = 0; i <= 14; i++) {
+        const u = i / 14;
+        ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) + bodyHalf2(u, scale));
+      }
+      for (let i = 14; i >= 0; i--) {
+        const u = i / 14;
+        ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) + bodyHalf2(u, scale) * 0.62);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.fillStyle = rgb68(p.backMid);
+    ctx.beginPath();
+    for (let i = 0; i <= 14; i++) {
+      const u = i / 14;
+      ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) - bodyHalf2(u, scale));
+    }
+    for (let i = 14; i >= 0; i--) {
+      const u = i / 14;
+      ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) - bodyHalf2(u, scale) * 0.08);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = rgb68(p.backDark);
+    ctx.beginPath();
+    for (let i = 0; i <= 14; i++) {
+      const u = i / 14;
+      ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) - bodyHalf2(u, scale));
+    }
+    for (let i = 14; i >= 0; i--) {
+      const u = i / 14;
+      ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) - bodyHalf2(u, scale) * 0.55);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba36(p.line, 0.55 + 0.1 * lit);
+    ctx.lineWidth = 1 * scale;
+    ctx.beginPath();
+    for (let i = 1; i <= 13; i++) {
+      const u = i / 14;
+      const x = xAt2(u, headX, tailX);
+      const y = spineY2(u, bob, flex, cy) - bodyHalf2(u, scale) * 0.12;
+      if (i === 1) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    if (lit > 0.01) {
+      ctx.fillStyle = rgba36(p.bellyLit, (0.35 + 0.3 * p.sheen) * lit);
+      for (let s = 0; s < 6; s++) {
+        const u = 0.24 + s / 6 * 0.5;
+        const x = xAt2(u, headX, tailX) + Math.sin(s * 1.3) * 0.6;
+        const y = spineY2(u, bob, flex, cy) + bodyHalf2(u, scale) * 0.12;
+        ctx.beginPath();
+        ctx.arc(x, y, 0.55 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (p.sheen > 0.02 && lit > 0.01) {
+      const sg = ctx.createLinearGradient(headX, cy + bob - BODY_HALF2, tailX, cy + bob + 2);
+      sg.addColorStop(0, rgba36(p.flank, 0));
+      sg.addColorStop(0.45, rgba36([216, 246, 252], 0.16 * p.sheen * lit));
+      sg.addColorStop(0.7, rgba36([196, 226, 255], 0.12 * p.sheen * lit));
+      sg.addColorStop(1, rgba36(p.flank, 0));
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      for (let i = 0; i <= 14; i++) {
+        const u = i / 14;
+        ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) - bodyHalf2(u, scale));
+      }
+      for (let i = 14; i >= 0; i--) {
+        const u = i / 14;
+        ctx.lineTo(xAt2(u, headX, tailX), spineY2(u, bob, flex, cy) + bodyHalf2(u, scale) * 0.3);
+      }
+      ctx.closePath();
+      ctx.fill();
+    }
+    if (p.gloss > 0.02 && lit > 0.01) {
+      ctx.strokeStyle = rgba36([255, 255, 255], (0.18 + 0.45 * p.gloss) * lit);
+      ctx.lineWidth = 1 * scale;
+      ctx.beginPath();
+      for (let i = 1; i <= 13; i++) {
+        const u = i / 14;
+        const x = xAt2(u, headX, tailX);
+        const y = spineY2(u, bob, flex, cy) - bodyHalf2(u, scale) * 0.78;
+        if (i === 1) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    if (p.frostAmt > 0.02) {
+      ctx.strokeStyle = rgba36([226, 240, 252], 0.42 * p.frostAmt);
+      ctx.lineWidth = 1.3 * scale;
+      ctx.beginPath();
+      for (let i = 1; i <= 13; i++) {
+        const u = i / 14;
+        const x = xAt2(u, headX, tailX);
+        const y = spineY2(u, bob, flex, cy) - bodyHalf2(u, scale) * 0.92;
+        if (i === 1) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.fillStyle = rgba36([240, 248, 255], 0.7 * p.frostAmt);
+      for (let s = 0; s < 5; s++) {
+        const u = 0.2 + s / 5 * 0.6;
+        const x = xAt2(u, headX, tailX) + Math.sin(s * 1.7) * 1;
+        const y = spineY2(u, bob, flex, cy) - bodyHalf2(u, scale) * 0.68;
+        ctx.beginPath();
+        ctx.arc(x, y, 0.6 * scale, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+    {
+      const u = 0.4;
+      const bx = xAt2(u, headX, tailX);
+      const by = spineY2(u, bob, flex, cy) - bodyHalf2(u, scale) + 0.5;
+      const s = scale;
+      ctx.fillStyle = rgb68(p.fin);
+      ctx.strokeStyle = rgb68(p.outline);
+      ctx.lineWidth = 0.9 * s;
+      ctx.beginPath();
+      ctx.moveTo(bx - 2.4 * s, by);
+      ctx.quadraticCurveTo(bx - 0.8 * s, by - 4 * s, bx + 1.2 * s, by - 3.4 * s);
+      ctx.lineTo(bx + 2.8 * s, by);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    {
+      const u = 0.32;
+      const fx = xAt2(u, headX, tailX);
+      const fy = spineY2(u, bob, flex, cy) + bodyHalf2(u, scale) * 0.5;
+      const s = scale;
+      ctx.fillStyle = rgba36(p.fin, 0.92);
+      ctx.strokeStyle = rgb68(p.outline);
+      ctx.lineWidth = 0.8 * s;
+      ctx.beginPath();
+      ctx.moveTo(fx - 0.8 * s, fy - 0.8 * s);
+      ctx.quadraticCurveTo(fx + 2 * s, fy + 2.2 * s, fx + 3.8 * s, fy + 3.2 * s);
+      ctx.quadraticCurveTo(fx + 1.4 * s, fy + 2.4 * s, fx - 0.8 * s, fy + 1.2 * s);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    {
+      const u = 0.16;
+      const gx = xAt2(u, headX, tailX);
+      const gTop = spineY2(u, bob, flex, cy) - bodyHalf2(u, scale);
+      const gBot = spineY2(u, bob, flex, cy) + bodyHalf2(u, scale);
+      ctx.strokeStyle = rgba36(p.outline, 0.7);
+      ctx.lineWidth = 1 * scale;
+      ctx.beginPath();
+      ctx.moveTo(gx, gTop + 0.5);
+      ctx.quadraticCurveTo(gx - 2 * scale, cy + bob, gx, gBot - 0.5);
+      ctx.stroke();
+      const ex = headX + 3.4 * scale;
+      const ey = spineY2(0.05, bob, flex, cy) - 1 * scale;
+      ctx.fillStyle = rgb68(p.bellyLit);
+      ctx.beginPath();
+      ctx.arc(ex, ey, 1.6 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb68(p.eye);
+      ctx.beginPath();
+      ctx.arc(ex, ey, 1.05 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.beginPath();
+      ctx.arc(ex - 0.4 * scale, ey - 0.4 * scale, 0.45 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  function paint68(ctx, raw, bob, flex = 0) {
+    const p = clampP57(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.fillStyle = rgba36(p.waterDeep, 0.4);
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb68(p.waterDeep);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb68(p.water);
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.clip();
+      const wg = ctx.createLinearGradient(-14, 14, 10, 22);
+      wg.addColorStop(0, rgba36([255, 255, 255], 0.22 * (1 - 0.4 * p.iceAmt)));
+      wg.addColorStop(0.5, rgba36([255, 255, 255], 0.04));
+      wg.addColorStop(1, rgba36(p.waterDeep, 0.18));
+      ctx.fillStyle = wg;
+      ctx.fillRect(-18, 13, 36, 12);
+      ctx.strokeStyle = rgba36([255, 255, 255], 0.22 * (1 - 0.5 * p.iceAmt));
+      ctx.lineWidth = 0.9;
+      [16.4, 18.6, 20.6].forEach((ry, i) => {
+        ctx.beginPath();
+        ctx.moveTo(-13 + i, ry);
+        ctx.quadraticCurveTo(-2, ry - 0.8, 12 - i, ry + 0.4);
+        ctx.stroke();
+      });
+      ctx.restore();
+      if (p.iceAmt > 0.01) {
+        const a = p.iceAmt;
+        ctx.fillStyle = rgba36([236, 246, 252], 0.8 * a);
+        ctx.beginPath();
+        ctx.ellipse(0, 18.8, 17.6, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba36([200, 222, 240], 0.45 * a);
+        ctx.beginPath();
+        ctx.ellipse(2, 20.2, 16, 3.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba36([255, 255, 255], 0.55 * a);
+        ctx.lineWidth = 0.8;
+        const facets = [
+          [-12, 18, -2, 21],
+          [3, 16.6, 9, 20],
+          [-6, 21, 6, 17.4],
+          [10, 17.8, 14, 20.4]
+        ];
+        facets.forEach(([x0, y0, x1, y1]) => {
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(x1, y1);
+          ctx.stroke();
+        });
+        ctx.fillStyle = rgba36([255, 255, 255], 0.85 * a);
+        [[-10, 18], [4, 19.4], [12, 17.6], [-3, 20.6], [8, 21]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.blossomAmt > 0.01) {
+        const a = p.blossomAmt;
+        const px = -12.5;
+        const py = 18.6;
+        ctx.fillStyle = rgba36([255, 246, 250], 0.95 * a);
+        ctx.beginPath();
+        ctx.ellipse(px, py, 2.3, 1.3, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba36([255, 198, 222], 0.8 * a);
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(px - 1.8, py + 0.4);
+        ctx.quadraticCurveTo(px, py - 0.6, px + 1.8, py - 0.2);
+        ctx.stroke();
+        ctx.strokeStyle = rgba36([255, 255, 255], 0.35 * a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.ellipse(px, py + 0.2, 3.6, 1.6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const lx = 12.5;
+        const ly = 18.4;
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(0.5);
+        ctx.fillStyle = rgba36([196, 116, 40], a);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 3.4, 1.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba36([110, 56, 18], a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(-3.2, 0);
+        ctx.lineTo(3.2, 0);
+        ctx.stroke();
+        ctx.restore();
+        ctx.strokeStyle = rgba36([255, 255, 255], 0.25 * a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.ellipse(lx, ly + 0.4, 4.4, 1.9, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      {
+        const bCy = FISH_CY2 + 6.2;
+        const bHeadX = HEAD_X3 + 3;
+        const bTailX = TAIL_X3 - 1;
+        const bScale = 0.66;
+        drawSardineBody(ctx, p, bob * 0.7, flex * 0.8, bCy, bHeadX, bTailX, bScale, 0.5);
+        ctx.fillStyle = rgba36(p.water, 0.28 * (1 - 0.5 * p.iceAmt));
+        ctx.beginPath();
+        ctx.ellipse(2, bCy + bob * 0.7 + 1.5, 12, 4.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = rgba36(p.outline, 0.26 * (1 - 0.5 * p.iceAmt));
+      ctx.beginPath();
+      ctx.ellipse(1, FISH_CY2 + bob + 4.6, 14, 2.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      drawSardineBody(ctx, p, bob, flex, FISH_CY2, HEAD_X3, TAIL_X3, 1, 1);
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lg.addColorStop(0, rgba36(p.light, p.lightAmt));
+        lg.addColorStop(1, rgba36(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lg;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function bobAt68(t, amp = 0.65, w = 1.4) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function flexAt2(t, amp = 1, w = 1.4) {
+    return amp * Math.sin(w * t);
+  }
+  function draw58(season) {
+    return (ctx) => paint68(ctx, SP68[season], 0, 0);
+  }
+  function anim58(season) {
+    return (ctx, t) => {
+      const bob = bobAt68(t);
+      const flex = flexAt2(t);
+      paint68(ctx, SP68[season], bob, flex);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const ripPhase = t * 0.35 % 1;
+        const iceMute = 1 - 0.55 * clamp0169(SP68[season].iceAmt);
+        ctx.strokeStyle = `rgba(255,255,255,${(0.12 + 0.12 * (0.5 + 0.5 * Math.sin(t * 1.3))) * iceMute})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        const ry = 16.5 + ripPhase * 5.5;
+        ctx.moveTo(-13, ry);
+        ctx.quadraticCurveTo(-1, ry - 0.9 - Math.sin(t * 1.7) * 0.4, 12, ry + 0.4);
+        ctx.stroke();
+        const exg = HEAD_X3 + 3.4;
+        const eyg = spineY2(0.05, bob, flex) - 1;
+        const gl = 0.4 + 0.5 * (0.5 + 0.5 * Math.sin(t * 2.4));
+        ctx.fillStyle = `rgba(255,255,255,${gl * 0.7})`;
+        ctx.beginPath();
+        ctx.arc(exg - 0.4, eyg - 0.4, 0.45 + 0.22 * gl, 0, Math.PI * 2);
+        ctx.fill();
+        if (season === "Spring") {
+          const g = 0.2 + 0.24 * (0.5 + 0.5 * Math.sin(t * 2));
+          const u = 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(t * 0.6));
+          ctx.fillStyle = `rgba(255,255,255,${g})`;
+          ctx.beginPath();
+          ctx.arc(xAt2(u), spineY2(u, bob, flex) - 1.2, 0.9 + g * 0.6, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Summer") {
+          const prog = t * 0.5 % 1;
+          const u = lerp73(0.12, 0.84, prog);
+          const x = xAt2(u);
+          const y = spineY2(u, bob, flex) - bodyHalf2(u) * 0.45;
+          const sh = ctx.createRadialGradient(x, y, 0.4, x, y, 5);
+          sh.addColorStop(0, "rgba(206,250,255,0.7)");
+          sh.addColorStop(0.5, "rgba(170,220,255,0.3)");
+          sh.addColorStop(1, "rgba(170,220,255,0)");
+          ctx.fillStyle = sh;
+          ctx.beginPath();
+          ctx.ellipse(x, y, 5, 2.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Autumn") {
+          const dx = 12.5 + Math.sin(t * 0.5) * 2.2;
+          const dy = 18.4 + Math.sin(t * 0.7 + 1) * 0.6;
+          ctx.save();
+          ctx.translate(dx, dy);
+          ctx.rotate(0.5 + Math.sin(t * 0.4) * 0.25);
+          ctx.fillStyle = "rgba(196,116,40,0.9)";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.4, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(110,56,18,0.9)";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3.2, 0);
+          ctx.lineTo(3.2, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          const prog = (t / 3.2 % 1 + 1) % 1;
+          const fy = -22 + prog * 40;
+          const fx = -4 + Math.sin(prog * Math.PI * 2) * 4;
+          ctx.globalAlpha = 0.5 + 0.4 * Math.sin(prog * Math.PI);
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(fx, fy, 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.1 + 0.12 * (0.5 + 0.5 * Math.sin(t * 0.9));
+          ctx.fillStyle = "rgba(214,234,252,1)";
+          ctx.beginPath();
+          ctx.ellipse(0, 19, 15, 4.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition65(fromIdx) {
+    const from = SP68[SEASON_NAMES[fromIdx]];
+    const to = SP68[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother68(clamp0169(pp));
+      paint68(ctx, lerpP68(from, to, k), 0, 0);
+    };
+  }
+  var springToSummer62 = makeTransition65(0);
+  var summerToAutumn62 = makeTransition65(1);
+  var autumnToWinter62 = makeTransition65(2);
+  var VARIANTS70 = {
+    Spring: { draw: draw58("Spring"), anim: anim58("Spring") },
+    Summer: { draw: draw58("Summer"), anim: anim58("Summer") },
+    Autumn: { draw: draw58("Autumn"), anim: anim58("Autumn") },
+    Winter: { draw: draw58("Winter"), anim: anim58("Winter") }
+  };
+  var TRANSITIONS70 = {
+    0: springToSummer62,
+    1: summerToAutumn62,
+    2: autumnToWinter62
+  };
+
+  // src/textures/seasonal/fish/cocoa.ts
+  function clamp0170(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother69 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp74(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB62(a, b, t) {
+    return [lerp74(a[0], b[0], t), lerp74(a[1], b[1], t), lerp74(a[2], b[2], t)];
+  }
+  function rgb69(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba37(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0170(a)})`;
+  }
+  function lerpP69(a, b, t) {
+    return {
+      podLight: lerpRGB62(a.podLight, b.podLight, t),
+      podMid: lerpRGB62(a.podMid, b.podMid, t),
+      podDeep: lerpRGB62(a.podDeep, b.podDeep, t),
+      ribHi: lerpRGB62(a.ribHi, b.ribHi, t),
+      bean: lerpRGB62(a.bean, b.bean, t),
+      beanLit: lerpRGB62(a.beanLit, b.beanLit, t),
+      water: lerpRGB62(a.water, b.water, t),
+      waterDeep: lerpRGB62(a.waterDeep, b.waterDeep, t),
+      outline: lerpRGB62(a.outline, b.outline, t),
+      light: lerpRGB62(a.light, b.light, t),
+      lightAmt: lerp74(a.lightAmt, b.lightAmt, t),
+      ripeness: lerp74(a.ripeness, b.ripeness, t),
+      gloss: lerp74(a.gloss, b.gloss, t),
+      iceAmt: lerp74(a.iceAmt, b.iceAmt, t),
+      frostAmt: lerp74(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp74(a.snowCapAmt, b.snowCapAmt, t),
+      blossomAmt: lerp74(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp74(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP58(p) {
+    return {
+      ...p,
+      lightAmt: clamp0170(p.lightAmt),
+      ripeness: clamp0170(p.ripeness),
+      gloss: clamp0170(p.gloss),
+      iceAmt: clamp0170(p.iceAmt),
+      frostAmt: clamp0170(p.frostAmt),
+      snowCapAmt: clamp0170(p.snowCapAmt),
+      blossomAmt: clamp0170(p.blossomAmt),
+      fallenLeafAmt: clamp0170(p.fallenLeafAmt)
+    };
+  }
+  var BEAN = [110, 70, 44];
+  var BEAN_LIT = [150, 104, 66];
+  var SP69 = {
+    // Spring — a slightly younger green-brown pod (ribs tinged olive); fresh blue
+    // dewy water + a tiny floating blossom petal; cool-bright light.
+    Spring: {
+      podLight: [150, 116, 64],
+      podMid: [120, 96, 50],
+      podDeep: [66, 50, 26],
+      ribHi: [186, 152, 92],
+      bean: BEAN,
+      beanLit: BEAN_LIT,
+      water: [120, 192, 220],
+      waterDeep: [70, 134, 170],
+      outline: [50, 32, 18],
+      light: [232, 246, 248],
+      lightAmt: 0.16,
+      ripeness: 0.55,
+      gloss: 0.42,
+      iceAmt: 0,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      blossomAmt: 0.85,
+      fallenLeafAmt: 0
+    },
+    // Summer — PEAK ripe: richest red-brown pod; bright saturated blue water; warm
+    // light, strong sheen on the ribs.
+    Summer: {
+      podLight: [168, 104, 56],
+      podMid: [130, 80, 44],
+      podDeep: [66, 38, 18],
+      ribHi: [204, 148, 92],
+      bean: [118, 74, 46],
+      beanLit: [158, 110, 70],
+      water: [78, 178, 226],
+      waterDeep: [40, 122, 180],
+      outline: [50, 28, 14],
+      light: [255, 244, 214],
+      lightAmt: 0.18,
+      ripeness: 1,
+      gloss: 0.95,
+      iceAmt: 0,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — deeper over-ripe browner pod; olive-tinged water + a floating
+    // fallen leaf; low amber light.
+    Autumn: {
+      podLight: [142, 88, 48],
+      podMid: [104, 64, 34],
+      podDeep: [56, 32, 16],
+      ribHi: [176, 122, 74],
+      bean: [98, 62, 38],
+      beanLit: [138, 96, 60],
+      water: [120, 158, 150],
+      waterDeep: [82, 116, 104],
+      outline: [44, 26, 14],
+      light: [248, 214, 156],
+      lightAmt: 0.2,
+      ripeness: 0.7,
+      gloss: 0.4,
+      iceAmt: 0,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — water FROZEN to pale blue-white ICE + frost sparkle; a light snow
+    // cap on the pod's upper ribs + cool frost dusting; the pod stays clearly
+    // reddish-brown; cool light.
+    Winter: {
+      podLight: [150, 96, 54],
+      podMid: [116, 74, 42],
+      podDeep: [62, 38, 20],
+      ribHi: [188, 138, 88],
+      bean: [108, 70, 46],
+      beanLit: [148, 104, 68],
+      water: [216, 234, 244],
+      waterDeep: [168, 198, 218],
+      outline: [50, 36, 26],
+      light: [212, 230, 252],
+      lightAmt: 0.3,
+      ripeness: 0.6,
+      gloss: 0.3,
+      iceAmt: 0.92,
+      frostAmt: 0.7,
+      snowCapAmt: 0.8,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var POD_CX = -1;
+  var POD_CY = 9;
+  var POD_RX = 14.5;
+  var POD_RY = 8.4;
+  var POD_TILT = -0.16;
+  var RIB_COUNT2 = 5;
+  function podRim(a) {
+    const cx = Math.cos(a);
+    const point = 1 + 0.16 * (cx * cx);
+    return [cx * POD_RX * point, Math.sin(a) * POD_RY];
+  }
+  function podBodyPath(ctx) {
+    const N = 26;
+    ctx.beginPath();
+    for (let i = 0; i <= N; i++) {
+      const a = i / N * Math.PI * 2;
+      const [x, y] = podRim(a);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+  }
+  function ribX(s) {
+    const f = (s + 0.5) / RIB_COUNT2;
+    return lerp74(-POD_RX * 0.74, POD_RX * 0.74, f);
+  }
+  function podHalfH(localX) {
+    const t = clamp0170(Math.abs(localX) / (POD_RX * 1.02));
+    return POD_RY * Math.sqrt(Math.max(0, 1 - t * t));
+  }
+  function paint69(ctx, raw, bob, sheen3 = -1) {
+    const p = clampP58(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.fillStyle = rgba37(p.waterDeep, 0.4);
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb69(p.waterDeep);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb69(p.water);
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.clip();
+      const wg = ctx.createLinearGradient(-14, 14, 10, 22);
+      wg.addColorStop(0, rgba37([255, 255, 255], 0.22 * (1 - 0.4 * p.iceAmt)));
+      wg.addColorStop(0.5, rgba37([255, 255, 255], 0.04));
+      wg.addColorStop(1, rgba37(p.waterDeep, 0.18));
+      ctx.fillStyle = wg;
+      ctx.fillRect(-18, 13, 36, 12);
+      ctx.strokeStyle = rgba37([255, 255, 255], 0.22 * (1 - 0.5 * p.iceAmt));
+      ctx.lineWidth = 0.9;
+      [16.4, 18.6, 20.6].forEach((ry, i) => {
+        ctx.beginPath();
+        ctx.moveTo(-13 + i, ry);
+        ctx.quadraticCurveTo(-2, ry - 0.8, 12 - i, ry + 0.4);
+        ctx.stroke();
+      });
+      ctx.restore();
+      if (p.iceAmt > 0.01) {
+        const a = p.iceAmt;
+        ctx.fillStyle = rgba37([236, 246, 252], 0.8 * a);
+        ctx.beginPath();
+        ctx.ellipse(0, 18.8, 17.6, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba37([200, 222, 240], 0.45 * a);
+        ctx.beginPath();
+        ctx.ellipse(2, 20.2, 16, 3.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba37([255, 255, 255], 0.55 * a);
+        ctx.lineWidth = 0.8;
+        const facets = [
+          [-12, 18, -2, 21],
+          [3, 16.6, 9, 20],
+          [-6, 21, 6, 17.4],
+          [10, 17.8, 14, 20.4]
+        ];
+        facets.forEach(([x0, y0, x1, y1]) => {
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(x1, y1);
+          ctx.stroke();
+        });
+        ctx.fillStyle = rgba37([255, 255, 255], 0.85 * a);
+        [[-10, 18], [4, 19.4], [12, 17.6], [-3, 20.6], [8, 21]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.blossomAmt > 0.01) {
+        const a = p.blossomAmt;
+        const px = -12.5;
+        const py = 18.6;
+        ctx.fillStyle = rgba37([255, 246, 250], 0.95 * a);
+        ctx.beginPath();
+        ctx.ellipse(px, py, 2.3, 1.3, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba37([255, 198, 222], 0.8 * a);
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(px - 1.8, py + 0.4);
+        ctx.quadraticCurveTo(px, py - 0.6, px + 1.8, py - 0.2);
+        ctx.stroke();
+        ctx.strokeStyle = rgba37([255, 255, 255], 0.35 * a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.ellipse(px, py + 0.2, 3.6, 1.6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const lx = 13;
+        const ly = 18.4;
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(0.5);
+        ctx.fillStyle = rgba37([196, 116, 40], a);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 3.4, 1.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba37([110, 56, 18], a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(-3.2, 0);
+        ctx.lineTo(3.2, 0);
+        ctx.stroke();
+        ctx.restore();
+        ctx.strokeStyle = rgba37([255, 255, 255], 0.25 * a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.ellipse(lx, ly + 0.4, 4.4, 1.9, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      {
+        const beans = [
+          // x, y, radiusX, rotation
+          [11.5, 14, 2.6, 0.5],
+          [14.6, 16, 2.3, -0.4],
+          [9.6, 16.8, 2.2, 0.9]
+        ];
+        beans.forEach(([bx, byR, br, rot]) => {
+          const by = byR + bob * 0.5;
+          ctx.fillStyle = rgba37(p.outline, 0.22 * (1 - 0.4 * p.iceAmt));
+          ctx.beginPath();
+          ctx.ellipse(bx + 0.6, by + br * 0.7, br * 1.05, br * 0.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.save();
+          ctx.translate(bx, by);
+          ctx.rotate(rot);
+          ctx.fillStyle = rgb69(p.outline);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, br + 0.7, br * 0.78 + 0.6, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = rgb69(p.bean);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, br, br * 0.78, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = rgb69(p.beanLit);
+          ctx.beginPath();
+          ctx.ellipse(-br * 0.28, -br * 0.3, br * 0.6, br * 0.42, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = rgba37(p.podDeep, 0.7);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-br * 0.7, 0);
+          ctx.lineTo(br * 0.7, 0);
+          ctx.stroke();
+          if (p.frostAmt > 0.02) {
+            ctx.fillStyle = rgba37([236, 246, 255], 0.6 * p.frostAmt);
+            ctx.beginPath();
+            ctx.ellipse(-br * 0.2, -br * 0.42, br * 0.5, br * 0.28, 0, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+        });
+      }
+      ctx.fillStyle = rgba37(p.outline, 0.28 * (1 - 0.5 * p.iceAmt));
+      ctx.beginPath();
+      ctx.ellipse(POD_CX + 2, POD_CY + bob + POD_RY - 1.5, POD_RX * 0.92, 3, POD_TILT, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.translate(POD_CX, POD_CY + bob);
+      ctx.rotate(POD_TILT);
+      ctx.save();
+      ctx.lineWidth = 2.2;
+      ctx.strokeStyle = rgb69(p.outline);
+      podBodyPath(ctx);
+      ctx.stroke();
+      ctx.restore();
+      ctx.save();
+      podBodyPath(ctx);
+      ctx.clip();
+      ctx.fillStyle = rgb69(p.podMid);
+      ctx.fillRect(-POD_RX - 4, -POD_RY - 4, (POD_RX + 4) * 2, (POD_RY + 4) * 2);
+      const fg = ctx.createLinearGradient(-POD_RX * 0.5, -POD_RY, POD_RX * 0.4, POD_RY);
+      fg.addColorStop(0, rgb69(p.podLight));
+      fg.addColorStop(0.5, rgb69(p.podMid));
+      fg.addColorStop(1, rgb69(p.podDeep));
+      ctx.fillStyle = fg;
+      ctx.fillRect(-POD_RX - 4, -POD_RY - 4, (POD_RX + 4) * 2, (POD_RY + 4) * 2);
+      ctx.fillStyle = rgba37(p.podDeep, 0.55);
+      ctx.beginPath();
+      ctx.ellipse(1.5, POD_RY * 0.5, POD_RX * 0.96, POD_RY * 0.62, 0, 0, Math.PI * 2);
+      ctx.fill();
+      for (let s = 0; s < RIB_COUNT2; s++) {
+        const cxr = ribX(s);
+        const h = podHalfH(cxr);
+        const ripple = (p.ripeness - 0.5) * 0.6;
+        ctx.strokeStyle = rgba37(p.podDeep, 0.85);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cxr - 1.4, -h + 0.6);
+        ctx.quadraticCurveTo(cxr - 2.2 - ripple, 0, cxr - 1.4, h - 0.6);
+        ctx.stroke();
+        ctx.strokeStyle = rgba37(p.ribHi, 0.8);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(cxr + 0.2, -h + 1);
+        ctx.quadraticCurveTo(cxr + 1 + ripple, 0, cxr + 0.2, h - 1);
+        ctx.stroke();
+        ctx.strokeStyle = rgba37(p.podDeep, 0.5);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cxr + 1.9, -h + 1.2);
+        ctx.quadraticCurveTo(cxr + 2.4, 0, cxr + 1.9, h - 1.2);
+        ctx.stroke();
+      }
+      ctx.fillStyle = rgba37(p.podDeep, 0.5);
+      ctx.beginPath();
+      ctx.ellipse(POD_RX * 0.92, 0, 1.8, 1.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (p.gloss > 0.02) {
+        const sgr = ctx.createLinearGradient(-POD_RX * 0.4, -POD_RY, POD_RX * 0.2, 0);
+        sgr.addColorStop(0, rgba37([255, 248, 236], 0));
+        sgr.addColorStop(0.5, rgba37([255, 248, 236], 0.16 + 0.34 * p.gloss));
+        sgr.addColorStop(1, rgba37([255, 248, 236], 0));
+        ctx.fillStyle = sgr;
+        ctx.beginPath();
+        ctx.ellipse(-POD_RX * 0.18, -POD_RY * 0.42, POD_RX * 0.7, POD_RY * 0.46, POD_TILT, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (sheen3 >= 0) {
+        const s = clamp0170(sheen3);
+        const cxr = lerp74(-POD_RX * 0.55, POD_RX * 0.55, s);
+        const h = podHalfH(cxr);
+        const gg = ctx.createLinearGradient(cxr, -h, cxr, h);
+        gg.addColorStop(0, "rgba(255,250,240,0)");
+        gg.addColorStop(0.45, "rgba(255,250,240,0.5)");
+        gg.addColorStop(1, "rgba(255,250,240,0)");
+        ctx.strokeStyle = gg;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(cxr + 0.2, -h + 1.2);
+        ctx.quadraticCurveTo(cxr + 1, 0, cxr + 0.2, h - 1.2);
+        ctx.stroke();
+      }
+      if (p.frostAmt > 0.02) {
+        ctx.fillStyle = rgba37([222, 238, 252], 0.2 * p.frostAmt);
+        ctx.beginPath();
+        ctx.ellipse(-POD_RX * 0.1, -POD_RY * 0.5, POD_RX * 0.82, POD_RY * 0.5, POD_TILT, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba37([240, 248, 255], 0.8 * p.frostAmt);
+        for (let s = 0; s < RIB_COUNT2; s++) {
+          const cxr = ribX(s);
+          const h = podHalfH(cxr);
+          ctx.beginPath();
+          ctx.arc(cxr + 0.2, -h * 0.55 + Math.sin(s * 1.7) * 0.6, 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.restore();
+      if (p.snowCapAmt > 0.02) {
+        const a = p.snowCapAmt;
+        ctx.fillStyle = rgba37([246, 251, 255], 0.94 * a);
+        ctx.beginPath();
+        const left = -POD_RX * 0.72;
+        const right = POD_RX * 0.72;
+        ctx.moveTo(left, -podHalfH(left) + 1.4);
+        const steps = RIB_COUNT2 * 2;
+        for (let i = 0; i <= steps; i++) {
+          const x = lerp74(left, right, i / steps);
+          const lump = 1.6 + (i % 2 === 0 ? 1.2 : 0.4);
+          ctx.lineTo(x, -podHalfH(x) - lump * 0.5);
+        }
+        for (let i = steps; i >= 0; i--) {
+          const x = lerp74(left, right, i / steps);
+          ctx.lineTo(x, -podHalfH(x) + 2.6);
+        }
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = rgba37([196, 216, 236], 0.5 * a);
+        ctx.lineWidth = 0.9;
+        ctx.beginPath();
+        ctx.moveTo(left, -podHalfH(left) + 2.6);
+        ctx.quadraticCurveTo(0, -POD_RY * 0.1, right, -podHalfH(right) + 2.6);
+        ctx.stroke();
+      }
+      ctx.restore();
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lg.addColorStop(0, rgba37(p.light, p.lightAmt));
+        lg.addColorStop(1, rgba37(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lg;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function bobAt69(t, amp = 0.7, w = 1.4) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function draw59(season) {
+    return (ctx) => paint69(ctx, SP69[season], 0, -1);
+  }
+  function anim59(season) {
+    return (ctx, t) => {
+      const bob = bobAt69(t);
+      const sheen3 = (t * 0.28 % 1 + 1) % 1;
+      paint69(ctx, SP69[season], bob, sheen3);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const ripPhase = t * 0.35 % 1;
+        const iceMute = 1 - 0.55 * clamp0170(SP69[season].iceAmt);
+        ctx.strokeStyle = `rgba(255,255,255,${(0.12 + 0.12 * (0.5 + 0.5 * Math.sin(t * 1.3))) * iceMute})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        const ry = 16.5 + ripPhase * 5.5;
+        ctx.moveTo(-13, ry);
+        ctx.quadraticCurveTo(-1, ry - 0.9 - Math.sin(t * 1.7) * 0.4, 12, ry + 0.4);
+        ctx.stroke();
+        if (season === "Spring") {
+          const g = 0.2 + 0.24 * (0.5 + 0.5 * Math.sin(t * 2));
+          ctx.fillStyle = `rgba(255,255,255,${g})`;
+          ctx.beginPath();
+          ctx.arc(POD_CX - 4, POD_CY + bob - 4, 1 + g * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Summer") {
+          const prog = t * 0.5 % 1;
+          const x = POD_CX + lerp74(-7, 7, prog);
+          const y = POD_CY + bob - 5;
+          const sh = ctx.createRadialGradient(x, y, 0.4, x, y, 6);
+          sh.addColorStop(0, "rgba(255,250,235,0.7)");
+          sh.addColorStop(0.5, "rgba(255,240,210,0.3)");
+          sh.addColorStop(1, "rgba(255,240,210,0)");
+          ctx.fillStyle = sh;
+          ctx.beginPath();
+          ctx.ellipse(x, y, 6, 3.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Autumn") {
+          const dx = 13 + Math.sin(t * 0.5) * 2.2;
+          const dy = 18.4 + Math.sin(t * 0.7 + 1) * 0.6;
+          ctx.save();
+          ctx.translate(dx, dy);
+          ctx.rotate(0.5 + Math.sin(t * 0.4) * 0.25);
+          ctx.fillStyle = "rgba(196,116,40,0.9)";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.4, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(110,56,18,0.9)";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3.2, 0);
+          ctx.lineTo(3.2, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          const prog = (t / 3.2 % 1 + 1) % 1;
+          const fy = -22 + prog * 40;
+          const fx = -4 + Math.sin(prog * Math.PI * 2) * 4;
+          ctx.globalAlpha = 0.5 + 0.4 * Math.sin(prog * Math.PI);
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(fx, fy, 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.1 + 0.12 * (0.5 + 0.5 * Math.sin(t * 0.9));
+          ctx.fillStyle = "rgba(214,234,252,1)";
+          ctx.beginPath();
+          ctx.ellipse(0, 19, 15, 4.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition66(fromIdx) {
+    const from = SP69[SEASON_NAMES[fromIdx]];
+    const to = SP69[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother69(clamp0170(pp));
+      paint69(ctx, lerpP69(from, to, k), 0, -1);
+    };
+  }
+  var springToSummer63 = makeTransition66(0);
+  var summerToAutumn63 = makeTransition66(1);
+  var autumnToWinter63 = makeTransition66(2);
+  var VARIANTS71 = {
+    Spring: { draw: draw59("Spring"), anim: anim59("Spring") },
+    Summer: { draw: draw59("Summer"), anim: anim59("Summer") },
+    Autumn: { draw: draw59("Autumn"), anim: anim59("Autumn") },
+    Winter: { draw: draw59("Winter"), anim: anim59("Winter") }
+  };
+  var TRANSITIONS71 = {
+    0: springToSummer63,
+    1: summerToAutumn63,
+    2: autumnToWinter63
+  };
+
+  // src/textures/seasonal/fish/ink.ts
+  function clamp0171(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother70 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp75(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB63(a, b, t) {
+    return [lerp75(a[0], b[0], t), lerp75(a[1], b[1], t), lerp75(a[2], b[2], t)];
+  }
+  function rgb70(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba38(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0171(a)})`;
+  }
+  function lerpP70(a, b, t) {
+    return {
+      mantleLight: lerpRGB63(a.mantleLight, b.mantleLight, t),
+      mantleMid: lerpRGB63(a.mantleMid, b.mantleMid, t),
+      mantleDeep: lerpRGB63(a.mantleDeep, b.mantleDeep, t),
+      bellyLit: lerpRGB63(a.bellyLit, b.bellyLit, t),
+      sucker: lerpRGB63(a.sucker, b.sucker, t),
+      eye: lerpRGB63(a.eye, b.eye, t),
+      ink: lerpRGB63(a.ink, b.ink, t),
+      water: lerpRGB63(a.water, b.water, t),
+      waterDeep: lerpRGB63(a.waterDeep, b.waterDeep, t),
+      ice: lerpRGB63(a.ice, b.ice, t),
+      outline: lerpRGB63(a.outline, b.outline, t),
+      light: lerpRGB63(a.light, b.light, t),
+      lightAmt: lerp75(a.lightAmt, b.lightAmt, t),
+      vividness: lerp75(a.vividness, b.vividness, t),
+      gloss: lerp75(a.gloss, b.gloss, t),
+      inkAmt: lerp75(a.inkAmt, b.inkAmt, t),
+      iceAmt: lerp75(a.iceAmt, b.iceAmt, t),
+      frostAmt: lerp75(a.frostAmt, b.frostAmt, t),
+      blossomAmt: lerp75(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp75(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP59(p) {
+    return {
+      ...p,
+      lightAmt: clamp0171(p.lightAmt),
+      vividness: clamp0171(p.vividness),
+      gloss: clamp0171(p.gloss),
+      inkAmt: clamp0171(p.inkAmt),
+      iceAmt: clamp0171(p.iceAmt),
+      frostAmt: clamp0171(p.frostAmt),
+      blossomAmt: clamp0171(p.blossomAmt),
+      fallenLeafAmt: clamp0171(p.fallenLeafAmt)
+    };
+  }
+  var MANTLE_DEEP = [22, 18, 40];
+  var EYE_DARK = [18, 14, 32];
+  var INK_WISP = [42, 36, 64];
+  var SP70 = {
+    // Spring — fresh indigo; blue dewy water; a tiny floating blossom petal.
+    Spring: {
+      mantleLight: [92, 82, 132],
+      mantleMid: [62, 54, 94],
+      mantleDeep: MANTLE_DEEP,
+      bellyLit: [156, 146, 186],
+      sucker: [156, 126, 166],
+      eye: EYE_DARK,
+      ink: INK_WISP,
+      water: [120, 196, 230],
+      waterDeep: [66, 138, 190],
+      ice: [222, 238, 248],
+      outline: [20, 16, 34],
+      light: [232, 244, 250],
+      lightAmt: 0.16,
+      vividness: 0.7,
+      gloss: 0.45,
+      inkAmt: 0.3,
+      iceAmt: 0,
+      frostAmt: 0,
+      blossomAmt: 0.85,
+      fallenLeafAmt: 0
+    },
+    // Summer — PEAK saturated purple-indigo; bright water; a small ink puff.
+    Summer: {
+      mantleLight: [98, 84, 148],
+      mantleMid: [66, 52, 108],
+      mantleDeep: [26, 18, 48],
+      bellyLit: [162, 150, 198],
+      sucker: [168, 132, 178],
+      eye: EYE_DARK,
+      ink: [40, 32, 64],
+      water: [70, 178, 232],
+      waterDeep: [34, 118, 188],
+      ice: [222, 238, 248],
+      outline: [20, 14, 38],
+      light: [255, 242, 208],
+      lightAmt: 0.18,
+      vividness: 1,
+      gloss: 0.95,
+      inkAmt: 0.7,
+      iceAmt: 0,
+      frostAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — duller mauve-indigo; olive-tinged water + a floating fallen leaf.
+    Autumn: {
+      mantleLight: [96, 84, 116],
+      mantleMid: [70, 60, 86],
+      mantleDeep: [30, 24, 42],
+      bellyLit: [156, 146, 168],
+      sucker: [158, 132, 158],
+      eye: [28, 24, 36],
+      ink: [48, 42, 60],
+      water: [120, 152, 130],
+      waterDeep: [78, 108, 92],
+      ice: [222, 238, 248],
+      outline: [30, 24, 32],
+      light: [248, 210, 150],
+      lightAmt: 0.2,
+      vividness: 0.55,
+      gloss: 0.4,
+      inkAmt: 0.32,
+      iceAmt: 0,
+      frostAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — water FROZEN to pale blue-white ice + frost sparkle; a little frost
+    // on the octopus; the indigo body stays clearly visible; cool light.
+    Winter: {
+      mantleLight: [90, 82, 128],
+      mantleMid: [60, 54, 94],
+      mantleDeep: [24, 20, 44],
+      bellyLit: [158, 150, 190],
+      sucker: [154, 128, 166],
+      eye: [26, 22, 40],
+      ink: [46, 42, 66],
+      water: [182, 210, 226],
+      waterDeep: [136, 170, 196],
+      ice: [226, 240, 250],
+      outline: [28, 26, 44],
+      light: [206, 226, 252],
+      lightAmt: 0.3,
+      vividness: 0.6,
+      gloss: 0.3,
+      inkAmt: 0.22,
+      iceAmt: 0.95,
+      frostAmt: 0.7,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var HEAD_CX2 = -1;
+  var HEAD_CY2 = -2;
+  var HEAD_RX = 11.5;
+  var HEAD_RY = 12.5;
+  var TENTACLES = [
+    // ── left side (negative x): roots on the lower-LEFT rim, outer → inner ──
+    { rootA: Math.PI * 0.82, tipX: -16, tipY: 16.4, bowX: -7, bowY: 2.6, tipUp: 2.8, phase: 0, width: 3 },
+    // far left, sweeps widest
+    { rootA: Math.PI * 0.7, tipX: -10.2, tipY: 17.8, bowX: -3.6, bowY: 3.8, tipUp: 2.1, phase: 1.05, width: 3.1 },
+    { rootA: Math.PI * 0.58, tipX: -4.4, tipY: 18, bowX: -1, bowY: 4.4, tipUp: 1.5, phase: 2.1, width: 3 },
+    // inner left
+    // ── right side (positive x): roots on the lower-RIGHT rim, inner → outer ──
+    { rootA: Math.PI * 0.42, tipX: 4.4, tipY: 18, bowX: 1, bowY: 4.4, tipUp: 1.5, phase: 3, width: 3 },
+    // inner right
+    { rootA: Math.PI * 0.3, tipX: 10.2, tipY: 17.8, bowX: 3.6, bowY: 3.8, tipUp: 2.1, phase: 4.05, width: 3.1 },
+    { rootA: Math.PI * 0.18, tipX: 16, tipY: 16.4, bowX: 7, bowY: 2.6, tipUp: 2.8, phase: 5.1, width: 3 }
+    // far right, sweeps widest
+  ];
+  function tentacleRoot(t, bob) {
+    return [
+      HEAD_CX2 + Math.cos(t.rootA) * HEAD_RX * 0.9,
+      HEAD_CY2 + bob + Math.sin(t.rootA) * HEAD_RY * 0.82
+    ];
+  }
+  function tentacleTip(t, bob, wave) {
+    const undulate = Math.sin(wave + t.phase) * 1.5;
+    return [
+      t.tipX + undulate,
+      t.tipY + bob - t.tipUp
+      // curl the tip up off the water
+    ];
+  }
+  function tentacleMid(t, bob, wave) {
+    const [rx, ry] = tentacleRoot(t, bob);
+    const [tx, ty] = tentacleTip(t, bob, wave);
+    return [lerp75(rx, tx, 0.5) + t.bowX, lerp75(ry, ty, 0.5) + t.bowY];
+  }
+  function spineAt2(rx, ry, mx, my, tx, ty, u) {
+    const omu = 1 - u;
+    return [
+      omu * omu * rx + 2 * omu * u * mx + u * u * tx,
+      omu * omu * ry + 2 * omu * u * my + u * u * ty
+    ];
+  }
+  function tentaclePath(ctx, t, bob, wave) {
+    const [rx, ry] = tentacleRoot(t, bob);
+    const [mx, my] = tentacleMid(t, bob, wave);
+    const [tx, ty] = tentacleTip(t, bob, wave);
+    const N = 10;
+    const left = [];
+    const right = [];
+    let px = rx;
+    let py = ry;
+    for (let i = 0; i <= N; i++) {
+      const u = i / N;
+      const [cx, cy] = spineAt2(rx, ry, mx, my, tx, ty, u);
+      let dx = cx - px;
+      let dy = cy - py;
+      if (i === 0) {
+        const [nx2, ny2] = spineAt2(rx, ry, mx, my, tx, ty, 0.04);
+        dx = nx2 - rx;
+        dy = ny2 - ry;
+      }
+      const len = Math.hypot(dx, dy) || 1;
+      const nx = -dy / len;
+      const ny = dx / len;
+      const w = t.width * (1 - u) * (1 - u) + 0.55;
+      left.push([cx + nx * w, cy + ny * w]);
+      right.push([cx - nx * w, cy - ny * w]);
+      px = cx;
+      py = cy;
+    }
+    ctx.beginPath();
+    ctx.moveTo(left[0][0], left[0][1]);
+    for (let i = 1; i <= N; i++) ctx.lineTo(left[i][0], left[i][1]);
+    ctx.lineTo(tx, ty);
+    for (let i = N; i >= 0; i--) ctx.lineTo(right[i][0], right[i][1]);
+    ctx.closePath();
+  }
+  function tentacleSuckers(ctx, t, bob, wave, col) {
+    const [rx, ry] = tentacleRoot(t, bob);
+    const [mx, my] = tentacleMid(t, bob, wave);
+    const [tx, ty] = tentacleTip(t, bob, wave);
+    const inward = HEAD_CX2 < t.tipX ? -1 : 1;
+    ctx.fillStyle = rgba38(col, 0.9);
+    const us = [0.5, 0.74];
+    for (const u of us) {
+      const [cx, cy] = spineAt2(rx, ry, mx, my, tx, ty, u);
+      const r = lerp75(1.05, 0.55, u);
+      ctx.beginPath();
+      ctx.arc(cx + inward * 0.6, cy, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  function paint70(ctx, raw, bob, wave = 0) {
+    const p = clampP59(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.fillStyle = rgba38(p.waterDeep, 0.4);
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb70(p.waterDeep);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      const waterGrad = ctx.createLinearGradient(0, 14, 0, 24);
+      waterGrad.addColorStop(0, rgb70(p.water));
+      waterGrad.addColorStop(1, rgb70(p.waterDeep));
+      ctx.fillStyle = waterGrad;
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+      ctx.clip();
+      const wg = ctx.createLinearGradient(-14, 14, 10, 22);
+      wg.addColorStop(0, rgba38([255, 255, 255], 0.2 * (1 - 0.4 * p.iceAmt)));
+      wg.addColorStop(0.5, rgba38([255, 255, 255], 0.04));
+      wg.addColorStop(1, rgba38(p.waterDeep, 0.18));
+      ctx.fillStyle = wg;
+      ctx.fillRect(-18, 13, 36, 12);
+      ctx.strokeStyle = rgba38([255, 255, 255], 0.2 * (1 - 0.5 * p.iceAmt));
+      ctx.lineWidth = 0.9;
+      [16.4, 18.6, 20.6].forEach((ry, i) => {
+        ctx.beginPath();
+        ctx.moveTo(-13 + i, ry);
+        ctx.quadraticCurveTo(-2, ry - 0.8, 12 - i, ry + 0.4);
+        ctx.stroke();
+      });
+      ctx.restore();
+      if (p.iceAmt > 0.01) {
+        const a = p.iceAmt;
+        ctx.fillStyle = rgba38(p.ice, 0.9 * a);
+        ctx.beginPath();
+        ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba38(p.waterDeep, 0.5 * a);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.ellipse(0, 19, 17.6, 5, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.strokeStyle = rgba38([255, 255, 255], 0.5 * a);
+        ctx.lineWidth = 0.8;
+        const cracks = [
+          [-12, 18, -3, 20],
+          [-2, 17, 9, 20.5],
+          [4, 21, 13, 18.5]
+        ];
+        cracks.forEach(([x1, y1, x2, y2]) => {
+          ctx.beginPath();
+          ctx.moveTo(x1, y1);
+          ctx.lineTo(x2, y2);
+          ctx.stroke();
+        });
+        ctx.fillStyle = rgba38([255, 255, 255], 0.85 * a);
+        const sparks = [
+          [-10, 18],
+          [5, 17.6],
+          [11, 19.2],
+          [-4, 20.4],
+          [1, 18.2]
+        ];
+        sparks.forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.blossomAmt > 0.01) {
+        const a = p.blossomAmt;
+        const px = -13;
+        const py = 18.6;
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(0.4);
+        ctx.fillStyle = rgba38([255, 232, 246], 0.95 * a);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 2.6, 1.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba38([255, 250, 252], 0.8 * a);
+        ctx.beginPath();
+        ctx.ellipse(-0.6, -0.3, 1.4, 0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.strokeStyle = rgba38([255, 255, 255], 0.3 * a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.ellipse(px, py + 0.3, 3.8, 1.7, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const lx = 13;
+        const ly = 18.4;
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(0.6);
+        ctx.fillStyle = rgba38([196, 116, 40], a);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 3.4, 1.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba38([110, 56, 18], a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(-3.2, 0);
+        ctx.lineTo(3.2, 0);
+        ctx.stroke();
+        ctx.restore();
+        ctx.strokeStyle = rgba38([255, 255, 255], 0.22 * a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.ellipse(lx, ly + 0.4, 4.4, 1.9, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (p.inkAmt > 0.01) {
+        const a = p.inkAmt;
+        ctx.save();
+        ctx.globalAlpha = 0.5 * a * (1 - 0.5 * p.iceAmt);
+        ctx.strokeStyle = rgb70(p.ink);
+        ctx.lineWidth = 2.2;
+        ctx.beginPath();
+        ctx.moveTo(10.5, 12);
+        ctx.quadraticCurveTo(13.5, 14, 12.5, 16.4);
+        ctx.quadraticCurveTo(11.6, 18.4, 13.4, 19.4);
+        ctx.stroke();
+        ctx.globalAlpha = 0.32 * a * (1 - 0.5 * p.iceAmt);
+        ctx.fillStyle = rgb70(p.ink);
+        ctx.beginPath();
+        ctx.ellipse(13.2, 19.6, 3.2, 1.7, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+      ctx.fillStyle = rgba38(p.outline, 0.26 * (1 - 0.5 * p.iceAmt));
+      ctx.beginPath();
+      ctx.ellipse(HEAD_CX2 + 1, 17 + bob * 0.4, 16.5, 3.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      for (const t of TENTACLES) {
+        ctx.save();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = rgb70(p.outline);
+        tentaclePath(ctx, t, bob, wave);
+        ctx.stroke();
+        ctx.restore();
+        tentaclePath(ctx, t, bob, wave);
+        ctx.fillStyle = rgb70(p.mantleMid);
+        ctx.fill();
+        ctx.save();
+        tentaclePath(ctx, t, bob, wave);
+        ctx.clip();
+        const [rx, ry] = tentacleRoot(t, bob);
+        const [ttx, tty] = tentacleTip(t, bob, wave);
+        const tg = ctx.createLinearGradient(rx, ry, ttx, tty);
+        tg.addColorStop(0, rgba38(p.mantleMid, 0));
+        tg.addColorStop(1, rgba38(p.mantleDeep, 0.55));
+        ctx.fillStyle = tg;
+        ctx.fillRect(-24, -24, 48, 48);
+        ctx.restore();
+        tentacleSuckers(ctx, t, bob, wave, p.sucker);
+      }
+      const hy = HEAD_CY2 + bob;
+      ctx.fillStyle = rgb70(p.outline);
+      ctx.beginPath();
+      ctx.ellipse(HEAD_CX2, hy, HEAD_RX + 1.1, HEAD_RY + 1.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb70(p.mantleMid);
+      ctx.beginPath();
+      ctx.ellipse(HEAD_CX2, hy, HEAD_RX, HEAD_RY, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(HEAD_CX2, hy, HEAD_RX, HEAD_RY, 0, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = rgb70(p.mantleDeep);
+      ctx.beginPath();
+      ctx.ellipse(HEAD_CX2 + 4.5, hy + 5.5, HEAD_RX, HEAD_RY, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb70(p.mantleMid);
+      ctx.beginPath();
+      ctx.ellipse(HEAD_CX2 - 0.5, hy - 1.5, HEAD_RX - 1.5, HEAD_RY - 1.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      const lit = ctx.createRadialGradient(
+        HEAD_CX2 - 4.5,
+        hy - 6.5,
+        1.5,
+        HEAD_CX2 - 4.5,
+        hy - 6.5,
+        HEAD_RX + 5
+      );
+      lit.addColorStop(0, rgba38(p.mantleLight, 0.55 + 0.35 * p.vividness));
+      lit.addColorStop(0.55, rgba38(p.mantleLight, 0.2 * p.vividness));
+      lit.addColorStop(1, rgba38(p.mantleLight, 0));
+      ctx.fillStyle = lit;
+      ctx.beginPath();
+      ctx.ellipse(HEAD_CX2, hy, HEAD_RX, HEAD_RY, 0, 0, Math.PI * 2);
+      ctx.fill();
+      if (p.gloss > 0.02) {
+        ctx.fillStyle = rgba38([255, 255, 255], 0.18 + 0.4 * p.gloss);
+        ctx.beginPath();
+        ctx.ellipse(HEAD_CX2 - 4.5, hy - 7.5, 3.6, 2, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = rgba38(p.mantleDeep, 0.35);
+      ctx.beginPath();
+      ctx.ellipse(HEAD_CX2, hy + 2.5, HEAD_RX - 2, 4.5, 0, 0, Math.PI);
+      ctx.fill();
+      if (p.frostAmt > 0.02) {
+        ctx.fillStyle = rgba38([214, 232, 250], 0.22 * p.frostAmt);
+        ctx.beginPath();
+        ctx.ellipse(HEAD_CX2 - 1, hy - 6, HEAD_RX - 1.5, 5.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba38([238, 248, 255], 0.7 * p.frostAmt);
+        const fp = [
+          [HEAD_CX2 - 5, hy - 7],
+          [HEAD_CX2 + 1, hy - 9],
+          [HEAD_CX2 + 5, hy - 5],
+          [HEAD_CX2 - 7, hy - 2],
+          [HEAD_CX2 + 6, hy + 1]
+        ];
+        fp.forEach(([fx, fy]) => {
+          ctx.beginPath();
+          ctx.arc(fx, fy, 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+      const eyeY = hy + 1.5;
+      const eyeDX = 4.6;
+      const eyeR = 3.5;
+      for (const sx of [-1, 1]) {
+        const ex = HEAD_CX2 + sx * eyeDX;
+        ctx.fillStyle = rgb70(p.bellyLit);
+        ctx.beginPath();
+        ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba38(p.outline, 0.55);
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = rgb70(p.eye);
+        ctx.beginPath();
+        ctx.arc(ex - 0.5, eyeY + 0.4, 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.92)";
+        ctx.beginPath();
+        ctx.arc(ex - 1.1, eyeY - 0.5, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lgrad = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lgrad.addColorStop(0, rgba38(p.light, p.lightAmt));
+        lgrad.addColorStop(1, rgba38(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lgrad;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function bobAt70(t, amp = 0.7, w = 1.3) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function waveAt2(t, w = 1.1) {
+    return Math.PI * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function draw60(season) {
+    return (ctx) => paint70(ctx, SP70[season], 0, 0);
+  }
+  function anim60(season) {
+    return (ctx, t) => {
+      const bob = bobAt70(t);
+      const wave = waveAt2(t);
+      paint70(ctx, SP70[season], bob, wave);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const sp = SP70[season];
+        const ripPhase = t * 0.35 % 1;
+        const iceMute = 1 - 0.55 * clamp0171(sp.iceAmt);
+        ctx.strokeStyle = `rgba(255,255,255,${(0.12 + 0.1 * (0.5 + 0.5 * Math.sin(t * 1.3))) * iceMute})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        const ry = 16.5 + ripPhase * 5.5;
+        ctx.moveTo(-13, ry);
+        ctx.quadraticCurveTo(-1, ry - 0.9 - Math.sin(t * 1.7) * 0.4, 12, ry + 0.4);
+        ctx.stroke();
+        const gl = 0.4 + 0.5 * (0.5 + 0.5 * Math.sin(t * 2.2));
+        const eyeY = HEAD_CY2 + bob + 1.5;
+        for (const sx of [-1, 1]) {
+          const ex = HEAD_CX2 + sx * 4.6;
+          ctx.fillStyle = `rgba(255,255,255,${gl * 0.7})`;
+          ctx.beginPath();
+          ctx.arc(ex - 1.1, eyeY - 0.5, 0.5 + 0.3 * gl, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        if (sp.inkAmt > 0.01) {
+          const prog = t / 4 % 1;
+          const fade = Math.sin(prog * Math.PI);
+          const wx = 13.2 + Math.sin(prog * Math.PI * 2) * 1.4;
+          const wy = 19.4 - prog * 7.5;
+          ctx.globalAlpha = 0.4 * fade * sp.inkAmt * iceMute;
+          ctx.fillStyle = rgb70(sp.ink);
+          ctx.beginPath();
+          ctx.ellipse(wx, wy, 2.6 - prog * 1.2, 1.8 - prog * 0.7, 0.2, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.3 * fade * sp.inkAmt * iceMute;
+          ctx.strokeStyle = rgb70(sp.ink);
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.moveTo(13.2, 19.4);
+          ctx.quadraticCurveTo(13.8 + Math.sin(t * 1.4), (19.4 + wy) / 2, wx, wy);
+          ctx.stroke();
+          ctx.globalAlpha = 1;
+        }
+        if (season === "Spring") {
+          const g = 0.2 + 0.24 * (0.5 + 0.5 * Math.sin(t * 2));
+          const u = 0.5 + 0.5 * Math.sin(t * 0.6);
+          ctx.fillStyle = `rgba(255,255,255,${g})`;
+          ctx.beginPath();
+          ctx.arc(HEAD_CX2 - 5 + u * 3, HEAD_CY2 + bob - 6, 1 + g * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Summer") {
+          const prog = t * 0.5 % 1;
+          const gx = HEAD_CX2 - 5 + prog * 9;
+          const gy = HEAD_CY2 + bob - 7 + prog * 4;
+          const sh = ctx.createRadialGradient(gx, gy, 0.4, gx, gy, 5);
+          sh.addColorStop(0, "rgba(220,210,255,0.7)");
+          sh.addColorStop(0.5, "rgba(180,170,240,0.3)");
+          sh.addColorStop(1, "rgba(180,170,240,0)");
+          ctx.fillStyle = sh;
+          ctx.beginPath();
+          ctx.ellipse(gx, gy, 5, 3, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Autumn") {
+          const dx = 13 + Math.sin(t * 0.5) * 2.2;
+          const dy = 18.4 + Math.sin(t * 0.7 + 1) * 0.6;
+          ctx.save();
+          ctx.translate(dx, dy);
+          ctx.rotate(0.6 + Math.sin(t * 0.4) * 0.25);
+          ctx.fillStyle = "rgba(196,116,40,0.9)";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.4, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(110,56,18,0.9)";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3.2, 0);
+          ctx.lineTo(3.2, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          const prog = (t / 3.2 % 1 + 1) % 1;
+          const fy = -22 + prog * 40;
+          const fx = -4 + Math.sin(prog * Math.PI * 2) * 4;
+          ctx.globalAlpha = 0.5 + 0.4 * Math.sin(prog * Math.PI);
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(fx, fy, 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.9));
+          ctx.fillStyle = "rgba(214,234,252,1)";
+          ctx.beginPath();
+          ctx.ellipse(-3, 19, 11, 3, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition67(fromIdx) {
+    const from = SP70[SEASON_NAMES[fromIdx]];
+    const to = SP70[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother70(clamp0171(pp));
+      paint70(ctx, lerpP70(from, to, k), 0, 0);
+    };
+  }
+  var springToSummer64 = makeTransition67(0);
+  var summerToAutumn64 = makeTransition67(1);
+  var autumnToWinter64 = makeTransition67(2);
+  var VARIANTS72 = {
+    Spring: { draw: draw60("Spring"), anim: anim60("Spring") },
+    Summer: { draw: draw60("Summer"), anim: anim60("Summer") },
+    Autumn: { draw: draw60("Autumn"), anim: anim60("Autumn") },
+    Winter: { draw: draw60("Winter"), anim: anim60("Winter") }
+  };
+  var TRANSITIONS72 = {
+    0: springToSummer64,
+    1: summerToAutumn64,
+    2: autumnToWinter64
+  };
+
+  // src/textures/seasonal/fish/jade.ts
+  function clamp0172(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother71 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp76(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB64(a, b, t) {
+    return [lerp76(a[0], b[0], t), lerp76(a[1], b[1], t), lerp76(a[2], b[2], t)];
+  }
+  function rgb71(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba39(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0172(a)})`;
+  }
+  function lerpP71(a, b, t) {
+    return {
+      jadeLight: lerpRGB64(a.jadeLight, b.jadeLight, t),
+      jadeMid: lerpRGB64(a.jadeMid, b.jadeMid, t),
+      jadeDeep: lerpRGB64(a.jadeDeep, b.jadeDeep, t),
+      jadeCore: lerpRGB64(a.jadeCore, b.jadeCore, t),
+      specular: lerpRGB64(a.specular, b.specular, t),
+      water: lerpRGB64(a.water, b.water, t),
+      waterDeep: lerpRGB64(a.waterDeep, b.waterDeep, t),
+      outline: lerpRGB64(a.outline, b.outline, t),
+      light: lerpRGB64(a.light, b.light, t),
+      lightAmt: lerp76(a.lightAmt, b.lightAmt, t),
+      translucency: lerp76(a.translucency, b.translucency, t),
+      gloss: lerp76(a.gloss, b.gloss, t),
+      iceAmt: lerp76(a.iceAmt, b.iceAmt, t),
+      frostAmt: lerp76(a.frostAmt, b.frostAmt, t),
+      blossomAmt: lerp76(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp76(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP60(p) {
+    return {
+      ...p,
+      lightAmt: clamp0172(p.lightAmt),
+      translucency: clamp0172(p.translucency),
+      gloss: clamp0172(p.gloss),
+      iceAmt: clamp0172(p.iceAmt),
+      frostAmt: clamp0172(p.frostAmt),
+      blossomAmt: clamp0172(p.blossomAmt),
+      fallenLeafAmt: clamp0172(p.fallenLeafAmt)
+    };
+  }
+  var SP71 = {
+    // Spring — cool wet sheen on the jade; fresh blue water; a blossom petal.
+    Spring: {
+      jadeLight: [110, 210, 156],
+      jadeMid: [63, 174, 122],
+      jadeDeep: [28, 90, 62],
+      jadeCore: [180, 236, 206],
+      specular: [220, 255, 236],
+      water: [120, 192, 220],
+      waterDeep: [70, 134, 170],
+      outline: [20, 64, 46],
+      light: [230, 244, 246],
+      lightAmt: 0.16,
+      translucency: 0.7,
+      gloss: 0.6,
+      iceAmt: 0,
+      frostAmt: 0,
+      blossomAmt: 0.85,
+      fallenLeafAmt: 0
+    },
+    // Summer — PEAK: most translucent / glowing jade; bright saturated water;
+    // a strong travelling specular glint; warm light.
+    Summer: {
+      jadeLight: [128, 226, 170],
+      jadeMid: [63, 184, 128],
+      jadeDeep: [26, 96, 66],
+      jadeCore: [198, 246, 218],
+      specular: [230, 255, 242],
+      water: [78, 178, 226],
+      waterDeep: [40, 122, 180],
+      outline: [18, 60, 44],
+      light: [255, 244, 212],
+      lightAmt: 0.18,
+      translucency: 1,
+      gloss: 0.95,
+      iceAmt: 0,
+      frostAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — amber-lit; olive-tinged water + a floating fallen leaf; jade a
+    // touch deeper green; low amber light.
+    Autumn: {
+      jadeLight: [104, 192, 146],
+      jadeMid: [56, 158, 110],
+      jadeDeep: [26, 84, 58],
+      jadeCore: [172, 224, 196],
+      specular: [240, 240, 214],
+      water: [124, 160, 150],
+      waterDeep: [84, 118, 106],
+      outline: [30, 58, 44],
+      light: [248, 212, 152],
+      lightAmt: 0.2,
+      translucency: 0.62,
+      gloss: 0.45,
+      iceAmt: 0,
+      frostAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — water FROZEN to pale blue-white ICE + frost sparkle; a light frost
+    // dusting on the jade; jade stays bright green and clearly visible; cool light.
+    Winter: {
+      jadeLight: [114, 212, 160],
+      jadeMid: [60, 172, 122],
+      jadeDeep: [26, 88, 60],
+      jadeCore: [186, 238, 210],
+      specular: [226, 252, 240],
+      water: [216, 234, 244],
+      waterDeep: [168, 198, 218],
+      outline: [26, 62, 50],
+      light: [210, 230, 252],
+      lightAmt: 0.3,
+      translucency: 0.66,
+      gloss: 0.4,
+      iceAmt: 0.92,
+      frostAmt: 0.65,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var STONE_CY = 8;
+  var STONE_CX = -3.5;
+  var STONE_RX = 12.5;
+  var STONE_RY = 11;
+  var BEAD_CX = 11;
+  var BEAD_CY = 13.5;
+  var BEAD_RX = 5.4;
+  var BEAD_RY = 5;
+  function cabochonPath(ctx, bob) {
+    const cx = STONE_CX;
+    const cy = STONE_CY + bob;
+    ctx.beginPath();
+    ctx.moveTo(cx - STONE_RX, cy + STONE_RY * 0.55);
+    ctx.bezierCurveTo(
+      cx - STONE_RX,
+      cy - STONE_RY * 0.9,
+      cx - STONE_RX * 0.4,
+      cy - STONE_RY,
+      cx,
+      cy - STONE_RY
+    );
+    ctx.bezierCurveTo(
+      cx + STONE_RX * 0.5,
+      cy - STONE_RY,
+      cx + STONE_RX,
+      cy - STONE_RY * 0.85,
+      cx + STONE_RX,
+      cy + STONE_RY * 0.5
+    );
+    ctx.bezierCurveTo(
+      cx + STONE_RX,
+      cy + STONE_RY * 0.95,
+      cx + STONE_RX * 0.5,
+      cy + STONE_RY * 1.02,
+      cx,
+      cy + STONE_RY * 1.02
+    );
+    ctx.bezierCurveTo(
+      cx - STONE_RX * 0.5,
+      cy + STONE_RY * 1.02,
+      cx - STONE_RX,
+      cy + STONE_RY * 0.95,
+      cx - STONE_RX,
+      cy + STONE_RY * 0.55
+    );
+    ctx.closePath();
+  }
+  function beadPath(ctx, bob) {
+    ctx.beginPath();
+    ctx.ellipse(BEAD_CX, BEAD_CY + bob, BEAD_RX, BEAD_RY, -0.12, 0, Math.PI * 2);
+    ctx.closePath();
+  }
+  function paint71(ctx, raw, bob) {
+    const p = clampP60(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.fillStyle = rgba39(p.waterDeep, 0.4);
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb71(p.waterDeep);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb71(p.water);
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.clip();
+      const wg = ctx.createLinearGradient(-14, 14, 10, 22);
+      wg.addColorStop(0, rgba39([255, 255, 255], 0.22 * (1 - 0.4 * p.iceAmt)));
+      wg.addColorStop(0.5, rgba39([255, 255, 255], 0.04));
+      wg.addColorStop(1, rgba39(p.waterDeep, 0.18));
+      ctx.fillStyle = wg;
+      ctx.fillRect(-18, 13, 36, 12);
+      ctx.strokeStyle = rgba39([255, 255, 255], 0.22 * (1 - 0.5 * p.iceAmt));
+      ctx.lineWidth = 0.9;
+      [16.4, 18.6, 20.6].forEach((ry, i) => {
+        ctx.beginPath();
+        ctx.moveTo(-13 + i, ry);
+        ctx.quadraticCurveTo(-2, ry - 0.8, 12 - i, ry + 0.4);
+        ctx.stroke();
+      });
+      ctx.restore();
+      if (p.iceAmt > 0.01) {
+        const a = p.iceAmt;
+        ctx.fillStyle = rgba39([236, 246, 252], 0.8 * a);
+        ctx.beginPath();
+        ctx.ellipse(0, 18.8, 17.6, 5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba39([200, 222, 240], 0.45 * a);
+        ctx.beginPath();
+        ctx.ellipse(2, 20.2, 16, 3.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba39([255, 255, 255], 0.55 * a);
+        ctx.lineWidth = 0.8;
+        const facets = [
+          [-12, 18, -2, 21],
+          [3, 16.6, 9, 20],
+          [-6, 21, 6, 17.4],
+          [10, 17.8, 14, 20.4]
+        ];
+        facets.forEach(([x0, y0, x1, y1]) => {
+          ctx.beginPath();
+          ctx.moveTo(x0, y0);
+          ctx.lineTo(x1, y1);
+          ctx.stroke();
+        });
+        ctx.fillStyle = rgba39([255, 255, 255], 0.85 * a);
+        [[-10, 18], [4, 19.4], [12, 17.6], [-3, 20.6], [8, 21]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.blossomAmt > 0.01) {
+        const a = p.blossomAmt;
+        const px = -12.5;
+        const py = 18.6;
+        ctx.fillStyle = rgba39([255, 246, 250], 0.95 * a);
+        ctx.beginPath();
+        ctx.ellipse(px, py, 2.3, 1.3, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba39([255, 198, 222], 0.8 * a);
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(px - 1.8, py + 0.4);
+        ctx.quadraticCurveTo(px, py - 0.6, px + 1.8, py - 0.2);
+        ctx.stroke();
+        ctx.strokeStyle = rgba39([255, 255, 255], 0.35 * a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.ellipse(px, py + 0.2, 3.6, 1.6, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const lx = -12.5;
+        const ly = 18.4;
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(0.5);
+        ctx.fillStyle = rgba39([196, 116, 40], a);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 3.4, 1.8, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba39([110, 56, 18], a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.moveTo(-3.2, 0);
+        ctx.lineTo(3.2, 0);
+        ctx.stroke();
+        ctx.restore();
+        ctx.strokeStyle = rgba39([255, 255, 255], 0.25 * a);
+        ctx.lineWidth = 0.7;
+        ctx.beginPath();
+        ctx.ellipse(lx, ly + 0.4, 4.4, 1.9, 0, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.globalAlpha = 0.22 * (1 - 0.7 * p.iceAmt);
+      ctx.fillStyle = rgb71(p.jadeMid);
+      ctx.beginPath();
+      ctx.ellipse(STONE_CX, 20.5, STONE_RX * 0.7, 2.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(BEAD_CX, 20.8, BEAD_RX * 0.7, 1.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.restore();
+      ctx.fillStyle = rgba39(p.outline, 0.26 * (1 - 0.5 * p.iceAmt));
+      ctx.beginPath();
+      ctx.ellipse(STONE_CX + 2.5, STONE_CY + bob + STONE_RY * 0.9, STONE_RX * 0.95, 2.8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(BEAD_CX + 1.5, BEAD_CY + bob + BEAD_RY * 0.85, BEAD_RX * 0.95, 1.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      drawJadeStone(
+        ctx,
+        beadPath,
+        bob,
+        p,
+        BEAD_CX,
+        BEAD_CY,
+        BEAD_RX,
+        BEAD_RY,
+        // bead specular catch a touch tighter / higher
+        -0.45,
+        -0.5,
+        1.6
+      );
+      drawJadeStone(
+        ctx,
+        cabochonPath,
+        bob,
+        p,
+        STONE_CX,
+        STONE_CY,
+        STONE_RX,
+        STONE_RY,
+        -0.42,
+        -0.46,
+        4.2
+      );
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lg.addColorStop(0, rgba39(p.light, p.lightAmt));
+        lg.addColorStop(1, rgba39(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lg;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function drawJadeStone(ctx, tracePath, bob, p, cx, cy, rx, ry, sxFrac, syFrac, specR) {
+    const cyb = cy + bob;
+    tracePath(ctx, bob);
+    ctx.fillStyle = rgb71(p.outline);
+    ctx.fill();
+    ctx.save();
+    tracePath(ctx, bob);
+    ctx.clip();
+    ctx.fillStyle = rgb71(p.jadeMid);
+    ctx.fillRect(cx - rx - 2, cyb - ry - 2, rx * 2 + 4, ry * 2 + 4);
+    const g = ctx.createRadialGradient(
+      cx - rx * 0.45,
+      cyb - ry * 0.5,
+      ry * 0.15,
+      cx,
+      cyb,
+      ry * 1.35
+    );
+    g.addColorStop(0, rgb71(p.jadeLight));
+    g.addColorStop(0.45, rgb71(p.jadeMid));
+    g.addColorStop(1, rgb71(p.jadeDeep));
+    ctx.fillStyle = g;
+    ctx.globalAlpha = 0.95;
+    tracePath(ctx, bob);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if (p.translucency > 0.02) {
+      const cg = ctx.createRadialGradient(
+        cx + rx * 0.1,
+        cyb + ry * 0.2,
+        ry * 0.1,
+        cx + rx * 0.1,
+        cyb + ry * 0.2,
+        ry * 1
+      );
+      cg.addColorStop(0, rgba39(p.jadeCore, 0.34 * p.translucency));
+      cg.addColorStop(0.6, rgba39(p.jadeCore, 0.12 * p.translucency));
+      cg.addColorStop(1, rgba39(p.jadeCore, 0));
+      ctx.fillStyle = cg;
+      ctx.fillRect(cx - rx - 2, cyb - ry - 2, rx * 2 + 4, ry * 2 + 4);
+    }
+    ctx.fillStyle = rgba39(p.jadeDeep, 0.55);
+    ctx.beginPath();
+    ctx.ellipse(cx + rx * 0.35, cyb + ry * 0.45, rx * 0.85, ry * 0.7, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba39(p.jadeLight, 0.4);
+    ctx.beginPath();
+    ctx.ellipse(cx - rx * 0.3, cyb - ry * 0.55, rx * 0.6, ry * 0.32, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    if (p.frostAmt > 0.02) {
+      ctx.fillStyle = rgba39([214, 236, 246], 0.18 * p.frostAmt);
+      ctx.beginPath();
+      ctx.ellipse(cx - rx * 0.2, cyb - ry * 0.45, rx * 0.8, ry * 0.55, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba39([240, 250, 255], 0.7 * p.frostAmt);
+      for (let s = 0; s < 6; s++) {
+        const ang = -2.4 + s * 0.42;
+        const fx = cx + Math.cos(ang) * rx * 0.55;
+        const fy = cyb + Math.sin(ang) * ry * 0.5 - ry * 0.18;
+        ctx.beginPath();
+        ctx.arc(fx, fy, 0.6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+    if (p.gloss > 0.02) {
+      const hx = cx + rx * sxFrac;
+      const hy = cyb + ry * syFrac;
+      const sg = ctx.createRadialGradient(hx, hy, 0.3, hx, hy, specR);
+      sg.addColorStop(0, rgba39(p.specular, 0.55 + 0.4 * p.gloss));
+      sg.addColorStop(0.5, rgba39(p.specular, 0.22 * (0.5 + p.gloss)));
+      sg.addColorStop(1, rgba39(p.specular, 0));
+      ctx.fillStyle = sg;
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, specR, specR * 0.72, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba39(p.specular, 0.5 + 0.4 * p.gloss);
+      ctx.beginPath();
+      ctx.ellipse(hx - specR * 0.12, hy - specR * 0.12, specR * 0.26, specR * 0.18, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  function bobAt71(t, amp = 0.7, w = 1.4) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function draw61(season) {
+    return (ctx) => paint71(ctx, SP71[season], 0);
+  }
+  function glintPoint3(prog, bob) {
+    const ang = -2.5 + prog * 2.2;
+    const gx = STONE_CX + Math.cos(ang) * STONE_RX * 0.6;
+    const gy = STONE_CY + bob + Math.sin(ang) * STONE_RY * 0.6 - STONE_RY * 0.12;
+    const fade = Math.sin(prog * Math.PI);
+    return [gx, gy, fade];
+  }
+  function anim61(season) {
+    return (ctx, t) => {
+      const bob = bobAt71(t);
+      paint71(ctx, SP71[season], bob);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const prog = t * 0.32 % 1;
+        const [gx, gy, fade] = glintPoint3(prog, bob);
+        let glintAlpha = 0.4;
+        if (season === "Summer") glintAlpha = 0.8;
+        else if (season === "Spring") glintAlpha = 0.5;
+        else if (season === "Autumn") glintAlpha = 0.38;
+        else glintAlpha = 0.42;
+        const glintCol = season === "Winter" ? "224,244,255" : "230,255,242";
+        const gr = 3.2;
+        const sg = ctx.createRadialGradient(gx, gy, 0.3, gx, gy, gr);
+        sg.addColorStop(0, `rgba(${glintCol},${glintAlpha * fade})`);
+        sg.addColorStop(0.5, `rgba(${glintCol},${glintAlpha * fade * 0.4})`);
+        sg.addColorStop(1, `rgba(${glintCol},0)`);
+        ctx.fillStyle = sg;
+        ctx.beginPath();
+        ctx.ellipse(gx, gy, gr, gr * 0.7, -0.4, 0, Math.PI * 2);
+        ctx.fill();
+        const ripPhase = t * 0.35 % 1;
+        const iceMute = 1 - 0.55 * clamp0172(SP71[season].iceAmt);
+        ctx.strokeStyle = `rgba(255,255,255,${(0.12 + 0.12 * (0.5 + 0.5 * Math.sin(t * 1.3))) * iceMute})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        const ry = 16.5 + ripPhase * 5.5;
+        ctx.moveTo(-13, ry);
+        ctx.quadraticCurveTo(-1, ry - 0.9 - Math.sin(t * 1.7) * 0.4, 12, ry + 0.4);
+        ctx.stroke();
+        if (season === "Spring") {
+          const g = 0.2 + 0.24 * (0.5 + 0.5 * Math.sin(t * 2));
+          const u = 0.5 + 0.5 * Math.sin(t * 0.6);
+          const ang = -2.2 + u * 1.4;
+          ctx.fillStyle = `rgba(235,255,244,${g})`;
+          ctx.beginPath();
+          ctx.arc(
+            STONE_CX + Math.cos(ang) * STONE_RX * 0.5,
+            STONE_CY + bob + Math.sin(ang) * STONE_RY * 0.5 - STONE_RY * 0.2,
+            1 + g * 0.6,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+        } else if (season === "Autumn") {
+          const dx = -12.5 + Math.sin(t * 0.5) * 2.2;
+          const dy = 18.4 + Math.sin(t * 0.7 + 1) * 0.6;
+          ctx.save();
+          ctx.translate(dx, dy);
+          ctx.rotate(0.5 + Math.sin(t * 0.4) * 0.25);
+          ctx.fillStyle = "rgba(196,116,40,0.9)";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.4, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(110,56,18,0.9)";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3.2, 0);
+          ctx.lineTo(3.2, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else if (season === "Winter") {
+          const flProg = t / 3.2 % 1;
+          const fy = -22 + flProg * 40;
+          const fx = -4 + Math.sin(flProg * Math.PI * 2) * 4;
+          ctx.globalAlpha = 0.5 + 0.4 * Math.sin(flProg * Math.PI);
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(fx, fy, 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.1 + 0.12 * (0.5 + 0.5 * Math.sin(t * 0.9));
+          ctx.fillStyle = "rgba(214,234,252,1)";
+          ctx.beginPath();
+          ctx.ellipse(0, 19, 15, 4.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition68(fromIdx) {
+    const from = SP71[SEASON_NAMES[fromIdx]];
+    const to = SP71[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother71(clamp0172(pp));
+      paint71(ctx, lerpP71(from, to, k), 0);
+    };
+  }
+  var springToSummer65 = makeTransition68(0);
+  var summerToAutumn65 = makeTransition68(1);
+  var autumnToWinter65 = makeTransition68(2);
+  var VARIANTS73 = {
+    Spring: { draw: draw61("Spring"), anim: anim61("Spring") },
+    Summer: { draw: draw61("Summer"), anim: anim61("Summer") },
+    Autumn: { draw: draw61("Autumn"), anim: anim61("Autumn") },
+    Winter: { draw: draw61("Winter"), anim: anim61("Winter") }
+  };
+  var TRANSITIONS73 = {
+    0: springToSummer65,
+    1: summerToAutumn65,
+    2: autumnToWinter65
+  };
+
+  // src/textures/seasonal/fruit/melon.ts
+  function clamp0173(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother72 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp77(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB65(a, b, t) {
+    return [lerp77(a[0], b[0], t), lerp77(a[1], b[1], t), lerp77(a[2], b[2], t)];
+  }
+  function rgb72(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba40(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0173(a)})`;
+  }
+  function lerpP72(a, b, t) {
+    return {
+      rindLight: lerpRGB65(a.rindLight, b.rindLight, t),
+      rindMid: lerpRGB65(a.rindMid, b.rindMid, t),
+      rindDark: lerpRGB65(a.rindDark, b.rindDark, t),
+      stripe: lerpRGB65(a.stripe, b.stripe, t),
+      highlight: lerpRGB65(a.highlight, b.highlight, t),
+      leaf: lerpRGB65(a.leaf, b.leaf, t),
+      padGrass: lerpRGB65(a.padGrass, b.padGrass, t),
+      padDark: lerpRGB65(a.padDark, b.padDark, t),
+      soil: lerpRGB65(a.soil, b.soil, t),
+      outline: lerpRGB65(a.outline, b.outline, t),
+      light: lerpRGB65(a.light, b.light, t),
+      lightAmt: lerp77(a.lightAmt, b.lightAmt, t),
+      ripeness: lerp77(a.ripeness, b.ripeness, t),
+      scale: lerp77(a.scale, b.scale, t),
+      gloss: lerp77(a.gloss, b.gloss, t),
+      stripeAmt: lerp77(a.stripeAmt, b.stripeAmt, t),
+      leafYellow: lerp77(a.leafYellow, b.leafYellow, t),
+      frostAmt: lerp77(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp77(a.snowCapAmt, b.snowCapAmt, t),
+      padSnowAmt: lerp77(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp77(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp77(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP61(p) {
+    return {
+      ...p,
+      lightAmt: clamp0173(p.lightAmt),
+      ripeness: clamp0173(p.ripeness),
+      scale: clamp0173(p.scale),
+      gloss: clamp0173(p.gloss),
+      stripeAmt: clamp0173(p.stripeAmt),
+      leafYellow: clamp0173(p.leafYellow),
+      frostAmt: clamp0173(p.frostAmt),
+      snowCapAmt: clamp0173(p.snowCapAmt),
+      padSnowAmt: clamp0173(p.padSnowAmt),
+      blossomAmt: clamp0173(p.blossomAmt),
+      fallenLeafAmt: clamp0173(p.fallenLeafAmt)
+    };
+  }
+  var SP72 = {
+    // Spring — younger, slightly smaller + paler green melon; faint dewy sheen;
+    // bright lime dewy pad + a pale blossom. Cool-bright light.
+    Spring: {
+      rindLight: [196, 226, 138],
+      rindMid: [132, 182, 86],
+      rindDark: [86, 132, 56],
+      stripe: [96, 138, 60],
+      highlight: [224, 242, 188],
+      leaf: [108, 160, 66],
+      padGrass: [128, 206, 86],
+      padDark: [72, 138, 58],
+      soil: [120, 84, 48],
+      outline: [44, 70, 34],
+      light: [232, 244, 226],
+      lightAmt: 0.16,
+      ripeness: 0.3,
+      scale: 0.9,
+      gloss: 0.34,
+      stripeAmt: 0.6,
+      leafYellow: 0,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      blossomAmt: 0.85,
+      fallenLeafAmt: 0
+    },
+    // Summer — full ripe melon: deep saturated green rind, crisp dark stripes
+    // (PEAK); bright grass pad. Warm light, strong shadow + sheen.
+    Summer: {
+      rindLight: [179, 215, 112],
+      rindMid: [120, 170, 72],
+      rindDark: [70, 110, 44],
+      stripe: [74, 110, 42],
+      highlight: [216, 238, 170],
+      leaf: [96, 150, 60],
+      padGrass: [86, 168, 70],
+      padDark: [44, 110, 48],
+      soil: [126, 86, 48],
+      outline: [40, 66, 28],
+      light: [255, 240, 206],
+      lightAmt: 0.18,
+      ripeness: 0.85,
+      scale: 1,
+      gloss: 0.92,
+      stripeAmt: 1,
+      leafYellow: 0,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — deeper, slightly dulling green rind; the top leaf yellows; gold/
+    // rust pad with a couple of fallen leaves. Low amber light.
+    Autumn: {
+      rindLight: [158, 188, 102],
+      rindMid: [108, 146, 66],
+      rindDark: [66, 98, 42],
+      stripe: [62, 92, 38],
+      highlight: [206, 220, 162],
+      leaf: [142, 150, 64],
+      padGrass: [150, 152, 86],
+      padDark: [104, 96, 52],
+      soil: [120, 80, 44],
+      outline: [48, 60, 28],
+      light: [248, 210, 150],
+      lightAmt: 0.2,
+      ripeness: 1,
+      scale: 1,
+      gloss: 0.5,
+      stripeAmt: 0.86,
+      leafYellow: 0.7,
+      frostAmt: 0,
+      snowCapAmt: 0,
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — cool blue-grey light; frost-dusted melon + a small snow cap on top;
+    // snow-covered pad with frost sparkle. The melon stays clearly green-striped
+    // underneath (NO white-out).
+    Winter: {
+      rindLight: [150, 180, 122],
+      rindMid: [104, 140, 84],
+      rindDark: [66, 100, 60],
+      stripe: [60, 92, 52],
+      highlight: [206, 224, 206],
+      leaf: [112, 138, 96],
+      padGrass: [176, 196, 214],
+      padDark: [120, 146, 172],
+      soil: [128, 110, 96],
+      outline: [50, 58, 56],
+      light: [206, 226, 252],
+      lightAmt: 0.3,
+      ripeness: 0.85,
+      scale: 1,
+      gloss: 0.28,
+      stripeAmt: 0.78,
+      leafYellow: 0.2,
+      frostAmt: 0.7,
+      snowCapAmt: 0.85,
+      padSnowAmt: 0.9,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var MEL_CY = 4;
+  var MEL_RX = 14;
+  var MEL_RY = 13;
+  function bodyR(p) {
+    const s = 0.85 + 0.15 * clamp0173(p.scale);
+    return { rx: MEL_RX * s, ry: MEL_RY * s };
+  }
+  function melonBodyPath(ctx, cy, rx, ry) {
+    ctx.beginPath();
+    ctx.ellipse(0, cy, rx, ry, 0, 0, Math.PI * 2);
+  }
+  function stripeX(u, v, rx) {
+    return u * rx * Math.sqrt(Math.max(0, 1 - v * v * 0.55));
+  }
+  function paint72(ctx, raw, bob) {
+    const p = clampP61(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      const { rx, ry } = bodyR(p);
+      const cy = MEL_CY + bob;
+      const botY = cy + ry;
+      ctx.fillStyle = rgba40(p.padDark, 0.4);
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb72(p.padDark);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb72(p.padGrass);
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = rgb72(p.padDark);
+      ctx.lineWidth = 1.1;
+      for (let i = -7; i <= 7; i++) {
+        const tx = i * 2.4;
+        const ty = 19 - Math.sqrt(Math.max(0, 1 - (tx / 18) ** 2)) * 5.2;
+        ctx.beginPath();
+        ctx.moveTo(tx, ty + 0.4);
+        ctx.lineTo(tx - 0.8, ty - 2.4);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = rgba40([255, 255, 255], 0.18);
+      ctx.lineWidth = 1;
+      for (let i = -5; i <= 5; i += 2) {
+        const tx = i * 2.6 - 2;
+        ctx.beginPath();
+        ctx.moveTo(tx, 18.4);
+        ctx.lineTo(tx - 0.6, 16.6);
+        ctx.stroke();
+      }
+      if (p.padSnowAmt > 0.01) {
+        ctx.fillStyle = rgba40([244, 250, 255], 0.92 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba40([210, 226, 244], 0.5 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba40([255, 255, 255], 0.8 * p.padSnowAmt);
+        [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.blossomAmt > 0.01) {
+        const a = p.blossomAmt;
+        const spots = [[-13, 18.5], [12, 17.8], [-4, 21]];
+        spots.forEach(([bx, by], idx) => {
+          ctx.fillStyle = rgba40(idx === 1 ? [255, 232, 246] : [255, 250, 252], 0.95 * a);
+          for (let k = 0; k < 5; k++) {
+            const ang = k / 5 * Math.PI * 2;
+            ctx.beginPath();
+            ctx.ellipse(bx + Math.cos(ang) * 1.5, by + Math.sin(ang) * 1, 1.1, 0.8, ang, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = rgba40([255, 214, 90], a);
+          ctx.beginPath();
+          ctx.arc(bx, by, 0.9, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const leaves2 = [
+          [-12, 19.6, -0.5, [196, 120, 40]],
+          [12, 18.6, 0.7, [176, 72, 32]]
+        ];
+        leaves2.forEach(([lx, ly, rot, col]) => {
+          ctx.save();
+          ctx.translate(lx, ly);
+          ctx.rotate(rot);
+          ctx.fillStyle = rgba40(col, a);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = rgba40([90, 44, 16], a);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+      ctx.fillStyle = rgb72(p.soil);
+      ctx.beginPath();
+      ctx.ellipse(0, botY + 0.5, rx * 0.62, 2.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba40(p.outline, 0.28);
+      ctx.beginPath();
+      ctx.ellipse(3, botY + 1.4, rx * 0.78, 2.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      melonBodyPath(ctx, cy, rx + 1.1, ry + 1.1);
+      ctx.fillStyle = rgb72(p.outline);
+      ctx.fill();
+      ctx.save();
+      melonBodyPath(ctx, cy, rx, ry);
+      ctx.clip();
+      ctx.fillStyle = rgb72(p.rindMid);
+      ctx.fillRect(-rx - 2, cy - ry - 2, (rx + 2) * 2, (ry + 2) * 2);
+      const sg = ctx.createRadialGradient(-rx * 0.42, cy - ry * 0.5, rx * 0.18, 0, cy, rx * 1.28);
+      sg.addColorStop(0, rgb72(p.rindLight));
+      sg.addColorStop(0.5, rgb72(p.rindMid));
+      sg.addColorStop(1, rgb72(p.rindDark));
+      ctx.fillStyle = sg;
+      ctx.fillRect(-rx - 2, cy - ry - 2, (rx + 2) * 2, (ry + 2) * 2);
+      if (p.stripeAmt > 0.01) {
+        ctx.strokeStyle = rgba40(p.stripe, 0.5 + 0.45 * p.stripeAmt);
+        const offs = [-0.82, -0.5, -0.16, 0.18, 0.52, 0.84];
+        offs.forEach((u) => {
+          ctx.lineWidth = 2.2 + 1.4 * (1 - Math.abs(u));
+          ctx.beginPath();
+          for (let s = 0; s <= 14; s++) {
+            const v = -1 + s / 14 * 2;
+            const x = stripeX(u, v, rx);
+            const y = cy + v * ry * 0.99;
+            if (s === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          ctx.save();
+          ctx.strokeStyle = rgba40(p.rindDark, 0.3 * p.stripeAmt);
+          ctx.lineWidth = 0.8;
+          ctx.beginPath();
+          for (let s = 0; s <= 14; s++) {
+            const v = -1 + s / 14 * 2;
+            const x = stripeX(u, v, rx) + 1.6;
+            const y = cy + v * ry * 0.99;
+            if (s === 0) ctx.moveTo(x, y);
+            else ctx.lineTo(x, y);
+          }
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+      ctx.fillStyle = rgba40(p.rindDark, 0.4);
+      ctx.beginPath();
+      ctx.ellipse(rx * 0.34, cy + ry * 0.42, rx * 0.78, ry * 0.7, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba40(p.highlight, 0.55);
+      ctx.beginPath();
+      ctx.ellipse(-rx * 0.34, cy - ry * 0.46, rx * 0.5, ry * 0.34, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      if (p.gloss > 0.02) {
+        ctx.fillStyle = rgba40([255, 255, 255], 0.14 + 0.5 * p.gloss);
+        ctx.beginPath();
+        ctx.ellipse(-rx * 0.42, cy - ry * 0.42, 1.8, ry * 0.42, -0.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba40([255, 255, 255], 0.55 * p.gloss);
+        ctx.beginPath();
+        ctx.arc(-rx * 0.5, cy - ry * 0.52, 1.3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (p.frostAmt > 0.02) {
+        ctx.fillStyle = rgba40([210, 230, 250], 0.26 * p.frostAmt);
+        ctx.beginPath();
+        ctx.ellipse(0, cy - ry * 0.3, rx * 0.92, ry * 0.5, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba40([235, 246, 255], 0.7 * p.frostAmt);
+        const speck = [
+          [-rx * 0.5, cy - ry * 0.5],
+          [-rx * 0.18, cy - ry * 0.62],
+          [rx * 0.2, cy - ry * 0.5],
+          [rx * 0.5, cy - ry * 0.34],
+          [-rx * 0.34, cy - ry * 0.12],
+          [rx * 0.34, cy - ry * 0.08],
+          [0, cy - ry * 0.38]
+        ];
+        speck.forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+      if (p.snowCapAmt > 0.02) {
+        const a = p.snowCapAmt;
+        const capW = rx * 0.62;
+        const capY = cy - ry * 0.86;
+        ctx.fillStyle = rgba40([246, 251, 255], 0.95 * a);
+        ctx.beginPath();
+        ctx.moveTo(-capW, capY + 2.4);
+        ctx.quadraticCurveTo(-capW * 0.5, capY - 4.2, 0, capY - 3.4);
+        ctx.quadraticCurveTo(capW * 0.5, capY - 4.2, capW, capY + 2.4);
+        ctx.quadraticCurveTo(capW * 0.6, capY + 4.4, capW * 0.3, capY + 2.8);
+        ctx.quadraticCurveTo(0, capY + 4.6, -capW * 0.3, capY + 2.8);
+        ctx.quadraticCurveTo(-capW * 0.6, capY + 4.4, -capW, capY + 2.4);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = rgba40([205, 222, 242], 0.5 * a);
+        ctx.beginPath();
+        ctx.ellipse(0, capY + 2.6, capW * 0.78, 1.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const stemX = rx * 0.12;
+      const stemY = cy - ry + 0.5;
+      ctx.strokeStyle = rgb72(p.outline);
+      ctx.lineWidth = 3.4;
+      ctx.beginPath();
+      ctx.moveTo(stemX, stemY + 1);
+      ctx.quadraticCurveTo(stemX - 0.6, stemY - 3.4, stemX + 1.4, stemY - 5.2);
+      ctx.stroke();
+      ctx.strokeStyle = rgb72(p.leaf);
+      ctx.lineWidth = 1.9;
+      ctx.beginPath();
+      ctx.moveTo(stemX, stemY + 1);
+      ctx.quadraticCurveTo(stemX - 0.6, stemY - 3.4, stemX + 1.4, stemY - 5.2);
+      ctx.stroke();
+      ctx.strokeStyle = rgb72(p.leaf);
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      ctx.moveTo(stemX + 1.4, stemY - 5);
+      ctx.bezierCurveTo(stemX + 5.4, stemY - 6, stemX + 5.8, stemY - 2.4, stemX + 3.4, stemY - 2);
+      ctx.bezierCurveTo(stemX + 1.6, stemY - 1.8, stemX + 2, stemY - 4, stemX + 3.6, stemY - 3.8);
+      ctx.stroke();
+      const leafCol = lerpRGB65(p.leaf, [206, 180, 70], clamp0173(p.leafYellow));
+      const leafDark = lerpRGB65(p.outline, [120, 96, 24], clamp0173(p.leafYellow) * 0.7);
+      ctx.save();
+      ctx.translate(stemX - 4.4, stemY - 2.2);
+      ctx.rotate(-0.95);
+      ctx.fillStyle = rgb72(leafDark);
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(4, -3, 8, 0);
+      ctx.quadraticCurveTo(4, 3, 0, 0);
+      ctx.fill();
+      ctx.fillStyle = rgb72(leafCol);
+      ctx.beginPath();
+      ctx.moveTo(0.8, 0);
+      ctx.quadraticCurveTo(4, -2.2, 7, 0);
+      ctx.quadraticCurveTo(4, 2.2, 0.8, 0);
+      ctx.fill();
+      ctx.strokeStyle = rgb72(leafDark);
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(0.6, 0);
+      ctx.lineTo(6.8, 0);
+      ctx.stroke();
+      ctx.restore();
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lg.addColorStop(0, rgba40(p.light, p.lightAmt));
+        lg.addColorStop(1, rgba40(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lg;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function bobAt72(t, amp = 0.85, w = 1.5) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function draw62(season) {
+    return (ctx) => paint72(ctx, SP72[season], 0);
+  }
+  function anim62(season) {
+    return (ctx, t) => {
+      const bob = bobAt72(t);
+      paint72(ctx, SP72[season], bob);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const { rx, ry } = bodyR(SP72[season]);
+        const cy = MEL_CY + bob;
+        if (season === "Spring") {
+          const g = 0.22 + 0.28 * (0.5 + 0.5 * Math.sin(t * 2.2));
+          ctx.fillStyle = `rgba(255,255,255,${g})`;
+          const gy = cy - ry * 0.4 + Math.sin(t * 1.1) * 1.4;
+          ctx.beginPath();
+          ctx.arc(-rx * 0.4, gy, 1 + g * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Summer") {
+          const prog = t * 0.4 % 1;
+          const gx = lerp77(-rx * 0.6, rx * 0.45, prog);
+          const gy = cy - ry * 0.5 + Math.sin(prog * Math.PI) * ry * 0.5;
+          ctx.fillStyle = "rgba(255,255,255,0.7)";
+          ctx.beginPath();
+          ctx.ellipse(gx, gy, 1.6, 2.4, -0.4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = "rgba(255,255,255,0.35)";
+          ctx.beginPath();
+          ctx.arc(gx - 1.4, gy - 1.2, 1, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Autumn") {
+          const s = 0.1 + 0.14 * (0.5 + 0.5 * Math.sin(t * 0.9));
+          ctx.fillStyle = `rgba(255,236,200,${s})`;
+          ctx.beginPath();
+          ctx.ellipse(-rx * 0.3, cy - ry * 0.5, 4, 3, -0.3, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          const seeds = [
+            [-9, 0, 1],
+            [6, 0.4, 0.9],
+            [11, 0.7, 0.8],
+            [-2, 0.25, 0.9]
+          ];
+          ctx.fillStyle = "#ffffff";
+          seeds.forEach(([fx, phase, r]) => {
+            const prog = ((t / 3 + phase) % 1 + 1) % 1;
+            const fy = -22 + prog * 40;
+            const dx = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
+            ctx.globalAlpha = 0.35 + 0.4 * Math.sin(prog * Math.PI);
+            ctx.beginPath();
+            ctx.arc(dx, fy, r, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          ctx.globalAlpha = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.8));
+          ctx.fillStyle = "rgba(210,232,255,1)";
+          ctx.beginPath();
+          ctx.ellipse(-rx * 0.3, cy - ry * 0.2, rx * 0.5, ry * 0.4, -0.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition69(fromIdx) {
+    const from = SP72[SEASON_NAMES[fromIdx]];
+    const to = SP72[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother72(clamp0173(pp));
+      paint72(ctx, lerpP72(from, to, k), 0);
+    };
+  }
+  var springToSummer66 = makeTransition69(0);
+  var summerToAutumn66 = makeTransition69(1);
+  var autumnToWinter66 = makeTransition69(2);
+  var VARIANTS74 = {
+    Spring: { draw: draw62("Spring"), anim: anim62("Spring") },
+    Summer: { draw: draw62("Summer"), anim: anim62("Summer") },
+    Autumn: { draw: draw62("Autumn"), anim: anim62("Autumn") },
+    Winter: { draw: draw62("Winter"), anim: anim62("Winter") }
+  };
+  var TRANSITIONS74 = {
+    0: springToSummer66,
+    1: summerToAutumn66,
+    2: autumnToWinter66
+  };
+
+  // src/textures/seasonal/bird/wildGoose.ts
+  function clamp0174(x) {
+    if (!(x >= 0)) return 0;
+    if (x > 1) return 1;
+    return x;
+  }
+  var smoother73 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function lerp78(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB66(a, b, t) {
+    return [lerp78(a[0], b[0], t), lerp78(a[1], b[1], t), lerp78(a[2], b[2], t)];
+  }
+  function rgb73(c) {
+    return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+  }
+  function rgba41(c, a) {
+    return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp0174(a)})`;
+  }
+  function lerpP73(a, b, t) {
+    return {
+      bodyLight: lerpRGB66(a.bodyLight, b.bodyLight, t),
+      bodyMid: lerpRGB66(a.bodyMid, b.bodyMid, t),
+      bodyShade: lerpRGB66(a.bodyShade, b.bodyShade, t),
+      back: lerpRGB66(a.back, b.back, t),
+      barring: lerpRGB66(a.barring, b.barring, t),
+      headNeck: lerpRGB66(a.headNeck, b.headNeck, t),
+      headNeckDark: lerpRGB66(a.headNeckDark, b.headNeckDark, t),
+      cheek: lerpRGB66(a.cheek, b.cheek, t),
+      bill: lerpRGB66(a.bill, b.bill, t),
+      billDark: lerpRGB66(a.billDark, b.billDark, t),
+      feet: lerpRGB66(a.feet, b.feet, t),
+      feetDark: lerpRGB66(a.feetDark, b.feetDark, t),
+      eye: lerpRGB66(a.eye, b.eye, t),
+      padGrass: lerpRGB66(a.padGrass, b.padGrass, t),
+      padDark: lerpRGB66(a.padDark, b.padDark, t),
+      outline: lerpRGB66(a.outline, b.outline, t),
+      light: lerpRGB66(a.light, b.light, t),
+      lightAmt: lerp78(a.lightAmt, b.lightAmt, t),
+      plumage: lerp78(a.plumage, b.plumage, t),
+      fluff: lerp78(a.fluff, b.fluff, t),
+      snowCapAmt: lerp78(a.snowCapAmt, b.snowCapAmt, t),
+      frostAmt: lerp78(a.frostAmt, b.frostAmt, t),
+      padSnowAmt: lerp78(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp78(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp78(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP62(p) {
+    return {
+      ...p,
+      lightAmt: clamp0174(p.lightAmt),
+      plumage: clamp0174(p.plumage),
+      fluff: clamp0174(p.fluff),
+      snowCapAmt: clamp0174(p.snowCapAmt),
+      frostAmt: clamp0174(p.frostAmt),
+      padSnowAmt: clamp0174(p.padSnowAmt),
+      blossomAmt: clamp0174(p.blossomAmt),
+      fallenLeafAmt: clamp0174(p.fallenLeafAmt)
+    };
+  }
+  var SP73 = {
+    // Spring — clear grey-brown plumage; bright lime dewy pad + a blossom. Cool-bright.
+    Spring: {
+      bodyLight: [192, 176, 144],
+      bodyMid: [168, 152, 120],
+      bodyShade: [128, 114, 88],
+      back: [120, 104, 76],
+      barring: [96, 82, 58],
+      headNeck: [82, 74, 58],
+      headNeckDark: [54, 48, 38],
+      cheek: [214, 202, 176],
+      bill: [70, 64, 52],
+      billDark: [44, 40, 32],
+      feet: [150, 96, 52],
+      feetDark: [108, 66, 34],
+      eye: [32, 26, 22],
+      padGrass: [128, 206, 86],
+      padDark: [72, 138, 58],
+      outline: [58, 50, 40],
+      light: [232, 244, 226],
+      lightAmt: 0.16,
+      plumage: 0.85,
+      fluff: 0,
+      snowCapAmt: 0,
+      frostAmt: 0,
+      padSnowAmt: 0,
+      blossomAmt: 0.85,
+      fallenLeafAmt: 0
+    },
+    // Summer — richest grey-brown PEAK; saturated mid-green pad; warm strong light.
+    Summer: {
+      bodyLight: [198, 182, 148],
+      bodyMid: [172, 156, 122],
+      bodyShade: [130, 116, 88],
+      back: [122, 106, 76],
+      barring: [98, 84, 58],
+      headNeck: [84, 76, 58],
+      headNeckDark: [54, 48, 36],
+      cheek: [218, 206, 178],
+      bill: [72, 66, 52],
+      billDark: [46, 42, 32],
+      feet: [156, 100, 54],
+      feetDark: [112, 68, 34],
+      eye: [30, 24, 20],
+      padGrass: [86, 168, 70],
+      padDark: [44, 110, 48],
+      outline: [56, 48, 38],
+      light: [255, 240, 206],
+      lightAmt: 0.18,
+      plumage: 1,
+      fluff: 0,
+      snowCapAmt: 0,
+      frostAmt: 0,
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — grey-brown plumage in low amber light; olive-tan pad; fallen leaves.
+    Autumn: {
+      bodyLight: [196, 178, 142],
+      bodyMid: [170, 152, 116],
+      bodyShade: [128, 112, 82],
+      back: [120, 102, 72],
+      barring: [96, 80, 54],
+      headNeck: [82, 72, 54],
+      headNeckDark: [52, 46, 34],
+      cheek: [216, 202, 170],
+      bill: [70, 62, 48],
+      billDark: [44, 38, 28],
+      feet: [152, 94, 48],
+      feetDark: [108, 64, 30],
+      eye: [34, 26, 20],
+      padGrass: [150, 152, 86],
+      padDark: [104, 96, 52],
+      outline: [60, 50, 38],
+      light: [248, 210, 150],
+      lightAmt: 0.2,
+      plumage: 0.9,
+      fluff: 0,
+      snowCapAmt: 0,
+      frostAmt: 0,
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0.85
+    },
+    // Winter — grey-brown feathers read against COOL blue shadows (not a white-out);
+    // snow on the back, frost dusting, breath-fog at the bill, snowy pad. Body stays
+    // clearly grey-brown; head/neck stay dark; cheek/breast stay pale.
+    Winter: {
+      bodyLight: [184, 174, 152],
+      bodyMid: [158, 148, 124],
+      bodyShade: [114, 110, 100],
+      // cool grey shadow so plumage reads in snow
+      back: [110, 100, 82],
+      barring: [86, 78, 62],
+      headNeck: [76, 72, 64],
+      headNeckDark: [50, 48, 44],
+      cheek: [206, 200, 188],
+      bill: [70, 66, 58],
+      billDark: [44, 42, 36],
+      feet: [148, 100, 60],
+      feetDark: [104, 66, 38],
+      eye: [34, 32, 30],
+      padGrass: [176, 196, 214],
+      padDark: [120, 146, 172],
+      outline: [52, 50, 48],
+      light: [206, 226, 252],
+      lightAmt: 0.3,
+      plumage: 0.8,
+      fluff: 0.85,
+      snowCapAmt: 0.8,
+      frostAmt: 0.6,
+      padSnowAmt: 0.9,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  var BODY_CX5 = 2.5;
+  var BODY_CY6 = 7.5;
+  var BODY_RX4 = 11;
+  var BODY_RY4 = 9;
+  var TAIL_X4 = 13.5;
+  var TAIL_Y2 = 5.5;
+  var NECK_BASE_X2 = -3.5;
+  var NECK_BASE_Y2 = 1.5;
+  var NECK_LOW_X = -7.5;
+  var NECK_LOW_Y = -5;
+  var NECK_MID_X = -6;
+  var NECK_MID_Y = -14;
+  var HEAD_X4 = -8.5;
+  var HEAD_Y2 = -19.5;
+  var HEAD_R3 = 4.2;
+  var BILL_TIP_X2 = -15.5;
+  var BILL_TIP_Y2 = -17.5;
+  function bodyPath12(ctx, bob) {
+    ctx.beginPath();
+    ctx.ellipse(BODY_CX5, BODY_CY6 + bob, BODY_RX4, BODY_RY4, -0.08, 0, Math.PI * 2);
+  }
+  function neckStroke2(ctx, bob, width, color, dx = 0, dy = 0) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.beginPath();
+    ctx.moveTo(NECK_BASE_X2 + dx, NECK_BASE_Y2 + dy + bob);
+    ctx.bezierCurveTo(
+      NECK_LOW_X + dx,
+      NECK_LOW_Y + dy + bob,
+      NECK_MID_X + dx,
+      NECK_MID_Y + dy + bob,
+      HEAD_X4 + dx,
+      HEAD_Y2 + dy + bob
+    );
+    ctx.stroke();
+  }
+  function paint73(ctx, raw, bob) {
+    const p = clampP62(raw);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+      ctx.fillStyle = rgba41(p.padDark, 0.4);
+      ctx.beginPath();
+      ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb73(p.padDark);
+      ctx.beginPath();
+      ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb73(p.padGrass);
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = rgb73(p.padDark);
+      ctx.lineWidth = 1.1;
+      for (let i = -7; i <= 7; i++) {
+        const tx = i * 2.4;
+        const ty = 19 - Math.sqrt(Math.max(0, 1 - (tx / 18) ** 2)) * 5.2;
+        ctx.beginPath();
+        ctx.moveTo(tx, ty + 0.4);
+        ctx.lineTo(tx - 0.8, ty - 2.4);
+        ctx.stroke();
+      }
+      ctx.strokeStyle = rgba41([255, 255, 255], 0.18);
+      ctx.lineWidth = 1;
+      for (let i = -5; i <= 5; i += 2) {
+        const tx = i * 2.6 - 2;
+        ctx.beginPath();
+        ctx.moveTo(tx, 18.4);
+        ctx.lineTo(tx - 0.6, 16.6);
+        ctx.stroke();
+      }
+      if (p.padSnowAmt > 0.01) {
+        ctx.fillStyle = rgba41([244, 250, 255], 0.92 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba41([210, 226, 244], 0.5 * p.padSnowAmt);
+        ctx.beginPath();
+        ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba41([255, 255, 255], 0.8 * p.padSnowAmt);
+        [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.blossomAmt > 0.01) {
+        const a = p.blossomAmt;
+        const spots = [[-13, 18.5], [12, 17.8], [-4, 21]];
+        spots.forEach(([bx, by], idx) => {
+          ctx.fillStyle = rgba41(idx === 1 ? [255, 232, 246] : [255, 250, 252], 0.95 * a);
+          for (let k = 0; k < 5; k++) {
+            const ang = k / 5 * Math.PI * 2;
+            ctx.beginPath();
+            ctx.ellipse(bx + Math.cos(ang) * 1.5, by + Math.sin(ang) * 1, 1.1, 0.8, ang, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.fillStyle = rgba41([255, 214, 90], a);
+          ctx.beginPath();
+          ctx.arc(bx, by, 0.9, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      if (p.fallenLeafAmt > 0.01) {
+        const a = p.fallenLeafAmt;
+        const leaves2 = [
+          [-12, 19.6, -0.5, [196, 120, 40]],
+          [12, 18.6, 0.7, [176, 72, 32]]
+        ];
+        leaves2.forEach(([lx, ly, rot, col]) => {
+          ctx.save();
+          ctx.translate(lx, ly);
+          ctx.rotate(rot);
+          ctx.fillStyle = rgba41(col, a);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = rgba41([90, 44, 16], a);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        });
+      }
+      ctx.fillStyle = rgba41(p.outline, 0.26);
+      ctx.beginPath();
+      ctx.ellipse(3, 17.6 + bob * 0.5, 12, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      const legTopY = 13.5 + bob;
+      const footY = 17.6 + bob * 0.4;
+      ctx.strokeStyle = rgb73(p.feetDark);
+      ctx.lineWidth = 2.8;
+      [-3, 4.5].forEach((fx) => {
+        ctx.beginPath();
+        ctx.moveTo(fx, legTopY);
+        ctx.lineTo(fx + 0.6, footY);
+        ctx.stroke();
+      });
+      ctx.fillStyle = rgb73(p.feet);
+      [-3, 4.5].forEach((fx) => {
+        ctx.beginPath();
+        ctx.moveTo(fx + 0.6, footY - 1.4);
+        ctx.lineTo(fx - 2.4, footY + 1.6);
+        ctx.lineTo(fx + 3.4, footY + 1.6);
+        ctx.closePath();
+        ctx.fill();
+      });
+      ctx.strokeStyle = rgb73(p.feet);
+      ctx.lineWidth = 2;
+      [-3, 4.5].forEach((fx) => {
+        ctx.beginPath();
+        ctx.moveTo(fx, legTopY);
+        ctx.lineTo(fx + 0.6, footY - 0.5);
+        ctx.stroke();
+      });
+      ctx.fillStyle = rgb73(p.back);
+      ctx.beginPath();
+      ctx.moveTo(BODY_CX5 + 8, BODY_CY6 - 4 + bob);
+      ctx.lineTo(TAIL_X4 + 3, TAIL_Y2 + bob);
+      ctx.lineTo(BODY_CX5 + 7, BODY_CY6 + 3 + bob);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = rgb73(p.outline);
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      neckStroke2(ctx, bob, 8, rgb73(p.outline));
+      neckStroke2(ctx, bob, 6.2, rgb73(p.headNeck));
+      neckStroke2(ctx, bob, 3, rgb73(p.headNeckDark), 1, 1);
+      neckStroke2(ctx, bob, 1.8, rgba41([150, 142, 124], 0.5), -1, 0);
+      bodyPath12(ctx, bob);
+      ctx.save();
+      ctx.lineWidth = 2.4;
+      ctx.strokeStyle = rgb73(p.outline);
+      ctx.stroke();
+      ctx.restore();
+      bodyPath12(ctx, bob);
+      ctx.fillStyle = rgb73(p.bodyMid);
+      ctx.fill();
+      ctx.save();
+      bodyPath12(ctx, bob);
+      ctx.clip();
+      ctx.fillStyle = rgba41(p.back, 0.9);
+      ctx.beginPath();
+      ctx.ellipse(BODY_CX5 + 5, BODY_CY6 - 4 + bob, BODY_RX4 * 0.95, BODY_RY4 * 0.7, -0.18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba41(p.bodyShade, 0.9);
+      ctx.beginPath();
+      ctx.ellipse(BODY_CX5 + 4, BODY_CY6 + 5 + bob, BODY_RX4, BODY_RY4 * 0.7, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba41(p.cheek, 0.8);
+      ctx.beginPath();
+      ctx.ellipse(BODY_CX5 - 6, BODY_CY6 + 3 + bob, BODY_RX4 * 0.5, BODY_RY4 * 0.6, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      const bg = ctx.createLinearGradient(
+        BODY_CX5 - BODY_RX4,
+        BODY_CY6 - BODY_RY4 + bob,
+        BODY_CX5 + BODY_RX4,
+        BODY_CY6 + BODY_RY4 + bob
+      );
+      bg.addColorStop(0, rgb73(p.bodyLight));
+      bg.addColorStop(0.5, rgb73(p.bodyMid));
+      bg.addColorStop(1, rgb73(p.bodyShade));
+      ctx.fillStyle = bg;
+      ctx.globalAlpha = 0.55;
+      ctx.beginPath();
+      ctx.ellipse(BODY_CX5 - 4, BODY_CY6 - 2 + bob, BODY_RX4 * 0.78, BODY_RY4 * 0.8, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+      ctx.strokeStyle = rgba41(p.barring, 0.42);
+      ctx.lineWidth = 0.9;
+      [-3, -0.5, 2, 4.5].forEach((dy, row) => {
+        ctx.beginPath();
+        const yy = BODY_CY6 + dy + bob;
+        ctx.moveTo(BODY_CX5 - BODY_RX4 + 2, yy + 0.4);
+        ctx.quadraticCurveTo(BODY_CX5 - 3, yy - 0.8 + row * 0.12, BODY_CX5 + 2, yy);
+        ctx.quadraticCurveTo(BODY_CX5 + 7, yy + 0.8, BODY_CX5 + BODY_RX4 - 2, yy - 0.4);
+        ctx.stroke();
+      });
+      ctx.strokeStyle = rgba41(p.bodyLight, 0.4);
+      ctx.lineWidth = 0.8;
+      [-2.5, 0.5].forEach((dy) => {
+        ctx.beginPath();
+        const yy = BODY_CY6 + dy + bob;
+        ctx.moveTo(BODY_CX5 - BODY_RX4 + 3, yy - 0.4);
+        ctx.quadraticCurveTo(BODY_CX5 - 2, yy - 1.1, BODY_CX5 + 4, yy - 0.6);
+        ctx.stroke();
+      });
+      ctx.strokeStyle = rgba41(p.barring, 0.6);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(BODY_CX5 - 5, BODY_CY6 - 2.5 + bob);
+      ctx.quadraticCurveTo(BODY_CX5 + 5, BODY_CY6 - 1.5 + bob, BODY_CX5 + 9.5, BODY_CY6 + 3 + bob);
+      ctx.stroke();
+      if (p.frostAmt > 0.02) {
+        ctx.fillStyle = rgba41([214, 232, 250], 0.2 * p.frostAmt);
+        ctx.beginPath();
+        ctx.ellipse(BODY_CX5 - 2, BODY_CY6 - 5 + bob, BODY_RX4 * 0.85, BODY_RY4 * 0.45, -0.12, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba41([240, 248, 255], 0.65 * p.frostAmt);
+        const speck = [
+          [-6, -3],
+          [-1, -5],
+          [4, -4],
+          [8, -1],
+          [-3, -1],
+          [2, -2]
+        ];
+        speck.forEach(([sx, sy]) => {
+          ctx.beginPath();
+          ctx.arc(BODY_CX5 + sx, BODY_CY6 + sy + bob, 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+      ctx.restore();
+      if (p.fluff > 0.02) {
+        ctx.save();
+        ctx.strokeStyle = rgba41(p.bodyLight, 0.45 * p.fluff);
+        ctx.lineWidth = 1.2;
+        const n = 22;
+        for (let i = 0; i < n; i++) {
+          const ang = i / n * Math.PI * 2;
+          const ax = BODY_CX5 + Math.cos(ang) * BODY_RX4;
+          const ay = BODY_CY6 + bob + Math.sin(ang) * BODY_RY4;
+          const ox = ax + Math.cos(ang) * (1.6 + 1.2 * Math.sin(i * 1.7));
+          const oy = ay + Math.sin(ang) * (1.6 + 1.2 * Math.sin(i * 1.3));
+          ctx.beginPath();
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(ox, oy);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+      if (p.snowCapAmt > 0.02) {
+        const a = p.snowCapAmt;
+        ctx.fillStyle = rgba41([246, 251, 255], 0.95 * a);
+        ctx.beginPath();
+        ctx.moveTo(BODY_CX5 - 7, BODY_CY6 - 4 + bob);
+        ctx.quadraticCurveTo(BODY_CX5 - 1, BODY_CY6 - 8 + bob, BODY_CX5 + 5, BODY_CY6 - 6.5 + bob);
+        ctx.quadraticCurveTo(BODY_CX5 + 10, BODY_CY6 - 5 + bob, BODY_CX5 + 11, BODY_CY6 - 1.5 + bob);
+        ctx.quadraticCurveTo(BODY_CX5 + 5, BODY_CY6 - 3 + bob, BODY_CX5 + 1, BODY_CY6 - 2 + bob);
+        ctx.quadraticCurveTo(BODY_CX5 - 3.5, BODY_CY6 - 1.5 + bob, BODY_CX5 - 7, BODY_CY6 - 4 + bob);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = rgba41([210, 226, 244], 0.5 * a);
+        ctx.beginPath();
+        ctx.ellipse(BODY_CX5 - 1, BODY_CY6 - 4.5 + bob, 7, 1.6, -0.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      const hx = HEAD_X4;
+      const hy = HEAD_Y2 + bob;
+      ctx.fillStyle = rgb73(p.outline);
+      ctx.beginPath();
+      ctx.arc(hx, hy, HEAD_R3 + 0.9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb73(p.headNeck);
+      ctx.beginPath();
+      ctx.arc(hx, hy, HEAD_R3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(hx, hy, HEAD_R3, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = rgb73(p.headNeckDark);
+      ctx.beginPath();
+      ctx.ellipse(hx + 1.2, hy + 1.8, HEAD_R3 * 0.8, HEAD_R3 * 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba41([130, 122, 104], 0.5);
+      ctx.beginPath();
+      ctx.ellipse(hx - 1.4, hy - 1.6, HEAD_R3 * 0.55, HEAD_R3 * 0.42, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb73(p.cheek);
+      ctx.beginPath();
+      ctx.ellipse(hx - 1.6, hy + 1.8, HEAD_R3 * 0.62, HEAD_R3 * 0.5, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      const btx = BILL_TIP_X2;
+      const bty = BILL_TIP_Y2 + bob;
+      ctx.fillStyle = rgb73(p.bill);
+      ctx.beginPath();
+      ctx.moveTo(hx - 2, hy - 1.4);
+      ctx.quadraticCurveTo(btx + 2, bty - 1.6, btx, bty);
+      ctx.lineTo(btx + 1.8, bty + 2.8);
+      ctx.quadraticCurveTo(hx - 3.4, hy + 2.4, hx - 2, hy - 1.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = rgb73(p.billDark);
+      ctx.beginPath();
+      ctx.moveTo(hx - 2, hy + 0.6);
+      ctx.quadraticCurveTo(btx + 2, bty + 1.6, btx + 1.8, bty + 2.8);
+      ctx.quadraticCurveTo(hx - 3.4, hy + 2.4, hx - 2, hy + 0.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = rgb73(p.billDark);
+      ctx.beginPath();
+      ctx.arc(hx - 5.2, hy - 0.4, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = rgba41(p.outline, 0.7);
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(hx - 2, hy - 1.4);
+      ctx.quadraticCurveTo(btx + 2, bty - 1.6, btx, bty);
+      ctx.lineTo(btx + 1.8, bty + 2.8);
+      ctx.stroke();
+      ctx.fillStyle = rgb73(p.eye);
+      ctx.beginPath();
+      ctx.arc(hx - 1.2, hy - 0.4, 1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba41([255, 255, 255], 0.8);
+      ctx.beginPath();
+      ctx.arc(hx - 1.6, hy - 0.8, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      if (p.lightAmt > 1e-3) {
+        ctx.globalAlpha = 1;
+        const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+        lg.addColorStop(0, rgba41(p.light, p.lightAmt));
+        lg.addColorStop(1, rgba41(p.light, p.lightAmt * 0.25));
+        ctx.fillStyle = lg;
+        ctx.fillRect(-24, -24, 48, 48);
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+  }
+  function bobAt73(t, amp = 0.9, w = 1.4) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function draw63(season) {
+    return (ctx) => paint73(ctx, SP73[season], 0);
+  }
+  function anim63(season) {
+    return (ctx, t) => {
+      const breathe = bobAt73(t);
+      const dip = 0.7 * (1 - Math.cos(t * 0.55)) * 0.5;
+      paint73(ctx, SP73[season], breathe + dip);
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        const flick = Math.sin(t * 0.9) * 0.7;
+        ctx.strokeStyle = rgba41([90, 80, 60], 0.4);
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(BODY_CX5 + 7.5, BODY_CY6 + 1.5 + breathe);
+        ctx.lineTo(TAIL_X4 + 3 + flick * 0.6, TAIL_Y2 + breathe + flick);
+        ctx.stroke();
+        if (season === "Spring") {
+          const g = 0.2 + 0.28 * (0.5 + 0.5 * Math.sin(t * 2));
+          ctx.fillStyle = `rgba(255,255,255,${g})`;
+          const gx = -8 + Math.sin(t * 0.8) * 5;
+          ctx.beginPath();
+          ctx.arc(gx, 17.5, 0.9 + g * 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Summer") {
+          const s = 0.08 + 0.12 * (0.5 + 0.5 * Math.sin(t * 1.1));
+          ctx.fillStyle = `rgba(255,250,236,${s})`;
+          ctx.beginPath();
+          ctx.ellipse(BODY_CX5 - 3, BODY_CY6 - 4 + breathe, 7, 4.5, -0.12, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Autumn") {
+          const prog = (t / 4 % 1 + 1) % 1;
+          const lx = -12 + prog * 4;
+          const ly = 19.6 - Math.sin(prog * Math.PI) * 2;
+          ctx.save();
+          ctx.translate(lx, ly);
+          ctx.rotate(-0.5 + Math.sin(t * 1.6) * 0.4);
+          ctx.fillStyle = "rgba(196,120,40,0.95)";
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = "rgba(90,44,16,0.9)";
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(-3, 0);
+          ctx.lineTo(3, 0);
+          ctx.stroke();
+          ctx.restore();
+        } else {
+          const cyc = (t / 2.6 % 1 + 1) % 1;
+          const puff = Math.sin(cyc * Math.PI);
+          if (puff > 0.01) {
+            const px = BILL_TIP_X2 - 2 - cyc * 4;
+            const py = BILL_TIP_Y2 - 1 + breathe + dip - cyc * 2;
+            ctx.fillStyle = `rgba(236,244,255,${0.5 * puff})`;
+            ctx.beginPath();
+            ctx.arc(px, py, 1.6 + cyc * 2.4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = `rgba(255,255,255,${0.3 * puff})`;
+            ctx.beginPath();
+            ctx.arc(px + 0.8, py + 0.4, 1 + cyc * 1.4, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          const fp = (t / 3.4 % 1 + 1) % 1;
+          const fy = -22 + fp * 40;
+          const fx = 7 + Math.sin(fp * Math.PI * 2) * 3.5;
+          ctx.globalAlpha = 0.4 + 0.45 * Math.sin(fp * Math.PI);
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(fx, fy, 1, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        }
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition70(fromIdx) {
+    const from = SP73[SEASON_NAMES[fromIdx]];
+    const to = SP73[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother73(clamp0174(pp));
+      paint73(ctx, lerpP73(from, to, k), 0);
+    };
+  }
+  var springToSummer67 = makeTransition70(0);
+  var summerToAutumn67 = makeTransition70(1);
+  var autumnToWinter67 = makeTransition70(2);
+  var VARIANTS75 = {
+    Spring: { draw: draw63("Spring"), anim: anim63("Spring") },
+    Summer: { draw: draw63("Summer"), anim: anim63("Summer") },
+    Autumn: { draw: draw63("Autumn"), anim: anim63("Autumn") },
+    Winter: { draw: draw63("Winter"), anim: anim63("Winter") }
+  };
+  var TRANSITIONS75 = {
+    0: springToSummer67,
+    1: summerToAutumn67,
+    2: autumnToWinter67
+  };
+
+  // src/textures/seasonal/bird/pigInDisguise.ts
+  function clamp0175(x) {
+    if (!(x >= 0)) return 0;
+    return x > 1 ? 1 : x;
+  }
+  function lerp79(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB67(a, b, t) {
+    return [lerp79(a[0], b[0], t), lerp79(a[1], b[1], t), lerp79(a[2], b[2], t)];
+  }
+  function rgb74(c, a = 1) {
+    const r = Math.round(clamp0175(c[0] / 255) * 255);
+    const g = Math.round(clamp0175(c[1] / 255) * 255);
+    const b = Math.round(clamp0175(c[2] / 255) * 255);
+    return `rgba(${r},${g},${b},${clamp0175(a)})`;
+  }
+  var smoother74 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  function bobAt74(t, amp = 0.9, w = 1.5) {
+    return amp * (1 - Math.cos(w * t)) * 0.5;
+  }
+  var SCARF = [206, 78, 72];
+  var SCARF_DARK = [150, 44, 46];
+  var SP74 = {
+    // Spring — smooth pink under a bright costume; dewy lime pad + blossom; cool
+    // bright light.
+    Spring: {
+      skinLight: [252, 200, 200],
+      skinMid: [238, 162, 168],
+      skinShadow: [196, 116, 128],
+      snout: [245, 180, 190],
+      hoof: [70, 50, 52],
+      featherMid: [86, 150, 180],
+      featherLight: [150, 205, 225],
+      featherDark: [52, 104, 132],
+      beakMask: [240, 190, 70],
+      beakMaskDark: [200, 150, 40],
+      padGrass: [128, 206, 86],
+      // bright lime dewy grass
+      soil: [86, 134, 54],
+      outline: [120, 70, 78],
+      lightWash: [216, 240, 255],
+      // cool-bright
+      lightWashAmt: 0.16,
+      featherSheen: 0.4,
+      maskTilt: 0,
+      scarfAmt: 0,
+      capeSnowAmt: 0,
+      frostAmt: 0,
+      padSnowAmt: 0,
+      breathFogAmt: 0,
+      blossomAmt: 0.7,
+      fallenLeafAmt: 0
+    },
+    // Summer — healthy PEAK pink, vivid costume, saturated mid-green pad, warm
+    // light, strongest shadow.
+    Summer: {
+      skinLight: [255, 196, 196],
+      skinMid: [244, 156, 162],
+      skinShadow: [192, 102, 116],
+      // deepest shadow (peak)
+      snout: [246, 178, 188],
+      hoof: [64, 44, 46],
+      featherMid: [70, 158, 192],
+      // vivid teal
+      featherLight: [156, 214, 232],
+      featherDark: [44, 102, 134],
+      beakMask: [246, 196, 72],
+      beakMaskDark: [202, 152, 40],
+      padGrass: [86, 170, 64],
+      // saturated mid-green
+      soil: [58, 112, 40],
+      outline: [116, 62, 70],
+      lightWash: [255, 244, 206],
+      // warm
+      lightWashAmt: 0.14,
+      featherSheen: 0.7,
+      maskTilt: 0,
+      scarfAmt: 0,
+      capeSnowAmt: 0,
+      frostAmt: 0,
+      padSnowAmt: 0,
+      breathFogAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    },
+    // Autumn — pink + costume warmed by amber light; olive-tan pad + fallen
+    // leaves; the BEAK MASK sits a few degrees ASKEW.
+    Autumn: {
+      skinLight: [246, 192, 188],
+      skinMid: [232, 150, 152],
+      skinShadow: [190, 104, 112],
+      snout: [240, 172, 178],
+      hoof: [66, 46, 44],
+      featherMid: [82, 146, 172],
+      featherLight: [148, 200, 218],
+      featherDark: [50, 100, 126],
+      beakMask: [238, 186, 66],
+      beakMaskDark: [196, 146, 38],
+      padGrass: [156, 142, 78],
+      // olive-tan
+      soil: [104, 84, 44],
+      outline: [112, 62, 64],
+      lightWash: [255, 206, 138],
+      // low amber
+      lightWashAmt: 0.2,
+      featherSheen: 0.42,
+      maskTilt: 0.16,
+      // mask worn crooked (a few degrees)
+      scarfAmt: 0,
+      capeSnowAmt: 0,
+      frostAmt: 0,
+      padSnowAmt: 0,
+      breathFogAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0.7
+    },
+    // Winter — pink + costume clearly visible under a knit SCARF, snow on the
+    // cape + frost; snowy pad, cool light, breath-fog at the snout. NO white-out.
+    Winter: {
+      skinLight: [244, 196, 198],
+      skinMid: [224, 156, 162],
+      skinShadow: [180, 116, 132],
+      snout: [236, 176, 186],
+      hoof: [70, 58, 64],
+      featherMid: [86, 146, 176],
+      // costume stays teal, slightly cooled
+      featherLight: [156, 206, 226],
+      featherDark: [52, 100, 130],
+      beakMask: [236, 188, 74],
+      beakMaskDark: [196, 148, 44],
+      padGrass: [222, 232, 244],
+      // snow on the pad
+      soil: [150, 168, 190],
+      outline: [104, 72, 84],
+      lightWash: [206, 222, 248],
+      // cool blue-grey
+      lightWashAmt: 0.24,
+      featherSheen: 0.3,
+      maskTilt: 0,
+      scarfAmt: 0.95,
+      capeSnowAmt: 0.7,
+      frostAmt: 0.6,
+      padSnowAmt: 0.85,
+      breathFogAmt: 0.7,
+      blossomAmt: 0,
+      fallenLeafAmt: 0
+    }
+  };
+  function lerpP74(a, b, t) {
+    return {
+      skinLight: lerpRGB67(a.skinLight, b.skinLight, t),
+      skinMid: lerpRGB67(a.skinMid, b.skinMid, t),
+      skinShadow: lerpRGB67(a.skinShadow, b.skinShadow, t),
+      snout: lerpRGB67(a.snout, b.snout, t),
+      hoof: lerpRGB67(a.hoof, b.hoof, t),
+      featherMid: lerpRGB67(a.featherMid, b.featherMid, t),
+      featherLight: lerpRGB67(a.featherLight, b.featherLight, t),
+      featherDark: lerpRGB67(a.featherDark, b.featherDark, t),
+      beakMask: lerpRGB67(a.beakMask, b.beakMask, t),
+      beakMaskDark: lerpRGB67(a.beakMaskDark, b.beakMaskDark, t),
+      padGrass: lerpRGB67(a.padGrass, b.padGrass, t),
+      soil: lerpRGB67(a.soil, b.soil, t),
+      outline: lerpRGB67(a.outline, b.outline, t),
+      lightWash: lerpRGB67(a.lightWash, b.lightWash, t),
+      lightWashAmt: lerp79(a.lightWashAmt, b.lightWashAmt, t),
+      featherSheen: lerp79(a.featherSheen, b.featherSheen, t),
+      maskTilt: lerp79(a.maskTilt, b.maskTilt, t),
+      scarfAmt: lerp79(a.scarfAmt, b.scarfAmt, t),
+      capeSnowAmt: lerp79(a.capeSnowAmt, b.capeSnowAmt, t),
+      frostAmt: lerp79(a.frostAmt, b.frostAmt, t),
+      padSnowAmt: lerp79(a.padSnowAmt, b.padSnowAmt, t),
+      breathFogAmt: lerp79(a.breathFogAmt, b.breathFogAmt, t),
+      blossomAmt: lerp79(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp79(a.fallenLeafAmt, b.fallenLeafAmt, t)
+    };
+  }
+  function clampP63(p) {
+    return {
+      ...p,
+      lightWashAmt: clamp0175(p.lightWashAmt),
+      featherSheen: clamp0175(p.featherSheen),
+      // maskTilt is a small angle, not a 0..1 amount — clamp to a sane range
+      maskTilt: Math.max(-0.6, Math.min(0.6, p.maskTilt)),
+      scarfAmt: clamp0175(p.scarfAmt),
+      capeSnowAmt: clamp0175(p.capeSnowAmt),
+      frostAmt: clamp0175(p.frostAmt),
+      padSnowAmt: clamp0175(p.padSnowAmt),
+      breathFogAmt: clamp0175(p.breathFogAmt),
+      blossomAmt: clamp0175(p.blossomAmt),
+      fallenLeafAmt: clamp0175(p.fallenLeafAmt)
+    };
+  }
+  var BODY_CX6 = 0;
+  var BODY_CY7 = 5;
+  var BODY_RX5 = 13.4;
+  var BODY_RY5 = 10.4;
+  var HEAD_DX = -11.5;
+  var HEAD_DY = 3.2;
+  function paintPad22(ctx, p) {
+    ctx.fillStyle = rgb74([0, 0, 0], 0.18);
+    ctx.beginPath();
+    ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb74(p.soil);
+    ctx.beginPath();
+    ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb74(p.padGrass);
+    ctx.beginPath();
+    ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgb74(p.padGrass);
+    ctx.lineWidth = 1.4;
+    ctx.lineCap = "round";
+    for (let i = -16; i <= 16; i += 4) {
+      const h = 1.6 + (i % 8 === 0 ? 1.4 : 0);
+      const yEdge = 19 - Math.sqrt(Math.max(0, 1 - (i / 18) ** 2)) * 5;
+      ctx.beginPath();
+      ctx.moveTo(i, yEdge);
+      ctx.lineTo(i + 1, yEdge - h);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    ctx.fillStyle = rgb74([255, 255, 255], 0.1);
+    ctx.beginPath();
+    ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    if (p.padSnowAmt > 1e-3) {
+      ctx.fillStyle = rgb74([244, 250, 255], 0.85 * p.padSnowAmt);
+      ctx.beginPath();
+      ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb74([255, 255, 255], 0.7 * p.padSnowAmt);
+      for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]]) {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (p.blossomAmt > 1e-3) {
+      for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]]) {
+        ctx.fillStyle = rgb74([255, 250, 252], 0.9 * p.blossomAmt);
+        for (let k = 0; k < 5; k++) {
+          const a = k / 5 * Math.PI * 2;
+          ctx.beginPath();
+          ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = rgb74([252, 214, 110], p.blossomAmt);
+        ctx.beginPath();
+        ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (p.fallenLeafAmt > 1e-3) {
+      const leaves2 = [
+        [-11, 20, -0.5, [196, 96, 36]],
+        [10, 20.5, 0.7, [212, 150, 52]],
+        [2, 21, 0.2, [168, 80, 40]]
+      ];
+      for (const [lx, ly, rot, col] of leaves2) {
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(rot);
+        ctx.fillStyle = rgb74(col, p.fallenLeafAmt);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgb74([110, 60, 26], p.fallenLeafAmt);
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(-2.4, 0);
+        ctx.lineTo(2.4, 0);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+  }
+  function paintLeg20(ctx, p, x, topY, baseY) {
+    ctx.strokeStyle = rgb74(p.skinShadow);
+    ctx.lineWidth = 4.2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x, topY);
+    ctx.lineTo(x, baseY);
+    ctx.stroke();
+    ctx.fillStyle = rgb74(p.hoof);
+    ctx.beginPath();
+    ctx.ellipse(x, baseY, 2, 1.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineCap = "butt";
+  }
+  function paintBody4(ctx, cx, cy, fill, scale) {
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, BODY_RX5 * scale, BODY_RY5 * scale, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function drawTailFeathers(ctx, p, ox, oy, flutter) {
+    ctx.save();
+    ctx.translate(ox, oy);
+    const blades = [
+      [-0.32, 0],
+      [0.05, 0.06],
+      [0.42, 0.12]
+    ];
+    blades.forEach(([baseAng, len], i) => {
+      ctx.save();
+      ctx.rotate(baseAng + flutter * (0.6 + i * 0.25));
+      const L = 8.5 + len * 4;
+      ctx.fillStyle = rgb74(p.featherDark);
+      ctx.beginPath();
+      ctx.moveTo(0, 1.6);
+      ctx.quadraticCurveTo(2.6, -L * 0.6, 1, -L);
+      ctx.quadraticCurveTo(-1, -L * 0.6, -2, 1);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = rgb74(p.featherMid);
+      ctx.beginPath();
+      ctx.moveTo(0, 0.8);
+      ctx.quadraticCurveTo(2, -L * 0.6, 0.7, -L + 1.2);
+      ctx.quadraticCurveTo(-0.7, -L * 0.55, -1.4, 0.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = rgb74(p.featherLight, 0.8);
+      ctx.beginPath();
+      ctx.ellipse(0.2, -L + 1.6, 0.9, 1.8, baseAng, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = rgb74(p.featherDark, 0.7);
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(0, 0.4);
+      ctx.lineTo(0.4, -L + 1.6);
+      ctx.stroke();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+  function drawWing(ctx, p, cx, cy, side, alpha) {
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    for (let row = 0; row < 3; row++) {
+      const ry = cy - 2 + row * 3;
+      const spread = 6.5 + row * 1.2;
+      ctx.fillStyle = rgb74(p.featherDark);
+      ctx.beginPath();
+      ctx.ellipse(cx + side * 1, ry, spread + 0.8, 2.4, side * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb74(p.featherMid);
+      ctx.beginPath();
+      ctx.ellipse(cx + side * 1, ry - 0.5, spread, 2, side * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb74(p.featherLight, 0.85);
+      const tips = 4;
+      for (let k = 0; k < tips; k++) {
+        const u = (k + 0.5) / tips;
+        const tx = cx - spread + u * spread * 2;
+        ctx.beginPath();
+        ctx.arc(tx, ry + 0.6, 1.1, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+  function paintPig2(ctx, p, bob, flutter, maskWobble) {
+    const bx = BODY_CX6;
+    const by = BODY_CY7 - bob;
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    paintLeg20(ctx, p, bx + 7, by + 6, 18.6);
+    paintLeg20(ctx, p, bx - 6, by + 6, 18.9);
+    ctx.restore();
+    paintLeg20(ctx, p, bx + 4, by + 7, 19.2);
+    paintLeg20(ctx, p, bx - 8.5, by + 7, 19.4);
+    drawTailFeathers(ctx, p, bx + 12.4, by - 1.5, flutter);
+    paintBody4(ctx, bx, by, rgb74(p.outline), 1.06);
+    paintBody4(ctx, bx, by, rgb74(p.skinMid), 1);
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(bx, by, BODY_RX5, BODY_RY5, 0, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = rgb74(p.skinShadow, 0.7);
+    ctx.beginPath();
+    ctx.ellipse(bx + 2, by + 5.5, 13, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb74(p.skinLight);
+    ctx.beginPath();
+    ctx.ellipse(bx - 2.4, by - 3.4, 9.6, 6.4, -0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.strokeStyle = rgb74(p.featherDark);
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(bx - 9, by + 2.5);
+    ctx.quadraticCurveTo(bx - 4, by + 6, bx + 3, by + 5.5);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(bx, by - 0.5, BODY_RX5 + 1.5, BODY_RY5 + 1, 0, 0, Math.PI * 2);
+    ctx.clip();
+    drawWing(ctx, p, bx + 3.5, by - 6.5, 1, 0.92);
+    drawWing(ctx, p, bx - 3, by - 6, -1, 1);
+    ctx.fillStyle = rgb74(p.featherDark);
+    ctx.beginPath();
+    ctx.ellipse(bx - 7.5, by - 4, 4.4, 3, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb74(p.featherMid);
+    ctx.beginPath();
+    ctx.ellipse(bx - 7.8, by - 4.6, 3.6, 2.4, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    if (p.featherSheen > 0.02) {
+      ctx.fillStyle = rgb74([255, 255, 255], 0.1 + 0.26 * p.featherSheen);
+      ctx.beginPath();
+      ctx.ellipse(bx - 3, by - 7.5, 7, 2.2, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    if (p.capeSnowAmt > 1e-3) {
+      ctx.fillStyle = rgb74([248, 252, 255], 0.9 * p.capeSnowAmt);
+      ctx.beginPath();
+      ctx.ellipse(bx - 1, by - 9, 8.6, 2.8, -0.08, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb74([255, 255, 255], 0.85 * p.capeSnowAmt);
+      for (const [dx, dy] of [[-5, -9.4], [1, -10], [5, -9]]) {
+        ctx.beginPath();
+        ctx.arc(bx + dx, by + dy, 1.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    if (p.frostAmt > 1e-3) {
+      ctx.fillStyle = rgb74([255, 255, 255], 0.75 * p.frostAmt);
+      const pts = [
+        [-7, -2],
+        [-2, 2],
+        [4, -3],
+        [8, 0],
+        [0, -4],
+        [-4, -6],
+        [6, 3]
+      ];
+      for (const [fx, fy] of pts) {
+        ctx.beginPath();
+        ctx.arc(bx + fx, by + fy, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    paintHead(ctx, p, bx + HEAD_DX, by + HEAD_DY, maskWobble);
+    if (p.scarfAmt > 1e-3) {
+      drawScarf(ctx, p, bx + HEAD_DX, by + HEAD_DY, p.scarfAmt);
+    }
+  }
+  function paintHead(ctx, p, hx, hy, maskWobble) {
+    for (const side of [-1, 1]) {
+      ctx.save();
+      ctx.translate(hx + side * 3.2 - 1, hy - 7.4);
+      ctx.rotate(side * 0.5 - 0.25);
+      ctx.fillStyle = rgb74(p.outline);
+      ctx.beginPath();
+      ctx.moveTo(0, -0.4);
+      ctx.lineTo(3.4, 1.2);
+      ctx.lineTo(1, 5.4);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = rgb74(p.skinMid);
+      ctx.beginPath();
+      ctx.moveTo(0.2, 0.2);
+      ctx.lineTo(2.8, 1.4);
+      ctx.lineTo(1.1, 4.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = rgb74(p.skinShadow, 0.7);
+      ctx.beginPath();
+      ctx.moveTo(0.8, 1);
+      ctx.lineTo(2.2, 1.7);
+      ctx.lineTo(1.3, 3.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.save();
+    ctx.translate(hx, hy);
+    ctx.rotate(0.16);
+    ctx.fillStyle = rgb74(p.outline);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 7.4, 6.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb74(p.skinMid);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 6.6, 5.9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb74(p.skinLight, 0.9);
+    ctx.beginPath();
+    ctx.ellipse(-1.8, -1.8, 3.2, 2.6, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb74([245, 245, 240]);
+    for (const ex of [-1.6, 1.8]) {
+      ctx.beginPath();
+      ctx.arc(ex, -1.8, 1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = rgb74([22, 18, 20]);
+    for (const ex of [-1.5, 1.9]) {
+      ctx.beginPath();
+      ctx.arc(ex, -1.6, 0.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = rgb74(p.snout);
+    ctx.beginPath();
+    ctx.ellipse(-0.6, 3.6, 4.6, 3.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.save();
+    ctx.translate(-0.6, 2.6);
+    ctx.rotate(p.maskTilt + maskWobble);
+    ctx.fillStyle = rgb74(p.beakMaskDark);
+    ctx.beginPath();
+    ctx.moveTo(-5.6, 1);
+    ctx.quadraticCurveTo(0.5, -2.4, 4.2, 0.2);
+    ctx.quadraticCurveTo(1, 1.6, -1, 1.8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = rgb74(p.beakMask);
+    ctx.beginPath();
+    ctx.moveTo(-5, 0.9);
+    ctx.quadraticCurveTo(0.4, -1.9, 3.6, 0.3);
+    ctx.quadraticCurveTo(0.6, 1.3, -1, 1.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = rgb74(p.beakMaskDark);
+    ctx.beginPath();
+    ctx.moveTo(-5.2, 1.4);
+    ctx.quadraticCurveTo(-0.4, 3.6, 3, 2.4);
+    ctx.quadraticCurveTo(-0.6, 2.3, -5.2, 1.4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = rgb74(p.beakMask);
+    ctx.beginPath();
+    ctx.moveTo(-4.6, 1.5);
+    ctx.quadraticCurveTo(-0.4, 3.1, 2.4, 2.1);
+    ctx.quadraticCurveTo(-0.6, 2.1, -4.6, 1.5);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = rgb74([255, 245, 210], 0.6);
+    ctx.beginPath();
+    ctx.moveTo(-3.8, 0.5);
+    ctx.quadraticCurveTo(0.2, -1.3, 2.8, -0.1);
+    ctx.lineTo(2.4, 0.4);
+    ctx.quadraticCurveTo(0, -0.6, -3.6, 0.9);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgb74(p.beakMaskDark, 0.9);
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(-5, 1.3);
+    ctx.quadraticCurveTo(-0.4, 2.6, 3, 1.4);
+    ctx.stroke();
+    ctx.fillStyle = rgb74(p.featherDark, 0.8);
+    ctx.beginPath();
+    ctx.arc(4, 0.6, 0.7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.restore();
+  }
+  function drawScarf(ctx, p, hx, hy, amt) {
+    ctx.save();
+    ctx.globalAlpha = clamp0175(amt);
+    ctx.lineCap = "round";
+    ctx.strokeStyle = rgb74(SCARF_DARK);
+    ctx.lineWidth = 5.2;
+    ctx.beginPath();
+    ctx.moveTo(hx - 4.5, hy + 4.6);
+    ctx.quadraticCurveTo(hx + 1.5, hy + 6.6, hx + 6, hy + 4);
+    ctx.stroke();
+    ctx.strokeStyle = rgb74(SCARF);
+    ctx.lineWidth = 3.6;
+    ctx.beginPath();
+    ctx.moveTo(hx - 4.5, hy + 4.4);
+    ctx.quadraticCurveTo(hx + 1.5, hy + 6.2, hx + 6, hy + 3.8);
+    ctx.stroke();
+    ctx.strokeStyle = rgb74(SCARF_DARK);
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(hx + 4.5, hy + 4.4);
+    ctx.quadraticCurveTo(hx + 6.5, hy + 8.5, hx + 5.2, hy + 11.5);
+    ctx.stroke();
+    ctx.strokeStyle = rgb74(SCARF);
+    ctx.lineWidth = 2.6;
+    ctx.beginPath();
+    ctx.moveTo(hx + 4.5, hy + 4.4);
+    ctx.quadraticCurveTo(hx + 6.5, hy + 8.5, hx + 5.2, hy + 11.5);
+    ctx.stroke();
+    ctx.strokeStyle = rgb74(SCARF_DARK, 0.8);
+    ctx.lineWidth = 0.7;
+    for (let i = -3; i <= 5; i += 2) {
+      ctx.beginPath();
+      ctx.moveTo(hx + i, hy + 3.2);
+      ctx.lineTo(hx + i + 0.6, hy + 6.4);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    ctx.strokeStyle = rgb74(SCARF_DARK);
+    ctx.lineWidth = 0.9;
+    for (const fx of [-0.8, 0, 0.8]) {
+      ctx.beginPath();
+      ctx.moveTo(hx + 5.2 + fx, hy + 11.4);
+      ctx.lineTo(hx + 5 + fx, hy + 13.2);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function drawBreathFog(ctx, hx, hy, amt, reach, grow) {
+    if (amt <= 1e-3) return;
+    ctx.fillStyle = rgb74([235, 244, 255], (0.18 + 0.26 * grow) * amt);
+    ctx.beginPath();
+    ctx.ellipse(hx - 7 - reach, hy + 4.2, 2.6 + grow * 1.8, 1.8 + grow * 1.2, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  function paintLightWash21(ctx, p) {
+    if (p.lightWashAmt <= 1e-3) return;
+    ctx.save();
+    ctx.globalCompositeOperation = "soft-light";
+    ctx.fillStyle = rgb74(p.lightWash, p.lightWashAmt);
+    ctx.beginPath();
+    ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function paint74(ctx, pIn, bob) {
+    const p = clampP63(pIn);
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      ctx.lineJoin = "round";
+      paintPad22(ctx, p);
+      paintPig2(ctx, p, bob, 0, 0);
+      drawBreathFog(ctx, BODY_CX6 + HEAD_DX, BODY_CY7 - bob + HEAD_DY, p.breathFogAmt, 0, 0);
+      paintLightWash21(ctx, p);
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.restore();
+    }
+  }
+  function draw64(season) {
+    return (ctx) => paint74(ctx, SP74[season], 0);
+  }
+  function anim64(season) {
+    return (ctx, t) => {
+      const p = clampP63(SP74[season]);
+      const bob = bobAt74(t);
+      const flutter = Math.sin(t * 1.5) * 0.14 * (1 - Math.cos(t * 1.5)) * 0.5;
+      const maskWobble = Math.sin(t * 2) * 0.06 * (1 - Math.cos(t * 1.5)) * 0.5;
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        ctx.lineJoin = "round";
+        paintPad22(ctx, p);
+        paintPig2(ctx, p, bob, flutter, maskWobble);
+        const hx = BODY_CX6 + HEAD_DX;
+        const hy = BODY_CY7 - bob + HEAD_DY;
+        if (season === "Spring") {
+          const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
+          ctx.fillStyle = rgb74([255, 255, 255], g);
+          ctx.beginPath();
+          ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.beginPath();
+          ctx.arc(10, 19.6, 0.9 + g * 0.8, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (season === "Summer") {
+          const s = 0.5 + 0.5 * Math.sin(t * 1.1);
+          const sx = BODY_CX6 - 8 + s * 16;
+          ctx.save();
+          ctx.globalCompositeOperation = "soft-light";
+          ctx.fillStyle = rgb74([255, 255, 255], 0.35);
+          ctx.beginPath();
+          ctx.ellipse(sx, BODY_CY7 - bob - 6, 3, 4, 0.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else if (season === "Autumn") {
+          const a = Math.sin(t * 1.3) * 0.5;
+          const dx = Math.sin(t * 0.7) * 1.2;
+          ctx.save();
+          ctx.translate(10 + dx, 20.5);
+          ctx.rotate(0.7 + a);
+          ctx.fillStyle = rgb74([212, 150, 52], p.fallenLeafAmt);
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        } else {
+          const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
+          drawBreathFog(ctx, hx, hy, p.breathFogAmt, breathe * 3, breathe);
+          const prog = (t / 3.4 % 1 + 1) % 1;
+          const fy = -20 + prog * 36;
+          const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
+          ctx.fillStyle = rgb74([255, 255, 255], 0.4 + 0.45 * Math.sin(prog * Math.PI));
+          ctx.beginPath();
+          ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
+          ctx.fill();
+          const sheen3 = 0.5 + 0.5 * Math.sin(t * 0.8);
+          ctx.save();
+          ctx.globalCompositeOperation = "soft-light";
+          ctx.fillStyle = rgb74([206, 224, 255], 0.12 + sheen3 * 0.12);
+          ctx.beginPath();
+          ctx.ellipse(BODY_CX6, BODY_CY7 - bob - 1, BODY_RX5, BODY_RY5, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        }
+        paintLightWash21(ctx, p);
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.globalCompositeOperation = "source-over";
+        ctx.restore();
+      }
+    };
+  }
+  function makeTransition71(fromIdx) {
+    const from = SP74[SEASON_NAMES[fromIdx]];
+    const to = SP74[SEASON_NAMES[fromIdx + 1]];
+    return (ctx, pp) => {
+      const k = smoother74(clamp0175(pp));
+      paint74(ctx, lerpP74(from, to, k), 0);
+    };
+  }
+  var springToSummer68 = makeTransition71(0);
+  var summerToAutumn68 = makeTransition71(1);
+  var autumnToWinter68 = makeTransition71(2);
+  var VARIANTS76 = {
+    Spring: { draw: draw64("Spring"), anim: anim64("Spring") },
+    Summer: { draw: draw64("Summer"), anim: anim64("Summer") },
+    Autumn: { draw: draw64("Autumn"), anim: anim64("Autumn") },
+    Winter: { draw: draw64("Winter"), anim: anim64("Winter") }
+  };
+  var TRANSITIONS76 = {
+    0: springToSummer68,
+    1: summerToAutumn68,
+    2: autumnToWinter68
+  };
+
+  // src/textures/seasonal/grain/wheat.ts
+  var SP75 = {
+    // Spring — soft GREEN unripe ears, pale awns, a little dew; bright lime dewy
+    // pad + a pale blossom resting on the pad.
+    Spring: {
+      shadowAmt: 0.5,
+      padGrass: [142, 214, 96],
+      padGrassDark: [86, 150, 60],
+      padSnowAmt: 0,
+      blossomAmt: 1,
+      fallenLeafAmt: 0,
+      grainLight: [176, 210, 110],
+      grainDark: [120, 160, 70],
+      grainDeep: [86, 122, 48],
+      plump: 0.55,
+      spread: 0.15,
+      shedAmt: 0,
+      awn: [196, 220, 140],
+      awnPale: 1,
+      tie: [150, 192, 96],
+      outline: [60, 96, 44],
+      frostAmt: 0,
+      snowCapAmt: 0,
+      gloss: 0.5
+    },
+    // Summer — ripe GOLD, plump full ears (PEAK), warm golden awns; saturated
+    // green pad, warm light, strong shadow.
+    Summer: {
+      shadowAmt: 0.7,
+      padGrass: [104, 184, 70],
+      padGrassDark: [62, 126, 46],
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0,
+      grainLight: [248, 206, 92],
+      grainDark: [214, 158, 44],
+      grainDeep: [160, 108, 24],
+      plump: 1,
+      spread: 0.1,
+      shedAmt: 0,
+      awn: [232, 196, 96],
+      awnPale: 0.2,
+      tie: [206, 150, 56],
+      outline: [86, 58, 22],
+      frostAmt: 0,
+      snowCapAmt: 0,
+      gloss: 0.8
+    },
+    // Autumn — pale drying gold, the ears a touch looser, a few grains shedding;
+    // olive-tan pad + a couple of fallen leaves.
+    Autumn: {
+      shadowAmt: 0.55,
+      padGrass: [158, 150, 78],
+      padGrassDark: [112, 96, 50],
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 1,
+      grainLight: [228, 196, 124],
+      grainDark: [188, 150, 78],
+      grainDeep: [138, 102, 48],
+      plump: 0.7,
+      spread: 1,
+      shedAmt: 1,
+      awn: [206, 178, 110],
+      awnPale: 0.45,
+      tie: [170, 128, 64],
+      outline: [96, 70, 34],
+      frostAmt: 0,
+      snowCapAmt: 0,
+      gloss: 0.45
+    },
+    // Winter — frosted ears with small snow caps on the upward awns, cool muted
+    // gold; snow-covered pad + frost sparkle. Ears stay CLEARLY visible.
+    Winter: {
+      shadowAmt: 0.4,
+      padGrass: [120, 138, 122],
+      padGrassDark: [86, 104, 96],
+      padSnowAmt: 1,
+      blossomAmt: 0,
+      fallenLeafAmt: 0,
+      grainLight: [204, 192, 150],
+      grainDark: [160, 150, 116],
+      grainDeep: [118, 112, 88],
+      plump: 0.7,
+      spread: 0.35,
+      shedAmt: 0,
+      awn: [196, 200, 190],
+      awnPale: 0.7,
+      tie: [150, 150, 142],
+      outline: [70, 78, 70],
+      frostAmt: 1,
+      snowCapAmt: 1,
+      gloss: 0.35
+    }
+  };
+  function clamp0176(x) {
+    return x < 0 ? 0 : x > 1 ? 1 : x;
+  }
+  function rgb75([r, g, b], a = 1) {
+    return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`;
+  }
+  function lerp80(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB68(a, b, t) {
+    return [lerp80(a[0], b[0], t), lerp80(a[1], b[1], t), lerp80(a[2], b[2], t)];
+  }
+  function lerpP75(a, b, t) {
+    return {
+      shadowAmt: lerp80(a.shadowAmt, b.shadowAmt, t),
+      padGrass: lerpRGB68(a.padGrass, b.padGrass, t),
+      padGrassDark: lerpRGB68(a.padGrassDark, b.padGrassDark, t),
+      padSnowAmt: lerp80(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp80(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp80(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      grainLight: lerpRGB68(a.grainLight, b.grainLight, t),
+      grainDark: lerpRGB68(a.grainDark, b.grainDark, t),
+      grainDeep: lerpRGB68(a.grainDeep, b.grainDeep, t),
+      plump: lerp80(a.plump, b.plump, t),
+      spread: lerp80(a.spread, b.spread, t),
+      shedAmt: lerp80(a.shedAmt, b.shedAmt, t),
+      awn: lerpRGB68(a.awn, b.awn, t),
+      awnPale: lerp80(a.awnPale, b.awnPale, t),
+      tie: lerpRGB68(a.tie, b.tie, t),
+      outline: lerpRGB68(a.outline, b.outline, t),
+      frostAmt: lerp80(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp80(a.snowCapAmt, b.snowCapAmt, t),
+      gloss: lerp80(a.gloss, b.gloss, t)
+    };
+  }
+  function clampP64(p) {
+    return {
+      ...p,
+      shadowAmt: clamp0176(p.shadowAmt),
+      padSnowAmt: clamp0176(p.padSnowAmt),
+      blossomAmt: clamp0176(p.blossomAmt),
+      fallenLeafAmt: clamp0176(p.fallenLeafAmt),
+      plump: clamp0176(p.plump),
+      spread: clamp0176(p.spread),
+      shedAmt: clamp0176(p.shedAmt),
+      awnPale: clamp0176(p.awnPale),
+      frostAmt: clamp0176(p.frostAmt),
+      snowCapAmt: clamp0176(p.snowCapAmt),
+      gloss: clamp0176(p.gloss)
+    };
+  }
+  var smoother75 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var TIE_Y = 13;
+  var TIE_X = 0;
+  var EARS = [
+    { lean: -0.34, len: 23, awn: 9 },
+    // left ear
+    { lean: 0, len: 30, awn: 11 },
+    // centre ear (tallest)
+    { lean: 0.34, len: 23, awn: 9 }
+    // right ear
+  ];
+  function earCrown(ear2, spread, sway) {
+    const ang = ear2.lean * (1 + spread * 0.3);
+    const x = TIE_X + Math.sin(ang) * ear2.len + sway * (0.4 + Math.abs(ear2.lean));
+    const y = TIE_Y - Math.cos(ang) * ear2.len;
+    return { x, y, ang };
+  }
+  function contactShadow2(ctx, p) {
+    ctx.save();
+    ctx.fillStyle = `rgba(0,0,0,${0.26 * p.shadowAmt})`;
+    ctx.beginPath();
+    ctx.ellipse(3, 21, 15, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function pad2(ctx, p) {
+    ctx.fillStyle = rgb75(p.padGrassDark);
+    ctx.beginPath();
+    ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb75(p.padGrass);
+    ctx.beginPath();
+    ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgb75(p.padGrassDark);
+    ctx.lineWidth = 1.3;
+    ctx.lineCap = "round";
+    for (let i = 0; i < 11; i++) {
+      const a = i / 11 * Math.PI * 2;
+      const ex = Math.cos(a) * 17.2;
+      const ey = 19 + Math.sin(a) * 4.6;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + Math.cos(a) * 1.8, ey + Math.sin(a) * 1.4 - 1.4);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = rgb75(lerpRGB68(p.padGrass, [255, 255, 255], 0.25));
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * Math.PI * 2 + 0.3;
+      const ex = Math.cos(a) * 12;
+      const ey = 18 + Math.sin(a) * 3.2;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + 0.6, ey - 2);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    if (p.padSnowAmt > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = p.padSnowAmt;
+      const snow = ctx.createLinearGradient(0, 14, 0, 23);
+      snow.addColorStop(0, "#f3f7fd");
+      snow.addColorStop(1, "#cbd8e6");
+      ctx.fillStyle = snow;
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 17, 4.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      const specks = [
+        [-10, 18],
+        [-3, 20],
+        [6, 18.5],
+        [12, 19.5],
+        [2, 17.5]
+      ];
+      specks.forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+  }
+  function blossom3(ctx, p) {
+    if (p.blossomAmt < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = p.blossomAmt;
+    ctx.translate(-12, 19);
+    ctx.fillStyle = "rgba(255,240,248,0.96)";
+    for (let i = 0; i < 5; i++) {
+      const a = i / 5 * Math.PI * 2;
+      ctx.beginPath();
+      ctx.ellipse(Math.cos(a) * 2.4, Math.sin(a) * 1.4, 1.7, 1.1, a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(248,206,96,0.95)";
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function fallenLeaves2(ctx, p) {
+    if (p.fallenLeafAmt < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = p.fallenLeafAmt;
+    const leaves2 = [
+      [-12, 20, -0.5, "#c8772b"],
+      [11, 20.5, 0.7, "#b8531f"]
+    ];
+    leaves2.forEach(([lx, ly, rot, col]) => {
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(rot);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 3.4, 1.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(90,48,16,0.7)";
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(-3.2, 0);
+      ctx.lineTo(3.2, 0);
+      ctx.stroke();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+  function awnFan(ctx, p, cx, cy, baseAng, awnLen, shimmer) {
+    const col = lerpRGB68(p.awn, [248, 250, 236], p.awnPale * 0.5);
+    const spreadFan = 0.5;
+    for (let i = 0; i < 5; i++) {
+      const f = i / 4 - 0.5;
+      const a = baseAng + f * spreadFan * 2;
+      const len = awnLen * (1 - Math.abs(f) * 0.22);
+      const wob = Math.sin(shimmer + i * 1.3) * 0.6 * (0.4 + Math.abs(f));
+      const tipX = cx + Math.sin(a) * len + wob;
+      const tipY = cy - Math.cos(a) * len;
+      ctx.strokeStyle = rgb75(lerpRGB68(p.awn, p.outline, 0.4), 0.8);
+      ctx.lineWidth = 1.1;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.sin(a) * 1.5, cy - Math.cos(a) * 1.5);
+      ctx.lineTo(tipX, tipY);
+      ctx.stroke();
+      ctx.strokeStyle = rgb75(col, 0.92);
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.sin(a) * 1.5, cy - Math.cos(a) * 1.5);
+      ctx.lineTo(tipX, tipY);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+  }
+  function ear(ctx, p, spec, sway, glint) {
+    const crown2 = earCrown(spec, p.spread, sway);
+    const ang = crown2.ang;
+    const nGrains = 6;
+    const grainStart = 4;
+    const usable = spec.len - grainStart - 1;
+    ctx.strokeStyle = rgb75(p.grainDeep, 0.9);
+    ctx.lineWidth = 2.2;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(TIE_X + Math.sin(ang) * grainStart, TIE_Y - Math.cos(ang) * grainStart);
+    ctx.lineTo(crown2.x, crown2.y);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+    const grainR = lerp80(1.7, 2.7, p.plump);
+    for (let i = 0; i < nGrains; i++) {
+      const f = i / (nGrains - 1);
+      const along = grainStart + f * usable;
+      const ax = TIE_X + Math.sin(ang) * along + sway * (along / spec.len) * (0.4 + Math.abs(spec.lean));
+      const ay = TIE_Y - Math.cos(ang) * along;
+      [-1, 1].forEach((side) => {
+        const ox = Math.cos(ang) * side * (grainR * 0.7);
+        const oy = Math.sin(ang) * side * (grainR * 0.7);
+        const gx = ax + ox;
+        const gy = ay + oy;
+        const grad = ctx.createLinearGradient(gx - 2, gy - 3, gx + 2, gy + 3);
+        grad.addColorStop(0, rgb75(p.grainLight));
+        grad.addColorStop(0.6, rgb75(p.grainDark));
+        grad.addColorStop(1, rgb75(p.grainDeep));
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.ellipse(gx, gy, grainR, grainR * 1.5, ang + side * 0.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgb75(p.outline, 0.7);
+        ctx.lineWidth = 0.7;
+        ctx.stroke();
+        ctx.fillStyle = rgb75(lerpRGB68(p.grainLight, [255, 255, 255], 0.4 * p.gloss));
+        ctx.beginPath();
+        ctx.ellipse(gx - 0.7, gy - 0.9, grainR * 0.45, grainR * 0.6, ang, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+    if (glint !== void 0) {
+      const along = grainStart + glint * usable;
+      const gx = TIE_X + Math.sin(ang) * along;
+      const gy = TIE_Y - Math.cos(ang) * along;
+      ctx.save();
+      const gr = ctx.createRadialGradient(gx, gy, 0, gx, gy, 4.5);
+      gr.addColorStop(0, "rgba(255,250,210,0.75)");
+      gr.addColorStop(1, "rgba(255,250,210,0)");
+      ctx.fillStyle = gr;
+      ctx.beginPath();
+      ctx.ellipse(gx, gy, 4.5, 3, ang, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    awnFan(ctx, p, crown2.x, crown2.y, ang, spec.awn, sway * 0.5);
+  }
+  function bundle(ctx, p, sway, glint) {
+    ear(ctx, p, EARS[0], sway, glint);
+    ear(ctx, p, EARS[2], sway, glint);
+    ear(ctx, p, EARS[1], sway, glint);
+    ctx.save();
+    ctx.fillStyle = rgb75(p.tie);
+    ctx.strokeStyle = rgb75(p.outline, 0.7);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.ellipse(TIE_X, TIE_Y - 0.5, 4.6, 2.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = rgb75(lerpRGB68(p.tie, [255, 255, 255], 0.3));
+    ctx.beginPath();
+    ctx.ellipse(TIE_X - 1, TIE_Y - 1.4, 1.6, 0.9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    if (p.snowCapAmt > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = p.snowCapAmt;
+      ctx.fillStyle = "#f4f8ff";
+      EARS.forEach((spec) => {
+        const crown2 = earCrown(spec, p.spread, sway);
+        const a = crown2.ang;
+        const capX = crown2.x + Math.sin(a) * spec.awn * 0.7;
+        const capY = crown2.y - Math.cos(a) * spec.awn * 0.7;
+        ctx.beginPath();
+        ctx.ellipse(capX, capY, 2.2, 1.4, a, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+  }
+  function shedGrains(ctx, p, fall) {
+    if (p.shedAmt < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = p.shedAmt;
+    const seeds = [
+      [-6, 0],
+      [5, 0.45],
+      [2, 0.8]
+    ];
+    const grainR = 1.6;
+    seeds.forEach(([sx, phase]) => {
+      const prog = ((fall + phase) % 1 + 1) % 1;
+      const gy = -2 + prog * 18;
+      const gx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * 2;
+      const fade = 1 - prog * 0.5;
+      ctx.globalAlpha = p.shedAmt * fade;
+      ctx.fillStyle = rgb75(p.grainDark);
+      ctx.beginPath();
+      ctx.ellipse(gx, gy, grainR, grainR * 1.4, 0.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = rgb75(p.outline, 0.5);
+      ctx.lineWidth = 0.5;
+      ctx.stroke();
+    });
+    ctx.restore();
+  }
+  function frostDust(ctx, p) {
+    if (p.frostAmt < 0.01) return;
+    ctx.save();
+    ctx.globalAlpha = 0.7 * p.frostAmt;
+    ctx.fillStyle = "#eaf3ff";
+    const specks = [
+      [-6, -10],
+      [-3, -2],
+      [-8, 2],
+      [0, -14],
+      [-1, -6],
+      [3, -10],
+      [6, -3],
+      [2, 4],
+      [-4, -16]
+    ];
+    specks.forEach(([sx, sy]) => {
+      ctx.beginPath();
+      ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+  function paint75(ctx, pRaw, bob, micro) {
+    const p = clampP64(pRaw);
+    const m = micro ?? {};
+    const sway = m.awnSway ?? 0;
+    contactShadow2(ctx, p);
+    pad2(ctx, p);
+    blossom3(ctx, p);
+    fallenLeaves2(ctx, p);
+    ctx.save();
+    ctx.translate(0, bob);
+    bundle(ctx, p, sway, m.glint);
+    shedGrains(ctx, p, m.shedFall ?? 0);
+    frostDust(ctx, p);
+    if (m.coldSheen !== void 0 && m.coldSheen > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = 0.1 * m.coldSheen;
+      ctx.fillStyle = "#cfe6ff";
+      ctx.beginPath();
+      ctx.ellipse(-1, -4, 9, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (m.dew !== void 0 && m.dew > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = m.dew;
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.beginPath();
+      ctx.arc(-3, -4, 0.9 + 0.5 * m.dew, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(2, 4, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+    if (m.extraFlakes) {
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      m.extraFlakes.forEach(([fx, fy, r]) => {
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.arc(fx, fy, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function bobAt75(t) {
+    const A = 1.4;
+    const w = 1.5;
+    return -A * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function drawWheatSpring(ctx) {
+    paint75(ctx, SP75.Spring, 0);
+  }
+  function drawWheatSummer(ctx) {
+    paint75(ctx, SP75.Summer, 0);
+  }
+  function drawWheatAutumn(ctx) {
+    paint75(ctx, SP75.Autumn, 0);
+  }
+  function drawWheatWinter(ctx) {
+    paint75(ctx, SP75.Winter, 0);
+  }
+  function animWheatSpring(ctx, t) {
+    const dew = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.8));
+    paint75(ctx, SP75.Spring, bobAt75(t), {
+      awnSway: Math.sin(t * 1.5) * 1.4,
+      dew
+    });
+  }
+  function animWheatSummer(ctx, t) {
+    const glint = t * 0.45 % 1;
+    paint75(ctx, SP75.Summer, bobAt75(t), {
+      awnSway: Math.sin(t * 1.4) * 1.2,
+      glint
+    });
+  }
+  function animWheatAutumn(ctx, t) {
+    const shedFall = t / 3.4 % 1;
+    paint75(ctx, SP75.Autumn, bobAt75(t), {
+      awnSway: Math.sin(t * 1.2) * 1.6,
+      shedFall
+    });
+  }
+  function animWheatWinter(ctx, t) {
+    const seeds = [
+      [-6, 1.1, 0],
+      [7, 0.9, 0.5]
+    ];
+    const span = 36;
+    const flakes = seeds.map(([fx, r, phase]) => {
+      const prog = ((t / 3.6 + phase) % 1 + 1) % 1;
+      const fy = -22 + prog * span;
+      const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
+      return [driftX, fy, r];
+    });
+    const coldSheen = 0.5 + 0.5 * Math.sin(t * 0.8);
+    paint75(ctx, SP75.Winter, bobAt75(t), {
+      awnSway: Math.sin(t * 0.9) * 0.8,
+      extraFlakes: flakes,
+      coldSheen
+    });
+  }
+  function makeTransition72(from, to) {
+    return (ctx, pp) => {
+      const t = smoother75(clamp0176(pp));
+      paint75(ctx, lerpP75(SP75[from], SP75[to], t), 0);
+    };
+  }
+  var springToSummer69 = makeTransition72("Spring", "Summer");
+  var summerToAutumn69 = makeTransition72("Summer", "Autumn");
+  var autumnToWinter69 = makeTransition72("Autumn", "Winter");
+  var VARIANTS77 = {
+    Spring: { draw: drawWheatSpring, anim: animWheatSpring },
+    Summer: { draw: drawWheatSummer, anim: animWheatSummer },
+    Autumn: { draw: drawWheatAutumn, anim: animWheatAutumn },
+    Winter: { draw: drawWheatWinter, anim: animWheatWinter }
+  };
+  var TRANSITIONS77 = {
+    0: springToSummer69,
+    1: summerToAutumn69,
+    2: autumnToWinter69
+  };
+
+  // src/textures/seasonal/grain/rice.ts
+  var SP76 = {
+    // Spring — fresh lightly-desaturated pastel; bright GREEN-gold young heads,
+    // slim grains, a little dew; bright lime dewy pad + a pale blossom.
+    Spring: {
+      shadowAmt: 0.5,
+      padGrass: [142, 214, 96],
+      padGrassDark: [86, 150, 60],
+      padSnowAmt: 0,
+      blossomAmt: 1,
+      fallenLeafAmt: 0,
+      tie: [186, 206, 132],
+      tieDark: [120, 150, 80],
+      grainLight: [196, 220, 120],
+      grainDark: [136, 168, 78],
+      stemLight: [150, 200, 96],
+      stemDark: [86, 140, 56],
+      droop: 0.32,
+      shedAmt: 0,
+      grainPlump: 0.55,
+      outline: [56, 92, 44],
+      frostAmt: 0,
+      snowCapAmt: 0,
+      gloss: 0.5
+    },
+    // Summer — richest, most-saturated palette (PEAK); GOLDEN plump heavy heads
+    // nodding lower under the weight; saturated green pad, warm light.
+    Summer: {
+      shadowAmt: 0.7,
+      padGrass: [104, 184, 70],
+      padGrassDark: [62, 126, 46],
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0,
+      tie: [214, 184, 96],
+      tieDark: [156, 122, 52],
+      grainLight: [255, 214, 84],
+      grainDark: [206, 150, 36],
+      stemLight: [206, 184, 92],
+      stemDark: [150, 120, 48],
+      droop: 0.85,
+      shedAmt: 0,
+      grainPlump: 1,
+      outline: [104, 76, 28],
+      frostAmt: 0,
+      snowCapAmt: 0,
+      gloss: 0.8
+    },
+    // Autumn — gold/orange/rust; TAN dried heads, a few grains shedding; olive-tan
+    // pad + a couple of fallen leaves.
+    Autumn: {
+      shadowAmt: 0.55,
+      padGrass: [158, 150, 78],
+      padGrassDark: [112, 96, 50],
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 1,
+      tie: [188, 150, 84],
+      tieDark: [130, 96, 48],
+      grainLight: [220, 180, 108],
+      grainDark: [162, 116, 56],
+      stemLight: [186, 156, 96],
+      stemDark: [128, 96, 50],
+      droop: 0.72,
+      shedAmt: 1,
+      grainPlump: 0.8,
+      outline: [86, 60, 30],
+      frostAmt: 0,
+      snowCapAmt: 0,
+      gloss: 0.45
+    },
+    // Winter — cool blue-grey light; frosted heads with small snow caps, cool
+    // muted tan; snow-covered pad + frost sparkle; heads stay clearly visible.
+    Winter: {
+      shadowAmt: 0.4,
+      padGrass: [120, 138, 122],
+      padGrassDark: [86, 104, 96],
+      padSnowAmt: 1,
+      blossomAmt: 0,
+      fallenLeafAmt: 0,
+      tie: [170, 162, 132],
+      tieDark: [118, 112, 88],
+      grainLight: [206, 196, 158],
+      grainDark: [150, 142, 112],
+      stemLight: [178, 178, 156],
+      stemDark: [120, 124, 104],
+      droop: 0.6,
+      shedAmt: 0.2,
+      grainPlump: 0.75,
+      outline: [70, 74, 64],
+      frostAmt: 1,
+      snowCapAmt: 1,
+      gloss: 0.35
+    }
+  };
+  function clamp0177(x) {
+    return x < 0 ? 0 : x > 1 ? 1 : x;
+  }
+  function rgb76([r, g, b], a = 1) {
+    return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`;
+  }
+  function lerp81(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB69(a, b, t) {
+    return [lerp81(a[0], b[0], t), lerp81(a[1], b[1], t), lerp81(a[2], b[2], t)];
+  }
+  function lerpP76(a, b, t) {
+    return {
+      shadowAmt: lerp81(a.shadowAmt, b.shadowAmt, t),
+      padGrass: lerpRGB69(a.padGrass, b.padGrass, t),
+      padGrassDark: lerpRGB69(a.padGrassDark, b.padGrassDark, t),
+      padSnowAmt: lerp81(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp81(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp81(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      tie: lerpRGB69(a.tie, b.tie, t),
+      tieDark: lerpRGB69(a.tieDark, b.tieDark, t),
+      grainLight: lerpRGB69(a.grainLight, b.grainLight, t),
+      grainDark: lerpRGB69(a.grainDark, b.grainDark, t),
+      stemLight: lerpRGB69(a.stemLight, b.stemLight, t),
+      stemDark: lerpRGB69(a.stemDark, b.stemDark, t),
+      droop: lerp81(a.droop, b.droop, t),
+      shedAmt: lerp81(a.shedAmt, b.shedAmt, t),
+      grainPlump: lerp81(a.grainPlump, b.grainPlump, t),
+      outline: lerpRGB69(a.outline, b.outline, t),
+      frostAmt: lerp81(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp81(a.snowCapAmt, b.snowCapAmt, t),
+      gloss: lerp81(a.gloss, b.gloss, t)
+    };
+  }
+  function clampP65(p) {
+    return {
+      ...p,
+      shadowAmt: clamp0177(p.shadowAmt),
+      padSnowAmt: clamp0177(p.padSnowAmt),
+      blossomAmt: clamp0177(p.blossomAmt),
+      fallenLeafAmt: clamp0177(p.fallenLeafAmt),
+      droop: clamp0177(p.droop),
+      shedAmt: clamp0177(p.shedAmt),
+      grainPlump: clamp0177(p.grainPlump),
+      frostAmt: clamp0177(p.frostAmt),
+      snowCapAmt: clamp0177(p.snowCapAmt),
+      gloss: clamp0177(p.gloss)
+    };
+  }
+  var smoother76 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var TIE_Y2 = 12;
+  var TIE_X2 = 0;
+  var PANICLES = [
+    { baseX: -2.5, spread: -9.5, len: 30, apexY: -19, side: -1, grains: 9 },
+    // back-left
+    { baseX: 2.5, spread: 9.5, len: 30, apexY: -19, side: 1, grains: 9 },
+    // back-right
+    { baseX: -1, spread: -4.5, len: 34, apexY: -23, side: -1, grains: 10 },
+    // tall centre-left
+    { baseX: 1.5, spread: 5.5, len: 32, apexY: -22, side: 1, grains: 10 }
+    // centre-right
+  ];
+  function panicleGeom(pan, droop) {
+    const apexX = TIE_X2 + pan.spread;
+    const apexY = pan.apexY;
+    const tipX = apexX + pan.side * (1.5 + droop * 5);
+    const tipY = apexY + 3 + droop * 11;
+    const baseX = TIE_X2 + pan.baseX;
+    return { apexX, apexY, tipX, tipY, baseX };
+  }
+  function contactShadow3(ctx, p) {
+    ctx.save();
+    ctx.fillStyle = `rgba(0,0,0,${0.26 * p.shadowAmt})`;
+    ctx.beginPath();
+    ctx.ellipse(3, 21, 15, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function pad3(ctx, p) {
+    ctx.fillStyle = rgb76(p.padGrassDark);
+    ctx.beginPath();
+    ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb76(p.padGrass);
+    ctx.beginPath();
+    ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgb76(p.padGrassDark);
+    ctx.lineWidth = 1.3;
+    ctx.lineCap = "round";
+    for (let i = 0; i < 11; i++) {
+      const a = i / 11 * Math.PI * 2;
+      const ex = Math.cos(a) * 17.2;
+      const ey = 19 + Math.sin(a) * 4.6;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + Math.cos(a) * 1.8, ey + Math.sin(a) * 1.4 - 1.4);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = rgb76(lerpRGB69(p.padGrass, [255, 255, 255], 0.25));
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * Math.PI * 2 + 0.3;
+      const ex = Math.cos(a) * 12;
+      const ey = 18 + Math.sin(a) * 3.2;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + 0.6, ey - 2);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    if (p.padSnowAmt > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = p.padSnowAmt;
+      const snow = ctx.createLinearGradient(0, 14, 0, 23);
+      snow.addColorStop(0, "#f3f7fd");
+      snow.addColorStop(1, "#cbd8e6");
+      ctx.fillStyle = snow;
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 17, 4.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      const specks = [
+        [-10, 18],
+        [-3, 20],
+        [6, 18.5],
+        [12, 19.5],
+        [2, 17.5]
+      ];
+      specks.forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+  }
+  function blossom4(ctx, p) {
+    if (p.blossomAmt < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = p.blossomAmt;
+    ctx.translate(-12, 19);
+    ctx.fillStyle = "rgba(255,240,248,0.96)";
+    for (let i = 0; i < 5; i++) {
+      const a = i / 5 * Math.PI * 2;
+      ctx.beginPath();
+      ctx.ellipse(Math.cos(a) * 2.4, Math.sin(a) * 1.4, 1.7, 1.1, a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(248,206,96,0.95)";
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function fallenLeaves3(ctx, p) {
+    if (p.fallenLeafAmt < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = p.fallenLeafAmt;
+    const leaves2 = [
+      [-12, 20, -0.5, "#c8772b"],
+      [11, 20.5, 0.7, "#b8531f"]
+    ];
+    leaves2.forEach(([lx, ly, rot, col]) => {
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(rot);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 3.4, 1.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(90,48,16,0.7)";
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(-3.2, 0);
+      ctx.lineTo(3.2, 0);
+      ctx.stroke();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+  function panicle(ctx, p, pan, sway, glint) {
+    const g = panicleGeom(pan, p.droop);
+    const swayApex = sway * 0.55;
+    const swayTip = sway;
+    const apexX = g.apexX + swayApex;
+    const tipX = g.tipX + swayTip;
+    const stemPath = () => {
+      ctx.beginPath();
+      ctx.moveTo(g.baseX, TIE_Y2);
+      ctx.quadraticCurveTo(g.baseX + (apexX - g.baseX) * 0.35, -2, apexX, g.apexY);
+      ctx.quadraticCurveTo(
+        apexX + (tipX - apexX) * 0.6,
+        g.apexY + 1,
+        tipX,
+        g.tipY
+      );
+    };
+    ctx.strokeStyle = rgb76(p.stemDark);
+    ctx.lineWidth = 2.1;
+    ctx.lineCap = "round";
+    stemPath();
+    ctx.stroke();
+    ctx.strokeStyle = rgb76(p.stemLight);
+    ctx.lineWidth = 1;
+    stemPath();
+    ctx.stroke();
+    const n = pan.grains;
+    const plump = 0.6 + p.grainPlump * 0.7;
+    for (let i = 0; i < n; i++) {
+      const u = i / (n - 1);
+      const ax = apexX + (tipX - apexX) * u;
+      const ay = g.apexY + (g.tipY - g.apexY) * u;
+      const bow = Math.sin(u * Math.PI) * 2.2;
+      const gx = ax + pan.side * bow * 0.3;
+      const gy = ay - bow;
+      if (p.shedAmt > 0.5 && u > 0.72 && i % 2 === 0) continue;
+      const off = (i % 2 === 0 ? 1 : -1) * (1.3 + u * 0.6);
+      const fx = gx + off;
+      const fy = gy + Math.abs(off) * 0.15;
+      const r = (1 + (1 - u) * 0.5) * plump;
+      ctx.save();
+      ctx.translate(fx, fy);
+      ctx.rotate(pan.side * 0.5 + u * pan.side * 0.4);
+      ctx.fillStyle = rgb76(p.grainDark);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.95, r * 1.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      let face = p.grainLight;
+      if (glint !== void 0) {
+        const band = Math.abs(u - glint);
+        if (band < 0.16) {
+          face = lerpRGB69(p.grainLight, [255, 252, 224], (1 - band / 0.16) * 0.8);
+        }
+      }
+      ctx.fillStyle = rgb76(face);
+      ctx.beginPath();
+      ctx.ellipse(-0.35, -0.3, r * 0.6, r * 1.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb76(lerpRGB69(face, [255, 255, 255], 0.5 * p.gloss));
+      ctx.beginPath();
+      ctx.ellipse(-0.4, -0.6, r * 0.3, r * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      if (i < 2) {
+        ctx.strokeStyle = rgb76(p.stemDark, 0.7);
+        ctx.lineWidth = 0.6;
+        ctx.beginPath();
+        ctx.moveTo(fx, fy - r);
+        ctx.lineTo(fx + pan.side * 1.4, fy - r - 3.5);
+        ctx.stroke();
+      }
+    }
+  }
+  function tieBand(ctx, p) {
+    ctx.save();
+    ctx.fillStyle = rgb76(p.tieDark);
+    ctx.beginPath();
+    ctx.ellipse(TIE_X2, TIE_Y2, 4.6, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb76(p.tie);
+    ctx.beginPath();
+    ctx.moveTo(TIE_X2 - 4.4, TIE_Y2 - 1.6);
+    ctx.quadraticCurveTo(TIE_X2, TIE_Y2 - 2.4, TIE_X2 + 4.4, TIE_Y2 - 1.6);
+    ctx.quadraticCurveTo(TIE_X2 + 5, TIE_Y2, TIE_X2 + 4.2, TIE_Y2 + 2);
+    ctx.quadraticCurveTo(TIE_X2, TIE_Y2 + 1.2, TIE_X2 - 4.2, TIE_Y2 + 2);
+    ctx.quadraticCurveTo(TIE_X2 - 5, TIE_Y2, TIE_X2 - 4.4, TIE_Y2 - 1.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgb76(p.tieDark, 0.85);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(TIE_X2 - 4, TIE_Y2 - 0.4);
+    ctx.quadraticCurveTo(TIE_X2, TIE_Y2 - 1.2, TIE_X2 + 4, TIE_Y2 - 0.4);
+    ctx.moveTo(TIE_X2 - 4, TIE_Y2 + 1.2);
+    ctx.quadraticCurveTo(TIE_X2, TIE_Y2 + 0.4, TIE_X2 + 4, TIE_Y2 + 1.2);
+    ctx.stroke();
+    ctx.strokeStyle = rgb76(p.tie);
+    ctx.lineWidth = 1.4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(TIE_X2 + 3, TIE_Y2 + 1.5);
+    ctx.quadraticCurveTo(TIE_X2 + 5.5, TIE_Y2 + 4, TIE_X2 + 5, TIE_Y2 + 6.5);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+    ctx.strokeStyle = rgb76(p.outline, 0.8);
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(TIE_X2, TIE_Y2, 4.6, 3, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function shedGrains2(ctx, p) {
+    if (p.shedAmt < 0.3) return;
+    ctx.save();
+    ctx.globalAlpha = clamp0177(p.shedAmt);
+    const drops = [
+      [7, 17, 0.6],
+      [-6, 18.5, -0.4],
+      [12, 16.5, 0.9]
+    ];
+    drops.forEach(([dx, dy, rot]) => {
+      ctx.save();
+      ctx.translate(dx, dy);
+      ctx.rotate(rot);
+      ctx.fillStyle = rgb76(p.grainDark);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 1, 1.9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgb76(p.grainLight);
+      ctx.beginPath();
+      ctx.ellipse(-0.3, -0.3, 0.6, 1.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+  function frostAndSnow2(ctx, p, sway) {
+    if (p.snowCapAmt > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = p.snowCapAmt;
+      PANICLES.forEach((pan) => {
+        const g = panicleGeom(pan, p.droop);
+        const swayTip = sway;
+        const capX = (g.apexX + g.tipX) / 2 + swayTip * 0.7;
+        const capY = (g.apexY + g.tipY) / 2 - 2.4;
+        const cap2 = ctx.createLinearGradient(capX, capY - 3, capX, capY + 2);
+        cap2.addColorStop(0, "#ffffff");
+        cap2.addColorStop(1, "#dbe6f2");
+        ctx.fillStyle = cap2;
+        ctx.beginPath();
+        ctx.ellipse(capX, capY, 3.2, 1.8, pan.side * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+    if (p.frostAmt > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = 0.7 * p.frostAmt;
+      ctx.fillStyle = "#eaf3ff";
+      const specks = [
+        [-7, -16],
+        [-3, -12],
+        [-9, -9],
+        [4, -17],
+        [2, -13],
+        [7, -11],
+        [-1, -20],
+        [-5, -6]
+      ];
+      specks.forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+  }
+  function paint76(ctx, pRaw, bob, micro) {
+    const p = clampP65(pRaw);
+    const m = micro ?? {};
+    const sway = m.sway ?? 0;
+    contactShadow3(ctx, p);
+    pad3(ctx, p);
+    blossom4(ctx, p);
+    fallenLeaves3(ctx, p);
+    shedGrains2(ctx, p);
+    ctx.save();
+    ctx.translate(0, bob);
+    PANICLES.forEach((pan, i) => {
+      const local = sway * (0.7 + i * 0.16);
+      panicle(ctx, p, pan, local, m.glint);
+    });
+    tieBand(ctx, p);
+    frostAndSnow2(ctx, p, sway);
+    if (m.coldSheen !== void 0 && m.coldSheen > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = 0.1 * m.coldSheen;
+      ctx.fillStyle = "#cfe6ff";
+      ctx.beginPath();
+      ctx.ellipse(0, -14, 13, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    if (m.dew !== void 0 && m.dew > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = m.dew;
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.beginPath();
+      ctx.arc(-4, -15, 0.8 + 0.5 * m.dew, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(4, -13, 0.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+    if (m.extraFlakes) {
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      m.extraFlakes.forEach(([fx, fy, r]) => {
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.arc(fx, fy, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function bobAt76(t) {
+    const A = 1.4;
+    const w = 1.5;
+    return -A * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function drawRiceSpring(ctx) {
+    paint76(ctx, SP76.Spring, 0);
+  }
+  function drawRiceSummer(ctx) {
+    paint76(ctx, SP76.Summer, 0);
+  }
+  function drawRiceAutumn(ctx) {
+    paint76(ctx, SP76.Autumn, 0);
+  }
+  function drawRiceWinter(ctx) {
+    paint76(ctx, SP76.Winter, 0);
+  }
+  function animRiceSpring(ctx, t) {
+    const dew = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.8));
+    paint76(ctx, SP76.Spring, bobAt76(t), {
+      sway: Math.sin(t * 1.5) * 1.1,
+      dew
+    });
+  }
+  function animRiceSummer(ctx, t) {
+    const glint = t * 0.4 % 1;
+    paint76(ctx, SP76.Summer, bobAt76(t), {
+      sway: Math.sin(t * 1.3) * 1.3,
+      glint
+    });
+  }
+  function animRiceAutumn(ctx, t) {
+    paint76(ctx, SP76.Autumn, bobAt76(t), {
+      sway: Math.sin(t * 1.1) * 1
+    });
+  }
+  function animRiceWinter(ctx, t) {
+    const seeds = [
+      [-6, 1.1, 0],
+      [7, 0.9, 0.5]
+    ];
+    const span = 38;
+    const flakes = seeds.map(([fx, r, phase]) => {
+      const prog = ((t / 3.6 + phase) % 1 + 1) % 1;
+      const fy = -22 + prog * span;
+      const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
+      return [driftX, fy, r];
+    });
+    const coldSheen = 0.5 + 0.5 * Math.sin(t * 0.8);
+    paint76(ctx, SP76.Winter, bobAt76(t), {
+      sway: Math.sin(t * 0.9) * 0.7,
+      extraFlakes: flakes,
+      coldSheen
+    });
+  }
+  function makeTransition73(from, to) {
+    return (ctx, pp) => {
+      const t = smoother76(clamp0177(pp));
+      paint76(ctx, lerpP76(SP76[from], SP76[to], t), 0);
+    };
+  }
+  var springToSummer70 = makeTransition73("Spring", "Summer");
+  var summerToAutumn70 = makeTransition73("Summer", "Autumn");
+  var autumnToWinter70 = makeTransition73("Autumn", "Winter");
+  var VARIANTS78 = {
+    Spring: { draw: drawRiceSpring, anim: animRiceSpring },
+    Summer: { draw: drawRiceSummer, anim: animRiceSummer },
+    Autumn: { draw: drawRiceAutumn, anim: animRiceAutumn },
+    Winter: { draw: drawRiceWinter, anim: animRiceWinter }
+  };
+  var TRANSITIONS78 = {
+    0: springToSummer70,
+    1: summerToAutumn70,
+    2: autumnToWinter70
+  };
+
+  // src/textures/seasonal/grain/buckwheat.ts
+  var SP77 = {
+    // Spring — fresh lightly-desaturated green sprig; tiny pale buds just forming
+    // at the nodes (no open flowers yet); a little dew; bright lime dewy pad + a
+    // pale blossom resting on the pad.
+    Spring: {
+      shadowAmt: 0.5,
+      padGrass: [142, 214, 96],
+      padGrassDark: [86, 150, 60],
+      padSnowAmt: 0,
+      blossomAmt: 1,
+      fallenLeafAmt: 0,
+      stemLight: [122, 188, 84],
+      stemDark: [60, 112, 46],
+      leaf: [128, 198, 90],
+      leafDark: [66, 120, 50],
+      leafRedAmt: 0,
+      flowerAmt: 0.12,
+      petal: [244, 248, 240],
+      petalCore: [228, 214, 130],
+      seedAmt: 0,
+      seed: [120, 80, 40],
+      seedDeep: [78, 48, 22],
+      budAmt: 1,
+      outline: [44, 78, 38],
+      frostAmt: 0,
+      snowCapAmt: 0,
+      gloss: 0.5
+    },
+    // Summer — richest, most-saturated palette (PEAK BLOOM); full white-pink
+    // 5-petal florets clustering at every node, fresh green stems & leaves;
+    // saturated green pad, warm light, strong shadow.
+    Summer: {
+      shadowAmt: 0.7,
+      padGrass: [104, 184, 70],
+      padGrassDark: [62, 126, 46],
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0,
+      stemLight: [110, 178, 74],
+      stemDark: [52, 104, 42],
+      leaf: [108, 184, 72],
+      leafDark: [52, 110, 44],
+      leafRedAmt: 0,
+      flowerAmt: 1,
+      petal: [255, 246, 250],
+      petalCore: [244, 196, 120],
+      seedAmt: 0,
+      seed: [120, 80, 40],
+      seedDeep: [78, 48, 22],
+      budAmt: 0,
+      outline: [40, 74, 34],
+      frostAmt: 0,
+      snowCapAmt: 0,
+      gloss: 0.8
+    },
+    // Autumn — rusty-red sprig; leaves reddening; flowers gone to seed so dark
+    // brown TRIANGULAR seeds are prominent at the nodes; olive-tan browning pad +
+    // a couple of fallen leaves on the pad.
+    Autumn: {
+      shadowAmt: 0.55,
+      padGrass: [158, 150, 78],
+      padGrassDark: [112, 96, 50],
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 1,
+      stemLight: [188, 96, 80],
+      stemDark: [112, 48, 40],
+      leaf: [188, 120, 64],
+      leafDark: [120, 64, 32],
+      leafRedAmt: 1,
+      flowerAmt: 0.08,
+      petal: [228, 206, 180],
+      petalCore: [196, 150, 90],
+      seedAmt: 1,
+      seed: [138, 90, 42],
+      seedDeep: [78, 46, 18],
+      budAmt: 0,
+      outline: [78, 44, 26],
+      frostAmt: 0,
+      snowCapAmt: 0,
+      gloss: 0.45
+    },
+    // Winter — cool muted blue-grey light; the SAME sprig, now bare of flowers
+    // but STILL CLEARLY A SPRIG: frost-dusted grey-green stems & leaves with small
+    // snow caps on the nodes; pad snow-covered + frost sparkle. No white-out, no
+    // bare-twig stub — the sprig stays visible in its own muted colour.
+    Winter: {
+      shadowAmt: 0.4,
+      padGrass: [120, 138, 122],
+      padGrassDark: [86, 104, 96],
+      padSnowAmt: 1,
+      blossomAmt: 0,
+      fallenLeafAmt: 0,
+      stemLight: [120, 142, 120],
+      stemDark: [74, 96, 80],
+      leaf: [124, 146, 122],
+      leafDark: [80, 102, 86],
+      leafRedAmt: 0.15,
+      flowerAmt: 0,
+      petal: [222, 230, 236],
+      petalCore: [196, 206, 214],
+      seedAmt: 0.25,
+      seed: [120, 116, 110],
+      seedDeep: [86, 84, 80],
+      budAmt: 0.2,
+      outline: [58, 70, 64],
+      frostAmt: 1,
+      snowCapAmt: 1,
+      gloss: 0.35
+    }
+  };
+  function clamp0178(x) {
+    return x < 0 ? 0 : x > 1 ? 1 : x;
+  }
+  function rgb77([r, g, b], a = 1) {
+    return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`;
+  }
+  function lerp82(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB70(a, b, t) {
+    return [lerp82(a[0], b[0], t), lerp82(a[1], b[1], t), lerp82(a[2], b[2], t)];
+  }
+  function lerpP77(a, b, t) {
+    return {
+      shadowAmt: lerp82(a.shadowAmt, b.shadowAmt, t),
+      padGrass: lerpRGB70(a.padGrass, b.padGrass, t),
+      padGrassDark: lerpRGB70(a.padGrassDark, b.padGrassDark, t),
+      padSnowAmt: lerp82(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp82(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp82(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      stemLight: lerpRGB70(a.stemLight, b.stemLight, t),
+      stemDark: lerpRGB70(a.stemDark, b.stemDark, t),
+      leaf: lerpRGB70(a.leaf, b.leaf, t),
+      leafDark: lerpRGB70(a.leafDark, b.leafDark, t),
+      leafRedAmt: lerp82(a.leafRedAmt, b.leafRedAmt, t),
+      flowerAmt: lerp82(a.flowerAmt, b.flowerAmt, t),
+      petal: lerpRGB70(a.petal, b.petal, t),
+      petalCore: lerpRGB70(a.petalCore, b.petalCore, t),
+      seedAmt: lerp82(a.seedAmt, b.seedAmt, t),
+      seed: lerpRGB70(a.seed, b.seed, t),
+      seedDeep: lerpRGB70(a.seedDeep, b.seedDeep, t),
+      budAmt: lerp82(a.budAmt, b.budAmt, t),
+      outline: lerpRGB70(a.outline, b.outline, t),
+      frostAmt: lerp82(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp82(a.snowCapAmt, b.snowCapAmt, t),
+      gloss: lerp82(a.gloss, b.gloss, t)
+    };
+  }
+  function clampP66(p) {
+    return {
+      ...p,
+      shadowAmt: clamp0178(p.shadowAmt),
+      padSnowAmt: clamp0178(p.padSnowAmt),
+      blossomAmt: clamp0178(p.blossomAmt),
+      fallenLeafAmt: clamp0178(p.fallenLeafAmt),
+      leafRedAmt: clamp0178(p.leafRedAmt),
+      flowerAmt: clamp0178(p.flowerAmt),
+      seedAmt: clamp0178(p.seedAmt),
+      budAmt: clamp0178(p.budAmt),
+      frostAmt: clamp0178(p.frostAmt),
+      snowCapAmt: clamp0178(p.snowCapAmt),
+      gloss: clamp0178(p.gloss)
+    };
+  }
+  var smoother77 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var BASE_Y = 16;
+  var BASE_X = 1;
+  var MAIN_TIP = [-1, -19];
+  var BRANCHES3 = [
+    // central main stem (drawn from base to top tip)
+    { bx: BASE_X, by: BASE_Y, cx: -1.5, cy: -1, tx: MAIN_TIP[0], ty: MAIN_TIP[1] },
+    // left branch
+    { bx: -0.5, by: 2, cx: -7, cy: -4, tx: -9.5, ty: -11 },
+    // right branch
+    { bx: 0.5, by: -2, cx: 8, cy: -7, tx: 10, ty: -14 }
+  ];
+  var NODES = [
+    [MAIN_TIP[0], MAIN_TIP[1]],
+    [-9.5, -11],
+    [10, -14]
+  ];
+  var LEAVES3 = [
+    [-5.5, 4, 4.2, -0.5, -1],
+    [6, -1, 4.6, 0.55, 1],
+    [-3.5, -7, 3.4, -0.9, -1]
+  ];
+  function contactShadow4(ctx, p) {
+    ctx.save();
+    ctx.fillStyle = `rgba(0,0,0,${0.26 * p.shadowAmt})`;
+    ctx.beginPath();
+    ctx.ellipse(3, 21, 15, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function pad4(ctx, p) {
+    ctx.fillStyle = rgb77(p.padGrassDark);
+    ctx.beginPath();
+    ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb77(p.padGrass);
+    ctx.beginPath();
+    ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgb77(p.padGrassDark);
+    ctx.lineWidth = 1.3;
+    ctx.lineCap = "round";
+    for (let i = 0; i < 11; i++) {
+      const a = i / 11 * Math.PI * 2;
+      const ex = Math.cos(a) * 17.2;
+      const ey = 19 + Math.sin(a) * 4.6;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + Math.cos(a) * 1.8, ey + Math.sin(a) * 1.4 - 1.4);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = rgb77(lerpRGB70(p.padGrass, [255, 255, 255], 0.25));
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * Math.PI * 2 + 0.3;
+      const ex = Math.cos(a) * 12;
+      const ey = 18 + Math.sin(a) * 3.2;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + 0.6, ey - 2);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    if (p.padSnowAmt > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = p.padSnowAmt;
+      const snow = ctx.createLinearGradient(0, 14, 0, 23);
+      snow.addColorStop(0, "#f3f7fd");
+      snow.addColorStop(1, "#cbd8e6");
+      ctx.fillStyle = snow;
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 17, 4.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      const specks = [
+        [-10, 18],
+        [-3, 20],
+        [6, 18.5],
+        [12, 19.5],
+        [2, 17.5]
+      ];
+      specks.forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+  }
+  function blossom5(ctx, p) {
+    if (p.blossomAmt < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = p.blossomAmt;
+    ctx.translate(-12, 19);
+    ctx.fillStyle = "rgba(255,240,248,0.96)";
+    for (let i = 0; i < 5; i++) {
+      const a = i / 5 * Math.PI * 2;
+      ctx.beginPath();
+      ctx.ellipse(Math.cos(a) * 2.4, Math.sin(a) * 1.4, 1.7, 1.1, a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(248,206,96,0.95)";
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function fallenLeaves4(ctx, p) {
+    if (p.fallenLeafAmt < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = p.fallenLeafAmt;
+    const leaves2 = [
+      [-12, 20, -0.5, "#c8772b"],
+      [11, 20.5, 0.7, "#b8531f"]
+    ];
+    leaves2.forEach(([lx, ly, rot, col]) => {
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(rot);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 3.4, 1.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(90,48,16,0.7)";
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(-3.2, 0);
+      ctx.lineTo(3.2, 0);
+      ctx.stroke();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+  function stems(ctx, p, sway) {
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    BRANCHES3.forEach((br, i) => {
+      const swx = sway * (0.4 + i * 0.25);
+      ctx.strokeStyle = rgb77(p.stemDark);
+      ctx.lineWidth = i === 0 ? 2.6 : 1.9;
+      ctx.beginPath();
+      ctx.moveTo(br.bx, br.by);
+      ctx.quadraticCurveTo(br.cx + swx * 0.5, br.cy, br.tx + swx, br.ty);
+      ctx.stroke();
+      ctx.strokeStyle = rgb77(p.stemLight);
+      ctx.lineWidth = i === 0 ? 1.2 : 0.9;
+      ctx.beginPath();
+      ctx.moveTo(br.bx - 0.5, br.by);
+      ctx.quadraticCurveTo(br.cx - 0.6 + swx * 0.5, br.cy - 0.6, br.tx - 0.4 + swx, br.ty);
+      ctx.stroke();
+    });
+    ctx.lineCap = "butt";
+    ctx.lineJoin = "miter";
+  }
+  function heartLeaf(ctx, p, lx, ly, s, rot, dir, flutter) {
+    const face = lerpRGB70(p.leaf, [192, 96, 52], p.leafRedAmt * 0.55);
+    const dark = lerpRGB70(p.leafDark, [124, 56, 28], p.leafRedAmt * 0.6);
+    ctx.save();
+    ctx.translate(lx, ly);
+    ctx.rotate(rot + flutter * 0.12 * dir);
+    const w = s;
+    const h = s * 1.15;
+    ctx.fillStyle = rgb77(dark);
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.7);
+    ctx.bezierCurveTo(-w, h * 0.2, -w, -h * 0.7, 0, -h * 0.25);
+    ctx.bezierCurveTo(w, -h * 0.7, w, h * 0.2, 0, h * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = rgb77(face);
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.55);
+    ctx.bezierCurveTo(-w * 0.78, h * 0.15, -w * 0.78, -h * 0.55, 0, -h * 0.18);
+    ctx.bezierCurveTo(w * 0.55, -h * 0.5, w * 0.62, h * 0.1, 0, h * 0.55);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgb77(dark, 0.75);
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.6);
+    ctx.lineTo(0, -h * 0.22);
+    ctx.stroke();
+    ctx.strokeStyle = rgb77(p.outline, 0.7);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(0, h * 0.7);
+    ctx.bezierCurveTo(-w, h * 0.2, -w, -h * 0.7, 0, -h * 0.25);
+    ctx.bezierCurveTo(w, -h * 0.7, w, h * 0.2, 0, h * 0.7);
+    ctx.closePath();
+    ctx.stroke();
+    ctx.restore();
+  }
+  function leaves(ctx, p, flutter) {
+    LEAVES3.forEach(([lx, ly, s, rot, dir]) => {
+      heartLeaf(ctx, p, lx, ly, s, rot, dir, flutter);
+    });
+  }
+  function floret(ctx, p, fx, fy, amt, twinkle) {
+    const petalR = 1.5 * (0.5 + 0.5 * amt);
+    const ringR = 1.7 * (0.55 + 0.45 * amt);
+    for (let i = 0; i < 5; i++) {
+      const a = i / 5 * Math.PI * 2 - Math.PI / 2;
+      const px = fx + Math.cos(a) * ringR;
+      const py = fy + Math.sin(a) * ringR;
+      const pg = ctx.createRadialGradient(px - 0.5, py - 0.5, 0.2, px, py, petalR + 0.1);
+      pg.addColorStop(0, rgb77(lerpRGB70(p.petal, [255, 255, 255], 0.25)));
+      pg.addColorStop(1, rgb77(p.petal));
+      ctx.fillStyle = pg;
+      ctx.beginPath();
+      ctx.arc(px, py, petalR, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = rgb77(p.petalCore);
+    ctx.beginPath();
+    ctx.arc(fx, fy, 0.95, 0, Math.PI * 2);
+    ctx.fill();
+    if (twinkle > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = twinkle;
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.beginPath();
+      ctx.arc(fx - 0.6, fy - 0.8, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  function seedTri(ctx, p, sx, sy, s) {
+    const sg = ctx.createLinearGradient(sx, sy - s, sx, sy + s);
+    sg.addColorStop(0, rgb77(p.seed));
+    sg.addColorStop(1, rgb77(p.seedDeep));
+    ctx.fillStyle = sg;
+    ctx.strokeStyle = rgb77(p.outline, 0.85);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(sx, sy + s);
+    ctx.lineTo(sx - s * 0.9, sy - s * 0.7);
+    ctx.lineTo(sx + s * 0.9, sy - s * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = rgb77(lerpRGB70(p.seed, [255, 255, 255], 0.35), 0.8);
+    ctx.beginPath();
+    ctx.moveTo(sx - s * 0.2, sy - s * 0.5);
+    ctx.lineTo(sx - s * 0.55, sy - s * 0.55);
+    ctx.lineTo(sx - s * 0.25, sy);
+    ctx.closePath();
+    ctx.fill();
+  }
+  function clusters(ctx, p, twinkles) {
+    const spray = [
+      [0, 0],
+      [-2.2, 1.4],
+      [2.2, 1.4]
+    ];
+    NODES.forEach(([nx, ny], ni) => {
+      if (p.budAmt > 0.02) {
+        ctx.save();
+        ctx.globalAlpha = p.budAmt;
+        ctx.fillStyle = rgb77(lerpRGB70(p.petal, p.stemLight, 0.35));
+        spray.forEach(([ox, oy]) => {
+          ctx.beginPath();
+          ctx.arc(nx + ox, ny + oy, 1.05, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.restore();
+      }
+      if (p.seedAmt > 0.03) {
+        ctx.save();
+        ctx.globalAlpha = clamp0178(p.seedAmt);
+        spray.forEach(([ox, oy]) => {
+          seedTri(ctx, p, nx + ox, ny + oy + 0.4, 1.9 * (0.55 + 0.45 * p.seedAmt));
+        });
+        ctx.restore();
+      }
+      if (p.flowerAmt > 0.03) {
+        ctx.save();
+        ctx.globalAlpha = clamp0178(p.flowerAmt + 0.15);
+        spray.forEach(([ox, oy]) => {
+          floret(ctx, p, nx + ox, ny + oy, p.flowerAmt, twinkles[ni]);
+        });
+        ctx.restore();
+      }
+    });
+  }
+  function frostAndSnow3(ctx, p) {
+    if (p.snowCapAmt > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = p.snowCapAmt;
+      const cap2 = ctx.createLinearGradient(0, -22, 0, -8);
+      cap2.addColorStop(0, "#ffffff");
+      cap2.addColorStop(1, "#dbe6f2");
+      ctx.fillStyle = cap2;
+      NODES.forEach(([nx, ny]) => {
+        ctx.beginPath();
+        ctx.ellipse(nx, ny - 1.4, 3.2, 1.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      LEAVES3.forEach(([lx, ly]) => {
+        ctx.beginPath();
+        ctx.ellipse(lx, ly - 2.2, 2.2, 1.1, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+    if (p.frostAmt > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = 0.7 * p.frostAmt;
+      ctx.fillStyle = "#eaf3ff";
+      const specks = [
+        [-9.5, -12],
+        [10, -15],
+        [-1, -20],
+        [-5.5, 2],
+        [6, -2.5],
+        [-3.5, -8.5],
+        [2, -6],
+        [-7, -5]
+      ];
+      specks.forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+  }
+  function sheen2(ctx, p) {
+    if (p.gloss < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = 0.5 * p.gloss;
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.beginPath();
+    ctx.ellipse(-2.2, -10, 0.7, 2.2, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(5.2, -1.4, 0.6, 1.4, 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function paint77(ctx, pRaw, bob, micro) {
+    const p = clampP66(pRaw);
+    const m = micro ?? {};
+    contactShadow4(ctx, p);
+    pad4(ctx, p);
+    blossom5(ctx, p);
+    fallenLeaves4(ctx, p);
+    ctx.save();
+    ctx.translate(0, bob);
+    const sway = m.stemSway ?? 0;
+    stems(ctx, p, sway);
+    leaves(ctx, p, m.leafFlutter ?? 0);
+    clusters(ctx, p, [
+      m.florTwinkA ?? 0,
+      m.florTwinkB ?? 0,
+      m.florTwinkC ?? 0
+    ]);
+    sheen2(ctx, p);
+    frostAndSnow3(ctx, p);
+    if (m.coldSheen !== void 0 && m.coldSheen > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = 0.1 * m.coldSheen;
+      ctx.fillStyle = "#cfe6ff";
+      NODES.forEach(([nx, ny]) => {
+        ctx.beginPath();
+        ctx.arc(nx, ny, 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+    if (m.dew !== void 0 && m.dew > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = m.dew;
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.beginPath();
+      ctx.arc(-3, -7, 0.9 + 0.5 * m.dew, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(7, -2, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.restore();
+    if (m.extraFlakes) {
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      m.extraFlakes.forEach(([fx, fy, r]) => {
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.arc(fx, fy, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function bobAt77(t) {
+    const A = 1.4;
+    const w = 1.5;
+    return -A * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function drawBuckwheatSpring(ctx) {
+    paint77(ctx, SP77.Spring, 0);
+  }
+  function drawBuckwheatSummer(ctx) {
+    paint77(ctx, SP77.Summer, 0);
+  }
+  function drawBuckwheatAutumn(ctx) {
+    paint77(ctx, SP77.Autumn, 0);
+  }
+  function drawBuckwheatWinter(ctx) {
+    paint77(ctx, SP77.Winter, 0);
+  }
+  function animBuckwheatSpring(ctx, t) {
+    const dew = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.8));
+    paint77(ctx, SP77.Spring, bobAt77(t), {
+      stemSway: Math.sin(t * 1.3) * 0.8,
+      leafFlutter: Math.sin(t * 1.6) * 0.9,
+      dew
+    });
+  }
+  function animBuckwheatSummer(ctx, t) {
+    const tw = (ph) => 0.2 + 0.5 * Math.max(0, Math.sin(t * 2.4 + ph));
+    paint77(ctx, SP77.Summer, bobAt77(t), {
+      stemSway: Math.sin(t * 1.3) * 1,
+      leafFlutter: Math.sin(t * 1.7) * 0.8,
+      florTwinkA: tw(0),
+      florTwinkB: tw(2.1),
+      florTwinkC: tw(4.2)
+    });
+  }
+  function animBuckwheatAutumn(ctx, t) {
+    const leafFlutter = Math.sin(t * 2.2) * 1.3;
+    paint77(ctx, SP77.Autumn, bobAt77(t), {
+      leafFlutter,
+      stemSway: Math.sin(t * 1.1) * 0.8
+    });
+  }
+  function animBuckwheatWinter(ctx, t) {
+    const seeds = [
+      [-7, 1.1, 0],
+      [8, 0.9, 0.5]
+    ];
+    const span = 36;
+    const flakes = seeds.map(([fx, r, phase]) => {
+      const prog = ((t / 3.6 + phase) % 1 + 1) % 1;
+      const fy = -22 + prog * span;
+      const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
+      return [driftX, fy, r];
+    });
+    const coldSheen = 0.5 + 0.5 * Math.sin(t * 0.8);
+    paint77(ctx, SP77.Winter, bobAt77(t), {
+      stemSway: Math.sin(t * 0.9) * 0.5,
+      extraFlakes: flakes,
+      coldSheen
+    });
+  }
+  function makeTransition74(from, to) {
+    return (ctx, pp) => {
+      const t = smoother77(clamp0178(pp));
+      paint77(ctx, lerpP77(SP77[from], SP77[to], t), 0);
+    };
+  }
+  var springToSummer71 = makeTransition74("Spring", "Summer");
+  var summerToAutumn71 = makeTransition74("Summer", "Autumn");
+  var autumnToWinter71 = makeTransition74("Autumn", "Winter");
+  var VARIANTS79 = {
+    Spring: { draw: drawBuckwheatSpring, anim: animBuckwheatSpring },
+    Summer: { draw: drawBuckwheatSummer, anim: animBuckwheatSummer },
+    Autumn: { draw: drawBuckwheatAutumn, anim: animBuckwheatAutumn },
+    Winter: { draw: drawBuckwheatWinter, anim: animBuckwheatWinter }
+  };
+  var TRANSITIONS79 = {
+    0: springToSummer71,
+    1: summerToAutumn71,
+    2: autumnToWinter71
+  };
+
+  // src/textures/seasonal/grain/manna.ts
+  var SP78 = {
+    // Spring — soft pale sprout: grains tinged pale green-cream, a faint cool
+    // -white shimmer (LOW glow); lime dewy pad + a pale blossom.
+    Spring: {
+      shadowAmt: 0.5,
+      padGrass: [142, 214, 96],
+      padGrassDark: [86, 150, 60],
+      padSnowAmt: 0,
+      blossomAmt: 1,
+      fallenLeafAmt: 0,
+      grainInner: [255, 255, 250],
+      grainMid: [240, 244, 210],
+      grainRim: [198, 214, 158],
+      contour: [148, 170, 104],
+      dimple: [140, 162, 96],
+      glowColor: [216, 242, 196],
+      glowAmt: 0.32,
+      gloss: 0.55,
+      sparkle: 0.7,
+      frostAmt: 0,
+      snowCapAmt: 0
+    },
+    // Summer — full pale-GOLD glow (PEAK): warm luminous cream grains; saturated
+    // green pad, warm light, strong shadow.
+    Summer: {
+      shadowAmt: 0.7,
+      padGrass: [104, 184, 70],
+      padGrassDark: [62, 126, 46],
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 0,
+      grainInner: [255, 255, 248],
+      grainMid: [252, 238, 196],
+      grainRim: [230, 196, 116],
+      contour: [189, 150, 54],
+      dimple: [180, 140, 60],
+      glowColor: [255, 230, 150],
+      glowAmt: 0.85,
+      gloss: 0.8,
+      sparkle: 0.95,
+      frostAmt: 0,
+      snowCapAmt: 0
+    },
+    // Autumn — dimming cream grains, glow fading to a soft amber (LOWER glow);
+    // olive-tan pad + a couple of fallen leaves.
+    Autumn: {
+      shadowAmt: 0.55,
+      padGrass: [158, 150, 78],
+      padGrassDark: [112, 96, 50],
+      padSnowAmt: 0,
+      blossomAmt: 0,
+      fallenLeafAmt: 1,
+      grainInner: [255, 244, 224],
+      grainMid: [240, 210, 154],
+      grainRim: [192, 142, 64],
+      contour: [140, 92, 32],
+      dimple: [140, 90, 30],
+      glowColor: [240, 172, 92],
+      glowAmt: 0.5,
+      gloss: 0.5,
+      sparkle: 0.7,
+      frostAmt: 0,
+      snowCapAmt: 0
+    },
+    // Winter — a faint cold-BLUE glow (LOW glow, cool colour); grains frost
+    // -dusted with tiny snow caps, but stay clearly visible (no white-out);
+    // snow-covered pad + frost sparkle.
+    Winter: {
+      shadowAmt: 0.4,
+      padGrass: [120, 138, 122],
+      padGrassDark: [86, 104, 96],
+      padSnowAmt: 1,
+      blossomAmt: 0,
+      fallenLeafAmt: 0,
+      grainInner: [255, 255, 255],
+      grainMid: [226, 236, 246],
+      grainRim: [176, 196, 216],
+      contour: [126, 150, 174],
+      dimple: [120, 150, 180],
+      glowColor: [190, 220, 245],
+      glowAmt: 0.34,
+      gloss: 0.4,
+      sparkle: 0.6,
+      frostAmt: 1,
+      snowCapAmt: 1
+    }
+  };
+  function clamp0179(x) {
+    return x < 0 ? 0 : x > 1 ? 1 : x;
+  }
+  function rgb78([r, g, b], a = 1) {
+    return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`;
+  }
+  function lerp83(a, b, t) {
+    return a + (b - a) * t;
+  }
+  function lerpRGB71(a, b, t) {
+    return [lerp83(a[0], b[0], t), lerp83(a[1], b[1], t), lerp83(a[2], b[2], t)];
+  }
+  function lerpP78(a, b, t) {
+    return {
+      shadowAmt: lerp83(a.shadowAmt, b.shadowAmt, t),
+      padGrass: lerpRGB71(a.padGrass, b.padGrass, t),
+      padGrassDark: lerpRGB71(a.padGrassDark, b.padGrassDark, t),
+      padSnowAmt: lerp83(a.padSnowAmt, b.padSnowAmt, t),
+      blossomAmt: lerp83(a.blossomAmt, b.blossomAmt, t),
+      fallenLeafAmt: lerp83(a.fallenLeafAmt, b.fallenLeafAmt, t),
+      grainInner: lerpRGB71(a.grainInner, b.grainInner, t),
+      grainMid: lerpRGB71(a.grainMid, b.grainMid, t),
+      grainRim: lerpRGB71(a.grainRim, b.grainRim, t),
+      contour: lerpRGB71(a.contour, b.contour, t),
+      dimple: lerpRGB71(a.dimple, b.dimple, t),
+      glowColor: lerpRGB71(a.glowColor, b.glowColor, t),
+      glowAmt: lerp83(a.glowAmt, b.glowAmt, t),
+      gloss: lerp83(a.gloss, b.gloss, t),
+      sparkle: lerp83(a.sparkle, b.sparkle, t),
+      frostAmt: lerp83(a.frostAmt, b.frostAmt, t),
+      snowCapAmt: lerp83(a.snowCapAmt, b.snowCapAmt, t)
+    };
+  }
+  function clampP67(p) {
+    return {
+      ...p,
+      shadowAmt: clamp0179(p.shadowAmt),
+      padSnowAmt: clamp0179(p.padSnowAmt),
+      blossomAmt: clamp0179(p.blossomAmt),
+      fallenLeafAmt: clamp0179(p.fallenLeafAmt),
+      glowAmt: clamp0179(p.glowAmt),
+      gloss: clamp0179(p.gloss),
+      sparkle: clamp0179(p.sparkle),
+      frostAmt: clamp0179(p.frostAmt),
+      snowCapAmt: clamp0179(p.snowCapAmt)
+    };
+  }
+  var smoother78 = (x) => x * x * x * (x * (6 * x - 15) + 10);
+  var BUMPS = [
+    { x: -10, y: 6, r: 10 },
+    { x: 10, y: 7, r: 9.5 },
+    { x: -2, y: -9, r: 11 },
+    { x: 7, y: -3, r: 8 },
+    { x: -7, y: -2, r: 7 }
+  ];
+  function contactShadow5(ctx, p) {
+    ctx.save();
+    ctx.fillStyle = `rgba(0,0,0,${0.26 * p.shadowAmt})`;
+    ctx.beginPath();
+    ctx.ellipse(3, 21, 15, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function pad5(ctx, p) {
+    ctx.fillStyle = rgb78(p.padGrassDark);
+    ctx.beginPath();
+    ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb78(p.padGrass);
+    ctx.beginPath();
+    ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgb78(p.padGrassDark);
+    ctx.lineWidth = 1.3;
+    ctx.lineCap = "round";
+    for (let i = 0; i < 11; i++) {
+      const a = i / 11 * Math.PI * 2;
+      const ex = Math.cos(a) * 17.2;
+      const ey = 19 + Math.sin(a) * 4.6;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + Math.cos(a) * 1.8, ey + Math.sin(a) * 1.4 - 1.4);
+      ctx.stroke();
+    }
+    ctx.strokeStyle = rgb78(lerpRGB71(p.padGrass, [255, 255, 255], 0.25));
+    for (let i = 0; i < 8; i++) {
+      const a = i / 8 * Math.PI * 2 + 0.3;
+      const ex = Math.cos(a) * 12;
+      const ey = 18 + Math.sin(a) * 3.2;
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex + 0.6, ey - 2);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    if (p.padSnowAmt > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = p.padSnowAmt;
+      const snow = ctx.createLinearGradient(0, 14, 0, 23);
+      snow.addColorStop(0, "#f3f7fd");
+      snow.addColorStop(1, "#cbd8e6");
+      ctx.fillStyle = snow;
+      ctx.beginPath();
+      ctx.ellipse(0, 19, 17, 4.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      const specks = [
+        [-10, 18],
+        [-3, 20],
+        [6, 18.5],
+        [12, 19.5],
+        [2, 17.5]
+      ];
+      specks.forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+  }
+  function blossom6(ctx, p) {
+    if (p.blossomAmt < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = p.blossomAmt;
+    ctx.translate(-12, 19);
+    ctx.fillStyle = "rgba(255,240,248,0.96)";
+    for (let i = 0; i < 5; i++) {
+      const a = i / 5 * Math.PI * 2;
+      ctx.beginPath();
+      ctx.ellipse(Math.cos(a) * 2.4, Math.sin(a) * 1.4, 1.7, 1.1, a, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(248,206,96,0.95)";
+    ctx.beginPath();
+    ctx.arc(0, 0, 1.1, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function fallenLeaves5(ctx, p) {
+    if (p.fallenLeafAmt < 0.02) return;
+    ctx.save();
+    ctx.globalAlpha = p.fallenLeafAmt;
+    const leaves2 = [
+      [-12, 20, -0.5, "#c8772b"],
+      [11, 20.5, 0.7, "#b8531f"]
+    ];
+    leaves2.forEach(([lx, ly, rot, col]) => {
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(rot);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 3.4, 1.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "rgba(90,48,16,0.7)";
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(-3.2, 0);
+      ctx.lineTo(3.2, 0);
+      ctx.stroke();
+      ctx.restore();
+    });
+    ctx.restore();
+  }
+  function glowHalo(ctx, p, pulse) {
+    if (p.glowAmt < 0.01) return;
+    ctx.save();
+    const alpha = 0.6 * p.glowAmt * pulse;
+    const radius = 23 + 1.5 * p.glowAmt * pulse;
+    const g = ctx.createRadialGradient(0, -2, 4, 0, -2, radius);
+    g.addColorStop(0, rgb78(p.glowColor, alpha));
+    g.addColorStop(1, rgb78(p.glowColor, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, -2, radius, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  function mound(ctx, p) {
+    BUMPS.forEach((b) => {
+      const grad = ctx.createRadialGradient(
+        b.x - b.r * 0.45,
+        b.y - b.r * 0.5,
+        1,
+        b.x,
+        b.y,
+        b.r
+      );
+      grad.addColorStop(0, rgb78(p.grainInner));
+      grad.addColorStop(0.55, rgb78(p.grainMid));
+      grad.addColorStop(1, rgb78(p.grainRim));
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.strokeStyle = rgb78(p.contour);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(BUMPS[2].x, BUMPS[2].y, BUMPS[2].r - 0.3, Math.PI * 1.05, Math.PI * 2.05);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(BUMPS[0].x, BUMPS[0].y, BUMPS[0].r - 0.3, Math.PI * 0.35, Math.PI * 1.4);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(BUMPS[1].x, BUMPS[1].y, BUMPS[1].r - 0.3, Math.PI * -0.45, Math.PI * 0.65);
+    ctx.stroke();
+    ctx.strokeStyle = rgb78(p.dimple, 0.45);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(0, 2, 5, -0.7, 0.7);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(2, -6, 4.5, 2.2, 3.6);
+    ctx.stroke();
+    if (p.gloss > 0.02) {
+      ctx.save();
+      ctx.fillStyle = rgb78([255, 255, 255], 0.5 * p.gloss);
+      ctx.beginPath();
+      ctx.ellipse(-5, -11, 4, 2.4, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+  function sparkles(ctx, p) {
+    if (p.sparkle < 0.02) return;
+    ctx.save();
+    ctx.fillStyle = rgb78(lerpRGB71(p.grainInner, [255, 255, 255], 0.4), 0.95 * p.sparkle);
+    const pts = [
+      [-9, -10, 1.7],
+      [4, -1, 1.3]
+    ];
+    pts.forEach(([sx, sy, sr]) => {
+      ctx.beginPath();
+      ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+  }
+  function frostAndSnow4(ctx, p) {
+    if (p.snowCapAmt > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = p.snowCapAmt;
+      const caps = [
+        [-2, -16, 6.5],
+        // top grain
+        [-10, -1, 5],
+        // upper-left grain
+        [7, -9, 4.5]
+        // upper-right grain
+      ];
+      const capGrad = ctx.createLinearGradient(0, -20, 0, -4);
+      capGrad.addColorStop(0, "#ffffff");
+      capGrad.addColorStop(1, "#dbe6f2");
+      ctx.fillStyle = capGrad;
+      caps.forEach(([cx, cy, cw]) => {
+        ctx.beginPath();
+        ctx.ellipse(cx, cy, cw, cw * 0.42, 0, Math.PI, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+    if (p.frostAmt > 0.01) {
+      ctx.save();
+      ctx.globalAlpha = 0.7 * p.frostAmt;
+      ctx.fillStyle = "#eaf3ff";
+      const specks = [
+        [-12, -2],
+        [-6, -12],
+        [-2, -5],
+        [3, -13],
+        [8, -4],
+        [-9, 3],
+        [1, 1],
+        [5, -8]
+      ];
+      specks.forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+  }
+  function paint78(ctx, pRaw, bob, micro) {
+    const p = clampP67(pRaw);
+    const m = micro ?? {};
+    glowHalo(ctx, p, m.glowPulse ?? 1);
+    contactShadow5(ctx, p);
+    pad5(ctx, p);
+    blossom6(ctx, p);
+    fallenLeaves5(ctx, p);
+    ctx.save();
+    ctx.translate(0, bob);
+    mound(ctx, p);
+    sparkles(ctx, p);
+    if (m.twinkle !== void 0 && m.twinkle > 0.01) {
+      ctx.save();
+      ctx.fillStyle = rgb78(lerpRGB71(p.grainInner, [255, 255, 255], 0.5), 0.5 * m.twinkle);
+      const pts = [
+        [-2, -14, 1.1],
+        [8, -8, 1]
+      ];
+      pts.forEach(([sx, sy, sr]) => {
+        ctx.beginPath();
+        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+    frostAndSnow4(ctx, p);
+    ctx.restore();
+    if (m.extraFlakes) {
+      ctx.save();
+      ctx.fillStyle = "#ffffff";
+      m.extraFlakes.forEach(([fx, fy, r]) => {
+        ctx.globalAlpha = 0.85;
+        ctx.beginPath();
+        ctx.arc(fx, fy, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+  function bobAt78(t) {
+    const A = 1.3;
+    const w = 1.4;
+    return -A * (1 - Math.cos(w * t)) * 0.5;
+  }
+  function drawMannaSpring(ctx) {
+    paint78(ctx, SP78.Spring, 0);
+  }
+  function drawMannaSummer(ctx) {
+    paint78(ctx, SP78.Summer, 0);
+  }
+  function drawMannaAutumn(ctx) {
+    paint78(ctx, SP78.Autumn, 0);
+  }
+  function drawMannaWinter(ctx) {
+    paint78(ctx, SP78.Winter, 0);
+  }
+  function animMannaSpring(ctx, t) {
+    paint78(ctx, SP78.Spring, bobAt78(t), {
+      glowPulse: 1 + 0.12 * Math.sin(t * 1.4),
+      twinkle: 0.4 + 0.4 * (0.5 + 0.5 * Math.sin(t * 1.8))
+    });
+  }
+  function animMannaSummer(ctx, t) {
+    paint78(ctx, SP78.Summer, bobAt78(t), {
+      glowPulse: 1 + 0.16 * Math.sin(t * 1.6),
+      twinkle: 0.5 + 0.5 * (0.5 + 0.5 * Math.sin(t * 2.2))
+    });
+  }
+  function animMannaAutumn(ctx, t) {
+    paint78(ctx, SP78.Autumn, bobAt78(t), {
+      glowPulse: 1 + 0.12 * Math.sin(t * 1.3),
+      twinkle: 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.7))
+    });
+  }
+  function animMannaWinter(ctx, t) {
+    const seeds = [
+      [-6, 1.1, 0],
+      [7, 0.9, 0.5]
+    ];
+    const span = 36;
+    const flakes = seeds.map(([fx, r, phase]) => {
+      const prog = ((t / 3.6 + phase) % 1 + 1) % 1;
+      const fy = -20 + prog * span;
+      const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
+      return [driftX, fy, r];
+    });
+    paint78(ctx, SP78.Winter, bobAt78(t), {
+      glowPulse: 1 + 0.12 * Math.sin(t * 1.5),
+      twinkle: 0.3 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2)),
+      extraFlakes: flakes
+    });
+  }
+  function makeTransition75(from, to) {
+    return (ctx, pp) => {
+      const t = smoother78(clamp0179(pp));
+      paint78(ctx, lerpP78(SP78[from], SP78[to], t), 0);
+    };
+  }
+  var springToSummer72 = makeTransition75("Spring", "Summer");
+  var summerToAutumn72 = makeTransition75("Summer", "Autumn");
+  var autumnToWinter72 = makeTransition75("Autumn", "Winter");
+  var VARIANTS80 = {
+    Spring: { draw: drawMannaSpring, anim: animMannaSpring },
+    Summer: { draw: drawMannaSummer, anim: animMannaSummer },
+    Autumn: { draw: drawMannaAutumn, anim: animMannaAutumn },
+    Winter: { draw: drawMannaWinter, anim: animMannaWinter }
+  };
+  var TRANSITIONS80 = {
+    0: springToSummer72,
+    1: summerToAutumn72,
+    2: autumnToWinter72
+  };
+
   // src/textures/seasonal/showcaseTiles.ts
   var SHOWCASE_TILES = {
     tile_tree_oak: VARIANTS,
@@ -35580,7 +45483,25 @@
     tile_fish_kelp: VARIANTS60,
     tile_mine_gem: VARIANTS61,
     tile_mine_gold: VARIANTS62,
-    tile_special_giant_pearl: VARIANTS63
+    tile_special_giant_pearl: VARIANTS63,
+    // ── Roster-completing batch ──
+    tile_mine_stone: VARIANTS64,
+    tile_mine_iron_ore: VARIANTS65,
+    tile_mine_copper_ore: VARIANTS66,
+    tile_mine_silver: VARIANTS67,
+    tile_mine_coal: VARIANTS68,
+    tile_coin_golden: VARIANTS69,
+    tile_fish_sardine: VARIANTS70,
+    tile_fish_cocoa: VARIANTS71,
+    tile_fish_ink: VARIANTS72,
+    tile_fish_jade: VARIANTS73,
+    tile_bird_melon: VARIANTS74,
+    tile_bird_wild_goose: VARIANTS75,
+    tile_bird_pig_in_disguise: VARIANTS76,
+    tile_grain_wheat: VARIANTS77,
+    tile_grain_rice: VARIANTS78,
+    tile_grain_buckwheat: VARIANTS79,
+    tile_grain_manna: VARIANTS80
   };
   var SHOWCASE_TRANSITIONS = {
     tile_tree_oak: TRANSITIONS,
@@ -35645,7 +45566,25 @@
     tile_fish_kelp: TRANSITIONS60,
     tile_mine_gem: TRANSITIONS61,
     tile_mine_gold: TRANSITIONS62,
-    tile_special_giant_pearl: TRANSITIONS63
+    tile_special_giant_pearl: TRANSITIONS63,
+    // ── Roster-completing batch ──
+    tile_mine_stone: TRANSITIONS64,
+    tile_mine_iron_ore: TRANSITIONS65,
+    tile_mine_copper_ore: TRANSITIONS66,
+    tile_mine_silver: TRANSITIONS67,
+    tile_mine_coal: TRANSITIONS68,
+    tile_coin_golden: TRANSITIONS69,
+    tile_fish_sardine: TRANSITIONS70,
+    tile_fish_cocoa: TRANSITIONS71,
+    tile_fish_ink: TRANSITIONS72,
+    tile_fish_jade: TRANSITIONS73,
+    tile_bird_melon: TRANSITIONS74,
+    tile_bird_wild_goose: TRANSITIONS75,
+    tile_bird_pig_in_disguise: TRANSITIONS76,
+    tile_grain_wheat: TRANSITIONS77,
+    tile_grain_rice: TRANSITIONS78,
+    tile_grain_buckwheat: TRANSITIONS79,
+    tile_grain_manna: TRANSITIONS80
   };
 
   // docs/seasonal-vector-tiles/_entry.ts

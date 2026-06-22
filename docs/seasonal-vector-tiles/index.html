@@ -79,7 +79,7 @@
     <div class="eyebrow">puzzleDrag2 · art trial</div>
     <h1>Seasonal vector tiles — animation preview</h1>
     <p class="lead">
-      <b>Sixty-three</b> board tiles drawn entirely with canvas vector paths (no pixel art), each with a
+      <b>Eighty</b> board tiles drawn entirely with canvas vector paths (no pixel art), each with a
       full seasonal lifecycle: four per-season redraws, a subtle seamless <b>idle loop</b> per
       season, and forward season→season <b>transition morphs</b> played once when a run crosses a
       season boundary (Spring → Summer → Autumn → Winter). Everything below runs the
@@ -135,23 +135,25 @@
   <div class="montage"><canvas id="montage"></canvas></div>
 
   <h2>What you're looking at</h2>
-  <p class="legend" style="margin-bottom:10px;">The full board roster — 63 tiles across every category:</p>
+  <p class="legend" style="margin-bottom:10px;">The full board roster — 80 tiles across every category:</p>
   <ul class="facts">
     <li><b>Trees</b> (6) — oak, birch, cypress, fir, palm, willow. The one category whose foliage shape may
       change seasonally (evergreens hold + gain snow; deciduous thin/bare), but the trunk keeps identity.</li>
-    <li><b>Fruit</b> (9) — apple, pear, lemon, blackberry, coconut, golden apple, jackfruit, rambutan, starfruit.
+    <li><b>Fruit</b> (10) — apple, pear, lemon, blackberry, coconut, golden apple, jackfruit, rambutan, starfruit, melon.
       One hero fruit, same outline every season; ripeness shows in surface colour, not shape.</li>
-    <li><b>Grain</b> (1) — corn (the iconic cob: husk green → peeling/yellow → drying → snow-capped; always a cob).</li>
+    <li><b>Grain</b> (5) — corn, wheat, rice, buckwheat, manna. The harvested item only (never a full stalk): the
+      cob / ears / nodding heads / flowering sprig / luminous grains hold one silhouette, green → ripe → drying → frosted.</li>
     <li><b>Veg</b> (9) — pepper, mushroom, beet, broccoli, carrot, cucumber, eggplant, squash, turnip.</li>
     <li><b>Grass</b> (4) — grass, meadow, spiky, clover (raised tufts/mounds that sway and snow over).</li>
     <li><b>Flower</b> (3) — pansy, heather, water&nbsp;lily (its pad reads as water, frozen over in winter).</li>
-    <li><b>Birds</b> (9) — chicken (with a spring chick), rooster, hen, turkey, goose, pheasant, parrot,
-      phoenix (sits in a winter melt-ring), dodo.</li>
-    <li><b>Livestock &amp; mounts</b> (19) — sheep, pig, hog, boar, warthog, alpaca, goat, ram; cow, longhorn,
+    <li><b>Birds</b> (11) — chicken (with a spring chick), rooster, hen, turkey, goose, wild goose, pheasant, parrot,
+      phoenix (sits in a winter melt-ring), dodo, pig-in-disguise (a pig in a feathered bird costume + a winter scarf).</li>
+    <li><b>Livestock &amp; mounts</b> (15) — sheep, pig, hog, boar, warthog, alpaca, goat, ram; cow, longhorn,
       triceratops; horse, donkey, moose (velvet→hard antlers), mammoth. Coat thickens, snow on the back +
       breath fog in winter.</li>
-    <li><b>Aquatic &amp; mineral</b> (7) — clam, oyster, mackerel, kelp, giant pearl (water pads that freeze to
-      ice); gem, gold (rock that gains a snow cap).</li>
+    <li><b>Aquatic, mineral &amp; coin</b> (17) — clam, oyster, mackerel, sardine, kelp, cocoa, octopus, jade,
+      giant pearl (water pads that freeze to ice); stone, iron ore, copper ore, silver, coal, gem, gold and a
+      golden coin (rock &amp; treasure that gain a snow cap + frost).</li>
     <li><b>Identity rule.</b> A tile keeps the SAME silhouette in all four seasons — only its surface
       colour, frost/snow, and the pad's seasonal dressing (spring blossom, autumn fallen leaves,
       winter snow) change. The subject is always clearly the same thing. (Trees are the lone exception.)</li>
@@ -170,7 +172,7 @@
   </footer>
 </div>
 
-<script src="./tiles.bundle.js?v=4"></script>
+<script src="./tiles.bundle.js?v=5"></script>
 <script>
 (function () {
   const DEMO = window.SEASONAL_DEMO;

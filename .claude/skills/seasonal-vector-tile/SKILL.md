@@ -164,3 +164,12 @@ build / test / e2e.
 - **visual-smoke noise.** Expect it red on every PR that touches tile rendering;
   it's advisory. Don't regenerate goldens unless asked (that's a human-run
   `visual-rebaseline` job).
+- **Procedural creatures need a silhouette check at the montage — type-clean ≠
+  readable.** Two real failures from the roster-completing batch, both caught only
+  by looking: an octopus whose tentacles merged into one downward cone (read as an
+  ice-cream cone — fix: splay 5–6 *distinct* tapered legs left and right across the
+  pad, not one wedge), and a wild goose drawn as a flat disc body on a thin neck
+  (read as a magnifying glass — fix: plump the body to an egg, thicken the S-neck,
+  enlarge the head). For any animal, confirm the body MASS and the signature
+  feature (a goose's neck, an octopus's separate legs, horns/antlers/limbs) read as
+  distinct forms at ~64px, not a single blob. Re-montage after each fix.
