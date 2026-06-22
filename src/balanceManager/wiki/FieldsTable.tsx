@@ -126,31 +126,33 @@ function renderRows(
       }}
     >
       <td
-        className="py-1.5 px-2 font-mono font-bold whitespace-nowrap align-top"
+        data-label="Field"
+        className="py-1.5 px-2 font-mono font-bold whitespace-nowrap align-top wiki-field-name"
         style={{ paddingLeft: `${0.5 + depth * 1}rem` }}
       >
         {depth > 0 ? "↳ " : ""}{f.field}
       </td>
       <td
+        data-label="Type"
         className="py-1.5 px-2 font-mono align-top wiki-field-type"
         style={{ color: COLORS.inkSubtle }}
       >
         {f.type}
       </td>
-      <td className="py-1.5 px-2 whitespace-nowrap align-top">
+      <td data-label="Req" className="py-1.5 px-2 whitespace-nowrap align-top">
         {f.optional ? (
           <span style={{ color: COLORS.inkSubtle }}>optional</span>
         ) : (
           <span style={{ color: COLORS.ember }} className="font-bold">required</span>
         )}
       </td>
-      <td className="py-1.5 px-2 align-top">{formatDefault(f.field, f.default)}</td>
+      <td data-label="Default" className="py-1.5 px-2 align-top">{formatDefault(f.field, f.default)}</td>
       {showValue && (
-        <td className="py-1.5 px-2 align-top">
+        <td data-label="Value" className="py-1.5 px-2 align-top">
           {f.children ? <span style={{ color: COLORS.inkSubtle }}>—</span> : formatValue(f.field, liveParent)}
         </td>
       )}
-      <td className="py-1.5 px-2 align-top" style={{ color: COLORS.inkSubtle }}>
+      <td data-label="Description" className="py-1.5 px-2 align-top" style={{ color: COLORS.inkSubtle }}>
         {f.description ?? "—"}
       </td>
     </tr>,
@@ -264,10 +266,10 @@ export function KeyValueTable({
                 borderBottom: `1px solid ${COLORS.border}`,
               }}
             >
-              <td className="py-1.5 px-2 font-mono font-bold whitespace-nowrap align-top">
+              <td data-label="Field" className="py-1.5 px-2 font-mono font-bold whitespace-nowrap align-top wiki-field-name">
                 {k}
               </td>
-              <td className="py-1.5 px-2 align-top">
+              <td data-label="Value" className="py-1.5 px-2 align-top">
                 {formatValue(k, entity[k])}
               </td>
             </tr>

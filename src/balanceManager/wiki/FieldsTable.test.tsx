@@ -54,6 +54,29 @@ describe("FieldsTable — showValue=false", () => {
   });
 });
 
+describe("FieldsTable — mobile stacked-card contract", () => {
+  // The mobile CSS turns each row into a card and injects column labels via
+  // each cell's data-label. These attributes are the load-bearing contract.
+  it("the field-name cell carries wiki-field-name and no data-label clash", () => {
+    const { container } = render(<FieldsTable fields={FIELDS} showValue={false} />);
+    const nameCells = container.querySelectorAll("td.wiki-field-name");
+    expect(nameCells.length).toBe(FIELDS.length);
+    nameCells.forEach((c) => expect(c.getAttribute("data-label")).toBe("Field"));
+  });
+
+  it("every body cell exposes a data-label for the ::before column label", () => {
+    const { container } = render(<FieldsTable fields={FIELDS} showValue={false} />);
+    const bodyCells = container.querySelectorAll("tbody td");
+    expect(bodyCells.length).toBeGreaterThan(0);
+    bodyCells.forEach((c) => expect(c.getAttribute("data-label")).toBeTruthy());
+  });
+
+  it("includes a Value-labelled cell when showValue is on", () => {
+    const { container } = render(<FieldsTable fields={FIELDS} entity={{ a: "x", b: 1 }} />);
+    expect(container.querySelector('td[data-label="Value"]')).not.toBeNull();
+  });
+});
+
 describe("FieldsTable — showValue=true (default) with entity", () => {
   const entity = { a: "hello", b: 42 };
 
