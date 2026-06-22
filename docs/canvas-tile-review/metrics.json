@@ -1,0 +1,1793 @@
+{
+  "groups": {
+    "arcane": [
+      "arcane_candle",
+      "arcane_crystal_ball",
+      "arcane_magic_dust",
+      "arcane_pentacle",
+      "arcane_potion_blue",
+      "arcane_potion_red",
+      "arcane_runestone"
+    ],
+    "buildings": [
+      "bld_barn",
+      "bld_castle",
+      "bld_church",
+      "bld_cottage",
+      "bld_market_stall",
+      "bld_tent",
+      "bld_tower",
+      "bld_watermill",
+      "bld_windmill"
+    ],
+    "celestial": [
+      "astral_constellation",
+      "astral_eclipse",
+      "astral_full_moon",
+      "astral_galaxy",
+      "astral_north_star",
+      "astral_ringed_planet",
+      "astral_shooting_star",
+      "astral_sun"
+    ],
+    "cozyDecor": [
+      "cozy_birdhouse",
+      "cozy_flower_pot",
+      "cozy_fountain",
+      "cozy_lantern",
+      "cozy_mailbox",
+      "cozy_street_lamp",
+      "cozy_wind_chime"
+    ],
+    "critters": [
+      "bug_ant",
+      "bug_bee",
+      "bug_butterfly",
+      "bug_caterpillar",
+      "bug_dragonfly",
+      "bug_firefly",
+      "bug_ladybug",
+      "bug_snail"
+    ],
+    "crops": [
+      "crop_corn",
+      "crop_peas",
+      "crop_pumpkin",
+      "crop_sunflower",
+      "crop_watermelon",
+      "crop_wheat"
+    ],
+    "drinks": [
+      "drink_beer",
+      "drink_coffee",
+      "drink_juice",
+      "drink_milk",
+      "drink_smoothie",
+      "drink_tea",
+      "drink_water",
+      "drink_wine"
+    ],
+    "festive": [
+      "festive_bell",
+      "festive_candy_cane",
+      "festive_gift",
+      "festive_gingerbread",
+      "festive_holly",
+      "festive_ornament",
+      "festive_snowman",
+      "festive_wreath"
+    ],
+    "furniture": [
+      "furn_bookshelf",
+      "furn_clock",
+      "furn_fireplace",
+      "furn_lamp",
+      "furn_mirror",
+      "furn_table"
+    ],
+    "gems": [
+      "gem_amethyst",
+      "gem_emerald",
+      "gem_opal",
+      "gem_ruby",
+      "gem_sapphire"
+    ],
+    "dishes": [
+      "dish_cake",
+      "dish_honey_pot",
+      "dish_soup",
+      "dish_stew"
+    ],
+    "instruments": [
+      "instr_bell",
+      "instr_drum",
+      "instr_fiddle",
+      "instr_flute",
+      "instr_horn",
+      "instr_lute",
+      "instr_pan_flute",
+      "instr_tambourine"
+    ],
+    "nature": [
+      "nature_cattail",
+      "nature_clover",
+      "nature_dewdrop",
+      "nature_feather",
+      "nature_leaf",
+      "nature_mushroom_cluster",
+      "nature_seashell",
+      "nature_spiderweb"
+    ],
+    "ores": [
+      "ore_coal",
+      "ore_copper",
+      "ore_crystal_vein",
+      "ore_gold_nugget",
+      "ore_iron",
+      "ore_obsidian",
+      "ore_silver",
+      "ore_sulfur"
+    ],
+    "pets": [
+      "pet_cat",
+      "pet_chick",
+      "pet_dog",
+      "pet_duckling",
+      "pet_frog",
+      "pet_goat_kid",
+      "pet_hedgehog",
+      "pet_lamb",
+      "pet_piglet",
+      "pet_rabbit"
+    ],
+    "reef": [
+      "reef_crab",
+      "reef_jellyfish",
+      "reef_lighthouse",
+      "reef_octopus",
+      "reef_seahorse",
+      "reef_starfish"
+    ],
+    "spells": [
+      "spell_arcane_missile",
+      "spell_fireball",
+      "spell_heal",
+      "spell_ice_shard",
+      "spell_lightning",
+      "spell_poison",
+      "spell_shield_bubble",
+      "spell_wind"
+    ],
+    "treasure": [
+      "treasure_chest_open",
+      "treasure_coin_stack",
+      "treasure_crown",
+      "treasure_gem_pile",
+      "treasure_goblet",
+      "treasure_gold_bars",
+      "treasure_gold_key",
+      "treasure_map",
+      "treasure_ring"
+    ],
+    "weapons": [
+      "weapon_axe",
+      "weapon_bow",
+      "weapon_crossbow",
+      "weapon_dagger",
+      "weapon_helmet",
+      "weapon_mace",
+      "weapon_shield",
+      "weapon_spear",
+      "weapon_staff",
+      "weapon_sword"
+    ],
+    "weather": [
+      "weather_comet",
+      "weather_crescent_moon",
+      "weather_fog",
+      "weather_lightning",
+      "weather_rain_cloud",
+      "weather_rainbow",
+      "weather_snow_cloud",
+      "weather_sun_cloud"
+    ],
+    "workshopTools": [
+      "wtool_drill",
+      "wtool_hammer",
+      "wtool_nail",
+      "wtool_paintbrush",
+      "wtool_saw",
+      "wtool_scissors",
+      "wtool_screwdriver",
+      "wtool_wrench"
+    ]
+  },
+  "metrics": {
+    "arcane_candle": {
+      "fill": 0.498,
+      "off_x": 0.0,
+      "off_y": -2.6,
+      "subj_w": 35.0,
+      "subj_h": 58.2,
+      "blank": false,
+      "motion": 11.55,
+      "frames": 16
+    },
+    "arcane_crystal_ball": {
+      "fill": 0.453,
+      "off_x": 0.0,
+      "off_y": 2.6,
+      "subj_w": 38.8,
+      "subj_h": 47.9,
+      "blank": false,
+      "motion": 5.13,
+      "frames": 16
+    },
+    "arcane_magic_dust": {
+      "fill": 0.473,
+      "off_x": 7.1,
+      "off_y": 4.6,
+      "subj_w": 44.1,
+      "subj_h": 43.9,
+      "blank": false,
+      "motion": 4.55,
+      "frames": 16
+    },
+    "arcane_pentacle": {
+      "fill": 0.442,
+      "off_x": 0.1,
+      "off_y": 0.2,
+      "subj_w": 42.4,
+      "subj_h": 42.8,
+      "blank": false,
+      "motion": 14.66,
+      "frames": 16
+    },
+    "arcane_potion_blue": {
+      "fill": 0.54,
+      "off_x": 0.0,
+      "off_y": 7.4,
+      "subj_w": 45.0,
+      "subj_h": 49.1,
+      "blank": false,
+      "motion": 1.75,
+      "frames": 16
+    },
+    "arcane_potion_red": {
+      "fill": 0.575,
+      "off_x": 0.0,
+      "off_y": 4.3,
+      "subj_w": 45.0,
+      "subj_h": 52.4,
+      "blank": false,
+      "motion": 2.84,
+      "frames": 16
+    },
+    "arcane_runestone": {
+      "fill": 0.348,
+      "off_x": 0.0,
+      "off_y": 2.8,
+      "subj_w": 30.0,
+      "subj_h": 47.5,
+      "blank": false,
+      "motion": 2.48,
+      "frames": 16
+    },
+    "astral_constellation": {
+      "fill": 0.517,
+      "off_x": 0.0,
+      "off_y": 0.0,
+      "subj_w": 46.0,
+      "subj_h": 46.0,
+      "blank": false,
+      "motion": 14.91,
+      "frames": 16
+    },
+    "astral_eclipse": {
+      "fill": 0.539,
+      "off_x": 0.7,
+      "off_y": -0.3,
+      "subj_w": 47.4,
+      "subj_h": 46.6,
+      "blank": false,
+      "motion": 23.6,
+      "frames": 16
+    },
+    "astral_full_moon": {
+      "fill": 0.505,
+      "off_x": 0.0,
+      "off_y": 0.0,
+      "subj_w": 45.5,
+      "subj_h": 45.5,
+      "blank": false,
+      "motion": 15.26,
+      "frames": 16
+    },
+    "astral_galaxy": {
+      "fill": 0.505,
+      "off_x": 0.0,
+      "off_y": 0.0,
+      "subj_w": 45.5,
+      "subj_h": 45.5,
+      "blank": false,
+      "motion": 8.84,
+      "frames": 16
+    },
+    "astral_north_star": {
+      "fill": 0.483,
+      "off_x": 0.0,
+      "off_y": 0.0,
+      "subj_w": 44.5,
+      "subj_h": 44.5,
+      "blank": false,
+      "motion": 8.83,
+      "frames": 16
+    },
+    "astral_ringed_planet": {
+      "fill": 0.308,
+      "off_x": 0.8,
+      "off_y": 0.0,
+      "subj_w": 49.5,
+      "subj_h": 25.5,
+      "blank": false,
+      "motion": 10.5,
+      "frames": 16
+    },
+    "astral_shooting_star": {
+      "fill": 0.0,
+      "off_x": 0.0,
+      "off_y": 0.0,
+      "blank": true,
+      "motion": 95.08,
+      "frames": 16
+    },
+    "astral_sun": {
+      "fill": 0.544,
+      "off_x": 0.7,
+      "off_y": -0.8,
+      "subj_w": 47.1,
+      "subj_h": 47.2,
+      "blank": false,
+      "motion": 26.69,
+      "frames": 16
+    },
+    "bld_barn": {
+      "fill": 0.572,
+      "off_x": 0.0,
+      "off_y": -0.6,
+      "subj_w": 44.0,
+      "subj_h": 53.2,
+      "blank": false,
+      "motion": 0.17,
+      "frames": 16
+    },
+    "bld_castle": {
+      "fill": 0.575,
+      "off_x": 0.0,
+      "off_y": -0.8,
+      "subj_w": 44.0,
+      "subj_h": 53.5,
+      "blank": false,
+      "motion": 1.64,
+      "frames": 16
+    },
+    "bld_church": {
+      "fill": 0.579,
+      "off_x": 0.4,
+      "off_y": -3.0,
+      "subj_w": 40.9,
+      "subj_h": 58.0,
+      "blank": false,
+      "motion": 1.58,
+      "frames": 16
+    },
+    "bld_cottage": {
+      "fill": 0.623,
+      "off_x": 0.0,
+      "off_y": -3.0,
+      "subj_w": 44.0,
+      "subj_h": 58.0,
+      "blank": false,
+      "motion": 5.19,
+      "frames": 16
+    },
+    "bld_market_stall": {
+      "fill": 0.428,
+      "off_x": 0.0,
+      "off_y": 6.1,
+      "subj_w": 44.0,
+      "subj_h": 39.9,
+      "blank": false,
+      "motion": 3.1,
+      "frames": 16
+    },
+    "bld_tent": {
+      "fill": 0.623,
+      "off_x": 0.0,
+      "off_y": -3.0,
+      "subj_w": 44.0,
+      "subj_h": 58.0,
+      "blank": false,
+      "motion": 7.17,
+      "frames": 16
+    },
+    "bld_tower": {
+      "fill": 0.393,
+      "off_x": 0.0,
+      "off_y": -2.8,
+      "subj_w": 28.0,
+      "subj_h": 57.5,
+      "blank": false,
+      "motion": 0.1,
+      "frames": 16
+    },
+    "bld_watermill": {
+      "fill": 0.551,
+      "off_x": 2.0,
+      "off_y": 2.5,
+      "subj_w": 48.0,
+      "subj_h": 47.0,
+      "blank": false,
+      "motion": 7.24,
+      "frames": 16
+    },
+    "bld_windmill": {
+      "fill": 0.523,
+      "off_x": 0.0,
+      "off_y": -0.9,
+      "subj_w": 39.8,
+      "subj_h": 53.9,
+      "blank": false,
+      "motion": 51.33,
+      "frames": 16
+    },
+    "bug_ant": {
+      "fill": 0.397,
+      "off_x": 0.8,
+      "off_y": 5.7,
+      "subj_w": 40.0,
+      "subj_h": 40.6,
+      "blank": false,
+      "motion": 12.98,
+      "frames": 16
+    },
+    "bug_bee": {
+      "fill": 0.41,
+      "off_x": -2.1,
+      "off_y": 3.3,
+      "subj_w": 37.0,
+      "subj_h": 45.4,
+      "blank": false,
+      "motion": 49.38,
+      "frames": 16
+    },
+    "bug_butterfly": {
+      "fill": 0.385,
+      "off_x": 0.0,
+      "off_y": 1.4,
+      "subj_w": 32.0,
+      "subj_h": 49.2,
+      "blank": false,
+      "motion": 73.69,
+      "frames": 16
+    },
+    "bug_caterpillar": {
+      "fill": 0.43,
+      "off_x": 1.4,
+      "off_y": 5.4,
+      "subj_w": 42.9,
+      "subj_h": 41.1,
+      "blank": false,
+      "motion": 10.8,
+      "frames": 16
+    },
+    "bug_dragonfly": {
+      "fill": 0.379,
+      "off_x": -0.1,
+      "off_y": 9.2,
+      "subj_w": 46.4,
+      "subj_h": 33.5,
+      "blank": false,
+      "motion": 17.89,
+      "frames": 16
+    },
+    "bug_firefly": {
+      "fill": 0.36,
+      "off_x": 1.9,
+      "off_y": 6.0,
+      "subj_w": 45.0,
+      "subj_h": 32.8,
+      "blank": false,
+      "motion": 34.23,
+      "frames": 16
+    },
+    "bug_ladybug": {
+      "fill": 0.294,
+      "off_x": 0.0,
+      "off_y": 4.5,
+      "subj_w": 28.0,
+      "subj_h": 43.0,
+      "blank": false,
+      "motion": 9.76,
+      "frames": 16
+    },
+    "bug_snail": {
+      "fill": 0.601,
+      "off_x": -0.3,
+      "off_y": 2.4,
+      "subj_w": 52.1,
+      "subj_h": 47.2,
+      "blank": false,
+      "motion": 15.84,
+      "frames": 16
+    },
+    "cozy_birdhouse": {
+      "fill": 0.34,
+      "off_x": 0.0,
+      "off_y": 2.6,
+      "subj_w": 29.8,
+      "subj_h": 46.9,
+      "blank": false,
+      "motion": 4.12,
+      "frames": 16
+    },
+    "cozy_flower_pot": {
+      "fill": 0.334,
+      "off_x": 0.0,
+      "off_y": 1.6,
+      "subj_w": 28.0,
+      "subj_h": 48.9,
+      "blank": false,
+      "motion": 5.16,
+      "frames": 16
+    },
+    "cozy_fountain": {
+      "fill": 0.529,
+      "off_x": 0.0,
+      "off_y": 2.3,
+      "subj_w": 45.8,
+      "subj_h": 47.4,
+      "blank": false,
+      "motion": 15.91,
+      "frames": 16
+    },
+    "cozy_lantern": {
+      "fill": 0.408,
+      "off_x": 0.0,
+      "off_y": -0.5,
+      "subj_w": 32.8,
+      "subj_h": 51.0,
+      "blank": false,
+      "motion": 14.26,
+      "frames": 16
+    },
+    "cozy_mailbox": {
+      "fill": 0.453,
+      "off_x": 1.9,
+      "off_y": 1.0,
+      "subj_w": 37.1,
+      "subj_h": 50.0,
+      "blank": false,
+      "motion": 1.22,
+      "frames": 16
+    },
+    "cozy_street_lamp": {
+      "fill": 0.414,
+      "off_x": 0.0,
+      "off_y": -3.0,
+      "subj_w": 29.2,
+      "subj_h": 58.0,
+      "blank": false,
+      "motion": 9.67,
+      "frames": 16
+    },
+    "cozy_wind_chime": {
+      "fill": 0.319,
+      "off_x": 0.0,
+      "off_y": -0.6,
+      "subj_w": 25.5,
+      "subj_h": 51.2,
+      "blank": false,
+      "motion": 17.32,
+      "frames": 16
+    },
+    "crop_corn": {
+      "fill": 0.362,
+      "off_x": 0.0,
+      "off_y": -0.5,
+      "subj_w": 28.0,
+      "subj_h": 53.0,
+      "blank": false,
+      "motion": 10.33,
+      "frames": 16
+    },
+    "crop_peas": {
+      "fill": 0.435,
+      "off_x": -2.5,
+      "off_y": 8.4,
+      "subj_w": 50.8,
+      "subj_h": 35.1,
+      "blank": false,
+      "motion": 9.79,
+      "frames": 16
+    },
+    "crop_pumpkin": {
+      "fill": 0.583,
+      "off_x": 0.0,
+      "off_y": 1.1,
+      "subj_w": 46.0,
+      "subj_h": 51.9,
+      "blank": false,
+      "motion": 6.77,
+      "frames": 16
+    },
+    "crop_sunflower": {
+      "fill": 0.444,
+      "off_x": 0.0,
+      "off_y": 0.5,
+      "subj_w": 35.0,
+      "subj_h": 52.0,
+      "blank": false,
+      "motion": 14.53,
+      "frames": 16
+    },
+    "crop_watermelon": {
+      "fill": 0.462,
+      "off_x": 0.0,
+      "off_y": 6.5,
+      "subj_w": 44.0,
+      "subj_h": 43.0,
+      "blank": false,
+      "motion": 3.47,
+      "frames": 16
+    },
+    "crop_wheat": {
+      "fill": 0.311,
+      "off_x": 0.0,
+      "off_y": 4.2,
+      "subj_w": 28.0,
+      "subj_h": 45.5,
+      "blank": false,
+      "motion": 9.39,
+      "frames": 16
+    },
+    "dish_cake": {
+      "fill": 0.512,
+      "off_x": 0.0,
+      "off_y": 1.1,
+      "subj_w": 41.2,
+      "subj_h": 50.9,
+      "blank": false,
+      "motion": 2.87,
+      "frames": 16
+    },
+    "dish_honey_pot": {
+      "fill": 0.466,
+      "off_x": 0.9,
+      "off_y": 0.4,
+      "subj_w": 37.2,
+      "subj_h": 51.2,
+      "blank": false,
+      "motion": 1.24,
+      "frames": 16
+    },
+    "dish_soup": {
+      "fill": 0.424,
+      "off_x": 0.0,
+      "off_y": 6.8,
+      "subj_w": 44.0,
+      "subj_h": 39.5,
+      "blank": false,
+      "motion": 20.32,
+      "frames": 16
+    },
+    "dish_stew": {
+      "fill": 0.541,
+      "off_x": 0.0,
+      "off_y": 6.0,
+      "subj_w": 51.5,
+      "subj_h": 43.0,
+      "blank": false,
+      "motion": 8.79,
+      "frames": 16
+    },
+    "drink_beer": {
+      "fill": 0.376,
+      "off_x": 3.4,
+      "off_y": 5.1,
+      "subj_w": 36.8,
+      "subj_h": 41.9,
+      "blank": false,
+      "motion": 3.38,
+      "frames": 16
+    },
+    "drink_coffee": {
+      "fill": 0.52,
+      "off_x": 0.9,
+      "off_y": 0.8,
+      "subj_w": 41.4,
+      "subj_h": 51.5,
+      "blank": false,
+      "motion": 9.23,
+      "frames": 16
+    },
+    "drink_juice": {
+      "fill": 0.318,
+      "off_x": -2.3,
+      "off_y": 3.2,
+      "subj_w": 28.6,
+      "subj_h": 45.5,
+      "blank": false,
+      "motion": 1.72,
+      "frames": 16
+    },
+    "drink_milk": {
+      "fill": 0.317,
+      "off_x": 0.0,
+      "off_y": 1.1,
+      "subj_w": 26.0,
+      "subj_h": 49.9,
+      "blank": false,
+      "motion": 0.57,
+      "frames": 16
+    },
+    "drink_smoothie": {
+      "fill": 0.296,
+      "off_x": 0.0,
+      "off_y": 1.2,
+      "subj_w": 24.5,
+      "subj_h": 49.5,
+      "blank": false,
+      "motion": 3.14,
+      "frames": 16
+    },
+    "drink_tea": {
+      "fill": 0.348,
+      "off_x": 0.7,
+      "off_y": 9.1,
+      "subj_w": 40.9,
+      "subj_h": 34.9,
+      "blank": false,
+      "motion": 6.56,
+      "frames": 16
+    },
+    "drink_water": {
+      "fill": 0.275,
+      "off_x": 0.0,
+      "off_y": 4.4,
+      "subj_w": 26.0,
+      "subj_h": 43.2,
+      "blank": false,
+      "motion": 3.61,
+      "frames": 16
+    },
+    "drink_wine": {
+      "fill": 0.291,
+      "off_x": 0.0,
+      "off_y": 3.1,
+      "subj_w": 26.0,
+      "subj_h": 45.9,
+      "blank": false,
+      "motion": 2.08,
+      "frames": 16
+    },
+    "festive_bell": {
+      "fill": 0.332,
+      "off_x": 0.0,
+      "off_y": 2.1,
+      "subj_w": 28.5,
+      "subj_h": 47.8,
+      "blank": false,
+      "motion": 28.41,
+      "frames": 16
+    },
+    "festive_candy_cane": {
+      "fill": 0.329,
+      "off_x": 2.5,
+      "off_y": 2.8,
+      "subj_w": 29.0,
+      "subj_h": 46.5,
+      "blank": false,
+      "motion": 2.15,
+      "frames": 16
+    },
+    "festive_gift": {
+      "fill": 0.433,
+      "off_x": 0.8,
+      "off_y": 2.8,
+      "subj_w": 38.2,
+      "subj_h": 46.4,
+      "blank": false,
+      "motion": 7.66,
+      "frames": 16
+    },
+    "festive_gingerbread": {
+      "fill": 0.367,
+      "off_x": 0.0,
+      "off_y": 2.5,
+      "subj_w": 32.0,
+      "subj_h": 47.0,
+      "blank": false,
+      "motion": 36.18,
+      "frames": 16
+    },
+    "festive_holly": {
+      "fill": 0.271,
+      "off_x": 0.0,
+      "off_y": 5.7,
+      "subj_w": 28.0,
+      "subj_h": 39.6,
+      "blank": false,
+      "motion": 1.21,
+      "frames": 16
+    },
+    "festive_ornament": {
+      "fill": 0.325,
+      "off_x": 0.0,
+      "off_y": 1.8,
+      "subj_w": 28.0,
+      "subj_h": 47.5,
+      "blank": false,
+      "motion": 14.5,
+      "frames": 16
+    },
+    "festive_snowman": {
+      "fill": 0.478,
+      "off_x": -0.6,
+      "off_y": 3.3,
+      "subj_w": 43.1,
+      "subj_h": 45.4,
+      "blank": false,
+      "motion": 22.58,
+      "frames": 16
+    },
+    "festive_wreath": {
+      "fill": 0.541,
+      "off_x": -0.3,
+      "off_y": 1.2,
+      "subj_w": 44.6,
+      "subj_h": 49.6,
+      "blank": false,
+      "motion": 4.5,
+      "frames": 16
+    },
+    "furn_bookshelf": {
+      "fill": 0.39,
+      "off_x": 0.0,
+      "off_y": 2.5,
+      "subj_w": 34.0,
+      "subj_h": 47.0,
+      "blank": false,
+      "motion": 0.61,
+      "frames": 16
+    },
+    "furn_clock": {
+      "fill": 0.286,
+      "off_x": 0.0,
+      "off_y": 0.6,
+      "subj_w": 24.0,
+      "subj_h": 48.8,
+      "blank": false,
+      "motion": 3.03,
+      "frames": 16
+    },
+    "furn_fireplace": {
+      "fill": 0.539,
+      "off_x": 0.0,
+      "off_y": 7.0,
+      "subj_w": 46.0,
+      "subj_h": 48.0,
+      "blank": false,
+      "motion": 9.19,
+      "frames": 16
+    },
+    "furn_lamp": {
+      "fill": 0.47,
+      "off_x": 0.0,
+      "off_y": -0.2,
+      "subj_w": 36.8,
+      "subj_h": 52.4,
+      "blank": false,
+      "motion": 10.45,
+      "frames": 16
+    },
+    "furn_mirror": {
+      "fill": 0.377,
+      "off_x": 0.0,
+      "off_y": 0.2,
+      "subj_w": 30.0,
+      "subj_h": 51.5,
+      "blank": false,
+      "motion": 1.44,
+      "frames": 16
+    },
+    "furn_table": {
+      "fill": 0.47,
+      "off_x": 0.0,
+      "off_y": 1.9,
+      "subj_w": 40.0,
+      "subj_h": 48.1,
+      "blank": false,
+      "motion": 6.36,
+      "frames": 16
+    },
+    "gem_amethyst": {
+      "fill": 0.449,
+      "off_x": 0.0,
+      "off_y": 3.6,
+      "subj_w": 41.0,
+      "subj_h": 44.9,
+      "blank": false,
+      "motion": 11.58,
+      "frames": 16
+    },
+    "gem_emerald": {
+      "fill": 0.353,
+      "off_x": 0.0,
+      "off_y": 3.0,
+      "subj_w": 30.8,
+      "subj_h": 47.0,
+      "blank": false,
+      "motion": 11.36,
+      "frames": 16
+    },
+    "gem_opal": {
+      "fill": 0.36,
+      "off_x": 0.0,
+      "off_y": 5.5,
+      "subj_w": 36.0,
+      "subj_h": 41.0,
+      "blank": false,
+      "motion": 4.53,
+      "frames": 16
+    },
+    "gem_ruby": {
+      "fill": 0.399,
+      "off_x": 0.0,
+      "off_y": 4.5,
+      "subj_w": 38.0,
+      "subj_h": 43.0,
+      "blank": false,
+      "motion": 10.01,
+      "frames": 16
+    },
+    "gem_sapphire": {
+      "fill": 0.419,
+      "off_x": 0.0,
+      "off_y": 4.6,
+      "subj_w": 39.0,
+      "subj_h": 44.0,
+      "blank": false,
+      "motion": 10.0,
+      "frames": 16
+    },
+    "instr_bell": {
+      "fill": 0.586,
+      "off_x": 0.0,
+      "off_y": 3.4,
+      "subj_w": 42.0,
+      "subj_h": 57.1,
+      "blank": false,
+      "motion": 73.1,
+      "frames": 16
+    },
+    "instr_drum": {
+      "fill": 0.443,
+      "off_x": 3.0,
+      "off_y": 3.4,
+      "subj_w": 40.2,
+      "subj_h": 45.1,
+      "blank": false,
+      "motion": 20.06,
+      "frames": 16
+    },
+    "instr_fiddle": {
+      "fill": 0.581,
+      "off_x": 9.0,
+      "off_y": 0.1,
+      "subj_w": 46.0,
+      "subj_h": 51.8,
+      "blank": false,
+      "motion": 4.07,
+      "frames": 16
+    },
+    "instr_flute": {
+      "fill": 0.576,
+      "off_x": 0.1,
+      "off_y": 1.7,
+      "subj_w": 48.5,
+      "subj_h": 48.6,
+      "blank": false,
+      "motion": 6.96,
+      "frames": 16
+    },
+    "instr_horn": {
+      "fill": 0.623,
+      "off_x": 5.3,
+      "off_y": 2.0,
+      "subj_w": 53.1,
+      "subj_h": 48.0,
+      "blank": false,
+      "motion": 21.37,
+      "frames": 16
+    },
+    "instr_lute": {
+      "fill": 0.519,
+      "off_x": 4.3,
+      "off_y": -3.0,
+      "subj_w": 36.6,
+      "subj_h": 58.0,
+      "blank": false,
+      "motion": 7.09,
+      "frames": 16
+    },
+    "instr_pan_flute": {
+      "fill": 0.506,
+      "off_x": 0.2,
+      "off_y": -3.0,
+      "subj_w": 35.8,
+      "subj_h": 58.0,
+      "blank": false,
+      "motion": 6.81,
+      "frames": 16
+    },
+    "instr_tambourine": {
+      "fill": 0.466,
+      "off_x": 0.2,
+      "off_y": 4.5,
+      "subj_w": 44.4,
+      "subj_h": 43.0,
+      "blank": false,
+      "motion": 29.17,
+      "frames": 16
+    },
+    "nature_cattail": {
+      "fill": 0.399,
+      "off_x": 0.0,
+      "off_y": -2.7,
+      "subj_w": 29.0,
+      "subj_h": 56.4,
+      "blank": false,
+      "motion": 33.85,
+      "frames": 16
+    },
+    "nature_clover": {
+      "fill": 0.336,
+      "off_x": 0.1,
+      "off_y": 4.5,
+      "subj_w": 32.8,
+      "subj_h": 42.0,
+      "blank": false,
+      "motion": 7.24,
+      "frames": 16
+    },
+    "nature_dewdrop": {
+      "fill": 0.333,
+      "off_x": 0.0,
+      "off_y": 2.1,
+      "subj_w": 29.8,
+      "subj_h": 45.9,
+      "blank": false,
+      "motion": 6.32,
+      "frames": 16
+    },
+    "nature_feather": {
+      "fill": 0.316,
+      "off_x": -1.2,
+      "off_y": 3.0,
+      "subj_w": 25.9,
+      "subj_h": 50.0,
+      "blank": false,
+      "motion": 16.75,
+      "frames": 16
+    },
+    "nature_leaf": {
+      "fill": 0.367,
+      "off_x": -1.6,
+      "off_y": 1.8,
+      "subj_w": 31.1,
+      "subj_h": 48.2,
+      "blank": false,
+      "motion": 4.82,
+      "frames": 16
+    },
+    "nature_mushroom_cluster": {
+      "fill": 0.41,
+      "off_x": 0.0,
+      "off_y": 5.9,
+      "subj_w": 40.0,
+      "subj_h": 42.0,
+      "blank": false,
+      "motion": 7.66,
+      "frames": 16
+    },
+    "nature_seashell": {
+      "fill": 0.454,
+      "off_x": 0.0,
+      "off_y": 2.8,
+      "subj_w": 40.0,
+      "subj_h": 46.5,
+      "blank": false,
+      "motion": 3.75,
+      "frames": 16
+    },
+    "nature_spiderweb": {
+      "fill": 0.586,
+      "off_x": 0.0,
+      "off_y": 0.0,
+      "subj_w": 49.0,
+      "subj_h": 49.0,
+      "blank": false,
+      "motion": 12.94,
+      "frames": 16
+    },
+    "ore_coal": {
+      "fill": 0.344,
+      "off_x": 0.0,
+      "off_y": 5.8,
+      "subj_w": 34.0,
+      "subj_h": 41.5,
+      "blank": false,
+      "motion": 4.75,
+      "frames": 16
+    },
+    "ore_copper": {
+      "fill": 0.344,
+      "off_x": 0.0,
+      "off_y": 5.8,
+      "subj_w": 34.0,
+      "subj_h": 41.5,
+      "blank": false,
+      "motion": 4.34,
+      "frames": 16
+    },
+    "ore_crystal_vein": {
+      "fill": 0.344,
+      "off_x": 0.0,
+      "off_y": 5.8,
+      "subj_w": 34.0,
+      "subj_h": 41.5,
+      "blank": false,
+      "motion": 0.87,
+      "frames": 16
+    },
+    "ore_gold_nugget": {
+      "fill": 0.348,
+      "off_x": -0.1,
+      "off_y": 5.8,
+      "subj_w": 34.5,
+      "subj_h": 41.4,
+      "blank": false,
+      "motion": 7.36,
+      "frames": 16
+    },
+    "ore_iron": {
+      "fill": 0.344,
+      "off_x": 0.0,
+      "off_y": 5.8,
+      "subj_w": 34.0,
+      "subj_h": 41.5,
+      "blank": false,
+      "motion": 5.47,
+      "frames": 16
+    },
+    "ore_obsidian": {
+      "fill": 0.359,
+      "off_x": -0.5,
+      "off_y": 2.8,
+      "subj_w": 31.0,
+      "subj_h": 47.5,
+      "blank": false,
+      "motion": 4.66,
+      "frames": 16
+    },
+    "ore_silver": {
+      "fill": 0.344,
+      "off_x": 0.0,
+      "off_y": 5.8,
+      "subj_w": 34.0,
+      "subj_h": 41.5,
+      "blank": false,
+      "motion": 6.43,
+      "frames": 16
+    },
+    "ore_sulfur": {
+      "fill": 0.363,
+      "off_x": 0.5,
+      "off_y": 4.0,
+      "subj_w": 33.0,
+      "subj_h": 45.0,
+      "blank": false,
+      "motion": 3.69,
+      "frames": 16
+    },
+    "pet_cat": {
+      "fill": 0.393,
+      "off_x": 3.2,
+      "off_y": 2.6,
+      "subj_w": 34.4,
+      "subj_h": 46.9,
+      "blank": false,
+      "motion": 6.58,
+      "frames": 16
+    },
+    "pet_chick": {
+      "fill": 0.381,
+      "off_x": 0.0,
+      "off_y": 3.1,
+      "subj_w": 34.0,
+      "subj_h": 45.9,
+      "blank": false,
+      "motion": 25.52,
+      "frames": 16
+    },
+    "pet_dog": {
+      "fill": 0.379,
+      "off_x": 1.4,
+      "off_y": 4.0,
+      "subj_w": 35.2,
+      "subj_h": 44.0,
+      "blank": false,
+      "motion": 21.3,
+      "frames": 16
+    },
+    "pet_duckling": {
+      "fill": 0.343,
+      "off_x": -0.6,
+      "off_y": 5.4,
+      "subj_w": 34.1,
+      "subj_h": 41.1,
+      "blank": false,
+      "motion": 21.85,
+      "frames": 16
+    },
+    "pet_frog": {
+      "fill": 0.392,
+      "off_x": 0.0,
+      "off_y": 5.6,
+      "subj_w": 39.2,
+      "subj_h": 40.9,
+      "blank": false,
+      "motion": 6.84,
+      "frames": 16
+    },
+    "pet_goat_kid": {
+      "fill": 0.419,
+      "off_x": -1.0,
+      "off_y": 2.8,
+      "subj_w": 37.0,
+      "subj_h": 46.4,
+      "blank": false,
+      "motion": 12.42,
+      "frames": 16
+    },
+    "pet_hedgehog": {
+      "fill": 0.466,
+      "off_x": -0.2,
+      "off_y": 4.2,
+      "subj_w": 43.8,
+      "subj_h": 43.6,
+      "blank": false,
+      "motion": 2.17,
+      "frames": 16
+    },
+    "pet_lamb": {
+      "fill": 0.405,
+      "off_x": -0.2,
+      "off_y": 4.8,
+      "subj_w": 39.1,
+      "subj_h": 42.4,
+      "blank": false,
+      "motion": 10.64,
+      "frames": 16
+    },
+    "pet_piglet": {
+      "fill": 0.36,
+      "off_x": 2.6,
+      "off_y": 3.8,
+      "subj_w": 33.2,
+      "subj_h": 44.4,
+      "blank": false,
+      "motion": 12.97,
+      "frames": 16
+    },
+    "pet_rabbit": {
+      "fill": 0.354,
+      "off_x": 1.8,
+      "off_y": -0.4,
+      "subj_w": 27.5,
+      "subj_h": 52.8,
+      "blank": false,
+      "motion": 31.66,
+      "frames": 16
+    },
+    "reef_crab": {
+      "fill": 0.651,
+      "off_x": 0.0,
+      "off_y": 3.0,
+      "subj_w": 58.0,
+      "subj_h": 46.0,
+      "blank": false,
+      "motion": 25.52,
+      "frames": 16
+    },
+    "reef_jellyfish": {
+      "fill": 0.462,
+      "off_x": 0.0,
+      "off_y": 0.1,
+      "subj_w": 41.5,
+      "subj_h": 45.6,
+      "blank": false,
+      "motion": 46.62,
+      "frames": 16
+    },
+    "reef_lighthouse": {
+      "fill": 0.595,
+      "off_x": 0.0,
+      "off_y": -1.7,
+      "subj_w": 44.0,
+      "subj_h": 55.4,
+      "blank": false,
+      "motion": 27.49,
+      "frames": 16
+    },
+    "reef_octopus": {
+      "fill": 0.373,
+      "off_x": 0.2,
+      "off_y": 6.8,
+      "subj_w": 39.1,
+      "subj_h": 39.0,
+      "blank": false,
+      "motion": 33.61,
+      "frames": 16
+    },
+    "reef_seahorse": {
+      "fill": 0.347,
+      "off_x": -1.9,
+      "off_y": 1.9,
+      "subj_w": 29.5,
+      "subj_h": 48.1,
+      "blank": false,
+      "motion": 12.47,
+      "frames": 16
+    },
+    "reef_starfish": {
+      "fill": 0.459,
+      "off_x": 0.0,
+      "off_y": 2.5,
+      "subj_w": 40.0,
+      "subj_h": 47.0,
+      "blank": false,
+      "motion": 32.52,
+      "frames": 16
+    },
+    "spell_arcane_missile": {
+      "fill": 0.518,
+      "off_x": 2.7,
+      "off_y": -2.0,
+      "subj_w": 47.4,
+      "subj_h": 44.8,
+      "blank": false,
+      "motion": 31.02,
+      "frames": 16
+    },
+    "spell_fireball": {
+      "fill": 0.529,
+      "off_x": 0.2,
+      "off_y": 2.0,
+      "subj_w": 48.4,
+      "subj_h": 44.8,
+      "blank": false,
+      "motion": 26.09,
+      "frames": 16
+    },
+    "spell_heal": {
+      "fill": 0.496,
+      "off_x": 0.4,
+      "off_y": 0.0,
+      "subj_w": 45.6,
+      "subj_h": 44.5,
+      "blank": false,
+      "motion": 27.1,
+      "frames": 16
+    },
+    "spell_ice_shard": {
+      "fill": 0.462,
+      "off_x": 0.0,
+      "off_y": 2.0,
+      "subj_w": 43.5,
+      "subj_h": 43.5,
+      "blank": false,
+      "motion": 14.12,
+      "frames": 16
+    },
+    "spell_lightning": {
+      "fill": 0.519,
+      "off_x": 0.0,
+      "off_y": 0.0,
+      "subj_w": 45.0,
+      "subj_h": 47.2,
+      "blank": false,
+      "motion": 40.96,
+      "frames": 16
+    },
+    "spell_poison": {
+      "fill": 0.545,
+      "off_x": 0.0,
+      "off_y": 6.5,
+      "subj_w": 43.8,
+      "subj_h": 51.0,
+      "blank": false,
+      "motion": 15.68,
+      "frames": 16
+    },
+    "spell_shield_bubble": {
+      "fill": 0.629,
+      "off_x": 0.0,
+      "off_y": 0.0,
+      "subj_w": 50.8,
+      "subj_h": 50.8,
+      "blank": false,
+      "motion": 22.08,
+      "frames": 16
+    },
+    "spell_wind": {
+      "fill": 0.454,
+      "off_x": -1.2,
+      "off_y": 0.0,
+      "subj_w": 44.5,
+      "subj_h": 41.8,
+      "blank": false,
+      "motion": 55.82,
+      "frames": 16
+    },
+    "treasure_chest_open": {
+      "fill": 0.456,
+      "off_x": 0.0,
+      "off_y": 2.2,
+      "subj_w": 39.2,
+      "subj_h": 47.6,
+      "blank": false,
+      "motion": 21.06,
+      "frames": 16
+    },
+    "treasure_coin_stack": {
+      "fill": 0.362,
+      "off_x": 3.2,
+      "off_y": 6.7,
+      "subj_w": 38.4,
+      "subj_h": 38.6,
+      "blank": false,
+      "motion": 12.87,
+      "frames": 16
+    },
+    "treasure_crown": {
+      "fill": 0.36,
+      "off_x": 0.0,
+      "off_y": 4.3,
+      "subj_w": 34.0,
+      "subj_h": 43.4,
+      "blank": false,
+      "motion": 5.42,
+      "frames": 16
+    },
+    "treasure_gem_pile": {
+      "fill": 0.256,
+      "off_x": 0.0,
+      "off_y": 10.6,
+      "subj_w": 34.0,
+      "subj_h": 30.9,
+      "blank": false,
+      "motion": 7.21,
+      "frames": 16
+    },
+    "treasure_goblet": {
+      "fill": 0.236,
+      "off_x": 0.0,
+      "off_y": 7.4,
+      "subj_w": 26.0,
+      "subj_h": 37.1,
+      "blank": false,
+      "motion": 3.06,
+      "frames": 16
+    },
+    "treasure_gold_bars": {
+      "fill": 0.258,
+      "off_x": 1.0,
+      "off_y": 12.6,
+      "subj_w": 39.5,
+      "subj_h": 26.8,
+      "blank": false,
+      "motion": 6.79,
+      "frames": 16
+    },
+    "treasure_gold_key": {
+      "fill": 0.349,
+      "off_x": -0.2,
+      "off_y": 2.2,
+      "subj_w": 30.6,
+      "subj_h": 46.6,
+      "blank": false,
+      "motion": 4.97,
+      "frames": 16
+    },
+    "treasure_map": {
+      "fill": 0.371,
+      "off_x": -0.4,
+      "off_y": 5.3,
+      "subj_w": 36.8,
+      "subj_h": 41.4,
+      "blank": false,
+      "motion": 1.63,
+      "frames": 16
+    },
+    "treasure_ring": {
+      "fill": 0.255,
+      "off_x": 0.0,
+      "off_y": 5.4,
+      "subj_w": 26.0,
+      "subj_h": 40.1,
+      "blank": false,
+      "motion": 3.39,
+      "frames": 16
+    },
+    "weapon_axe": {
+      "fill": 0.37,
+      "off_x": -3.7,
+      "off_y": 4.6,
+      "subj_w": 35.4,
+      "subj_h": 42.9,
+      "blank": false,
+      "motion": 1.87,
+      "frames": 16
+    },
+    "weapon_bow": {
+      "fill": 0.503,
+      "off_x": -5.8,
+      "off_y": 0.9,
+      "subj_w": 41.1,
+      "subj_h": 50.1,
+      "blank": false,
+      "motion": 3.74,
+      "frames": 16
+    },
+    "weapon_crossbow": {
+      "fill": 0.493,
+      "off_x": 3.7,
+      "off_y": 3.8,
+      "subj_w": 45.4,
+      "subj_h": 44.5,
+      "blank": false,
+      "motion": 3.36,
+      "frames": 16
+    },
+    "weapon_dagger": {
+      "fill": 0.231,
+      "off_x": -0.8,
+      "off_y": 1.9,
+      "subj_w": 19.6,
+      "subj_h": 48.2,
+      "blank": false,
+      "motion": 1.69,
+      "frames": 16
+    },
+    "weapon_helmet": {
+      "fill": 0.366,
+      "off_x": 0.0,
+      "off_y": 1.0,
+      "subj_w": 30.0,
+      "subj_h": 50.0,
+      "blank": false,
+      "motion": 3.33,
+      "frames": 16
+    },
+    "weapon_mace": {
+      "fill": 0.345,
+      "off_x": 2.0,
+      "off_y": 1.9,
+      "subj_w": 28.0,
+      "subj_h": 50.5,
+      "blank": false,
+      "motion": 1.73,
+      "frames": 16
+    },
+    "weapon_shield": {
+      "fill": 0.374,
+      "off_x": 0.0,
+      "off_y": 3.5,
+      "subj_w": 34.0,
+      "subj_h": 45.0,
+      "blank": false,
+      "motion": 7.48,
+      "frames": 16
+    },
+    "weapon_spear": {
+      "fill": 0.313,
+      "off_x": 0.8,
+      "off_y": -2.0,
+      "subj_w": 22.9,
+      "subj_h": 56.0,
+      "blank": false,
+      "motion": 2.63,
+      "frames": 16
+    },
+    "weapon_staff": {
+      "fill": 0.427,
+      "off_x": 2.8,
+      "off_y": -3.0,
+      "subj_w": 30.1,
+      "subj_h": 58.0,
+      "blank": false,
+      "motion": 24.15,
+      "frames": 16
+    },
+    "weapon_sword": {
+      "fill": 0.37,
+      "off_x": -1.2,
+      "off_y": 1.6,
+      "subj_w": 29.0,
+      "subj_h": 52.2,
+      "blank": false,
+      "motion": 4.54,
+      "frames": 16
+    },
+    "weather_comet": {
+      "fill": 0.0,
+      "off_x": 0.0,
+      "off_y": 0.0,
+      "blank": true,
+      "motion": 62.69,
+      "frames": 16
+    },
+    "weather_crescent_moon": {
+      "fill": 0.409,
+      "off_x": 0.8,
+      "off_y": -0.9,
+      "subj_w": 40.8,
+      "subj_h": 41.1,
+      "blank": false,
+      "motion": 16.87,
+      "frames": 16
+    },
+    "weather_fog": {
+      "fill": 0.489,
+      "off_x": 0.6,
+      "off_y": 3.1,
+      "subj_w": 55.5,
+      "subj_h": 36.1,
+      "blank": false,
+      "motion": 19.97,
+      "frames": 16
+    },
+    "weather_lightning": {
+      "fill": 0.547,
+      "off_x": 0.5,
+      "off_y": 2.1,
+      "subj_w": 43.0,
+      "subj_h": 52.1,
+      "blank": false,
+      "motion": 65.82,
+      "frames": 16
+    },
+    "weather_rain_cloud": {
+      "fill": 0.513,
+      "off_x": 0.5,
+      "off_y": 4.4,
+      "subj_w": 43.0,
+      "subj_h": 48.9,
+      "blank": false,
+      "motion": 37.31,
+      "frames": 16
+    },
+    "weather_rainbow": {
+      "fill": 0.515,
+      "off_x": 0.8,
+      "off_y": 7.2,
+      "subj_w": 59.0,
+      "subj_h": 35.8,
+      "blank": false,
+      "motion": 16.89,
+      "frames": 16
+    },
+    "weather_snow_cloud": {
+      "fill": 0.486,
+      "off_x": 0.5,
+      "off_y": 3.1,
+      "subj_w": 43.0,
+      "subj_h": 46.2,
+      "blank": false,
+      "motion": 27.47,
+      "frames": 16
+    },
+    "weather_sun_cloud": {
+      "fill": 0.442,
+      "off_x": -0.7,
+      "off_y": -3.5,
+      "subj_w": 46.4,
+      "subj_h": 39.0,
+      "blank": false,
+      "motion": 24.16,
+      "frames": 16
+    },
+    "wtool_drill": {
+      "fill": 0.434,
+      "off_x": 5.2,
+      "off_y": 7.9,
+      "subj_w": 49.2,
+      "subj_h": 36.1,
+      "blank": false,
+      "motion": 15.35,
+      "frames": 16
+    },
+    "wtool_hammer": {
+      "fill": 0.414,
+      "off_x": 3.5,
+      "off_y": 1.8,
+      "subj_w": 35.0,
+      "subj_h": 48.5,
+      "blank": false,
+      "motion": 55.61,
+      "frames": 16
+    },
+    "wtool_nail": {
+      "fill": 0.246,
+      "off_x": 2.6,
+      "off_y": 2.2,
+      "subj_w": 21.2,
+      "subj_h": 47.5,
+      "blank": false,
+      "motion": 2.55,
+      "frames": 16
+    },
+    "wtool_paintbrush": {
+      "fill": 0.353,
+      "off_x": -1.1,
+      "off_y": 2.1,
+      "subj_w": 30.2,
+      "subj_h": 47.8,
+      "blank": false,
+      "motion": 38.89,
+      "frames": 16
+    },
+    "wtool_saw": {
+      "fill": 0.365,
+      "off_x": 3.6,
+      "off_y": 8.8,
+      "subj_w": 43.5,
+      "subj_h": 34.4,
+      "blank": false,
+      "motion": 48.05,
+      "frames": 16
+    },
+    "wtool_scissors": {
+      "fill": 0.391,
+      "off_x": -0.2,
+      "off_y": 1.4,
+      "subj_w": 32.5,
+      "subj_h": 49.2,
+      "blank": false,
+      "motion": 47.18,
+      "frames": 16
+    },
+    "wtool_screwdriver": {
+      "fill": 0.296,
+      "off_x": 1.2,
+      "off_y": 2.2,
+      "subj_w": 25.5,
+      "subj_h": 47.6,
+      "blank": false,
+      "motion": 33.09,
+      "frames": 16
+    },
+    "wtool_wrench": {
+      "fill": 0.297,
+      "off_x": 2.0,
+      "off_y": 8.9,
+      "subj_w": 35.5,
+      "subj_h": 34.2,
+      "blank": false,
+      "motion": 34.62,
+      "frames": 16
+    }
+  }
+}
