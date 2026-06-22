@@ -153,7 +153,7 @@ anti-grind pacing"; "no real-money mechanics"; "wants every resource family viab
 
 ## Instance #1 — puzzleDrag2
 This skill was proven on puzzleDrag2 (a single-player, turn-based, transitive-economy farming game). Its
-Balance Profile lives at `docs/balance/index.html` + `docs/balance/profile.json`. Its measurement harness
+Balance Profile lives at `reference/docs/balance/index.html` + `reference/docs/balance/profile.json`. Its measurement harness
 is the seeded playtest rig: `npm run playtest` (per-run economy + the family-value spread audit) and
 `npm run playtest -- --campaign --zones home --runs 30 --seed 1` (progression pacing — runs-to-coin-
 milestone + the tier-stall finding). Load the Profile to resume a balance pass there.

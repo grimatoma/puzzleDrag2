@@ -6,7 +6,7 @@
  * zone and writes a balance report + a cost-matrix-compatible change-list.
  *
  * Usage:
- *   node tools/playtest/cli.mjs --zones home --runs 10 --seed 1 --out docs/playtest
+ *   node tools/playtest/cli.mjs --zones home --runs 10 --seed 1 --out reference/docs/playtest
  *   npm run playtest -- --zones home,meadow --runs 20 --seed 1234
  *
  * Flags: --zones <csv>  --runs <n>  --seed <n>  --policy <name>
@@ -41,7 +41,7 @@ globalThis.localStorage = {
 };
 
 function parseArgs(argv) {
-  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "docs/playtest", write: true, campaign: false };
+  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const val = () => argv[++i];
