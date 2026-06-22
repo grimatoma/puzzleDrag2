@@ -1,8 +1,11 @@
 // Seasonal art for the OCTOPUS aquatic tile (`tile_fish_ink`).
 //
 // A small, cute OCTOPUS: a rounded bulbous mantle/head (deep blue-indigo) with
-// two big friendly round eyes and a fan of ~5 curling tentacles draped down onto
-// a still WATER pad (NOT grass), each tentacle dotted with little paler suckers.
+// two big friendly round eyes sitting on a wide SKIRT of ~6 curling tentacles
+// that SPLAY OUTWARD to the sides across a still WATER pad (NOT grass) — three
+// curling lower-left, three lower-right, tips curling up — each leg dotted with
+// little paler suckers on its inner curl. Net silhouette: round head on top, a
+// fan of distinct legs below (never a single downward cone).
 // A faint ink wisp curls into the water beside it. The board label is "Octopus";
 // the tile yields the resource "ink".
 //
@@ -235,73 +238,130 @@ const SP: Record<SeasonName, P> = {
 };
 
 // ── Octopus geometry (the SAME silhouette every season) ──────────────────────
-// A rounded bulbous mantle centred a little above the pad, with a fan of curling
-// tentacles draped down onto the water. Origin-centered; light from upper-left.
+// A rounded bulbous mantle centred a little above the pad, sitting on a wide fan
+// of curling tentacles that splay OUTWARD onto the water (a friendly octopus on
+// the seabed). Origin-centered; light from upper-left.
 
 const HEAD_CX = -1; // mantle centre x
 const HEAD_CY = -2; // mantle centre y (resting; bob added on top)
 const HEAD_RX = 11.5; // mantle half-width
 const HEAD_RY = 12.5; // mantle half-height (taller than wide → bulbous dome)
 
-// Tentacle roots fan along the lower rim of the mantle. Each entry is the root
-// angle along the mantle ellipse and a base reach/direction; the SAME set every
-// season so the silhouette is locked. The CURL of the tip animates via `wave`.
+// Tentacle roots fan along the lower rim of the mantle. Each leg is an explicit
+// SPLAYED arm: it leaves the mantle, bows OUT sideways across the water pad, and
+// curls UP at the tip — so the legs spread into a wide skirt instead of merging
+// into one downward cone. The SAME set every season so the silhouette is locked.
+// The tip CURL undulates via `wave`.
 type Tentacle = {
-  rootA: number; // angle around the mantle rim (radians, canvas y-down)
-  reach: number; // how far the tentacle extends
-  curl: number; // base sideways curl of the tip (design px)
+  rootA: number; // angle around the mantle rim where the leg attaches (radians, y-down)
+  tipX: number; // resting tip x — splayed wide to the side (design px)
+  tipY: number; // resting tip y — out on the water-pad surface (design px)
+  bowX: number; // sideways bow of the mid control point (push the arm OUT)
+  bowY: number; // vertical sag of the mid control point
+  tipUp: number; // how much the very tip curls back UP (design px)
   phase: number; // wave phase offset so tips don't undulate in lock-step
   width: number; // base half-thickness near the root
 };
 
+// Six legs fanning out: three to the lower-LEFT, three to the lower-RIGHT. Roots
+// sit on the LOWER rim of the mantle (canvas y-down: sin(rootA) > 0 ⇒ lower rim;
+// rootA→π is the left rim, →0 the right rim, 0.5π the bottom centre). Each leg
+// leaves its side of the rim and sweeps OUT to its splayed tip. The outermost
+// reach widest (|tipX| ≈ 16) on the pad surface (tipY ≈ 16..18); inner legs are
+// shorter and steeper. Every leg curls its tip up (tipUp).
 const TENTACLES: Tentacle[] = [
-  { rootA: Math.PI * 0.62, reach: 15.5, curl: -4.2, phase: 0.0, width: 2.7 }, // far left
-  { rootA: Math.PI * 0.74, reach: 17.5, curl: -2.2, phase: 0.9, width: 3.0 },
-  { rootA: Math.PI * 0.88, reach: 18.5, curl: 0.6, phase: 1.7, width: 3.1 }, // centre
-  { rootA: Math.PI * 1.04, reach: 17.5, curl: 2.6, phase: 2.5, width: 3.0 },
-  { rootA: Math.PI * 1.18, reach: 15.5, curl: 4.4, phase: 3.3, width: 2.7 }, // far right
+  // ── left side (negative x): roots on the lower-LEFT rim, outer → inner ──
+  { rootA: Math.PI * 0.82, tipX: -16.0, tipY: 16.4, bowX: -7.0, bowY: 2.6, tipUp: 2.8, phase: 0.0, width: 3.0 }, // far left, sweeps widest
+  { rootA: Math.PI * 0.7, tipX: -10.2, tipY: 17.8, bowX: -3.6, bowY: 3.8, tipUp: 2.1, phase: 1.05, width: 3.1 },
+  { rootA: Math.PI * 0.58, tipX: -4.4, tipY: 18.0, bowX: -1.0, bowY: 4.4, tipUp: 1.5, phase: 2.1, width: 3.0 }, // inner left
+  // ── right side (positive x): roots on the lower-RIGHT rim, inner → outer ──
+  { rootA: Math.PI * 0.42, tipX: 4.4, tipY: 18.0, bowX: 1.0, bowY: 4.4, tipUp: 1.5, phase: 3.0, width: 3.0 }, // inner right
+  { rootA: Math.PI * 0.3, tipX: 10.2, tipY: 17.8, bowX: 3.6, bowY: 3.8, tipUp: 2.1, phase: 4.05, width: 3.1 },
+  { rootA: Math.PI * 0.18, tipX: 16.0, tipY: 16.4, bowX: 7.0, bowY: 2.6, tipUp: 2.8, phase: 5.1, width: 3.0 }, // far right, sweeps widest
 ];
 
 /** Where a tentacle root sits on the mantle rim (origin-centered, +bob). */
 function tentacleRoot(t: Tentacle, bob: number): [number, number] {
   return [
-    HEAD_CX + Math.cos(t.rootA) * HEAD_RX * 0.92,
-    HEAD_CY + bob + Math.sin(t.rootA) * HEAD_RY * 0.86,
+    HEAD_CX + Math.cos(t.rootA) * HEAD_RX * 0.9,
+    HEAD_CY + bob + Math.sin(t.rootA) * HEAD_RY * 0.82,
   ];
 }
 
-/** The drape point of a tentacle tip (origin-centered, +bob). `wave` curls the
- *  tip seamlessly in the idle; wave=0 is the rest pose. */
+/** The curled tip of a tentacle (origin-centered, +bob). `wave` sways the tip
+ *  seamlessly in the idle; wave=0 is the rest pose. The tip curls UP (−tipUp). */
 function tentacleTip(t: Tentacle, bob: number, wave: number): [number, number] {
-  const [rx, ry] = tentacleRoot(t, bob);
-  const undulate = Math.sin(wave + t.phase) * 1.6; // seamless tip sway
+  const undulate = Math.sin(wave + t.phase) * 1.5; // seamless sideways tip sway
   return [
-    rx + t.curl + undulate,
-    ry + t.reach,
+    t.tipX + undulate,
+    t.tipY + bob - t.tipUp, // curl the tip up off the water
   ];
 }
 
-/** Trace one tentacle as a tapering curved blob (root → curled tip → back).
- *  Same construction every season; only the tip curl shifts in idle. */
-function tentaclePath(ctx: CanvasRenderingContext2D, t: Tentacle, bob: number, wave: number): void {
+/** The mid control point of a leg — bows it OUTWARD (away from centre) and lets
+ *  it sag onto the pad, so the spine is an outward-then-up curl, not a straight
+ *  drop. Returns the quadratic Bézier control for root→tip. */
+function tentacleMid(t: Tentacle, bob: number, wave: number): [number, number] {
   const [rx, ry] = tentacleRoot(t, bob);
   const [tx, ty] = tentacleTip(t, bob, wave);
-  // a mid control point that bows the tentacle outward then curls the tip in
-  const midX = lerp(rx, tx, 0.5) + t.curl * 0.5;
-  const midY = lerp(ry, ty, 0.5) + 1.2;
-  const w0 = t.width; // thick at the root
-  const w1 = 0.7; // thin at the tip
-  // perpendicular-ish offsets to give the limb thickness on each side
+  return [lerp(rx, tx, 0.5) + t.bowX, lerp(ry, ty, 0.5) + t.bowY];
+}
+
+/** Sample the leg's centre-line spine (root → mid → tip) at u∈[0,1]. */
+function spineAt(
+  rx: number, ry: number, mx: number, my: number, tx: number, ty: number, u: number,
+): [number, number] {
+  const omu = 1 - u;
+  return [
+    omu * omu * rx + 2 * omu * u * mx + u * u * tx,
+    omu * omu * ry + 2 * omu * u * my + u * u * ty,
+  ];
+}
+
+/** Trace ONE leg as its own filled tapered ribbon: thick where it joins the
+ *  mantle, tapering to a thin curled tip. Built by walking the spine and
+ *  offsetting perpendicular by a tapering half-width, so each leg is a DISTINCT
+ *  shape (never merging into the neighbour). Same construction every season. */
+function tentaclePath(ctx: CanvasRenderingContext2D, t: Tentacle, bob: number, wave: number): void {
+  const [rx, ry] = tentacleRoot(t, bob);
+  const [mx, my] = tentacleMid(t, bob, wave);
+  const [tx, ty] = tentacleTip(t, bob, wave);
+  const N = 10;
+  const left: Array<[number, number]> = [];
+  const right: Array<[number, number]> = [];
+  let px = rx;
+  let py = ry;
+  for (let i = 0; i <= N; i++) {
+    const u = i / N;
+    const [cx, cy] = spineAt(rx, ry, mx, my, tx, ty, u);
+    // tangent (forward difference) for the perpendicular offset
+    let dx = cx - px;
+    let dy = cy - py;
+    if (i === 0) {
+      const [nx, ny] = spineAt(rx, ry, mx, my, tx, ty, 0.04);
+      dx = nx - rx;
+      dy = ny - ry;
+    }
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len;
+    const ny = dx / len;
+    // taper: full width at the root → a fine point at the tip (ease the falloff)
+    const w = t.width * (1 - u) * (1 - u) + 0.55;
+    left.push([cx + nx * w, cy + ny * w]);
+    right.push([cx - nx * w, cy - ny * w]);
+    px = cx;
+    py = cy;
+  }
   ctx.beginPath();
-  ctx.moveTo(rx - w0, ry);
-  ctx.quadraticCurveTo(midX - w1 * 1.6, midY, tx - w1, ty);
-  // round the tip
-  ctx.quadraticCurveTo(tx, ty + w1 * 1.6, tx + w1, ty);
-  ctx.quadraticCurveTo(midX + w1 * 1.6, midY, rx + w0, ry);
+  ctx.moveTo(left[0][0], left[0][1]);
+  for (let i = 1; i <= N; i++) ctx.lineTo(left[i][0], left[i][1]);
+  // round the very tip
+  ctx.lineTo(tx, ty);
+  for (let i = N; i >= 0; i--) ctx.lineTo(right[i][0], right[i][1]);
   ctx.closePath();
 }
 
-/** Small paler suckers running down the underside of a tentacle. */
+/** A couple of small paler suckers on the INNER curl of a leg. */
 function tentacleSuckers(
   ctx: CanvasRenderingContext2D,
   t: Tentacle,
@@ -310,20 +370,17 @@ function tentacleSuckers(
   col: RGB,
 ): void {
   const [rx, ry] = tentacleRoot(t, bob);
+  const [mx, my] = tentacleMid(t, bob, wave);
   const [tx, ty] = tentacleTip(t, bob, wave);
-  const midX = lerp(rx, tx, 0.5) + t.curl * 0.5;
-  const midY = lerp(ry, ty, 0.5) + 1.2;
+  // bias the suckers toward the inner edge of the curl (toward centre x)
+  const inward = HEAD_CX < t.tipX ? -1 : 1;
   ctx.fillStyle = rgba(col, 0.9);
-  const n = 4;
-  for (let i = 1; i <= n; i++) {
-    const u = i / (n + 1);
-    // quadratic Bézier sample of the centre-line
-    const omu = 1 - u;
-    const cx = omu * omu * rx + 2 * omu * u * midX + u * u * tx;
-    const cy = omu * omu * ry + 2 * omu * u * midY + u * u * ty;
-    const r = lerp(1.0, 0.45, u);
+  const us = [0.5, 0.74];
+  for (const u of us) {
+    const [cx, cy] = spineAt(rx, ry, mx, my, tx, ty, u);
+    const r = lerp(1.05, 0.55, u);
     ctx.beginPath();
-    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.arc(cx + inward * 0.6, cy, r, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -495,10 +552,10 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, wave = 0): vo
       ctx.restore();
     }
 
-    // ── Contact shadow of the octopus ON the water ──────────────────────────
+    // ── Contact shadow of the octopus ON the water (pools under the leg fan) ──
     ctx.fillStyle = rgba(p.outline, 0.26 * (1 - 0.5 * p.iceAmt));
     ctx.beginPath();
-    ctx.ellipse(HEAD_CX + 1.5, 16.5 + bob * 0.4, 13, 3.0, 0, 0, Math.PI * 2);
+    ctx.ellipse(HEAD_CX + 1.0, 17.0 + bob * 0.4, 16.5, 3.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // ── Subject: the octopus (SAME silhouette every season) ─────────────────
@@ -516,16 +573,19 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, wave = 0): vo
       tentaclePath(ctx, t, bob, wave);
       ctx.fillStyle = rgb(p.mantleMid);
       ctx.fill();
-      // a darker shaded underside on each limb (clip + lower-biased wash)
+      // a darker shaded underside on each limb (clip + root→tip wash so the
+      // deeper indigo gathers toward the curled tip, giving each leg roundness)
       ctx.save();
       tentaclePath(ctx, t, bob, wave);
       ctx.clip();
       const [rx, ry] = tentacleRoot(t, bob);
-      const tg = ctx.createLinearGradient(rx, ry - 4, rx, ry + t.reach + 2);
+      const [ttx, tty] = tentacleTip(t, bob, wave);
+      const tg = ctx.createLinearGradient(rx, ry, ttx, tty);
       tg.addColorStop(0, rgba(p.mantleMid, 0));
       tg.addColorStop(1, rgba(p.mantleDeep, 0.55));
       ctx.fillStyle = tg;
-      ctx.fillRect(rx - 8, ry - 6, 16, t.reach + 10);
+      // cover the whole clipped leg span (the clip keeps it leg-shaped)
+      ctx.fillRect(-24, -24, 48, 48);
       ctx.restore();
       // suckers down the limb
       tentacleSuckers(ctx, t, bob, wave, p.sucker);

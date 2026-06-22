@@ -255,49 +255,64 @@ const SP: Record<SeasonName, P> = {
 };
 
 // ── Wild-goose geometry constants (the SAME silhouette every season) ─────────
-// Front-¾ view, turned ~15–20° toward lower-left. Body is a plump egg; a LONG
-// UPRIGHT neck rises from the upper-left of the body and curves to a small head
-// with a stout bill pointing lower-left. Wilder than the domestic goose: the
-// neck is taller and more vertical.
+// Front-¾ view, turned ~15–20° toward lower-left. Body is a HORIZONTAL EGG
+// (clearly wider than tall, ~23 wide × ~15 tall), seated a bit low on the pad,
+// the tail tapering to the lower-right. A prominent S-CURVED LONG NECK rises
+// from the front/upper of the body up toward the TOP of the tile (~1/3 of the
+// total height) to a small head with a stout bill pointing lower-left. This
+// long neck + head is the goose's signature — without it the body reads as a
+// ball. Wilder than the domestic goose: the neck is taller and more vertical.
 
-const BODY_CX = 1.5;   // body centre x (turned right, head reaches left)
-const BODY_CY = 5.0;   // body centre y
-const BODY_RX = 13;    // body half-width
-const BODY_RY = 10.5;  // body half-height
-const TAIL_X = 15;     // tail tip (upper-right)
-const TAIL_Y = -0.5;
+const BODY_CX = 2.5;   // body centre x (turned right, head reaches left)
+const BODY_CY = 7.5;   // body centre y (seated a bit low on the pad)
+const BODY_RX = 11;    // body half-width  (≈22 wide)
+const BODY_RY = 9;     // body half-height (≈18 tall — a plump egg body, not a flat disc)
+const TAIL_X = 13.5;   // tail tip (tapers to the lower-right)
+const TAIL_Y = 5.5;
 
-// Neck path control points — long + upright (base on upper-left of body →
-// head up-and-left). The wild goose holds its neck higher than the domestic one.
-const NECK_BASE_X = -5;
-const NECK_BASE_Y = -3;
-const NECK_MID_X = -10.5;
-const NECK_MID_Y = -10;
-const HEAD_X = -12.5;
-const HEAD_Y = -17.5;
-const HEAD_R = 4.0;
-const BILL_TIP_X = -19.5; // stout bill tip, pointing lower-left
-const BILL_TIP_Y = -15.5;
+// Neck path control points — a LONG S-CURVE: base on the front/upper of the
+// body, bulging slightly forward (left) low, then sweeping up-and-left to a
+// head near the TOP of the tile. The wild goose holds its neck high + upright,
+// roughly one third of the whole tile height tall.
+const NECK_BASE_X = -3.5; // neck root, front/upper of the body
+const NECK_BASE_Y = 1.5;
+const NECK_LOW_X = -7.5;  // lower S-bend bulges forward (left)
+const NECK_LOW_Y = -5;
+const NECK_MID_X = -6;    // upper S-bend tucks back slightly
+const NECK_MID_Y = -14;
+const HEAD_X = -8.5;      // head high near the top of the tile
+const HEAD_Y = -19.5;
+const HEAD_R = 4.2;
+const BILL_TIP_X = -15.5; // stout bill tip, pointing lower-left
+const BILL_TIP_Y = -17.5;
 
-/** Trace the plump body egg into the current path. */
+/** Trace the horizontal body egg into the current path. */
 function bodyPath(ctx: CanvasRenderingContext2D, bob: number): void {
   ctx.beginPath();
-  ctx.ellipse(BODY_CX, BODY_CY + bob, BODY_RX, BODY_RY, -0.1, 0, Math.PI * 2);
+  ctx.ellipse(BODY_CX, BODY_CY + bob, BODY_RX, BODY_RY, -0.08, 0, Math.PI * 2);
 }
 
-/** Stroke the long upright neck as a tapering band (dark base then fill).
- *  Uses current strokeStyle/lineWidth set by caller. */
+/** Stroke the long S-curved neck as a tapering band (dark base then fill).
+ *  A cubic Bezier through the lower forward bulge and the upper tuck-back gives
+ *  the goose its signature S. Uses current strokeStyle/lineWidth set by caller.
+ *  `dx`/`dy` nudge every control point (for the under-shade / highlight passes). */
 function neckStroke(
   ctx: CanvasRenderingContext2D,
   bob: number,
   width: number,
   color: string,
+  dx = 0,
+  dy = 0,
 ): void {
   ctx.strokeStyle = color;
   ctx.lineWidth = width;
   ctx.beginPath();
-  ctx.moveTo(NECK_BASE_X, NECK_BASE_Y + bob);
-  ctx.quadraticCurveTo(NECK_MID_X, NECK_MID_Y + bob, HEAD_X, HEAD_Y + bob);
+  ctx.moveTo(NECK_BASE_X + dx, NECK_BASE_Y + dy + bob);
+  ctx.bezierCurveTo(
+    NECK_LOW_X + dx, NECK_LOW_Y + dy + bob,
+    NECK_MID_X + dx, NECK_MID_Y + dy + bob,
+    HEAD_X + dx, HEAD_Y + dy + bob,
+  );
   ctx.stroke();
 }
 
@@ -412,21 +427,23 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     // ── Contact shadow of the goose on the pad (lower-right) ─────────────────
     ctx.fillStyle = rgba(p.outline, 0.26);
     ctx.beginPath();
-    ctx.ellipse(3, 15.5 + bob * 0.5, 13, 3.2, 0, 0, Math.PI * 2);
+    ctx.ellipse(3, 17.6 + bob * 0.5, 12, 3, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // ── Muted-orange legs/feet on the pad (drawn before body so it overlaps) ─
-    const footY = 14 + bob * 0.4;
+    // Two short legs drop from the body underside to webbed feet on the pad.
+    const legTopY = 13.5 + bob;       // up inside the body underside
+    const footY = 17.6 + bob * 0.4;   // webbed feet rest on the pad top
     ctx.strokeStyle = rgb(p.feetDark);
     ctx.lineWidth = 2.8;
-    [-3.5, 4].forEach((fx) => {
+    [-3, 4.5].forEach((fx) => {
       ctx.beginPath();
-      ctx.moveTo(fx, 9 + bob);
+      ctx.moveTo(fx, legTopY);
       ctx.lineTo(fx + 0.6, footY);
       ctx.stroke();
     });
     ctx.fillStyle = rgb(p.feet);
-    [-3.5, 4].forEach((fx) => {
+    [-3, 4.5].forEach((fx) => {
       // little webbed foot fan
       ctx.beginPath();
       ctx.moveTo(fx + 0.6, footY - 1.4);
@@ -437,47 +454,33 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     });
     ctx.strokeStyle = rgb(p.feet);
     ctx.lineWidth = 2;
-    [-3.5, 4].forEach((fx) => {
+    [-3, 4.5].forEach((fx) => {
       ctx.beginPath();
-      ctx.moveTo(fx, 9 + bob);
+      ctx.moveTo(fx, legTopY);
       ctx.lineTo(fx + 0.6, footY - 0.5);
       ctx.stroke();
     });
 
-    // ── Tail wedge (upper-right of body), drawn before the body fill ─────────
-    // Wild goose: a darker back/tail wedge.
+    // ── Tail wedge (tapering to the lower-right), drawn before the body fill ──
+    // Wild goose: a darker back/tail wedge sweeping off the rump.
     ctx.fillStyle = rgb(p.back);
     ctx.beginPath();
-    ctx.moveTo(BODY_CX + 9, BODY_CY - 6 + bob);
+    ctx.moveTo(BODY_CX + 8, BODY_CY - 4 + bob);
     ctx.lineTo(TAIL_X + 3, TAIL_Y + bob);
-    ctx.lineTo(BODY_CX + 10, BODY_CY + 2 + bob);
+    ctx.lineTo(BODY_CX + 7, BODY_CY + 3 + bob);
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = rgb(p.outline);
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // ── Neck: dark outline pass then dark-feather fill (long + upright) ───────
-    neckStroke(ctx, bob, 7.4, rgb(p.outline)); // outline rim
-    neckStroke(ctx, bob, 5.4, rgb(p.headNeck)); // dark neck
-    // neck under-shade on the right/under edge
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(NECK_BASE_X + 1, NECK_BASE_Y + 1 + bob);
-    ctx.quadraticCurveTo(NECK_MID_X + 1.2, NECK_MID_Y + bob, HEAD_X + 1, HEAD_Y + 1 + bob);
-    ctx.lineWidth = 2.6;
-    ctx.strokeStyle = rgb(p.headNeckDark);
-    ctx.stroke();
-    ctx.restore();
-    // neck highlight on the lit (upper-left) side
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(NECK_BASE_X - 1, NECK_BASE_Y + bob);
-    ctx.quadraticCurveTo(NECK_MID_X - 1, NECK_MID_Y + bob, HEAD_X - 1, HEAD_Y + bob);
-    ctx.lineWidth = 1.4;
-    ctx.strokeStyle = rgba([150, 142, 124], 0.5);
-    ctx.stroke();
-    ctx.restore();
+    // ── Neck: dark outline pass then dark-feather fill (long S-curve) ─────────
+    neckStroke(ctx, bob, 8.0, rgb(p.outline)); // outline rim
+    neckStroke(ctx, bob, 6.2, rgb(p.headNeck)); // dark neck (thick, goose-like column)
+    // neck under-shade on the right/under edge (nudge toward lower-right)
+    neckStroke(ctx, bob, 3.0, rgb(p.headNeckDark), 1, 1);
+    // neck highlight on the lit (upper-left) side (nudge toward upper-left)
+    neckStroke(ctx, bob, 1.8, rgba([150, 142, 124], 0.5), -1, 0);
 
     // ── Body: outline pass then grey-brown fill ──────────────────────────────
     bodyPath(ctx, bob);
@@ -525,36 +528,37 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    // ── Horizontal feather BARRING (wild-goose identity marking) ─────────────
-    // Soft dark scalloped bars running across the body, tighter toward the back.
-    ctx.strokeStyle = rgba(p.barring, 0.55);
-    ctx.lineWidth = 1.2;
-    [-4, -1, 2, 5, 8].forEach((dy, row) => {
+    // ── Horizontal feather BARRING (wild-goose marking — kept SUBTLE) ─────────
+    // Fine short scalloped bars across the body so it reads as plumage, not a
+    // ball of yarn. Low alpha, thin lines, snug to the flatter body.
+    ctx.strokeStyle = rgba(p.barring, 0.42);
+    ctx.lineWidth = 0.9;
+    [-3, -0.5, 2, 4.5].forEach((dy, row) => {
       ctx.beginPath();
       const yy = BODY_CY + dy + bob;
-      ctx.moveTo(BODY_CX - BODY_RX + 1, yy + 0.5);
+      ctx.moveTo(BODY_CX - BODY_RX + 2, yy + 0.4);
       // gentle scallop across the width
-      ctx.quadraticCurveTo(BODY_CX - 4, yy - 1 + row * 0.15, BODY_CX + 2, yy);
-      ctx.quadraticCurveTo(BODY_CX + 8, yy + 1, BODY_CX + BODY_RX - 1, yy - 0.5);
+      ctx.quadraticCurveTo(BODY_CX - 3, yy - 0.8 + row * 0.12, BODY_CX + 2, yy);
+      ctx.quadraticCurveTo(BODY_CX + 7, yy + 0.8, BODY_CX + BODY_RX - 2, yy - 0.4);
       ctx.stroke();
     });
-    // a few light feather edges catching the upper-left light
-    ctx.strokeStyle = rgba(p.bodyLight, 0.5);
-    ctx.lineWidth = 0.9;
-    [-3, 0, 3].forEach((dy) => {
+    // a couple light feather edges catching the upper-left light
+    ctx.strokeStyle = rgba(p.bodyLight, 0.4);
+    ctx.lineWidth = 0.8;
+    [-2.5, 0.5].forEach((dy) => {
       ctx.beginPath();
       const yy = BODY_CY + dy + bob;
-      ctx.moveTo(BODY_CX - BODY_RX + 2, yy - 0.5);
-      ctx.quadraticCurveTo(BODY_CX - 2, yy - 1.4, BODY_CX + 4, yy - 0.8);
+      ctx.moveTo(BODY_CX - BODY_RX + 3, yy - 0.4);
+      ctx.quadraticCurveTo(BODY_CX - 2, yy - 1.1, BODY_CX + 4, yy - 0.6);
       ctx.stroke();
     });
 
     // soft wing crease arc (folded-wing seam) on the side
-    ctx.strokeStyle = rgba(p.barring, 0.7);
-    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = rgba(p.barring, 0.6);
+    ctx.lineWidth = 1.4;
     ctx.beginPath();
-    ctx.moveTo(BODY_CX - 6, BODY_CY - 3 + bob);
-    ctx.quadraticCurveTo(BODY_CX + 6, BODY_CY - 2 + bob, BODY_CX + 11, BODY_CY + 4 + bob);
+    ctx.moveTo(BODY_CX - 5, BODY_CY - 2.5 + bob);
+    ctx.quadraticCurveTo(BODY_CX + 5, BODY_CY - 1.5 + bob, BODY_CX + 9.5, BODY_CY + 3 + bob);
     ctx.stroke();
 
     // winter frost dusting on the upward body
@@ -601,16 +605,16 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       const a = p.snowCapAmt;
       ctx.fillStyle = rgba([246, 251, 255], 0.95 * a);
       ctx.beginPath();
-      ctx.moveTo(BODY_CX - 8, BODY_CY - 8 + bob);
-      ctx.quadraticCurveTo(BODY_CX - 2, BODY_CY - 13 + bob, BODY_CX + 5, BODY_CY - 11 + bob);
-      ctx.quadraticCurveTo(BODY_CX + 11, BODY_CY - 9 + bob, BODY_CX + 12, BODY_CY - 5 + bob);
-      ctx.quadraticCurveTo(BODY_CX + 6, BODY_CY - 7 + bob, BODY_CX + 1, BODY_CY - 6 + bob);
-      ctx.quadraticCurveTo(BODY_CX - 4, BODY_CY - 5 + bob, BODY_CX - 8, BODY_CY - 8 + bob);
+      ctx.moveTo(BODY_CX - 7, BODY_CY - 4 + bob);
+      ctx.quadraticCurveTo(BODY_CX - 1, BODY_CY - 8 + bob, BODY_CX + 5, BODY_CY - 6.5 + bob);
+      ctx.quadraticCurveTo(BODY_CX + 10, BODY_CY - 5 + bob, BODY_CX + 11, BODY_CY - 1.5 + bob);
+      ctx.quadraticCurveTo(BODY_CX + 5, BODY_CY - 3 + bob, BODY_CX + 1, BODY_CY - 2 + bob);
+      ctx.quadraticCurveTo(BODY_CX - 3.5, BODY_CY - 1.5 + bob, BODY_CX - 7, BODY_CY - 4 + bob);
       ctx.closePath();
       ctx.fill();
       ctx.fillStyle = rgba([210, 226, 244], 0.5 * a);
       ctx.beginPath();
-      ctx.ellipse(BODY_CX - 1, BODY_CY - 8 + bob, 8, 1.8, -0.12, 0, Math.PI * 2);
+      ctx.ellipse(BODY_CX - 1, BODY_CY - 4.5 + bob, 7, 1.6, -0.1, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -732,13 +736,13 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
       ctx.globalAlpha = 1;
 
       // small seamless tail flick (every season) — a faint dark feather nudge at
-      // the tail tip (additive; tiny dressing, never the silhouette).
+      // the lower-right tail tip (additive; tiny dressing, never the silhouette).
       const flick = Math.sin(t * 0.9) * 0.7;
       ctx.strokeStyle = rgba([90, 80, 60], 0.4);
       ctx.lineWidth = 1.4;
       ctx.beginPath();
-      ctx.moveTo(BODY_CX + 11, BODY_CY + 1 + breathe);
-      ctx.lineTo(TAIL_X + 3 + flick * 0.6, TAIL_Y - 0.5 + breathe + flick);
+      ctx.moveTo(BODY_CX + 7.5, BODY_CY + 1.5 + breathe);
+      ctx.lineTo(TAIL_X + 3 + flick * 0.6, TAIL_Y + breathe + flick);
       ctx.stroke();
 
       if (season === "Spring") {
