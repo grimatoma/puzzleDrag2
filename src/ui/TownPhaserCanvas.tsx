@@ -137,7 +137,15 @@ export default function TownPhaserCanvas({
           height: cssH * dpr,
           backgroundColor: "#5a7f36",
           transparent: false,
-          scene: [TownScene],
+          // Register TownScene but DON'T auto-start it here. Auto-starting kicks
+          // off preload() (async texture XHRs) immediately, and the old code then
+          // called scene.restart() in postBoot to inject the plan data — a second
+          // preload() pass. restart() resets the loader queue but the first pass's
+          // already-dispatched XHRs still fire their onload → addImage, so both
+          // passes register "tileset"/"character" and Phaser logs
+          // "Texture key already in use". Instead we add+start the scene exactly
+          // once in postBoot, with the plan data, so preload() runs a single time.
+          scene: [],
           scale: {
             mode: Phaser.Scale.FIT,
             autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -161,21 +169,25 @@ export default function TownPhaserCanvas({
               ro.observe(host);
               (g as GameWithObserver).__resizeObserver = ro;
 
-              // Bind event listeners to TownScene
-              const scene = g.scene.scenes[0] as TownScene;
+              // Pass pre-boot data, then add+start TownScene exactly once with
+              // the plan data so preload() runs a single time (see the `scene: []`
+              // note above on why boot-then-restart double-loaded the textures).
+              g.registry.set("hwv.svgMap", svgMap);
+              const scene = g.scene.add("TownScene", TownScene, true, {
+                plan: planRef.current,
+                zoneId: zoneIdRef.current,
+                builtLots: builtLotsRef.current,
+                buildingsMap: buildingsMapRef.current,
+                pendingBuilding: pendingBuildingRef.current,
+                initialCameraState: savedCameraStates[zoneIdRef.current],
+              }) as TownScene | null;
               if (scene) {
-                // Pass pre-boot data
-                g.registry.set("hwv.svgMap", svgMap);
-
-                scene.scene.restart({
-                  plan: planRef.current,
-                  zoneId: zoneIdRef.current,
-                  builtLots: builtLotsRef.current,
-                  buildingsMap: buildingsMapRef.current,
-                  pendingBuilding: pendingBuildingRef.current,
-                  initialCameraState: savedCameraStates[zoneIdRef.current],
-                });
-
+                // Expose the live town scene to the visual-testing bridge so a
+                // scenario can drive a board-fixture entry (the farm/mine/harbor
+                // entrances are Phaser hit-zones now, not DOM buttons). Test-only.
+                if (typeof window !== "undefined" && window.__HEARTH_VISUAL_TESTING__) {
+                  window.__hearthTownScene = scene;
+                }
                 scene.events.on("town.placebuilding", (data: { lotIndex: number; buildingId: string }) => {
                   onPlaceBuildingRef.current(data.lotIndex, data.buildingId);
                 });
@@ -263,6 +275,9 @@ export default function TownPhaserCanvas({
         game.__resizeObserver?.disconnect();
         game.destroy(true);
         gameRef.current = null;
+        if (typeof window !== "undefined" && window.__hearthTownScene) {
+          window.__hearthTownScene = null;
+        }
       }
     };
   }, []);

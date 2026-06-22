@@ -220,6 +220,16 @@ export class MapScene extends Phaser.Scene {
 
     this.scale.on("resize", () => this.relayout());
     this.relayout();
+
+    // Determinism for cartography goldens. The ambient ember/halo flicker
+    // tweens (and the per-frame smoke/cloud/bird animation in update()) are
+    // time- and Math.random-driven, so a live screenshot lands on a random
+    // frame. Under the visual-testing harness, pin every running tween to the
+    // end of its forward leg (a stable, fully-lit frame) and pause it; update()
+    // early-returns (see below) so nothing advances after this point.
+    if (typeof window !== "undefined" && window.__HEARTH_VISUAL_TESTING__) {
+      this.tweens.pauseAll();
+    }
   }
 
   // ─── Setup helpers ──────────────────────────────────────────────────────
@@ -721,6 +731,9 @@ export class MapScene extends Phaser.Scene {
   // ─── Per-frame and state-driven updates ─────────────────────────────────
 
   override update(_time: number, delta: number) {
+    // Frozen for deterministic visual goldens (see create()): skip all ambient
+    // motion so the captured frame is identical every run.
+    if (typeof window !== "undefined" && window.__HEARTH_VISUAL_TESTING__) return;
     const dt = delta / 1000;
     this._t += dt;
 

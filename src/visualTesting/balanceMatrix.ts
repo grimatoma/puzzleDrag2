@@ -9,7 +9,10 @@ const domDiff = { maxDiffPixelRatio: 0.02, threshold: 0.2 };
 export const BALANCE_VISUAL_SCENARIOS = [
   { id: 'balance-narrative-page', hash: '#/page/decisions', diff: domDiff },
   { id: 'balance-recipes-category', hash: '#/recipes', diff: domDiff },
-  { id: 'balance-bosses-category', hash: '#/bosses', diff: domDiff },
+  // Non-smoke: baselined on mobile only. Desktop balance coverage is the smoke
+  // subset (see BALANCE_VISUAL_SMOKE_SCENARIO_IDS + the integrity check), so this
+  // page would otherwise leave a dead desktop golden.
+  { id: 'balance-bosses-category', hash: '#/bosses', diff: domDiff, skipProjects: ['desktop'] },
   { id: 'balance-ability-article', hash: '#/abilities/abilities:threshold_reduce', diff: domDiff },
   { id: 'balance-building-powder-store', hash: '#/buildings/buildings:powder_store', diff: domDiff },
 ];

@@ -44,7 +44,6 @@ const click = (name: string): VisualAction => ({ type: "clickRole", role: "butto
 const clickLast = (name: string): VisualAction => ({ type: "clickRoleLast", role: "button", name });
 const clickText = (text: string): VisualAction => ({ type: "clickText", text });
 const clickPattern = (pattern: RegExp | string): VisualAction => ({ type: "clickRole", role: "button", namePattern: pattern });
-const hoverText = (text: string): VisualAction => ({ type: "hoverText", text });
 const api = (method: string, args?: Record<string, unknown>): VisualAction => ({ type: "api", method, args });
 
 const tileRoutes = [
@@ -57,13 +56,17 @@ const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
   { id: "shell-town-fresh", state: "fresh", hash: "#/town", diff: domDiff },
   { id: "shell-menu-main", state: "fresh", hash: "#/town", actions: [click("Menu")], diff: domDiff },
   { id: "shell-menu-settings", state: "fresh", hash: "#/town", actions: [click("Menu"), clickText("Settings")], diff: domDiff },
-  { id: "shell-debug-modal", state: "rich", hash: "#/town", actions: [click("Debug tools")], diff: domDiff },
+  // Debug tools live in the shell Menu (▸ 🛠 Debug), not a top-level button.
+  { id: "shell-debug-modal", state: "rich", hash: "#/town", actions: [click("Menu"), clickText("Debug")], diff: domDiff },
   { id: "shell-leave-board-confirm", state: "boardFarm", hash: "#/board", actions: [click("Leave board")], diff: domDiff },
   { id: "shell-toast-bubble", state: "bubble", hash: "#/town", diff: domDiff, enableDialogs: true },
 
   { id: "town-home-fresh", state: "fresh", hash: "#/town", diff: domDiff },
   { id: "town-home-built-out", state: "rich", hash: "#/town", diff: domDiff },
-  { id: "town-building-tooltip", state: "rich", hash: "#/town", actions: [hoverText("Workshop")], diff: domDiff },
+  // (removed town-building-tooltip) — the Phaser town reskin replaced the DOM
+  // building tiles with a canvas, so there is no hoverable "Workshop" element
+  // and hover has no meaning on the touch (mobile-only) project. Building info
+  // is now reached by tapping the canvas, covered by the town/board scenarios.
   { id: "town-build-picker-ready", state: "buildReady", hash: "#/town", actions: [click("Build")], diff: domDiff },
   { id: "town-build-picker-locked", state: "lowResource", hash: "#/town", actions: [click("Build"), clickText("Magic Portal")], diff: domDiff },
   { id: "town-placement-mode", state: "buildReady", hash: "#/town", actions: [click("Build"), clickText("Mill"), clickLast("Build")], diff: domDiff },
@@ -72,10 +75,13 @@ const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
   { id: "town-mine-settlement", state: "mineTown", hash: "#/town", diff: domDiff },
   { id: "town-harbor-settlement", state: "harborTown", hash: "#/town", diff: domDiff },
 
-  { id: "start-farming-default", state: "fresh", hash: "#/town", actions: [click("Enter Farm Field")], diff: domDiff },
-  { id: "start-farming-tile-chooser", state: "rich", hash: "#/town", actions: [click("Enter Farm Field"), clickPattern("Grass selected")], diff: domDiff },
+  // The farm/mine entrances are Phaser board fixtures (not DOM buttons) since
+  // the town reskin, so these open the entry modal via the visual bridge's
+  // `enterTownBoard` (emits the same `town.clickboard` event the fixture fires).
+  { id: "start-farming-default", state: "fresh", hash: "#/town", actions: [api("enterTownBoard", { kind: "farm" })], diff: domDiff },
+  { id: "start-farming-tile-chooser", state: "rich", hash: "#/town", actions: [api("enterTownBoard", { kind: "farm" }), clickPattern("Grass selected")], diff: domDiff },
   { id: "entry-mine-locked", state: "mineLocked", hash: "#/town", diff: domDiff },
-  { id: "entry-mine-provision-empty", state: "mineTownNoFood", hash: "#/town", actions: [click("Enter Mine")], diff: domDiff },
+  { id: "entry-mine-provision-empty", state: "mineTownNoFood", hash: "#/town", actions: [api("enterTownBoard", { kind: "mine" })], diff: domDiff },
 
   { id: "board-farm-idle", state: "boardFarm", hash: "#/board", diff: canvasDiff },
   { id: "board-anim-demo", state: "boardFarm", hash: "#/board", diff: canvasDiff, skipProjects: ["iphone-landscape", "iphone-portrait"] },
@@ -104,7 +110,8 @@ const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
 
   { id: "inventory-grid-all", state: "rich", hash: "#/inventory", diff: domDiff },
   { id: "inventory-list-mode", state: "rich", hash: "#/inventory", diff: domDiff },
-  { id: "inventory-search-empty", state: "rich", hash: "#/inventory", actions: [{ type: "fillPlaceholder", placeholder: "Search resources...", value: "zzzz" }], diff: domDiff },
+  // Search is collapsed behind a toggle on the mobile inventory; open it first.
+  { id: "inventory-search-empty", state: "rich", hash: "#/inventory", actions: [click("Search inventory"), { type: "fillPlaceholder", placeholder: "Search resources...", value: "zzzz" }], diff: domDiff },
   { id: "inventory-mid-progress", state: "inventoryMidProgress", hash: "#/inventory", diff: domDiff },
   { id: "inventory-full-with-progress", state: "inventoryFullWithProgress", hash: "#/inventory", diff: domDiff },
   { id: "orders-mixed", state: "rich", hash: "#/orders", diff: domDiff },

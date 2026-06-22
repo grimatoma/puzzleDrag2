@@ -167,7 +167,15 @@ describe("visual golden snapshots integrity", () => {
 
     const getExpected = (projectName, allScenarios, smokeIds) => {
       if (projectName === "desktop") {
-        return new Set(smokeIds.map((id) => `${id}.png`));
+        // Desktop baselines the smoke subset, plus any desktop-only scenario —
+        // one skipped on the mobile (iphone-portrait) project, so it can only
+        // run and be baselined here (e.g. the Story Editor's zoom / Tools-menu
+        // panels, which don't render at the iPhone viewport).
+        const ids = new Set(smokeIds);
+        for (const s of allScenarios) {
+          if (s.skipProjects?.includes("iphone-portrait")) ids.add(s.id);
+        }
+        return new Set([...ids].map((id) => `${id}.png`));
       }
       return new Set(
         allScenarios

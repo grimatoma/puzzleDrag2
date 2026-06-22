@@ -19,6 +19,10 @@ async function installDeterminism(page) {
 async function runAction(page, action) {
   if (action.type === 'clickRole') {
     await page.getByRole(action.role, { name: new RegExp(action.name, 'i') }).first().click();
+  } else if (action.type === 'selectBeat') {
+    // Beats are clickable canvas nodes (data-story-node), not buttons. Selecting
+    // one enables the beat-scoped Tools-menu utilities.
+    await page.locator('[data-story-node="1"]').first().click();
   }
   await page.waitForTimeout(action.waitMs ?? 150);
 }

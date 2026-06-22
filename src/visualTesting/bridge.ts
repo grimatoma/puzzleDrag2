@@ -111,6 +111,27 @@ async function holdChain({ key, length }: { key: string; length: number }): Prom
   };
 }
 
+/**
+ * Open a town board-entry modal (StartFarmingModal / BiomeEntryModal) the way a
+ * real player does — by triggering the Phaser board fixture. Since the town
+ * reskin moved the farm/mine/harbor entrances off DOM buttons and into Phaser
+ * hit-zones, a scenario can no longer `click("Enter Farm Field")`; instead it
+ * emits the same `town.clickboard` event the fixture fires, which Town.tsx maps
+ * to `setEntryBiome(kind)`. The town game boots lazily, so poll a bounded number
+ * of frames for the scene rather than wall-clock (Date.now is harness-frozen).
+ */
+async function enterTownBoard({ kind = "farm" }: { kind?: string } = {}): Promise<unknown> {
+  let scene = window.__hearthTownScene;
+  for (let i = 0; i < 240 && !scene; i += 1) {
+    await nextFrame();
+    scene = window.__hearthTownScene;
+  }
+  if (!scene) throw new Error("Town scene never booted for enterTownBoard");
+  scene.events.emit("town.clickboard", kind);
+  await settleFrames(3);
+  return { kind };
+}
+
 let demoAnimResetTimer: ReturnType<typeof setTimeout> | null = null;
 
 type VisualScene = NonNullable<Window["__phaserScene"]>;
@@ -359,6 +380,7 @@ export function installVisualTestingBridge({ getState, dispatch }: {
     },
     click: (selector: string) => clickSelector(selector),
     hover: (selector: string) => hoverSelector(selector),
+    enterTownBoard,
     holdChain,
     playBoardAnimation: (opts: { name: string; tint?: unknown; pattern?: string }) => playBoardAnimation(opts, api),
     syncScene: () => applyBoardStateToScene(window.__hearthVisualScenarioState ?? getState()),

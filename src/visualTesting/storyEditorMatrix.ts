@@ -1,6 +1,11 @@
 const domDiff = { maxDiffPixelRatio: 0.025, threshold: 0.22 };
 
 const click = (name: string) => ({ type: 'clickRole', role: 'button', name });
+// Select the first beat on the canvas. The Tools-menu utilities (Walk paths,
+// Compare playthroughs) are disabled until a beat is selected, so scenarios that
+// open them must select one first. Beats are clickable canvas nodes tagged
+// `data-story-node`, not buttons, hence a dedicated action type.
+const selectBeat = () => ({ type: 'selectBeat' });
 
 // The Story Editor is a desktop authoring tool: its zoom controls, side-panel
 // tabs, and Tools menu are not rendered at the iPhone-portrait viewport, so the
@@ -13,11 +18,12 @@ export const STORY_EDITOR_VISUAL_SCENARIOS = [
   { id: 'story-default', diff: domDiff },
   { id: 'story-zoom-controls', actions: [click('Zoom in')], diff: domDiff, skipProjects: DESKTOP_ONLY },
   { id: 'story-validation-panel', actions: [click('Validation')], diff: domDiff },
-  { id: 'story-paths-panel', actions: [click('Paths')], diff: domDiff, skipProjects: DESKTOP_ONLY },
-  // The playthrough UI is nested under the Tools menu (and is disabled until a beat is selected),
-  // so the visual scenario clicks through the menu label rather than a hidden panel tab.
-  { id: 'story-playthrough-panel', actions: [click('Tools'), click('Compare playthroughs')], diff: domDiff, skipProjects: DESKTOP_ONLY },
-  { id: 'story-find-replace-panel', actions: [click('Find / Replace')], diff: domDiff, skipProjects: DESKTOP_ONLY },
+  // Walk-paths and Compare-playthroughs live in the Tools menu and are disabled
+  // until a beat is selected — select one, open Tools, then click the item.
+  { id: 'story-paths-panel', actions: [selectBeat(), click('Tools'), click('Walk paths')], diff: domDiff, skipProjects: DESKTOP_ONLY },
+  { id: 'story-playthrough-panel', actions: [selectBeat(), click('Tools'), click('Compare playthroughs')], diff: domDiff, skipProjects: DESKTOP_ONLY },
+  // The Find button's accessible name is its aria-label ("Open find and replace").
+  { id: 'story-find-replace-panel', actions: [click('Find')], diff: domDiff, skipProjects: DESKTOP_ONLY },
 ];
 
 export const STORY_EDITOR_VISUAL_SMOKE_SCENARIO_IDS = [

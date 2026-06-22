@@ -31,7 +31,11 @@ async function waitForVisualReady(page, scenario) {
   await page.evaluate(() => window.__hearthVisual.ready);
   await page.waitForSelector('[data-visual-root="app"]');
   if (scenario.hash === "#/board" || scenario.state?.startsWith?.("board")) {
-    await page.waitForFunction(() => window.__phaserScene?.grid?.flat?.().filter(Boolean).length >= 36);
+    // Wait for the board to populate. A full 6×6 board is 36 tiles, but hazard
+    // boards (cave-ins/rubble) legitimately leave a few cells empty — e.g.
+    // board-mine-hazards stabilises at 34 — so requiring exactly 36 would hang.
+    // 30 still rejects an empty / half-dealt board while tolerating hazards.
+    await page.waitForFunction(() => window.__phaserScene?.grid?.flat?.().filter(Boolean).length >= 30);
     await page.evaluate(() => window.__hearthVisual.syncScene());
   }
   await page.waitForTimeout(200);

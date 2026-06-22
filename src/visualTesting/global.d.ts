@@ -3,6 +3,7 @@
 // the bridge itself plus state.ts (HEARTH_VISUAL_TESTING flag check).
 
 import type { GameScene } from "../GameScene.js";
+import type { TownScene } from "../ui/town/TownScene.js";
 
 export {};
 
@@ -14,6 +15,7 @@ interface VisualBridgeApi {
   loadScenario: (id: string) => Promise<{ id: string; view?: string; modal?: unknown }>;
   click: (selector: string) => boolean;
   hover: (selector: string) => boolean;
+  enterTownBoard: (opts?: { kind?: string }) => Promise<unknown>;
   holdChain: (opts: { key: string; length: number }) => Promise<unknown>;
   playBoardAnimation: (opts: { name: string; tint?: unknown; pattern?: string }) => unknown;
   syncScene: () => boolean;
@@ -28,6 +30,7 @@ declare global {
     __hearthVisual?: VisualBridgeApi;
     __hearthVisualScenarioState?: unknown;
     __phaserScene?: GameScene | null;
+    __hearthTownScene?: TownScene | null;
   }
 
   var __HEARTH_VISUAL_TESTING__: boolean | undefined;

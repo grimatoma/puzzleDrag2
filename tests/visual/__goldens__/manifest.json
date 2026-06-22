@@ -131,15 +131,17 @@
     "view": null,
     "actions": [
       {
-        "type": "clickRole",
-        "role": "button",
-        "name": "Enter Farm Field"
+        "type": "api",
+        "method": "enterTownBoard",
+        "args": {
+          "kind": "farm"
+        }
       }
     ],
     "expectation": "Scenario start-farming-default renders correctly at #/town after 1 scripted action.",
     "checklist": [
       "Open #/town.",
-      "Apply action clickRole:button:Enter Farm Field.",
+      "Apply action api:enterTownBoard.",
       "Compare UI and canvas output to the golden image."
     ]
   },
@@ -505,15 +507,17 @@
     "view": null,
     "actions": [
       {
-        "type": "clickRole",
-        "role": "button",
-        "name": "Enter Mine"
+        "type": "api",
+        "method": "enterTownBoard",
+        "args": {
+          "kind": "mine"
+        }
       }
     ],
     "expectation": "Scenario entry-mine-provision-empty renders correctly at #/town after 1 scripted action.",
     "checklist": [
       "Open #/town.",
-      "Apply action clickRole:button:Enter Mine.",
+      "Apply action api:enterTownBoard.",
       "Compare UI and canvas output to the golden image."
     ]
   },
@@ -567,14 +571,20 @@
     "view": null,
     "actions": [
       {
+        "type": "clickRole",
+        "role": "button",
+        "name": "Search inventory"
+      },
+      {
         "type": "fillPlaceholder",
         "placeholder": "Search resources...",
         "value": "zzzz"
       }
     ],
-    "expectation": "Scenario inventory-search-empty renders correctly at #/inventory after 1 scripted action.",
+    "expectation": "Scenario inventory-search-empty renders correctly at #/inventory after 2 scripted actions.",
     "checklist": [
       "Open #/inventory.",
+      "Apply action clickRole:button:Search inventory.",
       "Apply action fillPlaceholder:Search resources....",
       "Compare UI and canvas output to the golden image."
     ]
@@ -722,13 +732,18 @@
       {
         "type": "clickRole",
         "role": "button",
-        "name": "Debug tools"
+        "name": "Menu"
+      },
+      {
+        "type": "clickText",
+        "text": "Debug"
       }
     ],
-    "expectation": "Scenario shell-debug-modal renders correctly at #/town after 1 scripted action.",
+    "expectation": "Scenario shell-debug-modal renders correctly at #/town after 2 scripted actions.",
     "checklist": [
       "Open #/town.",
-      "Apply action clickRole:button:Debug tools.",
+      "Apply action clickRole:button:Menu.",
+      "Apply action clickText:Debug.",
       "Compare UI and canvas output to the golden image."
     ]
   },
@@ -819,15 +834,17 @@
     "view": null,
     "actions": [
       {
-        "type": "clickRole",
-        "role": "button",
-        "name": "Enter Farm Field"
+        "type": "api",
+        "method": "enterTownBoard",
+        "args": {
+          "kind": "farm"
+        }
       }
     ],
     "expectation": "Scenario start-farming-default renders correctly at #/town after 1 scripted action.",
     "checklist": [
       "Open #/town.",
-      "Apply action clickRole:button:Enter Farm Field.",
+      "Apply action api:enterTownBoard.",
       "Compare UI and canvas output to the golden image."
     ]
   },
@@ -837,9 +854,11 @@
     "view": null,
     "actions": [
       {
-        "type": "clickRole",
-        "role": "button",
-        "name": "Enter Farm Field"
+        "type": "api",
+        "method": "enterTownBoard",
+        "args": {
+          "kind": "farm"
+        }
       },
       {
         "type": "clickRole",
@@ -850,7 +869,7 @@
     "expectation": "Scenario start-farming-tile-chooser renders correctly at #/town after 2 scripted actions.",
     "checklist": [
       "Open #/town.",
-      "Apply action clickRole:button:Enter Farm Field.",
+      "Apply action api:enterTownBoard.",
       "Apply action clickRole:button:Grass selected.",
       "Compare UI and canvas output to the golden image."
     ]
@@ -1048,23 +1067,6 @@
     "checklist": [
       "Open #/town.",
       "Apply action clickRole:button:Build.",
-      "Compare UI and canvas output to the golden image."
-    ]
-  },
-  "iphone-portrait/town-building-tooltip.png": {
-    "scenarioId": "town-building-tooltip",
-    "routeHash": "#/town",
-    "view": null,
-    "actions": [
-      {
-        "type": "hoverText",
-        "text": "Workshop"
-      }
-    ],
-    "expectation": "Scenario town-building-tooltip renders correctly at #/town after 1 scripted action.",
-    "checklist": [
-      "Open #/town.",
-      "Apply action hoverText:Workshop.",
       "Compare UI and canvas output to the golden image."
     ]
   },

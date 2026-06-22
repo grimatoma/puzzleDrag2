@@ -222,11 +222,24 @@ export function ConceptRefCard({
       />
     ) : null;
 
+  // The rich card can carry a body (recipe I/O, per-host ability params) that
+  // itself renders navigable ConceptRefCards — i.e. nested buttons. A <button>
+  // ancestor of a <button> is invalid HTML and trips React's validateDOMNesting
+  // warning (which the visual specs treat as a failure). Render the rich card as
+  // a div with button semantics instead; the CSS class fully styles it, so the
+  // appearance is unchanged. Compact/inline variants have no body → stay buttons.
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       title={`${conceptId}:${entityKey}`}
       onClick={onActivate}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onActivate();
+        }
+      }}
       className={`wiki-concept-ref-card wiki-concept-ref-card--rich${
         conceptId === "buildings" ? " wiki-concept-ref-card--building" : ""
       } ${className}`.trim()}
@@ -251,7 +264,7 @@ export function ConceptRefCard({
         </div>
       </div>
       {body}
-    </button>
+    </div>
   );
 }
 

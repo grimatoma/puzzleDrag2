@@ -17,7 +17,11 @@ async function installDeterminism(page) {
 }
 
 for (const scenario of BALANCE_VISUAL_SCENARIOS) {
-  test(`${scenario.id}`, async ({ page }) => {
+  test(`${scenario.id}`, async ({ page }, testInfo) => {
+    test.skip(
+      Boolean(scenario.skipProjects?.includes(testInfo.project.name)),
+      `${scenario.id} is intentionally skipped for ${testInfo.project.name}`,
+    );
     const pageErrors = [];
     const consoleErrors = [];
     page.on('pageerror', (error) => pageErrors.push(error.stack || error.message));
@@ -29,7 +33,11 @@ for (const scenario of BALANCE_VISUAL_SCENARIOS) {
     await installDeterminism(page);
     await page.goto(`./b/${scenario.hash || ''}`);
     await page.waitForSelector('#root');
-    await page.waitForTimeout(250);
+    // The Dev Panel loads its fonts from Google Fonts with `display=swap`; a bare
+    // 250ms wait races that swap and ghosts every glyph past the diff budget.
+    // Wait for fonts to settle so golden + verify capture the same painted state.
+    await page.evaluate(() => document.fonts.ready);
+    await page.waitForTimeout(300);
 
     const screenshot = await page.locator('#root').screenshot({ animations: 'disabled', caret: 'hide', timeout: 60_000 });
     expect(screenshot).toMatchSnapshot(`${scenario.id}.png`, { ...scenario.diff });
