@@ -24,9 +24,9 @@
     "timeToMidGame_runs": [20, 35],
     "milestones": {
       "home_found_2_affordable_coins": { "target_runs": [6, 15], "current": "~2 (coins arrive too fast to be a real gate; the true gate is completing home)" },
-      "home_tier1_hamlet": { "target_runs": [3, 8], "current": "UNREACHABLE (needs crafted bread -> bakery -> block)" },
-      "home_tier2_village": { "target_runs": [10, 20], "current": "UNREACHABLE (needs block/coke/silver_bar)" },
-      "home_tier3_city_MIDGAME": { "target_runs": [20, 35], "current": "UNREACHABLE (circular gate — see finding)" }
+      "home_tier1_hamlet": { "target_runs": [3, 8], "current": "REACHABLE (softlock fixed 2026-06-23; bread bakes from farm goods at Outpost). Run-count not yet validated by the pacing sim." },
+      "home_tier2_village": { "target_runs": [10, 20], "current": "REACHABLE (re-costed to farm goods). Run-count not yet validated." },
+      "home_tier3_city_MIDGAME": { "target_runs": [20, 35], "current": "REACHABLE (full ladder opens on farm goods). Run-count not yet validated." }
     },
     "coinsPerRun": [40, 140],
     "familyValueSpreadRatio_max": 4
@@ -83,7 +83,8 @@
   "findings": [
     {
       "id": "home-progression-circular-lock",
-      "severity": "blocker",
+      "severity": "resolved",
+      "resolution": "FIXED 2026-06-23. Town 1 made self-contained on farm goods: Bakery re-costed block:6 -> hay_bundle:6 and its unlock moved Hamlet -> Outpost [constants.ts BUILDINGS; cartography/data.ts home tiers]; home Village & City upgradeCost re-costed off ALL mine goods to farm goods only (bread/pie/soup/eggs/plank/flour/hay_bundle). Quarry gate left at home=City (Zone 2 = farm+mine opens AFTER Town 1 is grown). Verified: progression oracle flips RED->green (home maxSelfTier 0/3 -> 3/3, every board zone reachable), baseline re-accepted (progression.baseline.json), 21/21 playtest-harness tests pass (progression-shape snapshot updated intentionally), lint/typecheck/build green. New downstream (non-blocking) wall: quarry Smeltworks->Foundry City needs gold_bar.",
       "summary": "A fresh save is HARD-SOFTLOCKED at home Outpost (tier 0). The first rung, Hamlet, needs `bread`; bread is crafted only at the Bakery; the Bakery (a) costs `block` to build and (b) only UNLOCKS at Hamlet — the rung it gates. Three stacked locks, all rooted in mine goods being demanded before the mine is reachable: (A) Bakery build cost includes block:6 [constants.ts:788]; (B) Bakery unlocks at home tier 1, whose gate is bread:10 [cartography/data.ts:264-265] — circular; (C) home Village/City rungs need block/coke/iron_bar [cartography/data.ts:273,282]. Mine goods come only from mine boards, and EVERY mine/fish zone is gated behind the quarry (quarry requiresZoneTier {home, 3}; harbor/caves/forge require the quarry) [cartography/data.ts:344,392,419,446]. Almost certainly collateral from PR #1299 (zones-as-spine) not reconciling the authored home tier/building costs.",
       "confirmed": "HARD LOCK — now CODE-DERIVED, not just traced. The progression oracle (src/playtest/progression.ts; `npm run playtest -- --progression`) computes fresh-save reachability = {home, meadow, orchard, crossroads} (all farm/no-board) and detects the wall at home Outpost->Hamlet on `bread`. CARTO/TRAVEL also enforces the travel gate (slice.ts:78). The escape-valve audit found NO out: orders/daily-rewards/story grants/init give no mine goods or bread; inventory is siloed per zone so another zone's output can't pay home's tier-up; no tier-0 home building yields bread or mine goods.",
       "marketLatentEscape": "The ONE near-miss: MARKET_PRICES lists block/iron_bar/coke/bread as buyable and BUY_RESOURCE doesn't itself check the caravan post [market.ts:72-80], but the buy UI only shows once caravan_post is built [Inventory.tsx:299,510] — and caravan_post costs block+iron_bar. So the market is a latent escape that is itself mine-gated. Ungating the buy UI (or seeding an early buyable starter good) is the cheapest single lever.",
@@ -95,9 +96,15 @@
   ],
 
   "openQuestions": [
-    "RESOLVED (was: is the gate enforced for travel or only founding?): the quarry gate IS enforced for travel (CARTO/TRAVEL slice.ts:78) AND the lock bites even earlier, at home Outpost->Hamlet on crafted `bread` — code-derived by the progression oracle. It is a hard softlock, not awkward ordering.",
-    "DESIGN CALL (objective 1, highest leverage): which lever opens the spine? re-cost the Bakery off `block` + unlock it at Outpost (cleanest first step), and/or lower the quarry's requiresZoneTier, and/or re-cost home Village/City off mine goods, and/or ungate the market buy UI. See finding `home-progression-circular-lock`.lever.",
-    "Compress the family-value spread toward a 3-4x ceiling (per the auto change-list), or keep a premium for marquee resources? (objective 2)",
+    "RESOLVED 2026-06-23: the home progression softlock is fixed (Town 1 self-contained on farm goods) — see findings[0].resolution.",
+    "NEXT SESSION is a live design conversation (see reference/docs/balance/index.html Overview > 'Discussion agenda'). Scope: keep a ROUGH whole-game outline, but deeply design+balance only the FIRST TWO ZONES; balance target = 'feels balanced through the FOUNDING OF THE THIRD ZONE'; zone 3+ open.",
+    "Zone-2 board model: can ONE settlement own both a farm and a mine board, and how does the player switch? (home is farm-only, quarry mine-only today — feasibility unverified). Zone 2 = farm+mine teaches the rations->mine-turns combination; its mine is HAZARD-FREE (hazards are later zones).",
+    "Workers (CRITICAL): wire houses -> workers -> shorter on-board chain length (effectiveMinChain floors at 3, reads only the boss; workers currently reduce the income threshold, not chain length). Per-zone pool vs the existing global villagers pool? Magnitudes?",
+    "Building-ability specials layer is ALREADY BUILT (14+ effect types via the aggregator) — the work is ASSIGNING specials to buildings per zone as balance levers, plus any new channel (chain-length; an active 'Extra Turn').",
+    "Zone completion / capstone: reframe the 'sub-boss' as a big capstone PROJECT (e.g., launch a Fair; the fairground node is a stub)? Permanent GLOBAL abilities don't exist yet (new machinery) — build now, or keep the first two zones on the existing keeper->Hearth-Token path?",
+    "Token gate: keep 'one of each biome (farm/mine/harbor) -> Old Capital', or move to N-of-M?",
+    "Zone roster & twists: the 8 board zones exist but are undifferentiated — keep all or consolidate, and which 2-3 unique twists to build first vs. high-level placeholders?",
+    "Value spread (~10x -> 3-4x ceiling via the harness change-list) and coin pacing (coins too fast; make them a soft secondary gate via the action-start/entry-cost sink) — deep tune deferred to the cross-zone pacing sim.",
     "Confirm constraints: no real-money; saves must survive value tweaks."
   ]
 }

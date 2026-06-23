@@ -9,7 +9,8 @@ import { gotoFresh, getReactState, waitForState, dispatchAction } from './helper
  *     cost port — coins are no longer a building currency).
  *   - Adds the building id to state.built.
  *
- * Bakery cost is { plank, block, eggs } in src/constants.ts (BUILDINGS).
+ * Bakery cost is { plank, hay_bundle, eggs } in src/constants.ts (BUILDINGS) —
+ * farm-only after the 2026-06-23 softlock fix (was { plank, block, eggs }).
  */
 
 function builtAtCurrentLocation(state, id) {
@@ -20,7 +21,7 @@ test('Building Bakery via BUILD action debits resources and adds to state.built'
   await gotoFresh(page, {
     coins: 0, // resource-only — no coins needed
     built: { hearth: true },
-    inventory: { home: { plank: 50, block: 50, eggs: 50 } },
+    inventory: { home: { plank: 50, hay_bundle: 50, eggs: 50 } },
   });
   const before = await getReactState(page);
   expect(builtAtCurrentLocation(before, 'bakery')).toBeFalsy();
@@ -37,7 +38,7 @@ test('BUILD without the required resources is rejected', async ({ page }) => {
   await gotoFresh(page, {
     coins: 5000,
     built: { hearth: true },
-    inventory: { home: { plank: 50, block: 50, eggs: 0 } }, // missing eggs
+    inventory: { home: { plank: 50, hay_bundle: 50, eggs: 0 } }, // missing eggs
   });
   await dispatchAction(page, { type: 'BUILD', payload: { id: 'bakery' } });
   await page.waitForTimeout(150);
