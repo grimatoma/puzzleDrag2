@@ -1,24 +1,40 @@
-// Seasonal art for the PALM tree tile (`tile_tree_palm`).
+// BOLD seasonal art for the PALM tree board tile (`tile_tree_palm`).
 //
 // A curved slim palm: a gently-leaning brown segmented trunk topped by a crown
-// fan of several long arching green fronds, with a small cluster of 2–3
-// coconuts nestled at the crown base. Palms are EVERGREEN — the trunk + frond
-// fan silhouette is IDENTICAL every season; only colour, a little frond droop,
-// snow and the small dressing (blossom / fallen leaves / pad snow / frost)
+// FAN of long arching green fronds, with a small cluster of coconuts nestled at
+// the crown base. The palm IDENTITY is constant every season — the curved trunk
+// and the frond-fan silhouette never change; only colour and a small seasonal
+// DRESSING (a new-frond bud, a fallen frond/coconut, snow caps + icicle, frost)
 // change. The fronds stay GREEN and the trunk stays BROWN all year (palette
-// lock). This is enforced by a single parameterized `paint(ctx, p, bob)`:
-//   - draw(season)      = paint(ctx, SP[season], 0)
-//   - anim(season)      = micro-motion + paint(ctx, SP[season], bobAt(t))
-//   - transition(from)  = paint(ctx, lerpP(SP[from], SP[from+1], smoother(p)), 0)
+// lock). Seasons are made UNMISTAKABLE at a glance (~58 px):
+//   Spring — bright FRESH lime fronds + a tiny pink flower / unfurling new frond.
+//   Summer — lush vivid PEAK green fronds, full and glossy (the high point).
+//   Autumn — lower fronds BROWNING & drooping + a fallen frond AND a fallen
+//            coconut resting on the pad.
+//   Winter — a cooler frostier palm with a snow DUSTING / caps on the frond tips
+//            and a small ICICLE hanging off a low frond. Tropical, so the snow
+//            is lighter than a conifer's — but the cool blue cast is clear.
 //
-// Because every season is the same paint with tweened params, transitions are
-// seamless: transition(0) ≡ draw(from) and transition(1) ≡ draw(to). The bob
-// uses A*(1-cos(w t))*0.5 so bob(0)=0 with zero velocity → seamless idle.
+// IDENTITY across seasons is enforced by a single parameterized `paint(ctx, p,
+// bob)` plus a `paintWithSway(...)` overlay that only adds idle motion:
+//   - draw(season)     = paint(ctx, SP[season], 0)
+//   - anim(season)     = two-tier WC3 idle (see below) over paint(...)
+//   - transition(from) = paint(ctx, lerpP(SP[from], SP[from+1], smoother(p)), 0)
+// Because every still is the same paint with tweened params, transitions are
+// seamless: transition(0) ≡ draw(from) and transition(1) ≡ draw(to).
 //
-// Tree framing: trunk base sits at the pad centre, the crown fans into the
-// upper portion and overhangs the pad width. Origin-centered in the −24..+24
-// design box, light from upper-left, flat cel-shaded with a soft dark outline.
-// Pure Canvas-2D vector drawing.
+// TWO-TIER WC3 IDLE (deterministic `actionQ` clock; mostly at rest):
+//   COMMON  — every ~6 s the frond fan SWAYS in a breeze: a TRAVELING WAVE rolls
+//             left→right across the fronds, ~13 px peak tip travel, anticipation
+//             then settle, zero velocity at both window edges (seamless).
+//   RARE    — every ~18 s a coconut WOBBLES and a small BIRD flits in, perches a
+//             beat on a frond, then flits up-and-off. Bold/noticeable, gone by
+//             the window edge. (Autumn has no coconuts hanging — only the fallen
+//             one — so its rare special is the bird alone.)
+// Both tiers come back to the exact rest pose at their window edges.
+//
+// Origin-centered −24..+24 design box, light from upper-left, flat cel-shaded
+// with a soft dark outline. Pure Canvas-2D vector drawing; never throws.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
 import { SEASON_NAMES, type SeasonName } from "../types.js";
@@ -49,9 +65,14 @@ interface P {
   droop: number;     // 0..1 extra downward droop of the lower fronds
   frostAmt: number;  // 0..1 cool frost dusting on the fronds
   snowCapAmt: number; // 0..1 snow resting on the upward frond surfaces
+  icicleAmt: number;  // 0..1 a small icicle hanging off a low frond (winter)
   padSnowAmt: number; // 0..1 snow blanket on the pad
   blossomAmt: number; // 0..1 tiny blossoms on the pad (spring)
+  budAmt: number;     // 0..1 a tiny flower / unfurling new frond at the crown (spring)
+  coconutAmt: number; // 0..1 how present the HANGING coconut cluster is
   fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
+  fallenFrondAmt: number; // 0..1 a whole fallen frond on the pad (autumn)
+  fallenNutAmt: number;   // 0..1 a fallen coconut resting on the pad (autumn)
 }
 
 // ── Local math helpers ───────────────────────────────────────────────────────
@@ -62,7 +83,10 @@ function clamp01(x: number): number {
   return x;
 }
 
-const smoother = (x: number): number => x * x * x * (x * (6 * x - 15) + 10);
+const smoother = (x: number): number => {
+  const c = clamp01(x);
+  return c * c * c * (c * (6 * c - 15) + 10);
+};
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
@@ -101,9 +125,14 @@ function lerpP(a: P, b: P, t: number): P {
     droop: lerp(a.droop, b.droop, t),
     frostAmt: lerp(a.frostAmt, b.frostAmt, t),
     snowCapAmt: lerp(a.snowCapAmt, b.snowCapAmt, t),
+    icicleAmt: lerp(a.icicleAmt, b.icicleAmt, t),
     padSnowAmt: lerp(a.padSnowAmt, b.padSnowAmt, t),
     blossomAmt: lerp(a.blossomAmt, b.blossomAmt, t),
+    budAmt: lerp(a.budAmt, b.budAmt, t),
+    coconutAmt: lerp(a.coconutAmt, b.coconutAmt, t),
     fallenLeafAmt: lerp(a.fallenLeafAmt, b.fallenLeafAmt, t),
+    fallenFrondAmt: lerp(a.fallenFrondAmt, b.fallenFrondAmt, t),
+    fallenNutAmt: lerp(a.fallenNutAmt, b.fallenNutAmt, t),
   };
 }
 
@@ -117,115 +146,144 @@ function clampP(p: P): P {
     droop: clamp01(p.droop),
     frostAmt: clamp01(p.frostAmt),
     snowCapAmt: clamp01(p.snowCapAmt),
+    icicleAmt: clamp01(p.icicleAmt),
     padSnowAmt: clamp01(p.padSnowAmt),
     blossomAmt: clamp01(p.blossomAmt),
+    budAmt: clamp01(p.budAmt),
+    coconutAmt: clamp01(p.coconutAmt),
     fallenLeafAmt: clamp01(p.fallenLeafAmt),
+    fallenFrondAmt: clamp01(p.fallenFrondAmt),
+    fallenNutAmt: clamp01(p.fallenNutAmt),
   };
 }
 
-// ── Per-season params ────────────────────────────────────────────────────────
+// ── Per-season params (BOLD) ──────────────────────────────────────────────────
 
 const SP: Record<SeasonName, P> = {
-  // Spring — fresh dewy lime-green fronds; bright lime dewy pad + blossom.
+  // Spring — BRIGHT fresh lime-green fronds; bright lime dewy pad + blossom and
+  // a tiny pink flower / unfurling new frond at the crown.
   Spring: {
-    frondLight: [168, 224, 104],
-    frondMid: [104, 182, 74],
-    frondDark: [56, 122, 52],
-    frondTip: [150, 210, 96],
+    frondLight: [180, 236, 110],
+    frondMid: [110, 192, 76],
+    frondDark: [54, 124, 50],
+    frondTip: [160, 220, 100],
     trunkLight: [156, 116, 72],
     trunkDark: [96, 66, 38],
     coconut: [118, 84, 48],
-    padGrass: [128, 206, 86],
-    padDark: [72, 138, 58],
+    padGrass: [132, 212, 88],
+    padDark: [72, 142, 58],
     soil: [120, 84, 48],
     outline: [40, 60, 30],
-    light: [232, 244, 226],
-    lightAmt: 0.16,
-    vigor: 0.6,
-    gloss: 0.28,
+    light: [236, 248, 228],
+    lightAmt: 0.17,
+    vigor: 0.65,
+    gloss: 0.3,
     tipBrown: 0,
-    droop: 0.08,
+    droop: 0.06,
     frostAmt: 0,
     snowCapAmt: 0,
+    icicleAmt: 0,
     padSnowAmt: 0,
-    blossomAmt: 0.85,
+    blossomAmt: 0.95,
+    budAmt: 0.95,
+    coconutAmt: 1,
     fallenLeafAmt: 0,
+    fallenFrondAmt: 0,
+    fallenNutAmt: 0,
   },
-  // Summer — lush vivid PEAK green fronds; saturated mid-green pad; warm light.
+  // Summer — lush vivid PEAK green fronds; saturated mid-green pad; warm glossy.
   Summer: {
-    frondLight: [142, 214, 78],
-    frondMid: [70, 162, 56],
-    frondDark: [34, 104, 42],
-    frondTip: [108, 190, 64],
+    frondLight: [150, 224, 80],
+    frondMid: [66, 168, 54],
+    frondDark: [28, 102, 40],
+    frondTip: [112, 198, 66],
     trunkLight: [164, 120, 72],
     trunkDark: [100, 66, 36],
     coconut: [110, 76, 42],
-    padGrass: [86, 168, 70],
-    padDark: [44, 110, 48],
+    padGrass: [86, 172, 70],
+    padDark: [44, 112, 48],
     soil: [126, 86, 48],
-    outline: [28, 58, 26],
-    light: [255, 240, 206],
-    lightAmt: 0.18,
+    outline: [26, 58, 26],
+    light: [255, 240, 204],
+    lightAmt: 0.19,
     vigor: 1.0,
-    gloss: 0.7,
+    gloss: 0.85,
     tipBrown: 0,
     droop: 0,
     frostAmt: 0,
     snowCapAmt: 0,
+    icicleAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
+    budAmt: 0,
+    coconutAmt: 1,
     fallenLeafAmt: 0,
+    fallenFrondAmt: 0,
+    fallenNutAmt: 0,
   },
-  // Autumn — fronds still green but the LOWER tips brown (olive-tan); rust pad.
+  // Autumn — fronds still green but the LOWER tips BROWN hard (olive-tan) and
+  // droop; rust pad; a whole fallen frond AND a fallen coconut on the pad.
   Autumn: {
     frondLight: [134, 184, 80],
-    frondMid: [86, 144, 58],
-    frondDark: [52, 96, 40],
-    frondTip: [176, 128, 56], // olive-tan the lower tips fade toward
+    frondMid: [88, 142, 56],
+    frondDark: [50, 92, 38],
+    frondTip: [190, 132, 52], // olive-tan the lower tips fade toward (bolder)
     trunkLight: [150, 108, 64],
     trunkDark: [92, 60, 32],
     coconut: [104, 70, 38],
-    padGrass: [150, 152, 86],
-    padDark: [104, 96, 52],
+    padGrass: [156, 152, 84],
+    padDark: [108, 96, 50],
     soil: [120, 80, 44],
     outline: [46, 50, 26],
-    light: [248, 210, 150],
-    lightAmt: 0.2,
-    vigor: 0.7,
-    gloss: 0.4,
-    tipBrown: 0.85,
-    droop: 0.55,
+    light: [248, 206, 144],
+    lightAmt: 0.21,
+    vigor: 0.65,
+    gloss: 0.38,
+    tipBrown: 0.95,
+    droop: 0.7,
     frostAmt: 0,
     snowCapAmt: 0,
+    icicleAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
-    fallenLeafAmt: 0.85,
+    budAmt: 0,
+    coconutAmt: 0.5, // some have dropped
+    fallenLeafAmt: 0.8,
+    fallenFrondAmt: 0.95,
+    fallenNutAmt: 0.95,
   },
-  // Winter — fronds STILL GREEN under a light snow dusting + frost; snowy pad,
-  // cool light. No white-out: the green stays clearly visible underneath.
+  // Winter — a COOLER, frostier palm. Fronds stay GREEN under a light snow
+  // dusting + caps on the tips + frost; a small icicle off a low frond; snowy
+  // pad; cold blue light. Tropical = lighter snow than a conifer, but clearly
+  // a cooler winter (no white-out: the green stays visible underneath).
   Winter: {
-    frondLight: [122, 168, 96],
-    frondMid: [74, 132, 70],
-    frondDark: [44, 92, 58],
-    frondTip: [108, 156, 96],
-    trunkLight: [140, 112, 84],
-    trunkDark: [88, 64, 46],
+    frondLight: [128, 174, 110],
+    frondMid: [76, 138, 84],
+    frondDark: [44, 96, 64],
+    frondTip: [122, 168, 122],
+    trunkLight: [138, 112, 86],
+    trunkDark: [86, 64, 48],
     coconut: [104, 80, 58],
-    padGrass: [176, 196, 214],
+    padGrass: [182, 200, 218],
     padDark: [120, 146, 172],
     soil: [128, 110, 96],
-    outline: [44, 50, 46],
-    light: [206, 226, 252],
-    lightAmt: 0.3,
+    outline: [44, 52, 50],
+    light: [200, 222, 252],
+    lightAmt: 0.34,
     vigor: 0.5,
-    gloss: 0.22,
-    tipBrown: 0.1,
-    droop: 0.35,
-    frostAmt: 0.7,
-    snowCapAmt: 0.7,
-    padSnowAmt: 0.9,
+    gloss: 0.2,
+    tipBrown: 0.08,
+    droop: 0.32,
+    frostAmt: 0.8,
+    snowCapAmt: 0.85,
+    icicleAmt: 0.9,
+    padSnowAmt: 0.92,
     blossomAmt: 0,
+    budAmt: 0,
+    coconutAmt: 1,
     fallenLeafAmt: 0,
+    fallenFrondAmt: 0,
+    fallenNutAmt: 0,
   },
 };
 
@@ -252,6 +310,63 @@ const FRONDS: Array<{ ang: number; len: number; lower: number }> = [
   { ang: 0.74, len: 23, lower: 0.45 }, // upper-right
   { ang: 1.30, len: 21, lower: 1.0 }, // far right, sweeps down-right (lower)
 ];
+
+// ── Idle clock helpers (deterministic, two-tier WC3) ─────────────────────────
+
+// Deterministic action clock. Returns a phase in [0,1) WHILE inside the action
+// window (length `win` seconds, repeating every `period`), or −1 at rest.
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
+}
+
+// A one-shot bell: 0 → 1 → 0 over the window with ZERO velocity at both ends
+// (sin² is C¹-zero at 0 and 1). Used to envelope the bird / coconut wobble.
+function bell(q: number): number {
+  if (q < 0) return 0;
+  const s = Math.sin(Math.PI * clamp01(q));
+  return s * s;
+}
+
+// A signed lean: rises, peaks, returns — zero value AND zero slope at q=0,q=1.
+function leanEnvelope(q: number): number {
+  if (q < 0) return 0;
+  return (1 - Math.cos(2 * Math.PI * clamp01(q))) * 0.5;
+}
+
+// COMMON breeze: every ~6 s, a ~1.2 s window. RARE special: every ~18 s, ~1.4 s.
+const SWAY_PERIOD = 6.0;
+const SWAY_WIN = 1.2;
+const SWAY_AMP = 13; // peak frond-TIP horizontal travel in design px (BOLD)
+
+const SPECIAL_PERIOD = 18.0;
+const SPECIAL_WIN = 1.4;
+
+// Traveling-wave breeze sway for frond `i` at time `t`. The whole envelope is
+// driven by the COMMON action window so it is exactly 0 (rest pose) outside the
+// window and at both edges. A phase offset per frond makes the gust ROLL across
+// the fan (left fronds lead, right fronds follow), and each frond's own tip
+// travel scales with how far it points sideways. Bob also rides the window so
+// the crown lifts a touch with the gust.
+function swayOfFrond(t: number, i: number): number {
+  const q = actionQ(t, SWAY_PERIOD, SWAY_WIN, 0);
+  if (q < 0) return 0;
+  const env = leanEnvelope(q); // 0..1..0, zero-velocity at ends
+  // roll the wave across the 6 fronds: ~0.16 of the window between neighbours
+  const rolled = clamp01(q - i * 0.06);
+  const travel = leanEnvelope(rolled); // delayed per-frond envelope
+  // sideways fronds get the most tip travel; top fronds least
+  const sideBias = 0.45 + 0.55 * Math.abs(Math.sin(FRONDS[i].ang));
+  // blend the shared lean with the per-frond rolled travel for a wave feel
+  return (env * 0.35 + travel * 0.65) * SWAY_AMP * sideBias;
+}
+
+// A small crown bob that accompanies the breeze (rides the same window → 0 at
+// the edges, seamless).
+function breezeBob(t: number): number {
+  const q = actionQ(t, SWAY_PERIOD, SWAY_WIN, 0);
+  return bell(q) * 1.4;
+}
 
 // ── Sub-part painters (driven only by P + offsets) ────────────────────────────
 
@@ -303,8 +418,9 @@ function drawFrond(
   // Direction up-and-out, then gravity bows the tip downward.
   const dirX = Math.sin(ang);
   const dirY = -Math.cos(ang);
-  // mid (rib apex) lifts up; tip falls under gravity + droop
-  const midX = ax + dirX * len * 0.55;
+  // mid (rib apex) lifts up; tip falls under gravity + droop. The mid also
+  // carries a fraction of the sway so the whole blade bends, not just the tip.
+  const midX = ax + dirX * len * 0.55 + sway * 0.4;
   const midY = ay + dirY * len * 0.55 - 2;
   const droopFall = 5 + extraDroop * 9;
   const tipX = ax + dirX * len + sway;
@@ -389,38 +505,95 @@ function drawCrown(
   ctx.beginPath();
   ctx.ellipse(ax, ay - 1, 3.2, 2.6, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  // spring bud — a tiny unfurling new frond + pink flower poking up from centre
+  if (p.budAmt > 0.02) {
+    const a = p.budAmt;
+    // a short pale-lime new frond curling up
+    ctx.strokeStyle = rgba(lerpRGB(p.frondLight, [220, 250, 180], 0.5), 0.9 * a);
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(ax, ay - 1);
+    ctx.quadraticCurveTo(ax - 1, ay - 7, ax + 1.5, ay - 10);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+    // a tiny pink flower at its tip
+    ctx.fillStyle = rgba([248, 150, 196], 0.95 * a);
+    for (let k = 0; k < 5; k++) {
+      const fa = (k / 5) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.ellipse(ax + 1.5 + Math.cos(fa) * 1.4, ay - 10 + Math.sin(fa) * 1.1, 1.0, 0.7, fa, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = rgba([255, 224, 96], a);
+    ctx.beginPath();
+    ctx.arc(ax + 1.5, ay - 10, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
-/** The little 2–3 coconut cluster nestled at the crown base. */
-function drawCoconuts(ctx: CanvasRenderingContext2D, bob: number, p: P): void {
+/** The little coconut cluster nestled at the crown base; `amt` fades it (some
+ *  drop in autumn). `wobble` nudges the nuts for the rare idle. */
+function drawCoconuts(
+  ctx: CanvasRenderingContext2D,
+  bob: number,
+  p: P,
+  amt: number,
+  wobble: number,
+): void {
+  if (amt <= 0.02) return;
   const [ax, ay] = [TRUNK_TOP_X, TRUNK_TOP_Y + bob];
   const nuts: Array<[number, number, number]> = [
     [ax - 3.2, ay + 3.4, 2.6],
     [ax + 0.4, ay + 4.6, 2.8],
     [ax - 1.6, ay + 5.6, 2.3],
   ];
-  nuts.forEach(([nx, ny, r]) => {
+  nuts.forEach(([nx, ny, r], idx) => {
+    // wobble: each nut swings on a tiny pendulum about its hang point
+    const wx = wobble * (idx === 1 ? 1.6 : idx === 0 ? -1.3 : 1.0);
+    const wy = Math.abs(wobble) * 0.5;
+    const cx = nx + wx;
+    const cy = ny + wy;
     // outline
-    ctx.fillStyle = rgb(p.outline);
+    ctx.fillStyle = rgba(p.outline, clamp01(amt));
     ctx.beginPath();
-    ctx.arc(nx, ny, r + 0.7, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r + 0.7, 0, Math.PI * 2);
     ctx.fill();
     // body
-    ctx.fillStyle = rgb(p.coconut);
+    ctx.fillStyle = rgba(p.coconut, clamp01(amt));
     ctx.beginPath();
-    ctx.arc(nx, ny, r, 0, Math.PI * 2);
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
     // lit cheek (upper-left)
-    ctx.fillStyle = rgba(lerpRGB(p.coconut, [255, 240, 210], 0.45), 0.7);
+    ctx.fillStyle = rgba(lerpRGB(p.coconut, [255, 240, 210], 0.45), 0.7 * clamp01(amt));
     ctx.beginPath();
-    ctx.arc(nx - r * 0.35, ny - r * 0.35, r * 0.5, 0, Math.PI * 2);
+    ctx.arc(cx - r * 0.35, cy - r * 0.35, r * 0.5, 0, Math.PI * 2);
     ctx.fill();
   });
 }
 
+/** A small icicle hanging off a low-left frond tip (winter). */
+function drawIcicle(ctx: CanvasRenderingContext2D, x: number, y: number, len: number, a: number): void {
+  if (a <= 0.02) return;
+  ctx.save();
+  const g = ctx.createLinearGradient(x, y, x, y + len);
+  g.addColorStop(0, `rgba(220,238,255,${0.95 * a})`);
+  g.addColorStop(1, `rgba(255,255,255,${0.6 * a})`);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(x - 1.1, y);
+  ctx.lineTo(x + 1.1, y);
+  ctx.lineTo(x, y + len);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
 // ── The single parameterized paint ───────────────────────────────────────────
 
-/** The whole tile from ONLY `p` and `bob`. */
+/** The whole tile from ONLY `p` and `bob` (still / transition path). The idle
+ *  motion is layered on top by `paintWithIdle`, never here. */
 function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
   const p = clampP(raw);
   ctx.save();
@@ -528,6 +701,57 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       });
     }
 
+    // a whole fallen FROND lying across the pad (autumn) — a clear seasonal cue
+    if (p.fallenFrondAmt > 0.01) {
+      const a = p.fallenFrondAmt;
+      ctx.save();
+      ctx.translate(-6, 21.4);
+      ctx.rotate(-0.28);
+      // rib
+      ctx.strokeStyle = rgba(lerpRGB(p.frondMid, p.frondTip, 0.7), a);
+      ctx.lineWidth = 2.0;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(-7, 0.5);
+      ctx.quadraticCurveTo(0, -1.4, 8, 0.8);
+      ctx.stroke();
+      // a few leaflets fanning off the rib
+      ctx.strokeStyle = rgba(lerpRGB(p.frondMid, p.frondTip, 0.85), 0.9 * a);
+      ctx.lineWidth = 1.0;
+      for (let i = -5; i <= 5; i += 1) {
+        const u = (i + 5) / 10;
+        const rx = lerp(-7, 8, u);
+        const ry = lerp(0.5, 0.8, u) - Math.sin(u * Math.PI) * 1.2;
+        [1, -1].forEach((side) => {
+          ctx.beginPath();
+          ctx.moveTo(rx, ry);
+          ctx.lineTo(rx + i * 0.2, ry + side * 2.0 + 0.4);
+          ctx.stroke();
+        });
+      }
+      ctx.lineCap = "butt";
+      ctx.restore();
+    }
+
+    // a fallen COCONUT resting on the pad (autumn)
+    if (p.fallenNutAmt > 0.01) {
+      const a = p.fallenNutAmt;
+      const nx = 10;
+      const ny = 20.2;
+      ctx.fillStyle = rgba(p.outline, 0.45 * a);
+      ctx.beginPath();
+      ctx.ellipse(nx, ny + 2, 3.4, 1.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba(p.coconut, a);
+      ctx.beginPath();
+      ctx.arc(nx, ny, 3.0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba(lerpRGB(p.coconut, [255, 240, 210], 0.4), 0.7 * a);
+      ctx.beginPath();
+      ctx.arc(nx - 1, ny - 1, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     // ── Soil contact patch + cast shadow under the trunk base ───────────────
     ctx.fillStyle = rgb(p.soil);
     ctx.beginPath();
@@ -581,11 +805,11 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     ctx.restore();
 
     // ── Crown of fronds (anchored at trunk top; SAME fan every season) ──────
-    // Static rest pose: no sway.
+    // Static rest pose: no sway. (Idle overlay redraws the crown with sway.)
     drawCrown(ctx, bob, () => 0, p);
 
     // ── Coconut cluster at the crown base ───────────────────────────────────
-    drawCoconuts(ctx, bob, p);
+    drawCoconuts(ctx, bob, p, p.coconutAmt, 0);
 
     // ── Frond sheen / gloss (kept on the fronds, never a flash) ─────────────
     if (p.gloss > 0.02) {
@@ -618,12 +842,12 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       });
     }
 
-    // ── Snow resting on the upward frond surfaces (winter) ──────────────────
+    // ── Snow resting on the upward frond surfaces + tips (winter) ────────────
     if (p.snowCapAmt > 0.02) {
       const a = p.snowCapAmt;
       const [ax, ay] = [TRUNK_TOP_X, TRUNK_TOP_Y + bob];
-      ctx.fillStyle = rgba([246, 251, 255], 0.9 * a);
-      // little snow caps riding the two top fronds + the crown heart
+      ctx.fillStyle = rgba([246, 251, 255], 0.92 * a);
+      // snow caps riding the top fronds + crown heart …
       const caps: Array<[number, number, number, number]> = [
         [ax - 6, ay - 6, 3.6, 1.5],
         [ax + 4, ay - 7, 3.8, 1.6],
@@ -634,6 +858,29 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
         ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
         ctx.fill();
       });
+      // … and little white caps dabbed on the resting FROND TIPS
+      FRONDS.forEach((f) => {
+        const dirX = Math.sin(f.ang);
+        const dirY = -Math.cos(f.ang);
+        const droopFall = 5 + f.lower * p.droop * 9;
+        const tx = ax + dirX * f.len;
+        const ty = ay + dirY * f.len + droopFall;
+        ctx.beginPath();
+        ctx.ellipse(tx, ty - 1.2, 2.0, 1.1, f.ang * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // ── A small icicle hanging off a low-left frond tip (winter) ────────────
+    if (p.icicleAmt > 0.02) {
+      const [ax, ay] = [TRUNK_TOP_X, TRUNK_TOP_Y + bob];
+      const f = FRONDS[0]; // far-left lower frond
+      const dirX = Math.sin(f.ang);
+      const dirY = -Math.cos(f.ang);
+      const droopFall = 5 + f.lower * p.droop * 9;
+      const tx = ax + dirX * f.len;
+      const ty = ay + dirY * f.len + droopFall;
+      drawIcicle(ctx, tx, ty, 5.5, p.icicleAmt);
     }
 
     // ── Ambient light wash over the whole tile (per-season tint) ────────────
@@ -653,9 +900,157 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
 
 // ── Idle bob (seamless, zero-velocity at t=0) ────────────────────────────────
 
-// A*(1-cos(w t))*0.5 → 0 at t=0 with zero velocity; period 2π/w.
-function bobAt(t: number, amp = 0.8, w = 1.4): number {
+// A small ever-present settle bob, plus the breeze bob from the action window.
+// A*(1-cos(w t))*0.5 → 0 at t=0 with zero velocity; very subtle baseline.
+function baseBobAt(t: number, amp = 0.5, w = 1.1): number {
   return amp * (1 - Math.cos(w * t)) * 0.5;
+}
+
+// ── Two-tier WC3 idle composition ─────────────────────────────────────────────
+
+/** A small bird (front-¾) used by the rare special. Colors locked. */
+function drawBird(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  hop: number,
+  look: number,
+  wing: number,
+  alpha: number,
+): void {
+  if (alpha <= 0.02) return;
+  ctx.save();
+  ctx.globalAlpha = clamp01(alpha);
+  ctx.translate(x, y + hop);
+  // body
+  ctx.fillStyle = "#3f5a8a";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 3.8, 2.9, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  // bright belly
+  ctx.fillStyle = "#e9d36a";
+  ctx.beginPath();
+  ctx.ellipse(-1.2, 0.6, 2.1, 2.0, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  // tail
+  ctx.fillStyle = "#334870";
+  ctx.beginPath();
+  ctx.moveTo(3.0, -0.4);
+  ctx.lineTo(6.6, -1.6);
+  ctx.lineTo(6.0, 1.1);
+  ctx.closePath();
+  ctx.fill();
+  // wing (opens during flit-off)
+  ctx.save();
+  ctx.translate(0.6, -0.4);
+  ctx.rotate(-0.5 * wing);
+  ctx.fillStyle = "#2b3a5c";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 2.9 + wing * 2.0, 1.6 + wing * 1.2, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // head (looks around)
+  ctx.save();
+  ctx.translate(-3.0, -2.2);
+  ctx.rotate(look);
+  ctx.fillStyle = "#3f5a8a";
+  ctx.beginPath();
+  ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
+  ctx.fill();
+  // beak
+  ctx.fillStyle = "#e2902a";
+  ctx.beginPath();
+  ctx.moveTo(-2.0, 0.2);
+  ctx.lineTo(-4.0, -0.2);
+  ctx.lineTo(-2.0, 1.0);
+  ctx.closePath();
+  ctx.fill();
+  // eye
+  ctx.fillStyle = "#0e0a06";
+  ctx.beginPath();
+  ctx.arc(-0.5, -0.4, 0.75, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  ctx.restore();
+}
+
+/** The rare special: a bird flits in onto a top-left frond, perches a beat
+ *  looking around, then opens its wing and flits up-and-off, gone by q=1. The
+ *  anchor rides the breeze sway so it sits on the moving frond. */
+function birdSpecial(ctx: CanvasRenderingContext2D, q: number, anchorX: number, anchorY: number): void {
+  if (q < 0) return;
+  let hop = 0;
+  let look = 0;
+  let wing = 0;
+  let alpha: number;
+  let dx = 0;
+  let dy = 0;
+  if (q < 0.25) {
+    const f = q / 0.25;
+    alpha = smoother(f);
+    dy = -11 * (1 - smoother(f)); // drops down onto the frond from above
+    hop = -2 * Math.sin(f * Math.PI);
+  } else if (q < 0.7) {
+    const f = (q - 0.25) / 0.45;
+    alpha = 1;
+    look = Math.sin(f * Math.PI * 2) * 0.5;
+    hop = -2.0 * Math.abs(Math.sin(f * Math.PI * 2));
+  } else {
+    const f = (q - 0.7) / 0.3;
+    alpha = 1 - smoother(f); // fades as it leaves → gone by q=1
+    wing = Math.abs(Math.sin(f * Math.PI * 3)); // flapping
+    dx = 11 * smoother(f); // flits up-and-right, ~13 px total
+    dy = -13 * smoother(f);
+    look = 0.3;
+  }
+  drawBird(ctx, anchorX + dx, anchorY + dy, hop, look, wing, alpha);
+}
+
+/** Draw the full tile with the two-tier idle applied at time `t`. */
+function paintWithIdle(ctx: CanvasRenderingContext2D, season: SeasonName, t: number): void {
+  const p = clampP(SP[season]);
+  const bob = baseBobAt(t) + breezeBob(t);
+
+  // 1) Base tile at this bob (crown drawn at rest by paint()).
+  paint(ctx, SP[season], bob);
+
+  // 2) COMMON breeze: redraw the crown (and hanging coconuts) with the
+  //    traveling-wave sway on top. Same anchor → the crown overdraws itself, so
+  //    at rest (sway≡0) this is a no-op overlay and the still is unchanged.
+  ctx.save();
+  try {
+    ctx.globalAlpha = 1;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    const swayActive = actionQ(t, SWAY_PERIOD, SWAY_WIN, 0) >= 0;
+    const rareQ = actionQ(t, SPECIAL_PERIOD, SPECIAL_WIN, SPECIAL_PERIOD / 2);
+    // RARE coconut wobble: a damped swing enveloped to 0 at the window edges.
+    const wobble = rareQ < 0 ? 0 : bell(rareQ) * Math.sin(rareQ * Math.PI * 6) * 1.6;
+
+    if (swayActive || wobble !== 0) {
+      drawCrown(ctx, bob, (i) => swayOfFrond(t, i), p);
+      // hanging coconuts (with the rare wobble) over the swayed crown
+      drawCoconuts(ctx, bob, p, p.coconutAmt, wobble);
+    }
+
+    // 3) RARE bird: perches on the top-left frond, then flits off. The anchor
+    //    rides that frond's breeze sway so it stays planted.
+    if (rareQ >= 0) {
+      const [ax, ay] = [TRUNK_TOP_X, TRUNK_TOP_Y + bob];
+      const f = FRONDS[2]; // top-left frond
+      const dirX = Math.sin(f.ang);
+      const dirY = -Math.cos(f.ang);
+      const u = 0.7; // perch ~70% out along the frond
+      const sway = swayOfFrond(t, 2);
+      const anchorX = ax + dirX * f.len * u + sway * u;
+      const anchorY = ay + dirY * f.len * u - 3;
+      birdSpecial(ctx, rareQ, anchorX, anchorY);
+    }
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
@@ -664,108 +1059,8 @@ function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
   return (ctx) => paint(ctx, SP[season], 0);
 }
 
-/** Crown breeze-sway paint: the crown fronds gently swing while the trunk bobs.
- *  Seamless (sin of t) and additive — silhouette identity preserved. */
-function paintWithSway(
-  ctx: CanvasRenderingContext2D,
-  season: SeasonName,
-  t: number,
-  bob: number,
-): void {
-  // We replicate paint() but feed a per-frond sway into the crown. To keep the
-  // single-paint guarantee for stills/transitions, the sway path lives only
-  // here in anim. Draw the full tile, then redraw the crown + coconuts with
-  // sway on top (same anchor → no doubling artefact, crown overdraws itself).
-  paint(ctx, SP[season], bob);
-  const p = clampP(SP[season]);
-  ctx.save();
-  try {
-    ctx.globalAlpha = 1;
-    ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-    const swayOf = (i: number) => {
-      // each frond swings on a shared breeze with a small phase offset
-      return Math.sin(t * 1.3 + i * 0.7) * 1.6 + Math.sin(t * 0.8) * 0.8;
-    };
-    drawCrown(ctx, bob, swayOf, p);
-    drawCoconuts(ctx, bob, p);
-  } finally {
-    ctx.globalAlpha = 1;
-    ctx.restore();
-  }
-}
-
 function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
-  return (ctx, t) => {
-    const bob = bobAt(t);
-    // base tile + swaying crown (the subject bob is 0 at t=0; sway is a gentle
-    // breeze that is also ~0 at t=0 since sin(0)·… is small and additive).
-    paintWithSway(ctx, season, t, bob);
-
-    ctx.save();
-    try {
-      ctx.globalAlpha = 1;
-      if (season === "Spring") {
-        // dew shimmer — a soft pulsing glint resting on a frond
-        const g = 0.22 + 0.28 * (0.5 + 0.5 * Math.sin(t * 2.2));
-        ctx.fillStyle = `rgba(255,255,255,${g})`;
-        const gy = -10 + bob + Math.sin(t * 1.1) * 1.0;
-        ctx.beginPath();
-        ctx.arc(-2, gy, 1.0 + g * 0.7, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Summer") {
-        // frond shimmer — a bright sheen travelling out along a top frond
-        const prog = (t * 0.45) % 1;
-        const ang = 0.16;
-        const dirX = Math.sin(ang);
-        const dirY = -Math.cos(ang);
-        const r = 4 + prog * 14;
-        const gx = TRUNK_TOP_X + dirX * r;
-        const gy = TRUNK_TOP_Y + bob + dirY * r - 2;
-        ctx.fillStyle = "rgba(232,255,200,0.7)";
-        ctx.beginPath();
-        ctx.ellipse(gx, gy, 1.6, 1.0, ang, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Autumn") {
-        // browning frond-tip flutter — a small tan fleck quivering at a low tip
-        const f = Math.sin(t * 3.0);
-        const ang = 1.30;
-        const dirX = Math.sin(ang);
-        const dirY = -Math.cos(ang);
-        const len = 21;
-        const tx = TRUNK_TOP_X + dirX * len + f * 1.4;
-        const ty = TRUNK_TOP_Y + bob + dirY * len + 11 + Math.abs(f) * 0.6;
-        ctx.fillStyle = "rgba(184,132,60,0.85)";
-        ctx.beginPath();
-        ctx.ellipse(tx, ty, 1.6, 1.0, ang + f * 0.3, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        // Winter — drifting snowflakes + a faint cold sheen
-        const seeds: Array<[number, number, number]> = [
-          [-9, 0.0, 1.0], [6, 0.4, 0.9], [12, 0.7, 0.8], [-2, 0.25, 0.9],
-        ];
-        ctx.fillStyle = "#ffffff";
-        seeds.forEach(([fx, phase, r]) => {
-          const prog = ((t / 3.0 + phase) % 1 + 1) % 1;
-          const fy = -22 + prog * 40;
-          const dx = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
-          ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog * Math.PI);
-          ctx.beginPath();
-          ctx.arc(dx, fy, r, 0, Math.PI * 2);
-          ctx.fill();
-        });
-        ctx.globalAlpha = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.8));
-        ctx.fillStyle = "rgba(210,232,255,1)";
-        ctx.beginPath();
-        ctx.ellipse(TRUNK_TOP_X, TRUNK_TOP_Y + bob - 4, 12, 6, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-    } finally {
-      ctx.globalAlpha = 1;
-      ctx.restore();
-    }
-  };
+  return (ctx, t) => paintWithIdle(ctx, season, t);
 }
 
 // ── Forward season→season transitions ────────────────────────────────────────

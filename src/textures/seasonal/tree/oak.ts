@@ -1,31 +1,28 @@
 // Seasonal art for the OAK tree board tile.
 //
-// Four full-art redraws tracing a believable oak lifecycle:
-//   Spring  — bare-ish to budding oak: brown trunk + a few main branches,
-//             small fresh yellow-green leaf clusters and tiny catkin dots.
-//   Summer  — full lush rounded green crown over a sturdy brown trunk.
-//   Autumn  — same crown silhouette turned to golds/oranges/russets, thinning
-//             with gaps, a couple of acorns, a leaf or two drifting down.
-//   Winter  — bare dark wet trunk + branching silhouette, snow caps on the
-//             upper branches and a snow blanket on the ground pad.
+// The same recognizable oak EVERY season (the trunk is constant; only the
+// foliage shape changes — the recognized Tree exception). The seasons are made
+// UNMISTAKABLE at a glance:
+//   Spring  — fresh lime canopy DRESSED in pink/white BLOSSOM (a bloom cloud).
+//   Summer  — peak deep-saturated lush green crown, full and round.
+//   Autumn  — vivid FIRE colour (gold→orange→red) + a steady fall of leaves.
+//   Winter  — bare dark wet branches under a REAL HEAVY SNOW LOAD on the limbs,
+//             a hanging ICICLE, and a deep snow blanket on the pad.
 //
-// Each draw is origin-centered in the ~-24..+24 design box; the tree grows
-// UPWARD (negative y) from a trunk base near y≈+20, ground pad at y≈+22.
-// Animations are deterministic (sin/cos/modulo of `t` in seconds), seamless,
-// and subtle — the board sprite supplies its own sway rotation, so these avoid
-// large rotations and lean on internal canopy shimmer, gentle branch sway,
-// leaf flutter, drifting leaves and snowflakes.
+// IDLE is two-tier: mostly at rest, then EVERY ~6 s a clearly-noticeable BIG
+// CANOPY SWAY (~13 px lean-and-return), and EVERY ~18 s a RARE special: a small
+// bird hops onto a branch, looks around, then flits off (~1.3 s) — except in
+// autumn, where the special is instead a GUST that sends a flurry of leaves off
+// the canopy. Both the common and rare actions are driven by a deterministic
+// clock and return to the rest pose with ZERO velocity at the window edges
+// (seamless).
+//
+// Origin-centered −24..+24 design box; the tree grows UPWARD (negative y) from a
+// trunk base near y≈+20, ground pad at y≈+22. Reads at ~64 px.
 
-import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
+import type { SeasonalTileEntry, SeasonalTransitionSet, SeasonName } from "../types.js";
 
-// ── Motion helpers (motion-v2) ───────────────────────────────────────────────
-//
-// MOTION-V2 idles are SLOW, eased gestures: a broad canopy SWAY as a breeze
-// passes through, on a ~5–6 s seamless loop. The subject's bob/sway must read
-// as a readable lean, not a twitch.
-//
-// `clamp01` keeps `p` in range; `smoother` is the quintic smoothstep used to
-// ease staged morphs; `bobAt`/`swayAt` are the canonical idle primitives.
+// ── Math / clock helpers ─────────────────────────────────────────────────────
 
 function clamp01(x: number): number {
   return x < 0 ? 0 : x > 1 ? 1 : x;
@@ -36,31 +33,59 @@ function smoother(x: number): number {
   return c * c * c * (c * (6 * c - 15) + 10);
 }
 
-// Idle angular frequency: ~5.5 s loop (was ~4.8 s at 1.3 rad/s; halved to ~0.65
-// rad/s for the canopy sway, giving a slow, legible breeze gesture).
-const IDLE_W = 0.66; // rad/s → period 2π/0.66 ≈ 9.5 s for one full sin cycle…
-// …but the broad sway uses a (1−cos) GESTURE envelope that completes its visible
-// lean-and-return inside ~5.5 s. See `breezeAt`.
-
-// A slow breeze gesture in design px: rises smoothly from rest, leans, returns —
-// position AND velocity are 0 at t=0 (`A*(1−cos(w t))/2`), and it loops
-// seamlessly. Amplitude `A` is the peak lean offset.
-function breezeAt(t: number, w: number, amp: number): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+function lerp(a: number, b: number, f: number): number {
+  return a + (b - a) * f;
 }
 
-// A small subject bob (vertical settle): 0 with zero velocity at t=0, seamless.
-function bobAt(t: number, w: number, amp: number): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+// Deterministic action clock. Returns a phase in [0,1) WHILE inside the action
+// window (length `win` seconds, repeating every `period`), or −1 at rest.
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
 }
 
-// Per-leaf shimmer: a slow eased twinkle that NEVER reads as a flash on the
-// subject — used only for tiny dressing flecks. Returns 0..1, smooth & seamless.
-function shimmerAt(t: number, w: number, phase: number): number {
-  return 0.5 - 0.5 * Math.cos(w * t + phase);
+// A one-shot bell that rises from 0 to 1 and back to 0 over the window, with
+// ZERO velocity at both ends (sin² is C¹-zero at 0 and 1). Used to envelope the
+// big sway and the special action so they begin and end at the rest pose.
+function bell(q: number): number {
+  if (q < 0) return 0;
+  const s = Math.sin(Math.PI * clamp01(q));
+  return s * s;
 }
 
-// ── Shared helpers ─────────────────────────────────────────────────────────
+// A signed lean: rises, peaks, returns — zero at q=0 and q=1 with zero velocity.
+// (1−cos(2π q))/2 has zero value AND zero slope at both endpoints.)
+function leanEnvelope(q: number): number {
+  if (q < 0) return 0;
+  return (1 - Math.cos(2 * Math.PI * clamp01(q))) * 0.5;
+}
+
+// ── Idle composition ─────────────────────────────────────────────────────────
+//
+// COMMON action: every ~6 s a BIG canopy sway — peak lean ≈ 13 px — over a ~1.0 s
+//   window. RARE action: every ~18 s a ~1.3 s special.
+const SWAY_PERIOD = 6.0;
+const SWAY_WIN = 1.0;
+const SWAY_AMP = 13; // peak horizontal canopy travel in design px
+
+const SPECIAL_PERIOD = 18.0;
+const SPECIAL_WIN = 1.3;
+
+// The whole-canopy sway offset (design px) at time t. The two windows are phased
+// apart so they don't collide; both return to 0 at their edges.
+function swayAt(t: number): number {
+  const q = actionQ(t, SWAY_PERIOD, SWAY_WIN, 0);
+  // signed lean to the right then back; bold amplitude.
+  return leanEnvelope(q) * SWAY_AMP * Math.sign(1); // direction: +x
+}
+
+// A gentle settle bob that accompanies the sway (small, seamless).
+function bobAt(t: number): number {
+  const q = actionQ(t, SWAY_PERIOD, SWAY_WIN, 0);
+  return bell(q) * 1.6;
+}
+
+// ── Shared geometry (reused/adapted from oak.ts so it's the SAME oak) ─────────
 
 function groundShadow(ctx: CanvasRenderingContext2D, rx = 16, alpha = 0.22): void {
   ctx.fillStyle = `rgba(0,0,0,${alpha})`;
@@ -69,8 +94,27 @@ function groundShadow(ctx: CanvasRenderingContext2D, rx = 16, alpha = 0.22): voi
   ctx.fill();
 }
 
-// A single oak crown blob: layered dark-then-light for rounded volume, with a
-// lighter top-left highlight. `colors` is [dark, mid, light].
+function grassPad(ctx: CanvasRenderingContext2D, color: [number, number, number]): void {
+  const [r, g, b] = color;
+  const top = `rgb(${r},${g},${b})`;
+  const bot = `rgb(${Math.round(r * 0.7)},${Math.round(g * 0.7)},${Math.round(b * 0.7)})`;
+  const grad = ctx.createLinearGradient(0, 16, 0, 24);
+  grad.addColorStop(0, top);
+  grad.addColorStop(1, bot);
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.ellipse(0, 20, 18, 5.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // a few tuft nicks along the top edge for a turfy read
+  ctx.fillStyle = `rgb(${Math.min(255, r + 26)},${Math.min(255, g + 26)},${Math.min(255, b + 18)})`;
+  for (let i = -14; i <= 14; i += 4) {
+    ctx.beginPath();
+    ctx.ellipse(i, 16.5, 1.6, 1.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// A single oak crown blob: layered dark-then-light for rounded volume.
 function canopyBlob(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -79,15 +123,14 @@ function canopyBlob(
   colors: [string, string, string],
   alpha = 1,
 ): void {
+  if (r <= 0.3) return;
   const [dark, mid, light] = colors;
   ctx.save();
   ctx.globalAlpha = alpha;
-  // dark underside pass for depth
   ctx.fillStyle = dark;
   ctx.beginPath();
   ctx.ellipse(x, y + r * 0.18, r, r * 0.92, 0, 0, Math.PI * 2);
   ctx.fill();
-  // mid body, lifted up-left
   const grad = ctx.createRadialGradient(x - r * 0.4, y - r * 0.4, r * 0.2, x, y, r);
   grad.addColorStop(0, light);
   grad.addColorStop(0.55, mid);
@@ -96,7 +139,6 @@ function canopyBlob(
   ctx.beginPath();
   ctx.ellipse(x, y, r * 0.96, r * 0.86, 0, 0, Math.PI * 2);
   ctx.fill();
-  // bright top-left highlight nub
   ctx.fillStyle = light;
   ctx.globalAlpha = alpha * 0.7;
   ctx.beginPath();
@@ -105,13 +147,12 @@ function canopyBlob(
   ctx.restore();
 }
 
-// The oak trunk + a couple of main branch limbs. `wet` darkens it for winter.
+// The oak trunk + root flare — IDENTICAL geometry every season (the identity).
 function trunk(ctx: CanvasRenderingContext2D, wet = false): void {
   const bark = wet ? "#3c2c1c" : "#6b4a26";
   const barkLight = wet ? "#5a4530" : "#8a6336";
   const barkDark = wet ? "#241a10" : "#4a3318";
 
-  // trunk body — tapering from a wide base, slight S
   ctx.fillStyle = barkDark;
   ctx.beginPath();
   ctx.moveTo(-5.5, 20);
@@ -120,7 +161,6 @@ function trunk(ctx: CanvasRenderingContext2D, wet = false): void {
   ctx.quadraticCurveTo(4, 6, 5.5, 20);
   ctx.closePath();
   ctx.fill();
-  // mid bark
   ctx.fillStyle = bark;
   ctx.beginPath();
   ctx.moveTo(-4.6, 20);
@@ -129,7 +169,6 @@ function trunk(ctx: CanvasRenderingContext2D, wet = false): void {
   ctx.quadraticCurveTo(3.2, 6, 4.6, 20);
   ctx.closePath();
   ctx.fill();
-  // lit left edge
   ctx.strokeStyle = barkLight;
   ctx.lineWidth = 1.2;
   ctx.beginPath();
@@ -137,7 +176,6 @@ function trunk(ctx: CanvasRenderingContext2D, wet = false): void {
   ctx.quadraticCurveTo(-2.8, 6, -2, -1);
   ctx.stroke();
 
-  // root flare at the base
   ctx.fillStyle = barkDark;
   ctx.beginPath();
   ctx.moveTo(-5.5, 20);
@@ -153,8 +191,8 @@ function trunk(ctx: CanvasRenderingContext2D, wet = false): void {
   ctx.fill();
 }
 
-// Bare branch silhouette fanning up from the trunk top (used in spring base &
-// winter). `snow` adds snow caps on the upper limbs. Returns nothing.
+// Bare branch silhouette fanning up from the trunk top. `snowLoad` 0..1 piles a
+// HEAVY snow load along the upper limbs (winter). `sway` bends the limbs.
 const BRANCHES: Array<[number, number, number, number, number]> = [
   // [ctrlX, ctrlY, tipX, tipY, width]
   [-6, -6, -13, -16, 2.6],
@@ -170,10 +208,10 @@ function branchSilhouette(
   ctx: CanvasRenderingContext2D,
   color: string,
   sway: number,
-  snow: boolean,
+  snowLoad: number,
 ): void {
   ctx.lineCap = "round";
-  BRANCHES.forEach(([cx, cy, tx, ty, w], i) => {
+  BRANCHES.forEach(([cx, cy, tx, ty, w]) => {
     const s = sway * (0.4 + Math.abs(tx) / 24);
     ctx.strokeStyle = color;
     ctx.lineWidth = w;
@@ -181,302 +219,386 @@ function branchSilhouette(
     ctx.moveTo(0, -2);
     ctx.quadraticCurveTo(cx + s * 0.5, cy, tx + s, ty);
     ctx.stroke();
-    // a small forking twig near the tip
     ctx.lineWidth = w * 0.55;
     ctx.beginPath();
     ctx.moveTo(cx + s * 0.5, cy);
     ctx.lineTo(cx + s * 0.5 + (tx < 0 ? -4 : 4), cy - 5);
     ctx.stroke();
-    if (snow) {
-      // snow cap riding on top of each upper limb tip
-      ctx.fillStyle = "#f4f8ff";
-      ctx.beginPath();
-      ctx.ellipse(tx + s, ty - 0.5, 2.6 + (i % 2) * 0.6, 1.5, (tx < 0 ? -0.5 : 0.5), 0, Math.PI * 2);
-      ctx.fill();
-    }
   });
+
+  // HEAVY snow load: a thick white ridge riding along the top of each limb, from
+  // the trunk fork out to the tip. Drawn as a stroked highlight over a fat base.
+  if (snowLoad > 0.01) {
+    BRANCHES.forEach(([cx, cy, tx, ty, w], idx) => {
+      const s = sway * (0.4 + Math.abs(tx) / 24);
+      const load = snowLoad;
+      // fat snow base sitting on the upper side of the limb (offset up a touch)
+      ctx.strokeStyle = "#dfe9f6";
+      ctx.lineWidth = (w + 3.4) * load;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(0, -3.0);
+      ctx.quadraticCurveTo(cx + s * 0.5, cy - 1.6, tx + s, ty - 1.4);
+      ctx.stroke();
+      // bright crown on top of the snow
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = (w + 1.0) * load;
+      ctx.beginPath();
+      ctx.moveTo(0, -3.4);
+      ctx.quadraticCurveTo(cx + s * 0.5, cy - 2.2, tx + s, ty - 2.0);
+      ctx.stroke();
+      // a plump snow clump on the limb tip
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.ellipse(tx + s, ty - 1.6, (2.8 + (idx % 2) * 0.8) * load, (1.9 + (idx % 2) * 0.4) * load, (tx < 0 ? -0.5 : 0.5), 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
   ctx.lineCap = "butt";
 }
 
-// ── Spring: budding oak ──────────────────────────────────────────────────────
-
-// Spring leaf-cluster anchor points (around the upper branch tips). The airy
-// crown is built from small clusters, not a solid mass.
-const SPRING_CLUSTERS: Array<[number, number, number]> = [
-  // [x, y, r]
-  [-12, -15, 4],
-  [-5, -20, 4.5],
-  [4, -21, 4.5],
-  [13, -14, 4],
-  [0, -10, 3.5],
-  [-15, -8, 3],
-  [16, -7, 3],
-];
-
-function springOak(
+// A single small bird (front-¾) used by the rare special. Drawn at the given
+// branch anchor; `hop` is its vertical hop offset (px, ≤0 = up), `look` rotates
+// the head, `wing` opens the wing for the flit-off. Colors locked (robin-ish).
+function bird(
   ctx: CanvasRenderingContext2D,
-  sway: number,
-  bob: number,
-  budPulse: number,
+  x: number,
+  y: number,
+  hop: number,
+  look: number,
+  wing: number,
+  alpha: number,
 ): void {
-  groundShadow(ctx, 14, 0.2);
+  if (alpha <= 0.02) return;
   ctx.save();
-  ctx.translate(0, bob); // whole tree settles a touch with the breeze
-  trunk(ctx, false);
-  branchSilhouette(ctx, "#5a3d20", sway, false);
-
-  const fresh: [string, string, string] = ["#5a7d24", "#86b53a", "#c0e26a"];
-  SPRING_CLUSTERS.forEach(([x, y, r]) => {
-    const s = sway * (0.3 + Math.abs(x) / 28);
-    canopyBlob(ctx, x + s, y, r, fresh, 0.9);
-  });
-
-  // tiny fresh leaflet dots scattered for an airy budding look
-  ctx.fillStyle = "#a6e06a";
-  SPRING_CLUSTERS.forEach(([x, y, r], i) => {
-    const s = sway * (0.3 + Math.abs(x) / 28);
-    for (let k = 0; k < 3; k++) {
-      const a = i * 1.7 + k * 2.1;
-      ctx.beginPath();
-      ctx.ellipse(x + s + Math.cos(a) * r, y + Math.sin(a) * r, 1.4, 2.2, a, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  });
-
-  // tiny catkin / blossom dots emerging — pale shimmer with the bud pulse
-  const buds: Array<[number, number]> = [
-    [-8, -18], [6, -19], [-2, -14], [11, -12], [-13, -11],
-  ];
-  buds.forEach(([bx, by], i) => {
-    const a = 0.5 + 0.45 * shimmerAt(budPulse, 1, i * 1.3);
-    ctx.fillStyle = `rgba(232,224,150,${a})`;
-    ctx.beginPath();
-    ctx.arc(bx + sway * 0.2, by, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.restore();
-}
-
-function drawOakSpring(ctx: CanvasRenderingContext2D): void {
-  // rest pose: budPulse=0 ⇒ shimmer=0 ⇒ bud alpha = 0.5 (matches transition end)
-  springOak(ctx, 0, 0, 0);
-}
-
-function animOakSpring(ctx: CanvasRenderingContext2D, t: number): void {
-  // Slow broad canopy sway as a breeze passes through (~5.5 s gesture loop) plus
-  // a gentle settle bob; buds twinkle on a slow eased shimmer. All components are
-  // 0 with zero velocity at t=0.
-  const sway = breezeAt(t, IDLE_W, 2.2);
-  const bob = bobAt(t, IDLE_W, 0.5);
-  springOak(ctx, sway, bob, t * IDLE_W);
-}
-
-// ── Summer: full lush green crown ────────────────────────────────────────────
-
-// Summer crown blobs — overlapping to form a classic rounded oak crown.
-const SUMMER_BLOBS: Array<[number, number, number]> = [
-  // [x, y, r]
-  [0, -16, 11],
-  [-9, -13, 7.5],
-  [9, -13, 7.5],
-  [-6, -21, 6.5],
-  [6, -21, 6.5],
-  [0, -24, 6],
-  [-13, -9, 5.5],
-  [13, -9, 5.5],
-  [0, -10, 7],
-];
-
-function summerOak(
-  ctx: CanvasRenderingContext2D,
-  sway: number,
-  bob: number,
-  shimmer: number,
-): void {
-  groundShadow(ctx, 16, 0.22);
-  ctx.save();
-  ctx.translate(0, bob);
-
-  // All shimmer terms below are written RELATIVE to their value at shimmer=0, so
-  // the rest pose (draw(Summer), shimmer=0) has ZERO shimmer offset and matches
-  // transition endpoints exactly, while staying a smooth seamless idle.
-  const green: [string, string, string] = ["#2f5418", "#4f8a2a", "#86bf48"];
-  SUMMER_BLOBS.forEach(([x, y, r], i) => {
-    // broad lean + a tiny per-blob shimmer travelling across the crown
-    const sh = shimmerAt(shimmer, 1, i) - shimmerAt(0, 1, i); // 0 at shimmer=0
-    const s = sway * (0.25 + Math.abs(x) / 26) + sh * 0.7;
-    canopyBlob(ctx, x + s, y, r, green, 1);
-  });
-
-  // a few shimmering highlight flecks on the top-left of the crown (eased twinkle)
-  ctx.fillStyle = `rgba(190,230,140,${0.4 + 0.3 * shimmerAt(shimmer, 1, 0)})`;
-  [[-7, -22, 2], [-2, -19, 1.6], [-11, -14, 1.8]].forEach(([fx, fy, r]) => {
-    ctx.beginPath();
-    ctx.arc(fx + sway * 0.3, fy, r, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  // one stray leaf shimmering at the lower-right edge — drifts on a slow eased
-  // figure, anchored so it sits at its rest spot (15,-6, rot 0) at shimmer=0.
-  const flx = 15 + (shimmerAt(shimmer, 0.8, 0) - shimmerAt(0, 0.8, 0)) * 3;
-  const fly = -6 + (shimmerAt(shimmer, 1.1, Math.PI / 2) - shimmerAt(0, 1.1, Math.PI / 2)) * 2.4;
-  ctx.fillStyle = "#4f8a2a";
-  ctx.save();
-  ctx.translate(flx, fly);
-  ctx.rotate((shimmerAt(shimmer, 1, 0) - shimmerAt(0, 1, 0)) * 0.6);
+  ctx.globalAlpha = clamp01(alpha);
+  ctx.translate(x, y + hop);
+  // body
+  ctx.fillStyle = "#5a4636";
   ctx.beginPath();
-  ctx.ellipse(0, 0, 1.6, 2.8, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, 4.2, 3.2, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  // warm breast
+  ctx.fillStyle = "#d2693a";
+  ctx.beginPath();
+  ctx.ellipse(-1.4, 0.6, 2.4, 2.2, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  // tail
+  ctx.fillStyle = "#46362a";
+  ctx.beginPath();
+  ctx.moveTo(3.4, -0.4);
+  ctx.lineTo(7.2, -1.8);
+  ctx.lineTo(6.6, 1.2);
+  ctx.closePath();
+  ctx.fill();
+  // wing (opens during flit-off)
+  ctx.save();
+  ctx.translate(0.6, -0.4);
+  ctx.rotate(-0.5 * wing);
+  ctx.fillStyle = "#3d2f24";
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 3.2 + wing * 2.0, 1.8 + wing * 1.2, 0.3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+  // head (looks around)
+  ctx.save();
+  ctx.translate(-3.4, -2.4);
+  ctx.rotate(look);
+  ctx.fillStyle = "#5a4636";
+  ctx.beginPath();
+  ctx.arc(0, 0, 2.4, 0, Math.PI * 2);
+  ctx.fill();
+  // beak
+  ctx.fillStyle = "#e2b23a";
+  ctx.beginPath();
+  ctx.moveTo(-2.2, 0.2);
+  ctx.lineTo(-4.4, -0.2);
+  ctx.lineTo(-2.2, 1.0);
+  ctx.closePath();
+  ctx.fill();
+  // eye
+  ctx.fillStyle = "#0e0a06";
+  ctx.beginPath();
+  ctx.arc(-0.6, -0.4, 0.8, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
   ctx.restore();
 }
 
-function drawOakSummer(ctx: CanvasRenderingContext2D): void {
-  summerOak(ctx, 0, 0, 0);
-}
+// ── Season parameter sets (for the spring blossom + autumn fire ramp etc.) ────
 
-function animOakSummer(ctx: CanvasRenderingContext2D, t: number): void {
-  // Slow broad sway as the breeze moves through the full crown (~5.5 s gesture)
-  // plus a gentle settle bob and an internal shimmer travelling the canopy.
-  const sway = breezeAt(t, IDLE_W, 2.0);
-  const bob = bobAt(t, IDLE_W, 0.5);
-  summerOak(ctx, sway, bob, t * IDLE_W);
-}
+// ════════════════════════════ SPRING ═════════════════════════════════════════
+// Fresh lime crown DRESSED in bold pink/white blossom — unmistakably spring.
 
-// ── Autumn: golds / oranges / russets, thinning ──────────────────────────────
-
-// Autumn uses the same crown silhouette but with gaps (a few summer blobs are
-// dropped) and warm colours. `[x, y, r, hue]` — hue 0..1 picks a russet ramp.
-const AUTUMN_BLOBS: Array<[number, number, number, number]> = [
-  [0, -16, 10.5, 0.5],
-  [-9, -13, 7, 0.2],
-  [9, -13, 7, 0.8],
-  [-6, -21, 6, 0.4],
-  [6, -21, 6, 0.7],
-  [0, -24, 5.5, 0.3],
-  [-13, -9, 5, 0.9],
-  [13, -9, 5, 0.1],
-  [0, -10, 6.5, 0.6],
+const SPRING_BLOBS: Array<[number, number, number]> = [
+  [0, -16, 10.5],
+  [-9, -13, 7],
+  [9, -13, 7],
+  [-6, -21, 6],
+  [6, -21, 6],
+  [0, -24, 5.5],
+  [-13, -9, 5],
+  [13, -9, 5],
+  [0, -10, 6.5],
 ];
 
-// Warm autumn colour ramp via explicit lerp so the palette stays clean.
-function autumnColors(hue: number): [string, string, string] {
-  // hue 0 = gold, 0.5 = orange, 1 = russet-red
-  const stops: Array<[number, [number, number, number]]> = [
-    [0, [216, 168, 48]], // gold
-    [0.5, [196, 96, 24]], // orange
-    [1, [150, 52, 28]], // russet
-  ];
-  function pick(h: number): [number, number, number] {
-    let lo = stops[0];
-    let hi = stops[stops.length - 1];
-    for (let i = 0; i < stops.length - 1; i++) {
-      if (h >= stops[i][0] && h <= stops[i + 1][0]) {
-        lo = stops[i];
-        hi = stops[i + 1];
-        break;
-      }
+// Blossom puff anchors riding on the crown (pink/white clouds).
+const BLOSSOMS: Array<[number, number, number]> = [
+  [-7, -22, 3.4],
+  [4, -24, 3.0],
+  [11, -15, 3.0],
+  [-13, -12, 2.8],
+  [-2, -18, 2.6],
+  [8, -11, 2.6],
+  [0, -27, 2.4],
+];
+
+function springOak(ctx: CanvasRenderingContext2D, sway: number, bob: number, _bloom: number): void {
+  groundShadow(ctx, 15, 0.2);
+  grassPad(ctx, [120, 196, 86]); // bright dewy lime
+  ctx.save();
+  ctx.translate(0, bob);
+  trunk(ctx, false);
+
+  const fresh: [string, string, string] = ["#3f6e1f", "#6cb02f", "#a8e25a"];
+  SPRING_BLOBS.forEach(([x, y, r]) => {
+    const s = sway * (0.5 + Math.abs(x) / 22);
+    canopyBlob(ctx, x + s, y, r, fresh, 1);
+  });
+
+  // BOLD blossom puffs — pink with white highlight, resting on the crown.
+  BLOSSOMS.forEach(([x, y, r], i) => {
+    const s = sway * (0.5 + Math.abs(x) / 22);
+    ctx.save();
+    ctx.globalAlpha = 0.95;
+    ctx.fillStyle = "#f49ac2";
+    ctx.beginPath();
+    ctx.ellipse(x + s, y, r, r * 0.9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#ffd9ea";
+    ctx.beginPath();
+    ctx.ellipse(x + s - r * 0.3, y - r * 0.3, r * 0.45, r * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // a few white petal dots
+    ctx.fillStyle = "#fff4fa";
+    for (let k = 0; k < 3; k++) {
+      const a = i * 1.6 + k * 2.1;
+      ctx.beginPath();
+      ctx.arc(x + s + Math.cos(a) * r * 0.8, y + Math.sin(a) * r * 0.8, 0.9, 0, Math.PI * 2);
+      ctx.fill();
     }
-    const span = hi[0] - lo[0] || 1;
-    const f = (h - lo[0]) / span;
-    return [
-      lo[1][0] + (hi[1][0] - lo[1][0]) * f,
-      lo[1][1] + (hi[1][1] - lo[1][1]) * f,
-      lo[1][2] + (hi[1][2] - lo[1][2]) * f,
-    ];
+    ctx.restore();
+  });
+
+  // a couple of fallen pink petals resting on the pad
+  ctx.fillStyle = "#f4a8c8";
+  [[-6, 21], [7, 22]].forEach(([fx, fy]) => {
+    ctx.beginPath();
+    ctx.ellipse(fx, fy, 1.8, 1.0, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+// ════════════════════════════ SUMMER ═════════════════════════════════════════
+// Peak deep-saturated lush green crown — full and round.
+
+const SUMMER_BLOBS: Array<[number, number, number]> = [
+  [0, -16, 11.5],
+  [-9.5, -13, 8],
+  [9.5, -13, 8],
+  [-6, -21, 7],
+  [6, -21, 7],
+  [0, -24, 6.5],
+  [-13, -10, 5],
+  [13, -10, 5],
+  [0, -11.5, 6.5],
+];
+
+function summerOak(ctx: CanvasRenderingContext2D, sway: number, bob: number): void {
+  groundShadow(ctx, 16, 0.24);
+  grassPad(ctx, [70, 158, 60]); // saturated mid-green
+  ctx.save();
+  ctx.translate(0, bob);
+  trunk(ctx, false);
+
+  const green: [string, string, string] = ["#1f4a12", "#357f1f", "#73c23a"];
+  SUMMER_BLOBS.forEach(([x, y, r]) => {
+    const s = sway * (0.5 + Math.abs(x) / 24);
+    canopyBlob(ctx, x + s, y, r, green, 1);
+  });
+  // bright top-left highlight flecks
+  ctx.fillStyle = "rgba(150,220,90,0.55)";
+  [[-8, -23, 2.2], [-2, -20, 1.7], [-12, -14, 1.9]].forEach(([fx, fy, r]) => {
+    ctx.beginPath();
+    ctx.arc(fx + sway * 0.4, fy, r, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+// ════════════════════════════ AUTUMN ═════════════════════════════════════════
+// Vivid FIRE colour (gold→orange→red) + a steady fall of leaves.
+
+const AUTUMN_BLOBS: Array<[number, number, number, number]> = [
+  [0, -16, 11, 0.5],
+  [-9.5, -13, 7.5, 0.15],
+  [9.5, -13, 7.5, 0.9],
+  [-6, -21, 6.5, 0.35],
+  [6, -21, 6.5, 0.75],
+  [0, -24, 6, 0.25],
+  [-13.5, -9, 5.5, 1.0],
+  [13.5, -9, 5.5, 0.05],
+  [0, -10, 7, 0.6],
+];
+
+// Bold fire ramp: 0=gold, 0.5=orange, 1=red.
+function autumnColors(hue: number): [string, string, string] {
+  const stops: Array<[number, [number, number, number]]> = [
+    [0, [240, 184, 36]], // bright gold
+    [0.5, [226, 104, 20]], // vivid orange
+    [1, [196, 40, 30]], // fire red
+  ];
+  let lo = stops[0];
+  let hi = stops[stops.length - 1];
+  const h = clamp01(hue);
+  for (let i = 0; i < stops.length - 1; i++) {
+    if (h >= stops[i][0] && h <= stops[i + 1][0]) {
+      lo = stops[i];
+      hi = stops[i + 1];
+      break;
+    }
   }
-  const [r, g, b] = pick(Math.max(0, Math.min(1, hue)));
-  const dark = `rgb(${Math.round(r * 0.55)},${Math.round(g * 0.45)},${Math.round(b * 0.4)})`;
+  const span = hi[0] - lo[0] || 1;
+  const f = (h - lo[0]) / span;
+  const r = lerp(lo[1][0], hi[1][0], f);
+  const g = lerp(lo[1][1], hi[1][1], f);
+  const b = lerp(lo[1][2], hi[1][2], f);
+  const dark = `rgb(${Math.round(r * 0.5)},${Math.round(g * 0.42)},${Math.round(b * 0.4)})`;
   const mid = `rgb(${Math.round(r)},${Math.round(g)},${Math.round(b)})`;
-  const light = `rgb(${Math.min(255, Math.round(r * 1.25))},${Math.min(255, Math.round(g * 1.25))},${Math.min(255, Math.round(b * 1.2))})`;
+  const light = `rgb(${Math.min(255, Math.round(r * 1.22))},${Math.min(255, Math.round(g * 1.2))},${Math.min(255, Math.round(b * 1.15))})`;
   return [dark, mid, light];
 }
 
-function acorns(ctx: CanvasRenderingContext2D): void {
-  const spots: Array<[number, number]> = [[-4, -9], [7, -7]];
-  spots.forEach(([ax, ay]) => {
-    // cap
-    ctx.fillStyle = "#6b4710";
-    ctx.beginPath();
-    ctx.ellipse(ax, ay, 2.2, 1.4, 0, Math.PI, Math.PI * 2);
-    ctx.fill();
-    // nut
-    ctx.fillStyle = "#b5762a";
-    ctx.beginPath();
-    ctx.ellipse(ax, ay + 1.6, 1.8, 2.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(255,235,180,0.5)";
-    ctx.beginPath();
-    ctx.arc(ax - 0.6, ay + 1, 0.6, 0, Math.PI * 2);
-    ctx.fill();
-  });
-}
-
+// `fall` 0..1 drives the steady ambient leaf-fall; `gust` 0..1 adds a flurry
+// blown OFF the canopy (the rare autumn special).
 function autumnOak(
   ctx: CanvasRenderingContext2D,
   sway: number,
   bob: number,
   fall: number,
+  gust: number,
 ): void {
-  groundShadow(ctx, 15, 0.22);
+  groundShadow(ctx, 15, 0.24);
+  grassPad(ctx, [150, 128, 64]); // olive-tan browning grass
   ctx.save();
   ctx.translate(0, bob);
   trunk(ctx, false);
 
-  // thinning crown — skip blob index 5 (the very top) to show a gap
-  AUTUMN_BLOBS.forEach(([x, y, r, hue], i) => {
-    if (i === 5) return; // gap at the crown top
-    const s = sway * (0.25 + Math.abs(x) / 26);
-    canopyBlob(ctx, x + s, y, r, autumnColors(hue), 0.95);
+  AUTUMN_BLOBS.forEach(([x, y, r, hue]) => {
+    const s = sway * (0.5 + Math.abs(x) / 24);
+    canopyBlob(ctx, x + s, y, r, autumnColors(hue), 1);
   });
+  ctx.restore();
 
-  acorns(ctx);
-
-  // 1–2 leaves drifting down, settling on the ground pad. `fall` 0..1 per leaf.
-  const leaves: Array<[number, number, number, number]> = [
-    // [startX, hue, phase, swayAmp]
-    [-6, 0.3, 0.0, 6],
-    [9, 0.8, 0.5, 5],
+  // Steady ambient drift — 3 leaves spiralling from canopy to pad (seamless loop).
+  const drifters: Array<[number, number, number, number]> = [
+    [-7, 0.25, 0.0, 6],
+    [9, 0.85, 0.4, 5],
+    [2, 0.55, 0.72, 5.5],
   ];
-  leaves.forEach(([sx, hue, phase, amp]) => {
-    const prog = ((fall + phase) % 1 + 1) % 1;
-    const ly = -6 + prog * 26; // from canopy base to ground pad
+  drifters.forEach(([sx, hue, phase, amp]) => {
+    const prog = (((fall + phase) % 1) + 1) % 1;
+    const ly = -8 + prog * 28;
     const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * amp;
-    const [, mid] = autumnColors(hue);
-    ctx.fillStyle = mid;
     ctx.save();
+    ctx.fillStyle = autumnColors(hue)[1];
     ctx.translate(lx, ly);
     ctx.rotate(prog * Math.PI * 3 + phase * 4);
     ctx.beginPath();
-    ctx.ellipse(0, 0, 1.7, 3, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 1.8, 3.1, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   });
 
-  // a couple of fallen leaves resting on the ground pad
-  ctx.fillStyle = autumnColors(0.6)[1];
+  // RARE special: a GUST that lifts a flurry of leaves OFF the canopy and blows
+  // them up-and-right, fading out. Amplitude 0 at gust=0 and gust=1 (uses bell).
+  if (gust > 0.001) {
+    const burst = bell(gust); // 0 at ends
+    const flurry: Array<[number, number, number]> = [
+      [-10, -16, 0.2],
+      [-3, -22, 0.6],
+      [5, -20, 0.85],
+      [11, -14, 0.4],
+      [-6, -12, 0.95],
+      [1, -25, 0.5],
+    ];
+    flurry.forEach(([fx, fy, hue], i) => {
+      const travel = burst; // 0..~1..0
+      const lx = fx + travel * (14 + i * 1.5) + Math.sin(gust * Math.PI * 4 + i) * 2;
+      const ly = fy - travel * (8 + i) ;
+      ctx.save();
+      ctx.globalAlpha = burst * 0.95;
+      ctx.fillStyle = autumnColors(hue)[1];
+      ctx.translate(lx, ly);
+      ctx.rotate(gust * Math.PI * 6 + i);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 1.8, 3.1, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  }
+
+  // a couple of fallen leaves resting on the pad
+  ctx.save();
+  ctx.fillStyle = autumnColors(0.55)[1];
   [[-7, 21], [5, 22]].forEach(([fx, fy]) => {
     ctx.beginPath();
     ctx.ellipse(fx, fy, 2.4, 1.3, 0.4, 0, Math.PI * 2);
     ctx.fill();
   });
   ctx.restore();
+  ctx.globalAlpha = 1;
 }
 
-function drawOakAutumn(ctx: CanvasRenderingContext2D): void {
-  autumnOak(ctx, 0, 0, 0.25);
+// ════════════════════════════ WINTER ═════════════════════════════════════════
+// Bare dark wet branches under a HEAVY snow load + an icicle + deep snow pad.
+
+function winterPad(ctx: CanvasRenderingContext2D, sheen: number): void {
+  const snow = ctx.createLinearGradient(0, 15, 0, 24);
+  snow.addColorStop(0, "#f3f8ff");
+  snow.addColorStop(1, "#bcccdf");
+  ctx.fillStyle = snow;
+  ctx.beginPath();
+  ctx.ellipse(0, 20, 18.5, 6.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // a couple of snow mounds at the base for a deep-blanket read
+  ctx.fillStyle = "#ffffff";
+  [[-8, 19, 5], [7, 20, 4.5], [0, 21, 6]].forEach(([mx, my, mr]) => {
+    ctx.beginPath();
+    ctx.ellipse(mx, my, mr, mr * 0.5, 0, Math.PI, Math.PI * 2);
+    ctx.fill();
+  });
+  ctx.fillStyle = `rgba(200,224,255,${0.16 + clamp01(sheen) * 0.16})`;
+  ctx.beginPath();
+  ctx.ellipse(-3, 19, 10, 2.4, 0, 0, Math.PI * 2);
+  ctx.fill();
 }
 
-function animOakAutumn(ctx: CanvasRenderingContext2D, t: number): void {
-  // Slow broad sway as the breeze stirs the thinning crown (~5.5 s gesture) plus
-  // a gentle settle bob; leaves keep drifting down on their own seamless loop.
-  const sway = breezeAt(t, IDLE_W, 1.8);
-  const bob = bobAt(t, IDLE_W, 0.45);
-  const fall = (t * 0.22) % 1; // slower, more legible drift than before
-  autumnOak(ctx, sway, bob, fall);
+function icicle(ctx: CanvasRenderingContext2D, x: number, y: number, len: number): void {
+  ctx.save();
+  const g = ctx.createLinearGradient(x, y, x, y + len);
+  g.addColorStop(0, "rgba(220,238,255,0.95)");
+  g.addColorStop(1, "rgba(255,255,255,0.65)");
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(x - 1.2, y);
+  ctx.lineTo(x + 1.2, y);
+  ctx.lineTo(x, y + len);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 }
-
-// ── Winter: bare snowy oak ───────────────────────────────────────────────────
 
 function winterOak(
   ctx: CanvasRenderingContext2D,
@@ -486,27 +608,16 @@ function winterOak(
   sheen: number,
 ): void {
   groundShadow(ctx, 16, 0.18);
-
-  // snow blanket on the ground pad (stays put — only the bare tree sways/bobs)
-  const snow = ctx.createLinearGradient(0, 16, 0, 24);
-  snow.addColorStop(0, "#eef4fb");
-  snow.addColorStop(1, "#c2d2e4");
-  ctx.fillStyle = snow;
-  ctx.beginPath();
-  ctx.ellipse(0, 20, 18, 6, 0, 0, Math.PI * 2);
-  ctx.fill();
+  winterPad(ctx, sheen);
 
   ctx.save();
   ctx.translate(0, bob);
   trunk(ctx, true);
-  branchSilhouette(ctx, "#2e2114", sway, true);
+  branchSilhouette(ctx, "#2b1f13", sway, 1); // FULL heavy snow load
+  // a hanging icicle off a low-left limb (rides with the sway)
+  icicle(ctx, -8 + sway * 0.6, -8.5, 5.5);
+  icicle(ctx, 6 + sway * 0.4, -5.5, 4.0);
   ctx.restore();
-
-  // faint cold sheen across the snow pad
-  ctx.fillStyle = `rgba(200,224,255,${0.16 + sheen * 0.16})`;
-  ctx.beginPath();
-  ctx.ellipse(-3, 19, 10, 2.4, 0, 0, Math.PI * 2);
-  ctx.fill();
 
   // drifting snowflakes
   ctx.fillStyle = "#ffffff";
@@ -517,6 +628,73 @@ function winterOak(
     ctx.fill();
   });
   ctx.globalAlpha = 1;
+}
+
+// ── Per-season draw + anim ───────────────────────────────────────────────────
+//
+// The rare special (bird-hop) is shared by Spring/Summer/Winter; Autumn uses the
+// leaf-gust instead. The bird perches on a left branch, looks around, then opens
+// its wing and flits up-and-off, fully gone by the window edge.
+
+function birdSpecial(ctx: CanvasRenderingContext2D, q: number): void {
+  if (q < 0) return;
+  // q in [0,1] across the ~1.3 s window.
+  // Phase 1 (0..0.25): land (drop in, alpha up). Phase 2 (0.25..0.7): perch,
+  // look around. Phase 3 (0.7..1): flit off (rise + fade + wing open).
+  const anchorX = -9;
+  const anchorY = -15;
+  let hop = 0;
+  let look = 0;
+  let wing = 0;
+  let alpha: number;
+  let dx = 0;
+  let dy = 0;
+  if (q < 0.25) {
+    const f = q / 0.25;
+    alpha = smoother(f);
+    dy = -10 * (1 - smoother(f)); // drops down onto the branch from above
+    hop = -2 * Math.sin(f * Math.PI); // little hop on landing
+  } else if (q < 0.7) {
+    const f = (q - 0.25) / 0.45;
+    alpha = 1;
+    // two little look-arounds + a tiny hop
+    look = Math.sin(f * Math.PI * 2) * 0.5;
+    hop = -2.0 * Math.abs(Math.sin(f * Math.PI * 2));
+  } else {
+    const f = (q - 0.7) / 0.3;
+    alpha = 1 - smoother(f); // fades as it leaves → gone by q=1
+    wing = Math.abs(Math.sin(f * Math.PI * 3)); // flapping
+    dx = -10 * smoother(f); // flits up-and-left, ~13px travel total
+    dy = -13 * smoother(f);
+    look = -0.3;
+  }
+  bird(ctx, anchorX + dx, anchorY + dy, hop, look, wing, alpha);
+}
+
+function drawOakSpring(ctx: CanvasRenderingContext2D): void {
+  springOak(ctx, 0, 0, 0);
+}
+function animOakSpring(ctx: CanvasRenderingContext2D, t: number): void {
+  springOak(ctx, swayAt(t), bobAt(t), 0);
+  birdSpecial(ctx, actionQ(t, SPECIAL_PERIOD, SPECIAL_WIN, SPECIAL_PERIOD / 2));
+}
+
+function drawOakSummer(ctx: CanvasRenderingContext2D): void {
+  summerOak(ctx, 0, 0);
+}
+function animOakSummer(ctx: CanvasRenderingContext2D, t: number): void {
+  summerOak(ctx, swayAt(t), bobAt(t));
+  birdSpecial(ctx, actionQ(t, SPECIAL_PERIOD, SPECIAL_WIN, SPECIAL_PERIOD / 2));
+}
+
+function drawOakAutumn(ctx: CanvasRenderingContext2D): void {
+  // rest pose: ambient fall frozen at 0.25, no gust.
+  autumnOak(ctx, 0, 0, 0.25, 0);
+}
+function animOakAutumn(ctx: CanvasRenderingContext2D, t: number): void {
+  const fall = (t * 0.22) % 1; // steady ambient drift
+  const gust = actionQ(t, SPECIAL_PERIOD, SPECIAL_WIN, SPECIAL_PERIOD / 2);
+  autumnOak(ctx, swayAt(t), bobAt(t), fall, gust < 0 ? 0 : gust);
 }
 
 function drawOakWinter(ctx: CanvasRenderingContext2D): void {
@@ -533,14 +711,10 @@ function drawOakWinter(ctx: CanvasRenderingContext2D): void {
     0.4,
   );
 }
-
 function animOakWinter(ctx: CanvasRenderingContext2D, t: number): void {
-  // The bare winter canopy sways STIFFER and SLOWER with a smaller amplitude —
-  // a slow ~5.5 s gesture lean, position & velocity 0 at t=0. Snowflakes keep
-  // their own seamless fall loops; the cold sheen eases on a slow cosine.
-  const sway = breezeAt(t, IDLE_W * 0.8, 0.9);
-  const bob = bobAt(t, IDLE_W * 0.8, 0.3);
-  const span = 36; // vertical travel top to settle line
+  const sway = swayAt(t) * 0.7; // bare limbs are stiffer
+  const bob = bobAt(t) * 0.6;
+  const span = 36;
   const seeds: Array<[number, number, number]> = [
     [-9, 1.3, 0.0],
     [6, 1.1, 0.45],
@@ -548,406 +722,151 @@ function animOakWinter(ctx: CanvasRenderingContext2D, t: number): void {
     [-3, 1.2, 0.25],
   ];
   const flakes: Array<[number, number, number]> = seeds.map(([fx, r, phase]) => {
-    const prog = ((t / 4.2 + phase) % 1 + 1) % 1;
+    const prog = (((t / 4.2 + phase) % 1) + 1) % 1;
     const fy = -24 + prog * span;
     const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
     return [driftX, fy, r];
   });
-  const sheen = shimmerAt(t, 0.5, 0);
+  const sheen = 0.5 - 0.5 * Math.cos(t * 0.5);
   winterOak(ctx, sway, bob, flakes, sheen);
+  birdSpecial(ctx, actionQ(t, SPECIAL_PERIOD, SPECIAL_WIN, SPECIAL_PERIOD / 2));
 }
 
-// ── Transitions ──────────────────────────────────────────────────────────────
+// ── Transitions (seamless: transition(0)≡draw(from), transition(1)≡draw(to)) ──
+//
+// Each transition draws the FROM still, crossfades the TO still in, and adds a
+// short transient that is zero at both ends. The endpoints are exact because at
+// p=0 only the from-still is drawn (to weight 0) and at p=1 only the to-still.
 
-function lerp(a: number, b: number, f: number): number {
-  return a + (b - a) * f;
-}
-
-// 0: Spring → Summer (2.6 s) — the canopy FILLS IN and deepens green. STAGED:
-//   • spring airy crown (clusters + leaflet dots + buds) fades over the first
-//     ~65% (eased), so at q=0 the frame is EXACTLY draw(Spring);
-//   • the lush summer crown grows in r≈0→full, staggered per-blob, easing in
-//     over ~25%→100%, so at q=1 the frame is EXACTLY draw(Summer);
-//   • TRANSIENT: a "fill breeze" gust (∝ sin(π·q), amplitude 0 at both ends)
-//     leans the new foliage as it thickens — peaks mid-morph, gone by the end.
+// 0: Spring → Summer — crown deepens green, blossom is shed.
 function springToSummer(ctx: CanvasRenderingContext2D, p: number): void {
   const q = clamp01(p);
-  const gust = Math.sin(Math.PI * q) * 1.6; // 0 at q=0 and q=1
-
-  groundShadow(ctx, lerp(14, 16, q), lerp(0.2, 0.22, q));
-  trunk(ctx, false);
-  branchSilhouette(ctx, "#5a3d20", gust * 0.4, false);
-
-  // ── SPRING layer: full spring still art, fading out over the first ~65% ──
-  // At q=0 this is alpha 1 ⇒ identical to draw(Spring). Eased fade for clarity.
-  const springFade = 1 - smoother(Math.min(1, q / 0.65));
-  if (springFade > 0.001) {
+  const w = smoother(q);
+  if (1 - w > 0.001) {
     ctx.save();
-    ctx.globalAlpha = springFade;
-    const fresh: [string, string, string] = ["#5a7d24", "#86b53a", "#c0e26a"];
-    SPRING_CLUSTERS.forEach(([x, y, r]) => {
-      const s = gust * 0.3 * (0.3 + Math.abs(x) / 28);
-      canopyBlob(ctx, x + s, y, r, fresh, 0.9);
-    });
-    // leaflet dots (part of the spring still — required for q=0 ≡ draw(Spring))
-    ctx.fillStyle = "#a6e06a";
-    SPRING_CLUSTERS.forEach(([x, y, r], i) => {
-      const s = gust * 0.3 * (0.3 + Math.abs(x) / 28);
-      for (let k = 0; k < 3; k++) {
-        const a = i * 1.7 + k * 2.1;
-        ctx.beginPath();
-        ctx.ellipse(x + s + Math.cos(a) * r, y + Math.sin(a) * r, 1.4, 2.2, a, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    });
-    // bud dots (draw(Spring) bud alpha = 0.5 at budPulse 0)
-    const buds: Array<[number, number]> = [
-      [-8, -18], [6, -19], [-2, -14], [11, -12], [-13, -11],
-    ];
-    buds.forEach(([bx, by], i) => {
-      // match draw(Spring) exactly at budPulse=0: a = 0.5 + 0.45·shimmer(0,1,i·1.3)
-      const a = 0.5 + 0.45 * shimmerAt(0, 1, i * 1.3);
-      ctx.fillStyle = `rgba(232,224,150,${a})`;
-      ctx.beginPath();
-      ctx.arc(bx + gust * 0.2, by, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-    });
+    ctx.globalAlpha = 1 - w;
+    springOak(ctx, 0, 0, 0);
     ctx.restore();
   }
-
-  // ── SUMMER crown: grows in, staggered per-blob, eased; full + warm at q=1 ──
-  const green: [string, string, string] = ["#2f5418", "#4f8a2a", "#86bf48"];
-  SUMMER_BLOBS.forEach(([x, y, r], i) => {
-    // each blob starts a little after the previous → foliage thickens outward-in
-    const start = 0.18 + i * 0.04;
-    const grow = smoother(clamp01((q - start) / (1 - start)));
-    const rr = r * grow;
-    if (rr > 0.4) {
-      const s = gust * (0.25 + Math.abs(x) / 26);
-      canopyBlob(ctx, x + s, y, rr, green, 1);
-    }
-  });
-
-  // At q≈1 lay in the summer still's dressing so the frame matches draw(Summer)
-  // exactly. These fade in only at the very end (∝ smoother over the last 12%).
-  const dress = smoother(clamp01((q - 0.88) / 0.12));
-  if (dress > 0.001) {
+  if (w > 0.001) {
     ctx.save();
-    ctx.globalAlpha = dress;
-    ctx.fillStyle = "rgba(190,230,140,0.4)"; // summer flecks at shimmer 0
-    [[-7, -22, 2], [-2, -19, 1.6], [-11, -14, 1.8]].forEach(([fx, fy, r]) => {
-      ctx.beginPath();
-      ctx.arc(fx, fy, r, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    // summer stray leaf at its rest spot (shimmer 0): flx=15, fly=-6, rot 0
-    ctx.fillStyle = "#4f8a2a";
-    ctx.beginPath();
-    ctx.ellipse(15, -6, 1.6, 2.8, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.globalAlpha = w;
+    summerOak(ctx, 0, 0);
     ctx.restore();
   }
-  ctx.globalAlpha = 1;
-}
-
-// Draw the AUTUMN still's crown + acorns + drifting/fallen leaves at fall=0.25
-// (matches draw(Autumn) = autumnOak(0,0,0.25) exactly when alpha=1). Trunk and
-// ground shadow are drawn by the caller so they aren't double-composited.
-function autumnCrownStill(ctx: CanvasRenderingContext2D): void {
-  AUTUMN_BLOBS.forEach(([x, y, r, hue], i) => {
-    if (i === 5) return; // autumn gap at the crown top
-    canopyBlob(ctx, x, y, r, autumnColors(hue), 0.95);
-  });
-  acorns(ctx);
-  // drifting leaves frozen at fall=0.25 (the autumn still pose)
-  const fall = 0.25;
-  const leaves: Array<[number, number, number, number]> = [
-    [-6, 0.3, 0.0, 6],
-    [9, 0.8, 0.5, 5],
-  ];
-  leaves.forEach(([sx, hue, phase, amp]) => {
-    const prog = ((fall + phase) % 1 + 1) % 1;
-    const ly = -6 + prog * 26;
-    const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * amp;
-    ctx.fillStyle = autumnColors(hue)[1];
+  // transient: a few blossom petals lift off mid-morph (0 at both ends)
+  const burst = bell(q);
+  if (burst > 0.01) {
     ctx.save();
-    ctx.translate(lx, ly);
-    ctx.rotate(prog * Math.PI * 3 + phase * 4);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 1.7, 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  });
-  // fallen leaves resting on the pad
-  ctx.fillStyle = autumnColors(0.6)[1];
-  [[-7, 21], [5, 22]].forEach(([fx, fy]) => {
-    ctx.beginPath();
-    ctx.ellipse(fx, fy, 2.4, 1.3, 0.4, 0, Math.PI * 2);
-    ctx.fill();
-  });
-}
-
-// 1: Summer → Autumn (2.6 s) — green SWEEPS to amber/orange and a couple of
-// leaves begin to detach at the edges. STAGED:
-//   • the lush summer crown (summer geometry) recolours green→autumn as a
-//     left-to-right SWEEP over q≈0→0.6 (per-blob staggered ease), so q=0 is
-//     EXACTLY draw(Summer);
-//   • the actual autumn still (autumn geometry, gap, acorns, leaves, fallen
-//     leaves) crossfades IN over q≈0.45→1, so q=1 is EXACTLY draw(Autumn);
-//   • TRANSIENT: 2 edge leaves lift and flutter outward (∝ sin(π·q), so their
-//     amplitude is 0 at both ends) — they peak mid-morph and resolve.
-function summerToAutumn(ctx: CanvasRenderingContext2D, p: number): void {
-  const q = clamp01(p);
-  const transient = Math.sin(Math.PI * q); // 0 at q=0 and q=1
-
-  groundShadow(ctx, lerp(16, 15, q), 0.22);
-  trunk(ctx, false);
-
-  // autumn still fades in over the back half; summer crown fades out to match.
-  const autumnFade = smoother(clamp01((q - 0.45) / 0.55));
-  const summerWeight = 1 - autumnFade;
-
-  // ── SUMMER crown recolouring as a left→right sweep ──
-  if (summerWeight > 0.001) {
-    ctx.save();
-    ctx.globalAlpha = summerWeight;
-    const greenCols: [string, string, string] = ["#2f5418", "#4f8a2a", "#86bf48"];
-    SUMMER_BLOBS.forEach(([x, y, r], i) => {
-      const aBlob = AUTUMN_BLOBS[Math.min(i, AUTUMN_BLOBS.length - 1)];
-      const autumnCols = autumnColors(aBlob[3]);
-      // sweep front: blobs to the left recolour first, right side lags
-      const sweep = smoother(clamp01((q * 1.4 - (x + 14) / 28) / 0.6));
-      const rr = i === 5 ? r * lerp(1, 0.15, q) : r;
-      if (rr > 0.5) {
-        canopyBlob(ctx, x, y, rr, greenCols, 1);
-        if (sweep > 0.01) canopyBlob(ctx, x, y, rr, autumnCols, sweep);
-      }
-    });
-    // summer dressing (flecks + stray leaf) — present at q=0 to match
-    // draw(Summer); they ride out with the summer weight.
-    ctx.fillStyle = "rgba(190,230,140,0.4)";
-    [[-7, -22, 2], [-2, -19, 1.6], [-11, -14, 1.8]].forEach(([fx, fy, r]) => {
-      ctx.beginPath();
-      ctx.arc(fx, fy, r, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.fillStyle = "#4f8a2a";
-    ctx.beginPath();
-    ctx.ellipse(15, -6, 1.6, 2.8, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // ── AUTUMN still crossfading in (exact draw(Autumn) crown at alpha 1) ──
-  if (autumnFade > 0.001) {
-    ctx.save();
-    ctx.globalAlpha = autumnFade;
-    autumnCrownStill(ctx);
-    ctx.restore();
-  }
-
-  // ── TRANSIENT: a couple of edge leaves lift & flutter outward, mid-morph ──
-  if (transient > 0.01) {
-    const leaves: Array<[number, number, number]> = [
-      [-12, -14, 0.3],
-      [13, -12, 0.8],
-    ];
-    leaves.forEach(([sx, sy, hue], i) => {
-      const lift = transient; // 0 at both ends
-      const lx = sx + (sx < 0 ? -1 : 1) * lift * 3;
-      const ly = sy + lift * 3 - lift * Math.abs(Math.sin(q * Math.PI * 4 + i)) * 1.5;
+    ctx.fillStyle = "#f4a8c8";
+    [[-7, -20], [4, -22], [10, -13]].forEach(([sx, sy], i) => {
       ctx.save();
-      ctx.globalAlpha = transient;
-      ctx.fillStyle = autumnColors(hue)[1];
-      ctx.translate(lx, ly);
-      ctx.rotate(Math.sin(q * Math.PI * 3 + i) * 0.8);
+      ctx.globalAlpha = burst * 0.9;
+      ctx.translate(sx + burst * (4 + i * 2), sy - burst * 6 + Math.sin(q * Math.PI * 4 + i) * 1.5);
+      ctx.rotate(q * Math.PI * 3 + i);
       ctx.beginPath();
-      ctx.ellipse(0, 0, 1.6, 2.8, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 1.6, 1.0, 0.4, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     });
+    ctx.restore();
   }
   ctx.globalAlpha = 1;
 }
 
-// 2: Autumn → Winter — coloured canopy sheds (leaves fall/fade revealing the
-// bare branch silhouette) while snow accumulates on branches and ground pad.
-// The WINTER still's snow pad blanket (matches winterOak's pad gradient).
-function winterPadStill(ctx: CanvasRenderingContext2D): void {
-  const snow = ctx.createLinearGradient(0, 16, 0, 24);
-  snow.addColorStop(0, "#eef4fb");
-  snow.addColorStop(1, "#c2d2e4");
-  ctx.fillStyle = snow;
-  ctx.beginPath();
-  ctx.ellipse(0, 20, 18, 6, 0, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-// The WINTER still's 4 drifting snowflakes at their rest positions (the
-// draw(Winter) flake list), globalAlpha 0.85 as in winterOak.
-function winterFlakesStill(ctx: CanvasRenderingContext2D): void {
-  const flakes: Array<[number, number, number]> = [
-    [-9, -14, 1.3],
-    [6, -4, 1.1],
-    [12, -18, 1.0],
-    [-3, 6, 1.2],
-  ];
-  ctx.fillStyle = "#ffffff";
-  flakes.forEach(([fx, fy, r]) => {
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    ctx.arc(fx, fy, r, 0, Math.PI * 2);
-    ctx.fill();
-  });
-  ctx.globalAlpha = 1;
-}
-
-// 2: Autumn → Winter (3.2 s, the SHOWPIECE) — leaves visibly FALL and drift off
-// the canopy while branches go bare and frost/snow settle on the limbs. STAGED:
-//   • foliage THINS & the coloured crown sheds over the first ~70% of q (each
-//     remaining autumn blob fades + drops), so q=0 is EXACTLY draw(Autumn);
-//   • the bare winter tree (wet trunk, dark branch silhouette + snow caps), the
-//     snow pad, sheen and resting snowflakes settle in over the LAST ~40%,
-//     reaching full at q=1 so q=1 is EXACTLY draw(Winter);
-//   • TRANSIENT (showpiece): 3 leaves are RELEASED IN SEQUENCE and flutter down
-//     off the canopy, each fully gone (alpha→0, below the pad) by q=1.
-function autumnToWinter(ctx: CanvasRenderingContext2D, p: number): void {
+// 1: Summer → Autumn — green sweeps to fire colour; leaves begin detaching.
+function summerToAutumn(ctx: CanvasRenderingContext2D, p: number): void {
   const q = clamp01(p);
-  // foliage thins/colours through the first ~70%; snow settles over the last ~40%.
-  const shed = smoother(clamp01(q / 0.7)); // 0..1 over q∈[0,0.7]
-  const settle = smoother(clamp01((q - 0.6) / 0.4)); // 0..1 over q∈[0.6,1]
-
-  groundShadow(ctx, lerp(15, 16, q), lerp(0.22, 0.18, q));
-
-  // ── WINTER pad/sheen settling in (full at q=1 ⇒ matches winterOak pad) ──
-  if (settle > 0.001) {
+  const w = smoother(q);
+  if (1 - w > 0.001) {
     ctx.save();
-    ctx.globalAlpha = settle;
-    winterPadStill(ctx);
+    ctx.globalAlpha = 1 - w;
+    summerOak(ctx, 0, 0);
     ctx.restore();
   }
-
-  // ── Trunk: brown autumn trunk → wet winter trunk ──
-  // Autumn-weighted brown trunk fades out as winter wet trunk fades in, so the
-  // composite is exact at both ends (brown at q=0, fully wet at q=1).
-  if (1 - settle > 0.001) {
+  if (w > 0.001) {
     ctx.save();
-    ctx.globalAlpha = 1 - settle;
-    trunk(ctx, false);
+    ctx.globalAlpha = w;
+    // autumn still at its rest pose (fall=0.25, no gust)
+    autumnOak(ctx, 0, 0, 0.25, 0);
     ctx.restore();
   }
-  if (settle > 0.001) {
-    ctx.save();
-    ctx.globalAlpha = settle;
-    trunk(ctx, true);
-    ctx.restore();
-  }
-
-  // ── Bare branch silhouette: ABSENT at q=0 (draw(Autumn) has no bare branches),
-  // emerges as the crown sheds, becomes the winter silhouette by q=1. Drawn
-  // before falling leaves so the leaves read in front. The autumn-brown branch
-  // fades in with `shed`; the winter-dark snow-capped branch fades in with
-  // `settle` (alpha 1 at q=1 ⇒ exactly draw(Winter)'s branchSilhouette).
-  if (shed > 0.001) {
-    ctx.save();
-    ctx.globalAlpha = shed * (1 - settle);
-    branchSilhouette(ctx, "#3a2a18", 0, false);
-    ctx.restore();
-  }
-  if (settle > 0.001) {
-    ctx.save();
-    ctx.globalAlpha = settle;
-    branchSilhouette(ctx, "#2e2114", 0, true);
-    ctx.restore();
-    // cold sheen on the pad — at settle=1 this is rgba(...,0.224), matching
-    // winterOak(sheen=0.4): 0.16 + 0.4*0.16 = 0.224.
-    ctx.save();
-    ctx.globalAlpha = settle;
-    ctx.fillStyle = "rgba(200,224,255,0.224)";
-    ctx.beginPath();
-    ctx.ellipse(-3, 19, 10, 2.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // ── Coloured canopy SHEDS: the autumn still (crown + acorns + resting leaves)
-  // fades out as `shed`→1; remaining blobs drop a little. At q=0 (shed=0) this is
-  // alpha 1 and undropped ⇒ EXACTLY draw(Autumn). ──
-  const autumnVis = 1 - shed;
-  if (autumnVis > 0.003) {
-    ctx.save();
-    ctx.globalAlpha = autumnVis;
-    // crown blobs drop & shrink slightly as they thin
-    AUTUMN_BLOBS.forEach(([x, y, r, hue], i) => {
-      if (i === 5) return; // autumn gap
-      const drop = shed * (6 + Math.abs(x) * 0.25);
-      canopyBlob(ctx, x, y + drop, r * (1 - shed * 0.35), autumnColors(hue), 0.95);
-    });
-    acorns(ctx);
-    // resting drifting leaves (autumn still, fall=0.25) also fade out
-    const leaves: Array<[number, number, number, number]> = [
-      [-6, 0.3, 0.0, 6],
-      [9, 0.8, 0.5, 5],
+  // transient: 2 edge leaves lift and flutter outward (0 at both ends)
+  const burst = bell(q);
+  if (burst > 0.01) {
+    const leaves: Array<[number, number, number]> = [
+      [-12, -14, 0.3],
+      [13, -12, 0.85],
     ];
-    leaves.forEach(([sx, hue, phase, amp]) => {
-      const prog = ((0.25 + phase) % 1 + 1) % 1;
-      const ly = -6 + prog * 26 + shed * 6;
-      const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * amp;
-      ctx.fillStyle = autumnColors(hue)[1];
+    leaves.forEach(([sx, sy, hue], i) => {
       ctx.save();
-      ctx.translate(lx, ly);
-      ctx.rotate(prog * Math.PI * 3 + phase * 4);
+      ctx.globalAlpha = burst;
+      ctx.fillStyle = autumnColors(hue)[1];
+      ctx.translate(sx + (sx < 0 ? -1 : 1) * burst * 4, sy + burst * 2 - Math.abs(Math.sin(q * Math.PI * 4 + i)) * 2);
+      ctx.rotate(Math.sin(q * Math.PI * 3 + i) * 0.8);
       ctx.beginPath();
       ctx.ellipse(0, 0, 1.7, 3, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
     });
-    // fallen leaves resting on the pad (cleared as winter snow takes over)
-    ctx.fillStyle = autumnColors(0.6)[1];
-    [[-7, 21], [5, 22]].forEach(([fx, fy]) => {
-      ctx.beginPath();
-      ctx.ellipse(fx, fy, 2.4, 1.3, 0.4, 0, Math.PI * 2);
-      ctx.fill();
-    });
+  }
+  ctx.globalAlpha = 1;
+}
+
+// 2: Autumn → Winter (showpiece) — leaves FALL off the canopy as branches go bare
+// and the heavy snow load + icicle + snow pad settle in.
+function autumnToWinter(ctx: CanvasRenderingContext2D, p: number): void {
+  const q = clamp01(p);
+  const w = smoother(q);
+  // FROM: autumn still, dropping/shrinking as it sheds (fades with w).
+  if (1 - w > 0.003) {
+    ctx.save();
+    ctx.globalAlpha = 1 - w;
+    autumnOak(ctx, 0, w * 4, 0.25, 0); // drops a touch as it sheds
     ctx.restore();
   }
-
-  // ── TRANSIENT showpiece: 3 leaves released IN SEQUENCE, fluttering down off
-  // the canopy. Each spawns at a staggered q, falls, and is fully gone (alpha 0,
-  // past the pad) by q=1. Amplitude is naturally 0 at q=0 (none spawned yet) and
-  // each leaf's own alpha resolves to 0 before q=1. ──
+  // TO: winter still, settling in (fades in with w).
+  if (w > 0.001) {
+    ctx.save();
+    ctx.globalAlpha = w;
+    winterOak(
+      ctx,
+      0,
+      0,
+      [
+        [-9, -14, 1.3],
+        [6, -4, 1.1],
+        [12, -18, 1.0],
+        [-3, 6, 1.2],
+      ],
+      0.4,
+    );
+    ctx.restore();
+  }
+  // transient showpiece: 3 leaves released in sequence, flutter down & gone by q=1.
   const fallers: Array<[number, number, number, number]> = [
-    // [startX, startY, spawnQ, hue]
     [-11, -13, 0.08, 0.3],
-    [12, -11, 0.30, 0.8],
+    [12, -11, 0.30, 0.85],
     [3, -17, 0.52, 0.55],
   ];
   fallers.forEach(([sx, sy, spawnQ, hue], i) => {
-    const span = 0.9 - spawnQ; // time available before q=1 (kept < 1)
+    const span = 0.9 - spawnQ;
     if (q <= spawnQ || span <= 0) return;
-    const prog = clamp01((q - spawnQ) / span); // 0..1, reaches 1 by q≈0.9
-    if (prog >= 1) return; // gone
-    const ly = sy + prog * (30 - sy); // fall down to ~+30 (below the pad)
+    const prog = clamp01((q - spawnQ) / span);
+    if (prog >= 1) return;
+    const ly = sy + prog * (30 - sy);
     const flutter = Math.sin(prog * Math.PI * 5 + i) * (1 - prog) * 4;
     const lx = sx + flutter + (sx < 0 ? -1 : 1) * prog * 2;
     ctx.save();
-    ctx.globalAlpha = (1 - prog) * 0.95; // fades to 0 as it lands → gone by q=1
+    ctx.globalAlpha = (1 - prog) * 0.95;
     ctx.fillStyle = autumnColors(hue)[1];
     ctx.translate(lx, ly);
     ctx.rotate(prog * Math.PI * 3 + i);
     ctx.beginPath();
-    ctx.ellipse(0, 0, 1.7, 3, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 0, 1.8, 3.1, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   });
-
-  // ── WINTER resting snowflakes settle in last (full at q=1 ⇒ draw(Winter)) ──
-  if (settle > 0.001) {
-    ctx.save();
-    ctx.globalAlpha = settle;
-    winterFlakesStill(ctx);
-    ctx.restore();
-  }
   ctx.globalAlpha = 1;
 }
 
@@ -963,3 +882,8 @@ export const TRANSITIONS: SeasonalTransitionSet = {
   1: summerToAutumn,
   2: autumnToWinter,
 };
+
+// Reference the SeasonName type to keep the strict-tsc import meaningful and to
+// document that the keys above are exhaustive over the season set.
+const _SEASON_KEYS: SeasonName[] = ["Spring", "Summer", "Autumn", "Winter"];
+void _SEASON_KEYS;
