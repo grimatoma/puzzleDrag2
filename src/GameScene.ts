@@ -17,7 +17,7 @@ import type { TileRes } from "./TileObj.js";
 const cssColor = (num: number): string => Phaser.Display.Color.IntegerToColor(num).rgba;
 import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeasonName, rebakeSeasonalTilesForSeason } from "./textures.js";
 import { hasSeasonalTileAnim, seasonalTileHasTransitions, seasonalVectorAdvance } from "./textures/seasonal/seasonalTiles.js";
-import { preloadSeasonalArt, seasonalBakedActive, seasonalAdvance, seasonalIdleFrameCount, seasonalMaxIdleFrames, bakedActiveKeys, onPixelSpriteOverrideChange } from "./textures/seasonal/seasonalArt.js";
+import { preloadSeasonalArt, seasonalBakedActive, seasonalAdvance, seasonalIdleFrameCount, seasonalMaxIdleFrames, seasonalGestureFrameCount, seasonalMaxGestureFrames, bakedActiveKeys, onPixelSpriteOverrideChange } from "./textures/seasonal/seasonalArt.js";
 import { idleAnimTime } from "./textures/idleAnimTiming.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
@@ -2242,9 +2242,19 @@ export class GameScene extends Phaser.Scene {
     tex.refresh();
   }
 
+  /** The frame-bank layout for `resKey`: `idle` idle slots followed by `gesture`
+   *  special-gesture slots in one strip. `gestureBase` is the slot index of the first
+   *  gesture frame (== `idle`); `total` is the strip width. The single source of truth
+   *  shared by the strip sizing/baking here and the per-tile frame selection in TileObj. */
+  private _bankLayout(resKey: string): { idle: number; gesture: number; total: number; gestureBase: number } {
+    const idle = Math.max(1, seasonalMaxIdleFrames(resKey));
+    const gesture = seasonalMaxGestureFrames(resKey);
+    return { idle, gesture, total: idle + gesture, gestureBase: idle };
+  }
+
   /** Ensure `tile_<resKey>` is a frame-bank strip wide enough for `maxN` square
-   *  frames (one slot per idle frame). (Re)creates the canvas + frame defs when
-   *  missing or mis-sized and re-binds on-board sprites; __BASE is pinned to slot 0
+   *  frames (idle slots followed by gesture slots). (Re)creates the canvas + frame defs
+   *  when missing or mis-sized and re-binds on-board sprites; __BASE is pinned to slot 0
    *  so a sprite shows the rest frame even before its first setFrame(). */
   private _ensureStripTexture(resKey: string, maxN: number, dpr: number): Phaser.Textures.CanvasTexture | undefined {
     const key = `tile_${resKey}`;
@@ -2282,19 +2292,28 @@ export class GameScene extends Phaser.Scene {
   }
 
   /** Bake the current season's idle frames into the frame-bank strip (one per slot;
-   *  unused slots duplicate the last frame) and refresh the `_sel` rest frame. */
+   *  unused slots duplicate the last frame), then the special-gesture frames into the
+   *  slots after them, and refresh the `_sel` rest frame. */
   private _bakeBankIdle(res: TileRes, season: SeasonName | null, dpr: number) {
-    const maxN = Math.max(1, seasonalMaxIdleFrames(res.key));
+    const layout = this._bankLayout(res.key);
     const n = Math.max(1, seasonalIdleFrameCount(res.key, season));
-    const tex = this._ensureStripTexture(res.key, maxN, dpr);
+    const tex = this._ensureStripTexture(res.key, layout.total, dpr);
     if (!tex) return;
     const ctx = tex.getContext();
     if (!ctx) return;
     const fw = Math.round(TILE * dpr);
-    for (let i = 0; i < maxN; i++) {
+    for (let i = 0; i < layout.idle; i++) {
       const frame = Math.min(i, n - 1);
       ctx.setTransform(dpr, 0, 0, dpr, i * fw, 0);
       paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, season, undefined, { idleFrame: frame });
+    }
+    if (layout.gesture > 0) {
+      const gN = Math.max(1, seasonalGestureFrameCount(res.key, season));
+      for (let i = 0; i < layout.gesture; i++) {
+        const frame = Math.min(i, gN - 1);
+        ctx.setTransform(dpr, 0, 0, dpr, (layout.gestureBase + i) * fw, 0);
+        paintTileCanvas(ctx, res as { key: string; look: { color: number } }, false, TILE, TILE, season, undefined, { gestureFrame: frame });
+      }
     }
     tex.refresh();
     this._bakeSelFrame(res, season, dpr, { idleFrame: 0 });
@@ -2303,7 +2322,7 @@ export class GameScene extends Phaser.Scene {
   /** Bake the lockstep transition frame into the frame-bank strip's slot 0 (every
    *  instance shows frame 0 while transitioning). */
   private _bakeBankTrans(res: TileRes, season: SeasonName | null, fromIdx: number, frame: number, dpr: number) {
-    const tex = this._ensureStripTexture(res.key, Math.max(1, seasonalMaxIdleFrames(res.key)), dpr);
+    const tex = this._ensureStripTexture(res.key, this._bankLayout(res.key).total, dpr);
     if (!tex) return;
     const ctx = tex.getContext();
     if (!ctx) return;
@@ -2335,7 +2354,7 @@ export class GameScene extends Phaser.Scene {
       if (!res) continue;
       // Snap the transition state machine to the settled season (no transition).
       const plan = seasonalAdvance(key, season, 0);
-      if (seasonalMaxIdleFrames(key) > 1) {
+      if (this._bankLayout(key).total > 1) {
         this._bakeBankIdle(res, season, dpr);
       } else {
         for (const selected of [false, true]) {

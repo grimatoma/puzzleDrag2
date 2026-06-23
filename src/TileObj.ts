@@ -1,6 +1,6 @@
 import Phaser from "phaser";
-import { seasonalBakedActive, seasonalVectorActive, seasonalIsTransitioning, seasonalIdleFrameCount } from "./textures/seasonal/seasonalArt.js";
-import { idleFrameAt } from "./textures/seasonalIdleTiming.js";
+import { seasonalBakedActive, seasonalVectorActive, seasonalIsTransitioning, seasonalIdleFrameCount, seasonalGestureFrameCount, seasonalMaxIdleFrames } from "./textures/seasonal/seasonalArt.js";
+import { idleFrameAt, gestureFrameAt } from "./textures/seasonalIdleTiming.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
 
 // Global multiplier on the ambient sway frequency. >1 makes the wind sway play
@@ -170,7 +170,18 @@ export class TileObj {
         this.sprite.setFrame(0);
         return;
       }
-      const frames = seasonalIdleFrameCount(this.res.key, this.scene.seasonName ?? null);
+      // A rare special gesture (frolic / flourish) preempts the idle loop on this
+      // cell's own independent timer. Its frames live in the strip slots after the
+      // idle frames; the base slot must match GameScene._bankLayout().gestureBase,
+      // which is seasonalMaxIdleFrames(key).
+      const season = this.scene.seasonName ?? null;
+      const gFrames = seasonalGestureFrameCount(this.res.key, season);
+      const g = gFrames > 1 ? gestureFrameAt(time, this.col, this.row, gFrames) : -1;
+      if (g >= 0) {
+        this.sprite.setFrame(seasonalMaxIdleFrames(this.res.key) + g);
+        return;
+      }
+      const frames = seasonalIdleFrameCount(this.res.key, season);
       this.sprite.setFrame(idleFrameAt(time, this.col, this.row, frames));
       return;
     }
