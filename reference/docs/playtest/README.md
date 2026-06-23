@@ -12,7 +12,24 @@ See the implementation brief (archived — shipped): [`docs/archive/projects/05-
 npm run playtest -- --zones home --runs 10 --seed 1 --out reference/docs/playtest
 # flags: --zones <csv>  --runs <n>  --seed <n>  --policy greedy
 #        --rows <n>  --cols <n>  --out <dir>  --no-write
+#        --campaign      sequential progression PACING (runs-to-milestone + tier stall)
+#        --progression   code-derived STRUCTURE (reachability + per-zone oracle + softlock)
 ```
+
+Three modes:
+
+- **default** — per-run economy + the family-value spread audit (above).
+- **`--campaign`** — one persistent state, runs carried forward, measuring how many
+  runs it takes to afford each milestone + where the tier ladder stalls (by actually
+  playing). Writes `campaign-report.md` / `campaign-metrics.json`.
+- **`--progression`** — no runs played. Derives the progression spine straight from
+  the constants (`MAP_NODES`/`BUILDINGS`/`RECIPES`): fresh-save zone reachability, a
+  **per-zone siloed** affordability oracle, and **softlock detection** (a circular /
+  unreachable gate). Writes `progression.json` / `progression-report.md` and refreshes
+  the inlined data block in `reference/docs/balance/progression-timeline.html` (the
+  interactive [progression map](../balance/progression-timeline.html)). The structural
+  guard is the progression-shape snapshot in the harness test — a constant edit that
+  re-gates a zone or re-opens the softlock breaks it intentionally.
 
 This writes four (git-ignored) artifacts into this folder:
 

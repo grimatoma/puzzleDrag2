@@ -160,7 +160,7 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
 <header class="mast">
   <p class="eyebrow">Balance Profile · Hearthwood Vale · June 2026</p>
   <h1>puzzleDrag2 — the<br>balance <span class="amp">ledger</span></h1>
-  <p class="dek">The readable companion to <code>profile.json</code> — the goals, the formulas, the knobs, and the one finding that matters: a circular gate has softlocked progression at the first rung. Every number below is drawn from the profile and the campaign pacing harness.</p>
+  <p class="dek">The readable companion to <code>profile.json</code> — the goals, the formulas, the knobs, and the one finding that matters: a circular gate has softlocked progression at the first rung. Every number below is drawn from the profile and the playtest harness. For the journey itself — the unlock map, tier ladders, and where the spine walls off — see the interactive <a href="progression-timeline.html">progression timeline</a>.</p>
   <hr>
   <div class="statline">
     <div class="stat e"><b>1</b><span>blocker found</span></div>
@@ -285,10 +285,10 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
   <p>Read it as a loop: <strong>climb home → need <code>block</code> → need the quarry → need home at City → climb home.</strong> There is no entry point. Even completing home to <em>found the next settlement</em> needs ~4 buildings that each demand <code>block</code>.</p>
 
   <h3>Confirmed: it is a hard lock, not just awkward ordering</h3>
-  <p><code>CARTO/TRAVEL</code> enforces the gate. At <strong><code>src/features/cartography/slice.ts:78</code></strong> the reducer returns state unchanged when <code>zoneTierGateReason</code> fails — so a fresh save cannot even <em>travel</em> to the quarry, let alone mine it, until home is City. The player is hard-stuck at home Outpost.</p>
+  <p>The lock is now <strong>code-derived</strong>, not just traced. The progression oracle (<code>src/playtest/progression.ts</code>, run via <code>npm run playtest -- --progression</code>) computes fresh-save reachability — <code>{home, meadow, orchard, crossroads}</code>, all farm/no-board — and pins the very first wall at <strong>home Outpost → Hamlet</strong>: the rung needs <code>bread</code>, and the Bakery that bakes it both costs <code>block</code> and only unlocks <em>at</em> Hamlet. <code>CARTO/TRAVEL</code> separately enforces the quarry travel gate (<code>slice.ts:78</code>). See the interactive <a href="progression-timeline.html">progression timeline →</a>.</p>
   <div class="call">
-    <h4>Residual uncertainty</h4>
-    <p>Story/quest grants have not yet been traced — it is conceivable a quest seeds early <code>block</code>. A fresh-save manual playtest would confirm the lock 100%. Everything else points to a hard wall.</p>
+    <h4>Escape-valve audit — no way out</h4>
+    <p>Every candidate bypass was checked and closed: orders/quests and daily rewards grant only coins; no story beat or starting inventory seeds <code>block</code> or <code>bread</code>; inventory is siloed per zone, so another zone's output can't pay home's tier-up. The one near-miss is the market — it <em>lists</em> <code>block</code>/<code>bread</code> as buyable, but the buy UI only appears once <code>caravan_post</code> is built, and that costs <code>block</code>+<code>iron_bar</code>. So even the escape is mine-gated.</p>
   </div>
 
   <h3>Likely cause &amp; the lever</h3>
@@ -630,15 +630,16 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
       <thead><tr><th>Purpose</th><th>Command / path</th></tr></thead>
       <tbody>
         <tr><td>Per-run metrics</td><td><code>npm run playtest -- --zones home --runs 10 --seed 1</code><br><span class="num" style="color:var(--ink-faint);font-size:11px">coins/run, coins/turn, family-value spread, change-list</span></td></tr>
-        <tr><td>Campaign pacing</td><td><code>npm run playtest -- --campaign --zones home --runs 30 --seed 1</code><br><span class="num" style="color:var(--ink-faint);font-size:11px">runs-to-coin-milestone + tier-stall pacing</span></td></tr>
+        <tr><td>Campaign pacing</td><td><code>npm run playtest -- --campaign --zones home --runs 30 --seed 1</code><br><span class="num" style="color:var(--ink-faint);font-size:11px">runs-to-coin-milestone + tier-stall pacing (by playing)</span></td></tr>
+        <tr><td>Progression spine</td><td><code>npm run playtest -- --progression</code><br><span class="num" style="color:var(--ink-faint);font-size:11px">code-derived reachability + per-zone siloed oracle + softlock; rewrites the <a href="progression-timeline.html">progression map</a></span></td></tr>
         <tr><td>Determinism / drift guard</td><td><code>npx vitest run src/__tests__/playtest-harness.test.ts</code></td></tr>
-        <tr><td>Code</td><td><code>src/playtest/</code> — <code>run.ts</code> (per-run loop), <code>campaign.ts</code> (pacing loop), <code>metrics.ts</code> (spread), <code>targets.ts</code> (bands)</td></tr>
+        <tr><td>Code</td><td><code>src/playtest/</code> — <code>run.ts</code> (per-run loop), <code>campaign.ts</code> (pacing loop), <code>progression.ts</code> (structural oracle), <code>metrics.ts</code> (spread), <code>targets.ts</code> (bands)</td></tr>
       </tbody>
     </table>
   </details>
   <div class="call warn">
     <h4>Known gap</h4>
-    <p>The campaign sim is <strong>farm-board-only</strong> and does not model crafting, buildings, or the mine, so it cannot yet validate a fix to the progression stall end-to-end. Extending it (or a manual trace) is the first tooling task of the pass.</p>
+    <p>The campaign <em>pacing</em> sim is <strong>farm-board-only</strong> and does not model crafting, buildings, or the mine, so it cannot yet validate a stall <em>fix</em> end-to-end by playing. The <em>structure</em> — reachability and the softlock — is now covered statically by <code>progression.ts</code> and pinned in CI; extending the pacing sim across zones is the remaining tooling task.</p>
   </div>
 </section>
 

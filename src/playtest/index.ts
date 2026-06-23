@@ -204,3 +204,4 @@ export * from "./policy.js";
 export * from "./payload.js";
 export * from "./prng.js";
 export * from "./campaign.js";
+export * from "./progression.js";

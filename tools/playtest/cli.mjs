@@ -10,19 +10,26 @@
  *   npm run playtest -- --zones home,meadow --runs 20 --seed 1234
  *
  * Flags: --zones <csv>  --runs <n>  --seed <n>  --policy <name>
- *        --rows <n>  --cols <n>  --out <dir>  --no-write  --campaign
+ *        --rows <n>  --cols <n>  --out <dir>  --no-write  --campaign  --progression
  *
  * --campaign switches to the sequential progression sim (src/playtest/campaign.ts):
  * one persistent state, runs carried forward, measuring runs-to-coin-milestone +
  * tier pacing for the FIRST zone in --zones. Writes campaign-report.md /
  * campaign-metrics.json instead of the per-run report.
  *
+ * --progression switches to the CODE-DERIVED spine (src/playtest/progression.ts):
+ * no runs played — it derives fresh-save reachability + the per-zone siloed
+ * progression oracle + softlock detection straight from MAP_NODES/BUILDINGS/RECIPES.
+ * Writes progression.json + progression-report.md AND, when the dashboard exists,
+ * refreshes the code-derived data block inlined between the SPINE markers in
+ * reference/docs/balance/progression-timeline.html (so the doc cannot drift).
+ *
  * The harness logic lives in importable TS under src/playtest/. This file is
  * thin glue: it loads that TS through Vite's SSR pipeline (the same compiler the
  * app build uses — so enums, .js→.ts specifiers, everything resolves exactly as
  * shipped) and does the argv + filesystem work.
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 // The same plugin vite.config.js / vitest.config.js register — provides the
 // `virtual:seasonal-subjects` module that the texture registry imports.
@@ -41,7 +48,7 @@ globalThis.localStorage = {
 };
 
 function parseArgs(argv) {
-  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false };
+  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const val = () => argv[++i];
@@ -55,6 +62,7 @@ function parseArgs(argv) {
       case "--out": out.outDir = val(); break;
       case "--no-write": out.write = false; break;
       case "--campaign": out.campaign = true; break;
+      case "--progression": out.progression = true; break;
       default:
         if (a.startsWith("--")) console.warn(`[playtest] ignoring unknown flag: ${a}`);
     }
@@ -79,9 +87,13 @@ async function main() {
 
   let report;
   let campaign;
+  let progression;
   try {
     const mod = await server.ssrLoadModule("/src/playtest/index.ts");
-    if (args.campaign) {
+    if (args.progression) {
+      const spine = mod.buildProgressionSpine();
+      progression = { spine, reportMarkdown: mod.renderProgressionReport(spine) };
+    } else if (args.campaign) {
       campaign = mod.runCampaign({
         zoneId: args.zones[0], runs: args.runs, seed: args.seed,
         policy: args.policy, rows: args.rows, cols: args.cols,
@@ -94,6 +106,52 @@ async function main() {
     }
   } finally {
     await server.close();
+  }
+
+  // ── Progression mode: the code-derived spine + softlock oracle ───────────
+  if (progression) {
+    const { spine } = progression;
+    const o = spine.oracle;
+    console.log(`\npuzzleDrag2 progression spine — code-derived (no runs played)\n`);
+    console.log(`  fresh-save reachable: ${o.freshSaveReachable.join(", ")}`);
+    console.log(`  playable boards: ${o.freshSavePlayableBoards.join(", ") || "(none)"}`);
+    if (o.softlock) {
+      console.log(`  ⛔ SOFTLOCK: home stuck at ${o.softlock.stuckTierName} (tier ${o.softlock.stuckTier}); ` +
+        `${o.softlock.blockedRung} needs ${o.softlock.primaryMissing.join(", ")}`);
+    } else {
+      console.log(`  ✓ no softlock detected (home can climb its full ladder)`);
+    }
+    for (const w of o.walls) {
+      console.log(`  wall · ${w.zone}: ${w.wall.reachedName} → ${w.wall.toName} blocked on ${w.wall.missing.map((m) => m.key).join(", ")}`);
+    }
+    if (!args.write) { console.log("\n(--no-write: skipped file output)\n"); return; }
+    const outDir = path.resolve(process.cwd(), args.outDir);
+    await mkdir(outDir, { recursive: true });
+    const json = JSON.stringify(spine, null, 2) + "\n";
+    await writeFile(path.join(outDir, "progression.json"), json, "utf8");
+    await writeFile(path.join(outDir, "progression-report.md"), progression.reportMarkdown + "\n", "utf8");
+    console.log(`\n  wrote progression.json, progression-report.md → ${args.outDir}`);
+    // Refresh the inlined, code-derived data block in the dashboard (if present),
+    // so the self-contained HTML can never drift from the constants.
+    const dashPath = path.resolve(process.cwd(), "reference/docs/balance/progression-timeline.html");
+    try {
+      const html = await readFile(dashPath, "utf8");
+      const START = "/* SPINE:START */";
+      const END = "/* SPINE:END */";
+      const a = html.indexOf(START), b = html.indexOf(END);
+      if (a >= 0 && b > a) {
+        const block = `${START}\nconst SPINE = ${JSON.stringify(spine)};\n${END}`;
+        const next = html.slice(0, a) + block + html.slice(b + END.length);
+        if (next !== html) {
+          await writeFile(dashPath, next, "utf8");
+          console.log(`  refreshed SPINE data block in progression-timeline.html`);
+        } else {
+          console.log(`  progression-timeline.html SPINE block already current`);
+        }
+      }
+    } catch { /* dashboard not present yet — fine */ }
+    console.log("");
+    return;
   }
 
   // ── Campaign mode: progression pacing for a single zone ──────────────────

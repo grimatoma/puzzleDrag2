@@ -69,6 +69,25 @@ If the game's **genre is outside the handbook's coverage** (shooter, gacha, deck
 **web-research that genre's balancing canon first** (see *Research the web*, below) so you model it with
 the right theory rather than forcing the economy lens onto it.
 
+### 2.5 Build the progression map — the alignment checkpoint (handbook §10)
+For any game with **gated/sequenced content**, the single most important artifact of the pass is the
+**progression map**: the ordered spine of milestones, each rung's cost and unlocks, the gates between
+them, and **what is actually reachable from a fresh save**. This is where you and the designer *confirm
+you are looking at the same game* before tuning a single number — alignment is the deliverable, not
+values.
+
+- **Derive it from the code, not by hand** — a map built from the real zone/tier/recipe/cost tables (as
+  a pure function) *cannot drift* from the build; a hand-drawn one certifies agreement on a game that no
+  longer exists. Model gate affordability **per resource container** if resources are siloed (§10).
+- **Detect dead-ends** — walk the gate graph outward from the start state and flag any **circular /
+  unreachable gate** (rung B needs X, X comes only from content gated behind B → *softlock*). This
+  cross-track failure is invisible on any single cost curve.
+- **Render it visual + interactive** so the designer can actually review it, and **assert it with a
+  test** that pins the progression shape, so a later structural change that re-opens a lock breaks CI.
+- **Get explicit sign-off**: *Is this the intended order? Anything reachable too early, or walled that
+  shouldn't be? Is every gate's demand producible by the time the player hits it?* Only once the map is
+  agreed do the step-1 KPI targets attach to real rungs.
+
 ### 3. Model before tuning
 Draw the faucet→converter→drain flow and write the governing formulas (handbook §3–4). Identify the
 feedback loops and the cost-vs-reward curves. **Name the failure mode if you see one** — e.g. "income is
@@ -131,6 +150,9 @@ Generated on first use, version-controlled in the game's repo:
 - **A design doc** (a self-contained HTML doc under the repo's docs/ folder is ideal): goals & KPI
   targets, the faucet/drain economy map + formulas, target curves, the knob registry, and a decision log.
   The artifact you'd review with another designer.
+- **A progression map** (handbook §10) — the interactive, **code-derived** timeline of the spine, gates,
+  unlocks, reachability, and any softlock. The alignment artifact; render it visual and back it with a
+  shape-pinning test so it can't drift.
 - **A machine-readable config** (e.g. `profile.json`): knob paths, core formulas, harness entry/commands,
   KPI target bands. The skill reads this on load to resume on a known game.
 - Keep it **thin** — game-specifics and decisions only. Theory stays in the handbook (so it never drifts
@@ -145,7 +167,7 @@ anti-grind pacing"; "no real-money mechanics"; "wants every resource family viab
 - **[balance-handbook.md](references/balance-handbook.md)** — the genre-aware theory: what balance is (§1),
   the genre map of what-applies-where (§2), curves & the cliff (§3), the internal economy & work-backward
   targeting (§4), setting a principled value (§5), feedback loops & fairness (§6), content-economy hygiene
-  (§7), estimation heuristics (§8), simulation discipline (§9).
+  (§7), estimation heuristics (§8), simulation discipline (§9), the progression map & softlock detection (§10).
 - **[sharp-edges.md](references/sharp-edges.md)** — the guardrails: the mistakes this skill must not make,
   plus a slot for per-game pitfalls.
 
@@ -153,7 +175,15 @@ anti-grind pacing"; "no real-money mechanics"; "wants every resource family viab
 
 ## Instance #1 — puzzleDrag2
 This skill was proven on puzzleDrag2 (a single-player, turn-based, transitive-economy farming game). Its
-Balance Profile lives at `reference/docs/balance/index.html` + `reference/docs/balance/profile.json`. Its measurement harness
-is the seeded playtest rig: `npm run playtest` (per-run economy + the family-value spread audit) and
-`npm run playtest -- --campaign --zones home --runs 30 --seed 1` (progression pacing — runs-to-coin-
-milestone + the tier-stall finding). Load the Profile to resume a balance pass there.
+Balance Profile lives at `reference/docs/balance/index.html` + `reference/docs/balance/profile.json`, with
+the **progression map** at `reference/docs/balance/progression-timeline.html` (the code-derived alignment
+artifact — handbook §10). Its measurement harness is the seeded playtest rig:
+- `npm run playtest` — per-run economy + the family-value spread audit;
+- `npm run playtest -- --campaign --zones home --runs 30 --seed 1` — progression *pacing* (runs-to-coin-
+  milestone + the tier-stall finding, by actually playing);
+- `npm run playtest -- --progression` — the *structural* spine: fresh-save reachability + the per-zone
+  siloed oracle + softlock detection, derived from the constants (no runs played). Rewrites the
+  progression-timeline data block and emits `progression.json`. Guarded by the progression-shape snapshot
+  in `src/__tests__/playtest-harness.test.ts`.
+
+Load the Profile to resume a balance pass there.
