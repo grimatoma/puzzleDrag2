@@ -143,6 +143,18 @@ describe("Phase 12.4 — build optimisation", () => {
     expect(html).toMatch(/rel="apple-touch-icon"/);
   });
 
+  it("excludes the standalone /b/, /story/ and /docs/ apps from the game-shell navigation fallback", () => {
+    // The SW's navigateFallback serves the game shell for SPA navigations that
+    // miss the precache. The Dev Panel, Story Editor and Docs are independent
+    // static apps, not game routes — they must be on the denylist, or a stale
+    // refresh boots the game under their path (e.g. /docs/#/town?modal=menu).
+    const sw = readFileSync(resolve(distDir, "sw.js"), "utf8");
+    for (const route of ["b", "story", "docs"]) {
+      // Forward slashes are escaped in the serialized RegExp source (\/).
+      expect(sw, `navigateFallbackDenylist should cover /${route}/`).toContain(`puzzleDrag2\\/${route}\\/`);
+    }
+  });
+
   it("keeps the service worker out of dist/assets/", () => {
     // The asset-budget/.gz/.br/sourcemap guardrails above only scan dist/assets/;
     // the SW + workbox runtime must stay at the dist root or those checks miss it.
