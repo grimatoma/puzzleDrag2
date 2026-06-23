@@ -14,6 +14,9 @@ import {
   SEASONAL_FOLDER_KEYS,
   hasSeasonalArtFolder,
   seasonalTransFrameCount,
+  seasonalGestureFrameCount,
+  seasonalMaxGestureFrames,
+  seasonalHasGesture,
 } from "./seasonalArt.js";
 
 // SEASON_NAMES order: 0 Spring, 1 Summer, 2 Autumn, 3 Winter. Summer (1) is the anchor.
@@ -105,6 +108,21 @@ describe("seasonal folder set (wiki Pixel-art toggle)", () => {
   it("seasonalTransFrameCount is 0 for inactive / unknown subjects (no sheets decoded in node)", () => {
     expect(seasonalTransFrameCount("tile_mine_stone", 0)).toBe(0);
     expect(seasonalTransFrameCount("tile_does_not_exist", 1)).toBe(0);
+  });
+});
+
+describe("special-gesture clip accessors", () => {
+  // The gesture clip reuses the Summer-anchor fallback (resolveGesture → fallbackIdleIndex,
+  // tested above). With no fetch/createImageBitmap in node, no sheets decode, so every
+  // accessor reports the empty/absent state — and a subject with no gesture art behaves
+  // exactly like today.
+  it("report 0 / false for inactive and unknown subjects", () => {
+    expect(seasonalGestureFrameCount("tile_special_dirt", "Summer")).toBe(0);
+    expect(seasonalGestureFrameCount("tile_does_not_exist", null)).toBe(0);
+    expect(seasonalMaxGestureFrames("tile_special_dirt")).toBe(0);
+    expect(seasonalMaxGestureFrames("tile_does_not_exist")).toBe(0);
+    expect(seasonalHasGesture("tile_special_dirt")).toBe(false);
+    expect(seasonalHasGesture("tile_does_not_exist")).toBe(false);
   });
 });
 

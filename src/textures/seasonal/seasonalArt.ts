@@ -32,6 +32,11 @@ const TRANS_MS = 70;    // ms per transition frame
 const SUMMER = 1;
 const IDLE_FILES = ["idle-spring.png", "idle-summer.png", "idle-autumn.png", "idle-winter.png"] as const;
 const TRANS_FILES = ["trans-spring-summer.png", "trans-summer-autumn.png", "trans-autumn-winter.png"] as const;
+// Optional per-season "special gesture" clip (a frolic / flourish) the board plays
+// occasionally on each tile's own rare per-cell timer — separate from the idle loop.
+// Same packing + Summer-anchor fallback as idles; purely additive (a subject without
+// these behaves exactly as before).
+const GESTURE_FILES = ["gesture-spring.png", "gesture-summer.png", "gesture-autumn.png", "gesture-winter.png"] as const;
 
 /** Every tile key that ships a seasonal-art folder (== public/seasonal-tiles/<dir>/),
  *  discovered at build time. `?? {}` keeps non-Vite tooling happy. */
@@ -113,6 +118,7 @@ interface Clip {
 }
 interface State {
   idle: (Clip | null)[]; // by season index 0..3
+  gesture: (Clip | null)[]; // optional special-gesture clip, by season index 0..3
   trans: (Clip | null)[]; // [i] = season i -> i+1
   active: boolean; // ≥1 idle decoded — the tile renders baked art (summer-anchored)
   curIdx: number;
@@ -193,12 +199,13 @@ async function loadManifest(manifest: Record<string, string[]>): Promise<void> {
       const u = baseUrl(key);
       const load = (f: string): Promise<Clip | null> =>
         present.has(f) ? loadSheet(u + f) : Promise.resolve(null);
-      const [idle, trans] = await Promise.all([
+      const [idle, gesture, trans] = await Promise.all([
         Promise.all(IDLE_FILES.map(load)),
+        Promise.all(GESTURE_FILES.map(load)),
         Promise.all(TRANS_FILES.map(load)),
       ]);
       states.set(key, {
-        idle, trans, active: idle.some(Boolean),
+        idle, gesture, trans, active: idle.some(Boolean),
         curIdx: 0, mode: "idle", transTo: 0, transStart: 0,
       });
     }),
@@ -288,6 +295,13 @@ export function fallbackIdleIndex(present: readonly boolean[], idx: number): num
 function resolveIdle(st: State, idx: number): Clip | null {
   const i = fallbackIdleIndex(st.idle.map(Boolean), idx);
   return i >= 0 ? st.idle[i] : null;
+}
+
+/** The gesture clip to draw for season `idx`, reusing the Summer-anchor fallback so a
+ *  Summer-only gesture drop plays in every season. Null when the subject ships no gesture. */
+function resolveGesture(st: State, idx: number): Clip | null {
+  const i = fallbackIdleIndex(st.gesture.map(Boolean), idx);
+  return i >= 0 ? st.gesture[i] : null;
 }
 
 function drawFrame(ctx: CanvasRenderingContext2D, clip: Clip, frame: number): void {
@@ -432,6 +446,28 @@ export function seasonalMaxIdleFrames(key: string): number {
   return st.idle.reduce((m, c) => (c ? Math.max(m, c.frames) : m), 0);
 }
 
+/** Gesture frame count for `key` at `season` (after Summer-anchor fallback): >1 means a
+ *  real gesture clip, otherwise 0 (no gesture for this subject/season). */
+export function seasonalGestureFrameCount(key: string, season: SeasonName | null): number {
+  const st = states.get(key);
+  if (!st || !st.active) return 0;
+  const c = resolveGesture(st, seasonIdx(season, st.curIdx));
+  return c ? c.frames : 0;
+}
+
+/** The widest gesture clip across every decoded season — the extra frame-bank width a
+ *  subject's strip needs to hold its gesture frames after the idle frames. 0 = no gesture. */
+export function seasonalMaxGestureFrames(key: string): number {
+  const st = states.get(key);
+  if (!st || !st.active) return 0;
+  return st.gesture.reduce((m, c) => (c ? Math.max(m, c.frames) : m), 0);
+}
+
+/** Whether `key` ships any special-gesture clip (regardless of season fallback). */
+export function seasonalHasGesture(key: string): boolean {
+  return states.get(key)?.gesture.some(Boolean) ?? false;
+}
+
 /** Draw idle `frame` of the resolved season into an origin-centered context. Pure
  *  (no state mutation) — the caller owns frame selection (per-tile timing). */
 export function paintSeasonalIdleFrame(
@@ -443,6 +479,20 @@ export function paintSeasonalIdleFrame(
   const st = states.get(key);
   if (!st || !st.active) return;
   const c = resolveIdle(st, seasonIdx(season, st.curIdx));
+  if (c) drawFrame(ctx, c, frame);
+}
+
+/** Draw gesture `frame` of the resolved season into an origin-centered context. Pure
+ *  (no state mutation) — the caller owns frame selection (per-tile gesture timing). */
+export function paintSeasonalGestureFrame(
+  ctx: CanvasRenderingContext2D,
+  key: string,
+  season: SeasonName | null,
+  frame: number,
+): void {
+  const st = states.get(key);
+  if (!st || !st.active) return;
+  const c = resolveGesture(st, seasonIdx(season, st.curIdx));
   if (c) drawFrame(ctx, c, frame);
 }
 

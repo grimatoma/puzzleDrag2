@@ -21,6 +21,13 @@ export const IDLE_REST_MIN_MS = 5000;
 /** Longest hold on the rest frame between gestures. */
 export const IDLE_REST_MAX_MS = 10000;
 
+/** ms per special-gesture frame — same cadence as the idle clip. */
+export const GESTURE_FRAME_MS = 130;
+/** Shortest wait between a cell's special gestures (rarer than the idle loop). */
+export const GESTURE_INTERVAL_MIN_MS = 18000;
+/** Longest wait between a cell's special gestures. */
+export const GESTURE_INTERVAL_MAX_MS = 40000;
+
 /** Stable FNV-1a hash of a salted cell key mapped to [0, 1). */
 function cellRand01(col: number, row: number, salt: string): number {
   let h = 2166136261;
@@ -57,4 +64,29 @@ export function idleFrameAt(ms: number, col: number, row: number, frames: number
   const intoClip = local - (cycle - clipMs); // rest occupies [0, cycle-clipMs)
   if (intoClip < 0) return 0; // resting on the rest frame
   return Math.min(frames - 1, Math.max(0, Math.floor(intoClip / IDLE_FRAME_MS)));
+}
+
+/**
+ * The special-GESTURE frame to show at time `ms` for the cell at (col,row) of a
+ * `gFrames`-frame gesture clip, or **-1 when this cell is not currently mid-gesture**.
+ *
+ * Each cell waits a randomized interval (`GESTURE_INTERVAL_MIN_MS..MAX_MS`) then plays
+ * the gesture clip once. The interval and phase are seeded from (col,row) with salts
+ * (`"gint"`, `"gphase"`) distinct from the idle loop's (`"rest"`, `"phase"`), so gestures
+ * fire on an independent schedule that does not line up with the base idle cycle. Pure
+ * function of (ms, col, row, gFrames) — no Math.random — so it is stable within a tick
+ * and identical across re-bakes and reloads. A single-frame (or absent) clip never fires.
+ */
+export function gestureFrameAt(ms: number, col: number, row: number, gFrames: number): number {
+  if (gFrames <= 1 || !Number.isFinite(ms)) return -1;
+  const clipMs = gFrames * GESTURE_FRAME_MS;
+  const interval = GESTURE_INTERVAL_MIN_MS
+    + cellRand01(col, row, "gint") * (GESTURE_INTERVAL_MAX_MS - GESTURE_INTERVAL_MIN_MS);
+  const cycle = interval + clipMs;
+  const phase = cellRand01(col, row, "gphase") * cycle;
+  let local = (ms + phase) % cycle;
+  if (local < 0) local += cycle;
+  const intoClip = local - interval; // wait occupies [0, interval)
+  if (intoClip < 0) return -1; // waiting — not gesturing
+  return Math.min(gFrames - 1, Math.floor(intoClip / GESTURE_FRAME_MS));
 }
