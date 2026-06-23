@@ -1,54 +1,76 @@
-// Seasonal art for the SQUASH vegetable tile (`tile_veg_squash`).
+// BOLD seasonal art for the SQUASH vegetable tile (`tile_veg_squash`).
 //
 // One plump golden gourd (a butternut shape: a fat rounded base swelling up to a
 // thicker neck) with soft vertical ribbing and a short woody stem on top,
 // resting low-centre on a grassy pad. The SAME gourd silhouette is drawn every
-// season — only colour and dressing (frost, snow cap, pad blossoms / fallen
-// leaves / snow, light tint, sheen) change. Category framing: Fruit/Veg — the
-// iconic harvested ITEM only, constant outline, ripeness = colour/shade only.
+// season (identity-safe) — but the seasons swing HARD on colour + a real
+// seasonal prop, and the idle is loud rather than subtle (it's a PLUMP gourd):
 //
-// Enforced by a single parameterized `paint(ctx, p, bob)`:
-//   - draw(season)      = paint(ctx, SP[season], 0)
-//   - anim(season)      = micro-motion + paint(ctx, SP[season], bobAt(t))
-//   - transition(from)  = paint(ctx, lerpP(SP[from], SP[from+1], smoother(p)), 0)
+//   Spring : a SMALL green-tinged young squash + a prominent pad blossom.
+//   Summer : the full GOLDEN squash at peak ripeness, glossy and warm.
+//   Autumn : a deep amber-ripe squash + a fallen leaf on the pad.
+//   Winter : a bold SNOW CAP on the neck + snow at the base + frost; the golden
+//            gourd still clearly reads through the cold.
 //
-// Because every season is the same paint with tweened params, transitions are
-// seamless: transition(0) ≡ draw(from) and transition(1) ≡ draw(to). The bob
-// uses A*(1-cos(w t))*0.5 so bob(0)=0 with zero velocity → seamless idle.
+//   IDLE COMMON  (~6s, win ~0.9s): a heavy side-to-side WOBBLE — the plump gourd
+//       rocks/leans about its base with a weighty squash, ~10–12 design-px sway
+//       at the neck. Anticipation → peak → settle, zero velocity at the window
+//       edges (seamless).
+//   IDLE SPECIAL (~18s, win ~1.1s): a bigger BOUNCE — an anticipation crouch,
+//       a stretch hop ~12px up, then a squash landing that settles.
 //
-// Palette lock: the squash stays a golden/amber gourd in every season; ripeness
-// shows only as colour/shade (green-tinged young → full golden → deep amber),
-// never an identity change. Origin-centered in the −24..+24 design box, light
-// from upper-left, flat cel-shaded with a soft dark outline. Pure Canvas-2D.
+// Architecture mirrors pepper.bold.ts: a single parameterized
+// `paint(ctx, p, pose)` where `interface P` holds tweenable season params
+// (colours + prop amounts + size) and `pose` holds the idle gesture
+// (bob / lean / squash). Because every season is the same paint with tweened P,
+// transitions are seamless:
+//   transition(0) ≡ draw(from), transition(1) ≡ draw(to).
+// REST pose has all zeros, so draw(season) = paint(ctx, SP[season], REST) and the
+// idle's pose is 0 (with zero velocity) at every action-window edge → seamless.
+//
+// Origin-centered in the −24..+24 design box (actions may paint outside it),
+// light from upper-left, flat cel-shaded with a soft dark outline. Pure
+// Canvas-2D vector drawing — never throws, clamps everything, save/restore,
+// resets globalAlpha.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
 import { SEASON_NAMES, type SeasonName } from "../types.js";
 
-// ── Tweenable params ─────────────────────────────────────────────────────────
+// ── Tweenable season params ──────────────────────────────────────────────────
 
 type RGB = [number, number, number];
 
-/** Every field tweens (number or RGB). NO booleans / season strings — the
- *  paint must be a pure function of these so transitions interpolate cleanly. */
+/** Every field tweens (number or RGB). NO booleans / season strings — paint is a
+ *  pure function of these so transitions interpolate cleanly. */
 interface P {
-  skinLight: RGB;   // lit face of the gourd skin
-  skinMid: RGB;     // body tone
-  skinDark: RGB;    // shadowed ribs / underside
-  stem: RGB;        // short woody stem on top
-  padGrass: RGB;    // top of the grass pad
-  padDark: RGB;     // shaded pad underside
-  soil: RGB;        // contact / base soil under the gourd
-  outline: RGB;     // soft dark outline tint
-  light: RGB;       // ambient light tint laid over the whole tile
-  lightAmt: number; // 0..1 strength of the ambient light wash
-  ripeness: number; // 0..1 (reserved colour cue; identity unchanged)
-  gloss: number;    // 0..1 specular sheen strength across the ribs
-  frostAmt: number; // 0..1 cool frost dusting on the skin
-  snowCapAmt: number; // 0..1 snow on the upward shoulders/neck of the gourd
-  padSnowAmt: number; // 0..1 snow blanket on the pad
-  blossomAmt: number; // 0..1 tiny blossoms on the pad (spring)
-  fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
+  skinLight: RGB;        // lit face of the gourd skin
+  skinMid: RGB;          // body tone
+  skinDark: RGB;         // shadowed ribs / underside
+  stem: RGB;             // short woody stem on top
+  padGrass: RGB;         // top of the grass pad
+  padDark: RGB;          // shaded pad underside
+  soil: RGB;             // contact / base soil under the gourd
+  outline: RGB;          // soft dark outline tint
+  light: RGB;            // ambient light tint laid over the whole tile
+  lightAmt: number;      // 0..1 strength of the ambient light wash
+  size: number;          // ~0.86..1.0 overall gourd scale (Spring is small)
+  gloss: number;         // 0..1 specular sheen strength across the ribs
+  frostAmt: number;      // 0..1 cool frost dusting on the skin (winter)
+  snowCapAmt: number;    // 0..1 snow cap on the neck shoulders (winter)
+  padSnowAmt: number;    // 0..1 snow blanket on the pad (winter)
+  blossomAmt: number;    // 0..1 blossom on the pad (spring)
+  fallenLeafAmt: number; // 0..1 fallen leaf on the pad (autumn)
 }
+
+/** The idle gesture, separate from season identity. All zero = REST. */
+interface Pose {
+  bob: number;     // vertical offset in design px (negative = up)
+  lean: number;    // top-of-gourd sway, radians (rock side to side)
+  squashX: number; // additive horizontal scale (+0.18 = 18% wider)
+  squashY: number; // additive vertical scale (+0.18 = 18% taller)
+}
+
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
 
@@ -88,7 +110,7 @@ function lerpP(a: P, b: P, t: number): P {
     outline: lerpRGB(a.outline, b.outline, t),
     light: lerpRGB(a.light, b.light, t),
     lightAmt: lerp(a.lightAmt, b.lightAmt, t),
-    ripeness: lerp(a.ripeness, b.ripeness, t),
+    size: lerp(a.size, b.size, t),
     gloss: lerp(a.gloss, b.gloss, t),
     frostAmt: lerp(a.frostAmt, b.frostAmt, t),
     snowCapAmt: lerp(a.snowCapAmt, b.snowCapAmt, t),
@@ -102,7 +124,8 @@ function clampP(p: P): P {
   return {
     ...p,
     lightAmt: clamp01(p.lightAmt),
-    ripeness: clamp01(p.ripeness),
+    // size kept in a sane band so a wild value can never explode the silhouette
+    size: 0.7 + 0.4 * clamp01((p.size - 0.7) / 0.4),
     gloss: clamp01(p.gloss),
     frostAmt: clamp01(p.frostAmt),
     snowCapAmt: clamp01(p.snowCapAmt),
@@ -112,100 +135,102 @@ function clampP(p: P): P {
   };
 }
 
-// ── Per-season params ────────────────────────────────────────────────────────
-// Palette lock: skin tones stay golden/amber gourd in every season. Spring is a
-// slightly green-tinged young squash (still clearly a golden gourd), Summer the
-// full golden PEAK, Autumn the deepest/richest amber, Winter golden but cooled
-// and dusted (still clearly visible under cap + frost).
+function safeNum(x: number): number {
+  return Number.isFinite(x) ? x : 0;
+}
+
+// ── Per-season params — pushed HARD ──────────────────────────────────────────
+// Identity lock: the same butternut gourd every season; ripeness shows as
+// colour/shade + size only (small green young → full golden peak → deep amber →
+// cooled golden under snow), never an identity change.
 
 const SP: Record<SeasonName, P> = {
-  // Spring — fresh pastel; young green-tinged golden squash, matte; dewy lime pad + blossom.
+  // Spring — SMALL young green-tinged squash, matte; dewy lime pad + blossom.
   Spring: {
-    skinLight: [232, 214, 132],
-    skinMid: [206, 176, 84],
-    skinDark: [150, 124, 56],
-    stem: [126, 150, 74],
-    padGrass: [128, 206, 86],
-    padDark: [72, 138, 58],
+    skinLight: [196, 220, 120],
+    skinMid: [150, 188, 72],
+    skinDark: [96, 138, 50],
+    stem: [120, 150, 74],
+    padGrass: [128, 210, 86],
+    padDark: [70, 142, 58],
     soil: [120, 84, 48],
-    outline: [86, 66, 30],
-    light: [232, 244, 226],
+    outline: [56, 92, 34],
+    light: [232, 246, 224],
     lightAmt: 0.16,
-    ripeness: 0.25,
-    gloss: 0.14,
+    size: 0.86,
+    gloss: 0.16,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
-    blossomAmt: 0.85,
+    blossomAmt: 1.0,
     fallenLeafAmt: 0,
   },
-  // Summer — PEAK full golden squash, smooth; saturated mid-green pad, warm light.
+  // Summer — PEAK full golden squash, glossy; saturated mid-green pad, warm light.
   Summer: {
-    skinLight: [255, 214, 96],
-    skinMid: [238, 174, 50],
-    skinDark: [176, 116, 26],
+    skinLight: [255, 216, 92],
+    skinMid: [242, 174, 44],
+    skinDark: [176, 112, 22],
     stem: [120, 132, 60],
-    padGrass: [86, 168, 70],
-    padDark: [44, 110, 48],
+    padGrass: [86, 170, 70],
+    padDark: [44, 112, 48],
     soil: [126, 86, 48],
-    outline: [104, 68, 22],
-    light: [255, 240, 206],
-    lightAmt: 0.18,
-    ripeness: 0.7,
-    gloss: 0.6,
+    outline: [104, 66, 20],
+    light: [255, 242, 204],
+    lightAmt: 0.2,
+    size: 1.0,
+    gloss: 0.78,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
-  // Autumn — deep amber ripe squash, richest; olive-tan browning pad, fallen leaves.
+  // Autumn — DEEP amber ripe squash, richest; olive-tan browning pad, fallen leaf.
   Autumn: {
-    skinLight: [240, 174, 70],
-    skinMid: [212, 132, 38],
-    skinDark: [150, 84, 26],
-    stem: [128, 110, 52],
-    padGrass: [150, 152, 86],
-    padDark: [104, 96, 52],
+    skinLight: [238, 156, 56],
+    skinMid: [202, 110, 30],
+    skinDark: [134, 66, 20],
+    stem: [128, 108, 50],
+    padGrass: [152, 150, 84],
+    padDark: [106, 94, 50],
     soil: [120, 80, 44],
-    outline: [96, 54, 20],
-    light: [248, 210, 150],
-    lightAmt: 0.2,
-    ripeness: 1.0,
+    outline: [86, 44, 16],
+    light: [250, 200, 134],
+    lightAmt: 0.24,
+    size: 1.0,
     gloss: 0.4,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
-    fallenLeafAmt: 0.85,
+    fallenLeafAmt: 1.0,
   },
   // Winter — cool blue-grey light; snow-capped + frosted golden squash, snowy pad.
+  // Skin stays golden (still clearly a gourd) but cooled + dusted.
   Winter: {
-    skinLight: [222, 184, 104],
-    skinMid: [196, 150, 70],
-    skinDark: [136, 100, 52],
-    stem: [120, 116, 86],
-    padGrass: [176, 196, 214],
-    padDark: [120, 146, 172],
-    soil: [128, 110, 96],
-    outline: [70, 54, 44],
-    light: [206, 226, 252],
-    lightAmt: 0.3,
-    ripeness: 0.85,
-    gloss: 0.2,
-    frostAmt: 0.7,
-    snowCapAmt: 0.85,
-    padSnowAmt: 0.9,
+    skinLight: [224, 184, 100],
+    skinMid: [198, 148, 66],
+    skinDark: [132, 96, 50],
+    stem: [118, 116, 88],
+    padGrass: [178, 198, 218],
+    padDark: [118, 146, 174],
+    soil: [128, 112, 98],
+    outline: [60, 46, 40],
+    light: [202, 224, 255],
+    lightAmt: 0.34,
+    size: 0.98,
+    gloss: 0.22,
+    frostAmt: 0.78,
+    snowCapAmt: 1.0,
+    padSnowAmt: 1.0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
 };
 
-// ── The single parameterized paint ───────────────────────────────────────────
-
-// Butternut gourd geometry (the SAME silhouette every season). A fat rounded
-// bulb resting low on the pad, swelling UP through a slimmer waist into a
-// thicker neck, with a short woody stem on top. Origin-centered.
+// ── Gourd geometry — the SAME silhouette every season ────────────────────────
+// A fat rounded bulb resting low on the pad, swelling UP through a slimmer waist
+// into a thicker neck, with a short woody stem on top. Origin-centered.
 const BULB_CY = 11;     // centre of the fat rounded base, low on the pad
 const BULB_RX = 12.5;   // half-width of the fat base
 const BULB_RY = 8.5;    // half-height of the fat base
@@ -214,15 +239,19 @@ const WAIST_HALF = 6;   // half-width at the waist
 const NECK_TOP_Y = -16; // top of the neck where the stem sits
 const NECK_HALF = 5.4;  // half-width of the thicker neck
 
+const GOURD_BOT = BULB_CY + BULB_RY;     // contact line on the pad
+const GOURD_PIVOT_Y = GOURD_BOT - 1;     // rock/lean about a point near the base
+
 // Rib x-offsets (as a fraction of the local half-width) for the soft vertical
 // ribbing that runs the whole gourd.
 const RIB_FRACS: number[] = [-0.62, -0.2, 0.2, 0.62];
 
-/** Trace the butternut-gourd body path (fat base → waist → thicker neck). */
-function gourdBodyPath(ctx: CanvasRenderingContext2D, bob: number): void {
-  const bcy = BULB_CY + bob;
-  const wy = WAIST_Y + bob;
-  const nty = NECK_TOP_Y + bob;
+/** Trace the butternut-gourd body path (fat base → waist → thicker neck),
+ *  origin-local and unposed. */
+function gourdBodyPath(ctx: CanvasRenderingContext2D): void {
+  const bcy = BULB_CY;
+  const wy = WAIST_Y;
+  const nty = NECK_TOP_Y;
   ctx.beginPath();
   // start at the neck top-left, just under the stem
   ctx.moveTo(-NECK_HALF, nty + 1);
@@ -243,8 +272,8 @@ function gourdBodyPath(ctx: CanvasRenderingContext2D, bob: number): void {
   ctx.closePath();
 }
 
-/** Local half-width of the gourd at design-y `y` (in body-local coords, pre-bob).
- *  Used to place ribs / shading so they hug the silhouette. */
+/** Local half-width of the gourd at design-y `y` (body-local coords). Used to
+ *  place ribs / shading so they hug the silhouette. */
 function halfWidthAt(y: number): number {
   if (y <= WAIST_Y) {
     // neck region: NECK_HALF (top) → WAIST_HALF (waist)
@@ -261,28 +290,34 @@ function halfWidthAt(y: number): number {
   return lerp(BULB_RX, 0.5, k);
 }
 
-/** The whole tile from ONLY `p` and `bob`. */
-function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
+// ── The single parameterized paint ───────────────────────────────────────────
+
+/** The whole tile from ONLY `p` (season identity) and `pose` (idle gesture). */
+function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
   const p = clampP(raw);
+  const pose: Pose = {
+    bob: safeNum(rawPose.bob),
+    lean: safeNum(rawPose.lean),
+    squashX: safeNum(rawPose.squashX),
+    squashY: safeNum(rawPose.squashY),
+  };
+
   ctx.save();
   try {
     ctx.globalAlpha = 1;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
-    // ── Pad: low flat grass ellipse, x∈[−18,+18], centre y≈+19 ──────────────
-    // soft contact shadow lower-right, pad colour from P
+    // ── Pad: low flat grass ellipse (does NOT move with the pose) ────────────
     ctx.fillStyle = rgba(p.padDark, 0.4);
     ctx.beginPath();
     ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // shaded underside
     ctx.fillStyle = rgb(p.padDark);
     ctx.beginPath();
     ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    // grass top
     ctx.fillStyle = rgb(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
@@ -322,14 +357,14 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       ctx.fill();
       // sparkle on the snow
       ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
-      [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+      ([[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]] as Array<[number, number]>).forEach(([sx, sy]) => {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
         ctx.fill();
       });
     }
 
-    // blossoms on the pad (spring)
+    // blossom on the pad (spring)
     if (p.blossomAmt > 0.01) {
       const a = p.blossomAmt;
       const spots: Array<[number, number]> = [[-13, 18.5], [12, 17.8], [-4, 21]];
@@ -338,22 +373,22 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
         for (let k = 0; k < 5; k++) {
           const ang = (k / 5) * Math.PI * 2;
           ctx.beginPath();
-          ctx.ellipse(bx + Math.cos(ang) * 1.5, by + Math.sin(ang) * 1.0, 1.1, 0.8, ang, 0, Math.PI * 2);
+          ctx.ellipse(bx + Math.cos(ang) * 1.6, by + Math.sin(ang) * 1.1, 1.2, 0.9, ang, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.fillStyle = rgba([255, 214, 90], a);
         ctx.beginPath();
-        ctx.arc(bx, by, 0.9, 0, Math.PI * 2);
+        ctx.arc(bx, by, 1.0, 0, Math.PI * 2);
         ctx.fill();
       });
     }
 
-    // fallen leaves on the pad (autumn)
+    // fallen leaf on the pad (autumn)
     if (p.fallenLeafAmt > 0.01) {
       const a = p.fallenLeafAmt;
       const leaves: Array<[number, number, number, RGB]> = [
-        [-12, 19.6, -0.5, [196, 120, 40]],
-        [12, 18.6, 0.7, [176, 72, 32]],
+        [-12, 19.6, -0.5, [206, 124, 38]],
+        [12, 18.6, 0.7, [182, 70, 28]],
       ];
       leaves.forEach(([lx, ly, rot, col]) => {
         ctx.save();
@@ -361,48 +396,55 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
         ctx.rotate(rot);
         ctx.fillStyle = rgba(col, a);
         ctx.beginPath();
-        ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 3.6, 2.0, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = rgba([90, 44, 16], a);
-        ctx.lineWidth = 0.7;
+        ctx.lineWidth = 0.8;
         ctx.beginPath();
-        ctx.moveTo(-3, 0);
-        ctx.lineTo(3, 0);
+        ctx.moveTo(-3.4, 0);
+        ctx.lineTo(3.4, 0);
         ctx.stroke();
         ctx.restore();
       });
     }
 
-    // ── Soil contact patch directly under the gourd base ────────────────────
+    // ── Contact shadow under the gourd (follows the bob/lean for grounding) ──
+    const tipShift = pose.lean * (GOURD_PIVOT_Y - NECK_TOP_Y); // how far the neck leans
+    const shadowSpread = 1 + clamp01(pose.bob < 0 ? -pose.bob / 14 : 0) * 0.5;
     ctx.fillStyle = rgb(p.soil);
     ctx.beginPath();
-    ctx.ellipse(0, BULB_CY + BULB_RY + bob + 0.5, 9, 2.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(0 + tipShift * 0.18, GOURD_BOT + 1.5, 9 * shadowSpread, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    // contact shadow of the gourd on the pad
-    ctx.fillStyle = rgba(p.outline, 0.28);
+    ctx.fillStyle = rgba(p.outline, 0.28 / shadowSpread);
     ctx.beginPath();
-    ctx.ellipse(2.5, BULB_CY + BULB_RY + bob + 1, 12, 2.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(2.5 + tipShift * 0.2, GOURD_BOT + 2, 12 * shadowSpread, 2.4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // ── Subject: the squash gourd (SAME silhouette every season) ────────────
-    // 1) soft dark outline pass (drawn slightly fatter, dark first then light)
+    // ── Subject: the squash gourd, under the size + idle pose transform ───────
     ctx.save();
-    ctx.translate(0, 0);
-    gourdBodyPath(ctx, bob);
+    // Pivot near the base so lean rocks the NECK side-to-side and squash anchors
+    // at the base (it "sits" on the pad). bob raises the whole body. size scales
+    // the whole gourd about the same base pivot (Spring is a small squash).
+    ctx.translate(0, GOURD_PIVOT_Y + pose.bob);
+    ctx.rotate(pose.lean);
+    ctx.scale((1 + pose.squashX) * p.size, (1 + pose.squashY) * p.size);
+    ctx.translate(0, -GOURD_PIVOT_Y);
+
+    const bcy = BULB_CY;
+    const nty = NECK_TOP_Y;
+
+    // 1) soft dark outline pass (drawn fatter, dark first then light rim shows)
+    gourdBodyPath(ctx);
     ctx.lineWidth = 2.2;
     ctx.strokeStyle = rgb(p.outline);
     ctx.stroke();
     ctx.fillStyle = rgb(p.outline);
     ctx.fill();
-    ctx.restore();
 
     // 2) body fill, clipped so the outline shows as a rim
     ctx.save();
-    gourdBodyPath(ctx, bob);
+    gourdBodyPath(ctx);
     ctx.clip();
-
-    const bcy = BULB_CY + bob;
-    const nty = NECK_TOP_Y + bob;
 
     // base mid tone fill
     ctx.fillStyle = rgb(p.skinMid);
@@ -430,7 +472,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       ctx.beginPath();
       let first = true;
       for (let y = yTop; y <= yBot; y += 1.6) {
-        const hw = halfWidthAt(y - bob);
+        const hw = halfWidthAt(y);
         const x = frac * hw;
         if (first) { ctx.moveTo(x, y); first = false; }
         else ctx.lineTo(x, y);
@@ -442,7 +484,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       ctx.beginPath();
       first = true;
       for (let y = yTop; y <= yBot; y += 1.6) {
-        const hw = halfWidthAt(y - bob);
+        const hw = halfWidthAt(y);
         const x = frac * hw - 1.3;
         if (first) { ctx.moveTo(x, y); first = false; }
         else ctx.lineTo(x, y);
@@ -458,11 +500,11 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
 
     // smooth sheen across the ribs (gloss strength from P)
     if (p.gloss > 0.02) {
-      ctx.fillStyle = rgba([255, 255, 255], 0.12 + 0.5 * p.gloss);
+      ctx.fillStyle = rgba([255, 255, 255], 0.12 + 0.55 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(-4.5, lerp(nty, bcy, 0.4), 2.2, (bcy - nty) * 0.5, -0.1, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgba([255, 255, 255], 0.08 + 0.32 * p.gloss);
+      ctx.fillStyle = rgba([255, 255, 255], 0.08 + 0.36 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(-6, bcy + 1, 1.8, 3.4, -0.1, 0, Math.PI * 2);
       ctx.fill();
@@ -487,7 +529,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       });
     }
 
-    ctx.restore(); // end clip
+    ctx.restore(); // end body clip
 
     // 3) snow cap on the neck shoulders (winter) — drawn over, hugging the crown
     if (p.snowCapAmt > 0.02) {
@@ -495,24 +537,24 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       ctx.fillStyle = rgba([246, 251, 255], 0.95 * a);
       ctx.beginPath();
       ctx.moveTo(-NECK_HALF - 0.5, nty + 1.5);
-      ctx.quadraticCurveTo(-3, nty - 4, 0, nty - 3.5);
-      ctx.quadraticCurveTo(3, nty - 4, NECK_HALF + 0.5, nty + 1.5);
-      ctx.quadraticCurveTo(2.5, nty + 4, 0, nty + 2.8);
-      ctx.quadraticCurveTo(-2.5, nty + 4, -NECK_HALF - 0.5, nty + 1.5);
+      ctx.quadraticCurveTo(-3, nty - 5, 0, nty - 4);
+      ctx.quadraticCurveTo(3, nty - 5, NECK_HALF + 0.5, nty + 1.5);
+      ctx.quadraticCurveTo(2.5, nty + 4.4, 0, nty + 3.2);
+      ctx.quadraticCurveTo(-2.5, nty + 4.4, -NECK_HALF - 0.5, nty + 1.5);
       ctx.closePath();
       ctx.fill();
       ctx.fillStyle = rgba([205, 222, 242], 0.5 * a);
       ctx.beginPath();
-      ctx.ellipse(0, nty + 2, NECK_HALF * 0.7, 1.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, nty + 2.2, NECK_HALF * 0.7, 1.5, 0, 0, Math.PI * 2);
       ctx.fill();
       // a little snow on the upward shoulder of the bulb
       ctx.fillStyle = rgba([240, 248, 255], 0.7 * a);
       ctx.beginPath();
-      ctx.ellipse(-6, bcy - BULB_RY + 1, 3.6, 1.6, -0.3, 0, Math.PI * 2);
+      ctx.ellipse(-6, bcy - BULB_RY + 1, 3.8, 1.7, -0.3, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // ── Short woody stem on top (SAME placement every season) ───────────────
+    // ── Short woody stem on top (SAME placement every season) ────────────────
     const stemBaseY = nty - 2;
     // stem outline (fat dark) then the woody core
     ctx.strokeStyle = rgb(p.outline);
@@ -535,7 +577,9 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     ctx.quadraticCurveTo(-1.1, stemBaseY - 3.5, 0.4, stemBaseY - 6);
     ctx.stroke();
 
-    // ── Ambient light wash over the whole tile (per-season tint) ────────────
+    ctx.restore(); // end size + pose transform
+
+    // ── Ambient light wash over the whole tile (per-season tint) ─────────────
     if (p.lightAmt > 0.001) {
       ctx.globalAlpha = 1;
       const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
@@ -550,64 +594,100 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
   }
 }
 
-// ── Idle bob (seamless, zero-velocity at t=0) ────────────────────────────────
+// ── Idle pose clock — two-tier occasional action ─────────────────────────────
 
-// A*(1-cos(w t))*0.5 → 0 at t=0 with zero velocity; period 2π/w.
-function bobAt(t: number, amp = 0.8, w = 1.4): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+/** Returns 0..1 progress through an action window of length `win` starting at
+ *  phase offset within `period`, else −1 (at rest). Seamless because the pose
+ *  built from q is zero (with zero velocity) at q=0 and q=1. */
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
+}
+
+// A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
+function hump(q: number): number {
+  const s = Math.sin(Math.PI * q);
+  return s * s;
+}
+
+// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
+function anticipate(q: number): number {
+  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
+  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
+  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+}
+
+/** Build the idle pose from the wall clock. Two tiers:
+ *   common heavy WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s).
+ *   It's a plump gourd, so the wobble carries real weight (squash at the base). */
+function poseFromClock(t: number): Pose {
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+
+  // ── COMMON: heavy side-to-side wobble (~6s, win 0.9s) ──
+  // Tip arm ≈ (GOURD_PIVOT_Y - NECK_TOP_Y) ≈ 34 px → ~0.16 rad → ~10–12 px sway
+  // at the neck. The plump base squashes weightily as it rocks.
+  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  if (qC >= 0) {
+    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
+    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
+    pose.lean += 0.15 * env * rock;
+    // weighty squat at the base as it rocks (it's plump)
+    pose.squashY += -0.09 * hump(qC);
+    pose.squashX += 0.08 * hump(qC);
+  }
+
+  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
+  // Anticipation crouch → stretch up ~12px → squash landing → settle.
+  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  if (qS >= 0) {
+    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
+    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
+    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
+    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
+    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
+
+    // bob: crouch dips down a touch, then a big rise (negative = up) ~12px.
+    pose.bob += crouch * 1.8 - air * 12.0;
+    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
+    const apex = air;
+    pose.squashY += apex * 0.18 - crouch * 0.14 - land * 0.18;
+    pose.squashX += -apex * 0.12 + crouch * 0.12 + land * 0.16;
+    // a tiny lean wiggle on the way down for life
+    pose.lean += 0.04 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+  }
+
+  // Reference anticipate() so it stays part of the seamless-curve toolkit and
+  // contributes a faint windup tilt to the common wobble (still 0 at edges).
+  if (qC >= 0) {
+    pose.lean += 0.02 * anticipate(qC);
+  }
+
+  return pose;
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
 
 function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
-  return (ctx) => paint(ctx, SP[season], 0);
+  return (ctx) => paint(ctx, SP[season], REST);
 }
 
 function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
   return (ctx, t) => {
-    const bob = bobAt(t);
-    // Per-season additive micro-motion. The subject bob itself is 0 at t=0;
-    // micro-motion is additive dressing (sheen / dew / snow / leaf glint).
-    paint(ctx, SP[season], bob);
+    const tt = Number.isFinite(t) ? t : 0;
+    paint(ctx, SP[season], poseFromClock(tt));
 
+    // Light additive season micro-sparkle (dressing only — never the subject's
+    // own colour/brightness). Kept tiny so the POSE action is the star.
     ctx.save();
     try {
       ctx.globalAlpha = 1;
-      if (season === "Spring") {
-        // dew shimmer — a soft pulsing glint that travels gently on the skin
-        const g = 0.24 + 0.28 * (0.5 + 0.5 * Math.sin(t * 2.2));
-        ctx.fillStyle = `rgba(255,255,255,${g})`;
-        const gy = -2 + bob + Math.sin(t * 1.1) * 1.4;
-        ctx.beginPath();
-        ctx.arc(-5, gy, 1.0 + g * 0.7, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Summer") {
-        // soft sheen travels DOWN across the ribs (seamless via fract)
-        const prog = (t * 0.45) % 1;
-        const gy = lerp(NECK_TOP_Y + 1 + bob, BULB_CY + BULB_RY - 2 + bob, prog);
-        ctx.fillStyle = "rgba(255,255,255,0.7)";
-        ctx.beginPath();
-        ctx.ellipse(-4.5, gy, 1.6, 3.0, -0.1, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,0.35)";
-        ctx.beginPath();
-        ctx.ellipse(0.5, gy * 0.96, 1.0, 2.0, 0, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Autumn") {
-        // faint slow warm sheen pulsing on the shoulder
-        const s = 0.1 + 0.14 * (0.5 + 0.5 * Math.sin(t * 0.9));
-        ctx.fillStyle = `rgba(255,228,180,${s})`;
-        ctx.beginPath();
-        ctx.ellipse(-4, 2 + bob, 5.0, 3.6, -0.2, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        // Winter — drifting snowflakes + cold sheen
+      if (season === "Winter") {
         const seeds: Array<[number, number, number]> = [
           [-9, 0.0, 1.0], [6, 0.4, 0.9], [11, 0.7, 0.8], [-2, 0.25, 0.9],
         ];
         ctx.fillStyle = "#ffffff";
         seeds.forEach(([fx, phase, r]) => {
-          const prog = ((t / 3.0 + phase) % 1 + 1) % 1;
+          const prog = ((tt / 3.0 + phase) % 1 + 1) % 1;
           const fy = -22 + prog * 38;
           const dx = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
           ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog * Math.PI);
@@ -615,13 +695,37 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
           ctx.arc(dx, fy, r, 0, Math.PI * 2);
           ctx.fill();
         });
-        ctx.globalAlpha = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.8));
-        ctx.fillStyle = "rgba(210,232,255,1)";
+        ctx.globalAlpha = 1;
+      } else if (season === "Spring") {
+        // a couple of drifting petals
+        ctx.fillStyle = "rgba(255,240,248,0.9)";
+        for (let i = 0; i < 2; i++) {
+          const prog = ((tt / 4.0 + i * 0.5) % 1 + 1) % 1;
+          const px = (i === 0 ? -10 : 9) + Math.sin(prog * Math.PI * 2) * 3;
+          const py = -18 + prog * 34;
+          ctx.globalAlpha = 0.35 + 0.4 * Math.sin(prog * Math.PI);
+          ctx.beginPath();
+          ctx.ellipse(px, py, 1.4, 0.9, prog * 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      } else if (season === "Autumn") {
+        // one slow tumbling leaf
+        const prog = ((tt / 5.0) % 1 + 1) % 1;
+        const px = 11 - prog * 6 + Math.sin(prog * Math.PI * 3) * 2;
+        const py = -16 + prog * 32;
+        ctx.globalAlpha = 0.4 + 0.4 * Math.sin(prog * Math.PI);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(prog * Math.PI * 4);
+        ctx.fillStyle = "rgba(196,96,32,1)";
         ctx.beginPath();
-        ctx.ellipse(-3, 4 + bob, 7, 5, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 2.4, 1.3, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
         ctx.globalAlpha = 1;
       }
+      // Summer: no extra dressing — the bounce + glossy golden gourd is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();
@@ -629,14 +733,14 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   };
 }
 
-// ── Forward season→season transitions ────────────────────────────────────────
+// ── Forward season→season transitions (seamless endpoints) ───────────────────
 
 function makeTransition(fromIdx: 0 | 1 | 2): (ctx: CanvasRenderingContext2D, p: number) => void {
   const from = SP[SEASON_NAMES[fromIdx]];
   const to = SP[SEASON_NAMES[fromIdx + 1]];
   return (ctx, pp) => {
     const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(from, to, k), 0);
+    paint(ctx, lerpP(from, to, k), REST);
   };
 }
 

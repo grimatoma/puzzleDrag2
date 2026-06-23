@@ -1,31 +1,41 @@
-// Seasonal art for the MUSHROOM vegetable tile (`tile_veg_mushroom`).
+// BOLD seasonal art for the MUSHROOM vegetable tile (`tile_veg_mushroom`).
 //
-// The subject is ALWAYS the same tight cluster of 2–3 classic toadstool
-// mushrooms — bright red domed caps with cream spots on plump cream stems,
-// standing on a low grass pad. "Ripeness" across the year is conveyed only by
-// cap size/openness, colour, and pad/frost/snow dressing — never by swapping in
-// a different object.
+// The subject is ALWAYS the same tight cluster of three classic toadstool
+// mushrooms — bright RED domed caps with cream spots on plump cream stems on a
+// low grass pad. Identity is constant; the seasons swing HARD on colour + cap
+// size/openness + a real seasonal PROP (blossom / fallen leaf / snow cap + base
+// snow + frost), and the idle is LOUD rather than a subtle breath.
 //
-// Architecture (mandatory): a SINGLE parameterized `paint(ctx, p, bob)` draws
-// the entire tile from a tweenable param set `P`. Each season is one `P` in
-// `SP`. `draw` paints at rest (bob 0); `anim` adds a seamless breathing bob
-// plus per-season micro-motion; each `transition` paints a lerp between two
-// adjacent `P`s through a smootherstep ease. Because every visual is a pure
-// function of `P`, transition(0) ≡ draw(from) and transition(1) ≡ draw(to) —
-// no snap, and the subject is the same cluster every frame.
+// Architecture mirrors `pepper.bold.ts`: a single parameterized
+// `paint(ctx, p, pose)` where `interface P` holds tweenable season params
+// (colours + prop amounts) and `pose` holds the idle gesture (bob / lean /
+// squash). Because every season is the same paint with a tweened P, transitions
+// are seamless:  transition(0) ≡ draw(from),  transition(1) ≡ draw(to).
+// REST pose has all zeros, so draw(season) = paint(ctx, SP[season], REST) and
+// the idle's pose is 0 (with zero velocity) at every action-window edge → the
+// loop is seamless.
 //
-// Origin-centered in the ~−24..+24 design box. Light comes from upper-left.
+//   IDLE COMMON  (~6s, win 0.9s): a side-to-side WOBBLE — the cluster rocks
+//       ~10–12 design-px at the cap with a squash at the base.
+//   IDLE SPECIAL (~18s, win 1.1s): a bigger squash-stretch BOUNCE — an
+//       anticipation crouch, a hop up ~12–14 design-px, then a squash landing
+//       that settles. May briefly paint outside the −24..+24 box.
+//
+// Origin-centered in the ~−24..+24 design box (actions may paint outside it).
+// Light comes from upper-left. Pure Canvas-2D vector drawing — never throws,
+// clamps everything, save/restore, resets globalAlpha.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
-import type { SeasonName } from "../types.js";
+import { SEASON_NAMES, type SeasonName } from "../types.js";
 
 // ── small math helpers ───────────────────────────────────────────────────────
 
 type RGB = [number, number, number];
 
 function clamp01(x: number): number {
-  if (!Number.isFinite(x)) return 0;
-  return x < 0 ? 0 : x > 1 ? 1 : x;
+  if (!(x >= 0)) return 0; // also catches NaN
+  if (x > 1) return 1;
+  return x;
 }
 
 const smoother = (x: number): number => x * x * x * (x * (6 * x - 15) + 10);
@@ -42,7 +52,7 @@ function rgb(c: RGB, alpha = 1): string {
   const r = Math.round(c[0]);
   const g = Math.round(c[1]);
   const b = Math.round(c[2]);
-  return alpha >= 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${alpha})`;
+  return alpha >= 1 ? `rgb(${r},${g},${b})` : `rgba(${r},${g},${b},${clamp01(alpha)})`;
 }
 
 /** Mix toward a target colour by amount k (0..1). */
@@ -55,8 +65,14 @@ function shade(c: RGB, k: number): RGB {
   return k >= 0 ? mix(c, [255, 255, 255], k) : mix(c, [0, 0, 0], -k);
 }
 
+function safeNum(x: number): number {
+  return Number.isFinite(x) ? x : 0;
+}
+
 // ── tweenable param set ──────────────────────────────────────────────────────
 
+/** Every field tweens (number or RGB). NO booleans / season strings — paint is
+ *  a pure function of these so transitions interpolate cleanly. */
 interface P {
   // colours
   cap: RGB; // mushroom cap red
@@ -75,90 +91,99 @@ interface P {
   snowCapAmt: number; // little snow cap on top of caps
   padSnowAmt: number; // snow blanket over the pad
   blossomAmt: number; // tiny blossom on the pad (spring)
-  fallenLeafAmt: number; // fallen leaves on the pad (autumn)
+  fallenLeafAmt: number; // fallen leaf on the pad (autumn)
 }
 
-const SPRING: P = {
-  cap: [223, 74, 64], // fresh bright red
-  spot: [255, 250, 240],
-  stem: [246, 238, 220],
-  grass: [150, 214, 96], // bright lime dewy
-  soil: [92, 70, 44],
-  outline: [74, 48, 40],
-  light: [214, 240, 255], // cool-bright
-  lightAmt: 0.32,
-  capOpenAmount: 0.18, // small button caps
-  gloss: 0.32,
-  droop: 0.0,
-  frostAmt: 0.0,
-  snowCapAmt: 0.0,
-  padSnowAmt: 0.0,
-  blossomAmt: 0.85,
-  fallenLeafAmt: 0.0,
-};
+/** The idle gesture, separate from season identity. All zero = REST. */
+interface Pose {
+  bob: number; // vertical offset in design px (negative = up)
+  lean: number; // top-of-cluster sway, radians (rock side to side)
+  squashX: number; // additive horizontal scale (+0.18 = 18% wider)
+  squashY: number; // additive vertical scale (+0.18 = 18% taller)
+}
 
-const SUMMER: P = {
-  cap: [214, 44, 40], // vivid saturated red
-  spot: [255, 248, 232],
-  stem: [240, 230, 206],
-  grass: [86, 168, 64], // saturated mid-green
-  soil: [82, 60, 36],
-  outline: [66, 40, 32],
-  light: [255, 246, 214], // warm
-  lightAmt: 0.4,
-  capOpenAmount: 0.6, // full rounded domes
-  gloss: 0.62,
-  droop: 0.0,
-  frostAmt: 0.0,
-  snowCapAmt: 0.0,
-  padSnowAmt: 0.0,
-  blossomAmt: 0.0,
-  fallenLeafAmt: 0.0,
-};
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-const AUTUMN: P = {
-  cap: [176, 40, 36], // deep mature red
-  spot: [238, 222, 188], // ageing cream
-  stem: [226, 210, 178],
-  grass: [150, 142, 78], // olive-tan
-  soil: [86, 58, 30],
-  outline: [70, 42, 28],
-  light: [255, 224, 168], // low amber
-  lightAmt: 0.42,
-  capOpenAmount: 1.0, // peak size, edges flattening
-  gloss: 0.34,
-  droop: 0.06,
-  frostAmt: 0.0,
-  snowCapAmt: 0.0,
-  padSnowAmt: 0.0,
-  blossomAmt: 0.0,
-  fallenLeafAmt: 0.9,
-};
-
-const WINTER: P = {
-  cap: [168, 76, 70], // muted but clearly red
-  spot: [240, 240, 244],
-  stem: [222, 220, 222],
-  grass: [126, 150, 150], // cool grey-green under snow
-  soil: [78, 76, 86],
-  outline: [64, 60, 72],
-  light: [206, 224, 248], // cool blue-grey
-  lightAmt: 0.46,
-  capOpenAmount: 0.78, // mature, drooping a touch
-  gloss: 0.22,
-  droop: 0.22,
-  frostAmt: 0.85,
-  snowCapAmt: 0.7,
-  padSnowAmt: 0.92,
-  blossomAmt: 0.0,
-  fallenLeafAmt: 0.0,
-};
+// ── Per-season params — pushed HARD ──────────────────────────────────────────
 
 const SP: Record<SeasonName, P> = {
-  Spring: SPRING,
-  Summer: SUMMER,
-  Autumn: AUTUMN,
-  Winter: WINTER,
+  // Spring — small button caps, fresh bright red, dewy lime pad + a blossom.
+  Spring: {
+    cap: [228, 70, 60], // fresh bright red
+    spot: [255, 250, 240],
+    stem: [246, 238, 220],
+    grass: [150, 218, 96], // bright lime dewy
+    soil: [104, 76, 46],
+    outline: [74, 48, 40],
+    light: [222, 246, 224], // cool-bright
+    lightAmt: 0.28,
+    capOpenAmount: 0.14, // small button caps
+    gloss: 0.34,
+    droop: 0.0,
+    frostAmt: 0.0,
+    snowCapAmt: 0.0,
+    padSnowAmt: 0.0,
+    blossomAmt: 1.0,
+    fallenLeafAmt: 0.0,
+  },
+  // Summer — open rounded vivid RED caps, bright white spots, peak gloss.
+  Summer: {
+    cap: [232, 38, 34], // vivid saturated red (peak)
+    spot: [255, 252, 244],
+    stem: [242, 232, 208],
+    grass: [86, 178, 66], // saturated mid-green
+    soil: [96, 70, 42],
+    outline: [70, 30, 28],
+    light: [255, 246, 206], // warm
+    lightAmt: 0.22,
+    capOpenAmount: 0.62, // full open rounded domes
+    gloss: 1.0,
+    droop: 0.0,
+    frostAmt: 0.0,
+    snowCapAmt: 0.0,
+    padSnowAmt: 0.0,
+    blossomAmt: 0.0,
+    fallenLeafAmt: 0.0,
+  },
+  // Autumn — large mature caps, deep darker red, amber pad + a fallen leaf.
+  Autumn: {
+    cap: [180, 38, 34], // deep mature red
+    spot: [236, 218, 184], // ageing cream
+    stem: [226, 208, 174],
+    grass: [156, 146, 78], // olive-tan
+    soil: [100, 66, 34],
+    outline: [62, 34, 24],
+    light: [252, 206, 142], // low amber
+    lightAmt: 0.3,
+    capOpenAmount: 1.0, // peak size, edges flattening
+    gloss: 0.34,
+    droop: 0.07,
+    frostAmt: 0.0,
+    snowCapAmt: 0.0,
+    padSnowAmt: 0.0,
+    blossomAmt: 0.0,
+    fallenLeafAmt: 1.0,
+  },
+  // Winter — frost-rimmed caps still clearly RED, a snow cap on top + snow at
+  // base; cool blue-grey light.
+  Winter: {
+    cap: [188, 70, 64], // muted but clearly red
+    spot: [240, 240, 246],
+    stem: [222, 220, 224],
+    grass: [150, 176, 188], // cool grey-green under snow
+    soil: [104, 100, 110],
+    outline: [56, 50, 64],
+    light: [202, 224, 252], // cool blue-grey
+    lightAmt: 0.36,
+    capOpenAmount: 0.78, // mature, drooping a touch
+    gloss: 0.24,
+    droop: 0.22,
+    frostAmt: 0.85,
+    snowCapAmt: 1.0,
+    padSnowAmt: 1.0,
+    blossomAmt: 0.0,
+    fallenLeafAmt: 0.0,
+  },
 };
 
 function lerpP(a: P, b: P, t: number): P {
@@ -182,10 +207,29 @@ function lerpP(a: P, b: P, t: number): P {
   };
 }
 
+function clampP(p: P): P {
+  return {
+    ...p,
+    lightAmt: clamp01(p.lightAmt),
+    capOpenAmount: clamp01(p.capOpenAmount),
+    gloss: clamp01(p.gloss),
+    droop: clamp01(p.droop),
+    frostAmt: clamp01(p.frostAmt),
+    snowCapAmt: clamp01(p.snowCapAmt),
+    padSnowAmt: clamp01(p.padSnowAmt),
+    blossomAmt: clamp01(p.blossomAmt),
+    fallenLeafAmt: clamp01(p.fallenLeafAmt),
+  };
+}
+
 // ── pad (low flat grass ellipse with tufted edge + contact shadow) ───────────
 
+const PAD_CY = 19;
+const CLUSTER_PIVOT_Y = 18; // rock/squash about a point near the cluster base
+
+/** The grass pad + seasonal pad dressing. Does NOT move with the idle pose. */
 function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
-  const cy = 19;
+  const cy = PAD_CY;
   // soft contact shadow, offset lower-right
   ctx.fillStyle = "rgba(0,0,0,0.2)";
   ctx.beginPath();
@@ -210,7 +254,6 @@ function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
   ctx.fill();
 
   // tufted grass blades along the rim
-  ctx.strokeStyle = rgb(shade(p.grass, -0.18));
   ctx.lineWidth = 1.2;
   ctx.lineCap = "round";
   for (let i = 0; i < 11; i++) {
@@ -255,8 +298,8 @@ function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
   if (p.fallenLeafAmt > 0.01) {
     const a = clamp01(p.fallenLeafAmt);
     const leaves: Array<[number, number, number, RGB]> = [
-      [-12, 20, 0.5, [196, 120, 40]],
-      [11, 21, -0.7, [168, 70, 36]],
+      [-12, 20, 0.5, [202, 124, 40]],
+      [11, 21, -0.7, [172, 70, 32]],
     ];
     leaves.forEach(([lx, ly, rot, col]) => {
       ctx.save();
@@ -289,6 +332,13 @@ function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
     ctx.beginPath();
     ctx.ellipse(0, cy - 0.6, 16.5 * (0.6 + 0.4 * a), 4.4 * (0.6 + 0.4 * a), 0, 0, Math.PI * 2);
     ctx.fill();
+    // little snow lumps to read clearly as a snowy winter
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ([[-9, 18.6], [6, 19.6], [11, 18.2], [-3, 20.2]] as Array<[number, number]>).forEach(([sx, sy]) => {
+      ctx.beginPath();
+      ctx.arc(sx, sy, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    });
     ctx.globalAlpha = 1;
   }
 }
@@ -309,7 +359,7 @@ function paintMushroom(
   const open = clamp01(p.capOpenAmount);
   const capW = (6.0 + open * 4.0) * scale; // half-width
   const capH = (5.6 - open * 1.4) * scale; // dome height (flatter when open)
-  const droop = p.droop * 2.4 * scale; // caps sag a touch in winter
+  const droop = clamp01(p.droop) * 2.4 * scale; // caps sag a touch in winter
   const stemH = (9.0 - open * 1.0) * scale;
   const stemW = (2.6 + open * 0.4) * scale;
   const capCy = by - stemH; // cap centre y
@@ -332,7 +382,7 @@ function paintMushroom(
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  // ── cap ── dark base then lit dome (layered like wheat.ts)
+  // ── cap ── dark base then lit dome
   ctx.save();
   ctx.translate(bx, capCy);
   // dark underside / outline pass
@@ -411,7 +461,7 @@ function paintMushroom(
       [-capW * 0.2, droop - capH * 0.5],
     ];
     frost.forEach(([fx, fy]) => {
-      ctx.globalAlpha = f * (0.4 + 0.5 * sparkle + 0.3);
+      ctx.globalAlpha = f * (0.4 + 0.5 * clamp01(sparkle) + 0.3);
       ctx.beginPath();
       ctx.arc(fx, fy, 0.7 * scale, 0, Math.PI * 2);
       ctx.fill();
@@ -436,25 +486,46 @@ function paintMushroom(
   ctx.restore();
 }
 
-// ── full tile paint ──────────────────────────────────────────────────────────
+// ── the single parameterized paint ───────────────────────────────────────────
 
-function paint(ctx: CanvasRenderingContext2D, p: P, bob: number): void {
+/** The whole tile from ONLY `p` (season identity) and `pose` (idle gesture).
+ *  `sparkle` drives the per-season micro-shimmer on the front cap. */
+function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose, sparkle = 0): void {
+  const p = clampP(raw);
+  const pose: Pose = {
+    bob: safeNum(rawPose.bob),
+    lean: safeNum(rawPose.lean),
+    squashX: safeNum(rawPose.squashX),
+    squashY: safeNum(rawPose.squashY),
+  };
+
   ctx.save();
   try {
+    ctx.globalAlpha = 1;
+
+    // ── pad (does NOT move with the idle pose) ──
     paintPad(ctx, p);
 
+    // ── the cluster, under the idle pose transform ──
+    // Pivot near the cluster base so lean rocks the caps side-to-side and
+    // squash anchors at the base (it "sits" on the pad). bob lifts the cluster.
+    ctx.save();
+    ctx.translate(0, CLUSTER_PIVOT_Y + pose.bob);
+    ctx.rotate(pose.lean);
+    ctx.scale(1 + pose.squashX, 1 + pose.squashY);
+    ctx.translate(0, -CLUSTER_PIVOT_Y);
+
     // the cluster: one tall front mushroom + two smaller behind.
-    // base y stays on the pad; bob lifts the whole cluster subtly.
-    const baseY = 18 + bob;
-    // back-left small
-    paintMushroom(ctx, p, -8.5, baseY - 1.5, 0.62, 0);
-    // back-right small
-    paintMushroom(ctx, p, 9.5, baseY - 0.5, 0.7, 0);
-    // front tall (drawn last → on top)
-    paintMushroom(ctx, p, 0.5, baseY + 0.5, 1.0, 0);
+    const baseY = 18;
+    paintMushroom(ctx, p, -8.5, baseY - 1.5, 0.62, 0); // back-left small
+    paintMushroom(ctx, p, 9.5, baseY - 0.5, 0.7, 0); // back-right small
+    paintMushroom(ctx, p, 0.5, baseY + 0.5, 1.0, sparkle); // front tall (on top)
+
+    ctx.restore(); // end pose transform
 
     // ambient seasonal light wash over everything (subtle, never a flash)
     if (p.lightAmt > 0.001) {
+      ctx.globalAlpha = 1;
       const g = ctx.createRadialGradient(-8, -8, 2, 0, 0, 34);
       g.addColorStop(0, rgb(p.light, 0.16 * p.lightAmt));
       g.addColorStop(1, rgb(p.light, 0));
@@ -470,56 +541,113 @@ function paint(ctx: CanvasRenderingContext2D, p: P, bob: number): void {
 // ── season stills ────────────────────────────────────────────────────────────
 
 const drawFor = (season: SeasonName) => (ctx: CanvasRenderingContext2D): void =>
-  paint(ctx, SP[season], 0);
+  paint(ctx, SP[season], REST);
 
-// ── idle: seamless breathing bob (bob(0)=0, zero velocity) + micro-motion ────
+// ── Idle pose clock — two-tier occasional action ─────────────────────────────
 
-/** A*(1−cos(w t))*0.5 → value 0 and velocity 0 at t=0, smooth & seamless. */
-function bobAt(t: number, amp: number, w: number): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+/** Returns 0..1 progress through an action window of length `win` starting at
+ *  phase offset within `period`, else −1 (at rest). Seamless because the pose
+ *  built from q is zero (with zero velocity) at q=0 and q=1. */
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
 }
 
+// A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
+function hump(q: number): number {
+  const s = Math.sin(Math.PI * q);
+  return s * s;
+}
+
+// An asymmetric anticipation curve, 0 (with zero velocity) at q=0 and q=1.
+function anticipate(q: number): number {
+  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
+  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
+  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+}
+
+/** Build the idle pose from the wall clock. Two tiers:
+ *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+function poseFromClock(t: number): Pose {
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+
+  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
+  // ~0.17 rad lean about a pivot ~25px below the caps → ~10–12 px sway at top.
+  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  if (qC >= 0) {
+    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
+    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
+    pose.lean += 0.17 * env * rock;
+    pose.squashY += -0.06 * hump(qC); // little squat as it rocks
+    pose.squashX += 0.05 * hump(qC);
+    pose.lean += 0.02 * anticipate(qC); // faint windup tilt (still 0 at edges)
+  }
+
+  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
+  // Anticipation crouch → stretch up ~12–14px → squash landing → settle.
+  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  if (qS >= 0) {
+    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
+    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
+    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
+    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
+    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
+
+    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
+    pose.bob += crouch * 1.6 - air * 13.0;
+    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
+    pose.squashY += air * 0.2 - crouch * 0.12 - land * 0.16;
+    pose.squashX += -air * 0.14 + crouch * 0.1 + land * 0.14;
+    // a tiny lean wiggle on the way down for life
+    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+  }
+
+  return pose;
+}
+
+// ── idle anim: two-tier action pose + per-season micro-shimmer/overlays ──────
+
 const animFor = (season: SeasonName) => (ctx: CanvasRenderingContext2D, t: number): void => {
-  const bob = -bobAt(t, 0.9, 1.5); // gentle rise; subject bob 0 at t=0
-  // base cluster with the breathing bob
+  const tt = Number.isFinite(t) ? t : 0;
+  const p = SP[season];
+
+  // per-season front-cap shimmer (dressing only — never changes identity)
+  let sparkle = 0;
+  if (season === "Spring") sparkle = 0.4 + 0.4 * (0.5 - 0.5 * Math.cos(tt * 2.2)); // dew shimmer
+  if (season === "Summer") sparkle = 0.5 * (0.5 - 0.5 * Math.cos(tt * 1.8)); // soft sheen
+  if (season === "Winter") sparkle = 0.45 * (0.5 - 0.5 * Math.cos(tt * 1.4)); // cold sheen
+
+  paint(ctx, p, poseFromClock(tt), sparkle);
+
+  // ── per-season additive overlays (dressing only) ──
   ctx.save();
   try {
-    paintPad(ctx, SP[season]);
-    const p = SP[season];
-    const baseY = 18 + bob;
-    paintMushroom(ctx, p, -8.5, baseY - 1.5, 0.62, 0);
-    paintMushroom(ctx, p, 9.5, baseY - 0.5, 0.7, 0);
-    // front mushroom carries the per-season sparkle micro-motion
-    let sparkle = 0;
-    if (season === "Spring") sparkle = 0.4 + 0.4 * (0.5 - 0.5 * Math.cos(t * 2.2)); // dew shimmer
-    if (season === "Summer") sparkle = 0.5 * (0.5 - 0.5 * Math.cos(t * 1.8)); // soft sheen
-    if (season === "Winter") sparkle = 0.45 * (0.5 - 0.5 * Math.cos(t * 1.4)); // cold sheen
-    paintMushroom(ctx, p, 0.5, baseY + 0.5, 1.0, sparkle);
-
-    // ── per-season additive overlays ──
+    ctx.globalAlpha = 1;
     if (season === "Autumn") {
-      // a fallen leaf stirs on the pad (small seamless rock)
-      const rock = Math.sin(t * 1.2) * 0.25;
+      // one slow tumbling leaf drifting down
+      const prog = ((tt / 5.0) % 1 + 1) % 1;
+      const px = 11 - prog * 6 + Math.sin(prog * Math.PI * 3) * 2;
+      const py = -16 + prog * 32;
+      ctx.globalAlpha = 0.4 + 0.4 * Math.sin(prog * Math.PI);
       ctx.save();
-      ctx.globalAlpha = clamp01(p.fallenLeafAmt);
-      ctx.translate(-12, 20);
-      ctx.rotate(0.5 + rock);
-      ctx.fillStyle = "rgb(196,120,40)";
+      ctx.translate(px, py);
+      ctx.rotate(prog * Math.PI * 4);
+      ctx.fillStyle = "rgba(200,108,36,1)";
       ctx.beginPath();
-      ctx.ellipse(0, 0, 3.4, 1.8, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 2.4, 1.3, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.restore();
       ctx.globalAlpha = 1;
-    }
-    if (season === "Winter") {
+    } else if (season === "Winter") {
       // a couple of drifting snowflakes on seamless vertical loops
       const seeds: Array<[number, number, number]> = [
         [-7, 1.0, 0.0],
         [8, 0.8, 0.5],
+        [2, 0.7, 0.25],
       ];
       ctx.fillStyle = "#ffffff";
       seeds.forEach(([fx, r, phase]) => {
-        const prog = ((t / 3.4 + phase) % 1 + 1) % 1;
+        const prog = ((tt / 3.4 + phase) % 1 + 1) % 1;
         const fy = -18 + prog * 32;
         const dx = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
         ctx.globalAlpha = 0.85 * Math.sin(prog * Math.PI); // fade in/out at ends
@@ -528,32 +656,41 @@ const animFor = (season: SeasonName) => (ctx: CanvasRenderingContext2D, t: numbe
         ctx.fill();
       });
       ctx.globalAlpha = 1;
+    } else if (season === "Spring") {
+      // a couple of drifting petals
+      ctx.fillStyle = "rgba(255,240,248,0.9)";
+      for (let i = 0; i < 2; i++) {
+        const prog = ((tt / 4.0 + i * 0.5) % 1 + 1) % 1;
+        const px = (i === 0 ? -10 : 9) + Math.sin(prog * Math.PI * 2) * 3;
+        const py = -18 + prog * 34;
+        ctx.globalAlpha = 0.35 + 0.4 * Math.sin(prog * Math.PI);
+        ctx.beginPath();
+        ctx.ellipse(px, py, 1.4, 0.9, prog * 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
     }
-
-    // ambient wash (same as paint)
-    if (p.lightAmt > 0.001) {
-      const g = ctx.createRadialGradient(-8, -8, 2, 0, 0, 34);
-      g.addColorStop(0, rgb(p.light, 0.16 * p.lightAmt));
-      g.addColorStop(1, rgb(p.light, 0));
-      ctx.fillStyle = g;
-      ctx.fillRect(-24, -24, 48, 48);
-    }
+    // Summer: no extra dressing — the bounce + glossy red caps are the show.
   } finally {
     ctx.globalAlpha = 1;
     ctx.restore();
   }
 };
 
-// ── forward transitions (smootherstep lerp of every field) ───────────────────
+// ── forward season→season transitions (seamless endpoints) ───────────────────
 
-const springToSummer = (ctx: CanvasRenderingContext2D, pp: number): void =>
-  paint(ctx, lerpP(SP.Spring, SP.Summer, smoother(clamp01(pp))), 0);
+function makeTransition(fromIdx: 0 | 1 | 2): (ctx: CanvasRenderingContext2D, p: number) => void {
+  const from = SP[SEASON_NAMES[fromIdx]];
+  const to = SP[SEASON_NAMES[fromIdx + 1]];
+  return (ctx, pp) => {
+    const k = smoother(clamp01(pp));
+    paint(ctx, lerpP(from, to, k), REST);
+  };
+}
 
-const summerToAutumn = (ctx: CanvasRenderingContext2D, pp: number): void =>
-  paint(ctx, lerpP(SP.Summer, SP.Autumn, smoother(clamp01(pp))), 0);
-
-const autumnToWinter = (ctx: CanvasRenderingContext2D, pp: number): void =>
-  paint(ctx, lerpP(SP.Autumn, SP.Winter, smoother(clamp01(pp))), 0);
+const springToSummer = makeTransition(0);
+const summerToAutumn = makeTransition(1);
+const autumnToWinter = makeTransition(2);
 
 // ── exports ──────────────────────────────────────────────────────────────────
 

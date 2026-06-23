@@ -1,59 +1,78 @@
-// Seasonal art for the CUCUMBER vegetable tile (`tile_veg_cucumber`).
+// BOLD seasonal art for the CUCUMBER vegetable tile (`tile_veg_cucumber`).
 // Source: src/textures/seasonal/veg/cucumber.ts
 //
 // Category framing: Fruit / Veg — the iconic harvested ITEM only (never a vine
-// or bush). ONE ripe cucumber: an elongated, slightly-curved green cylinder
-// with rounded ends, a bumpy / ribbed dark-green skin (small pale speckles),
-// resting at a gentle diagonal on a grassy pad, with a tiny yellow cucumber
-// flower + a small leaf at the stem end. The SAME silhouette is drawn every
-// season — only colour and the small dressing (frost, snow cap, pad
-// blossom / fallen leaves / snow, light tint, gloss, speckles) change. Ripeness
-// reads as colour/shade only; the cucumber stays green and bumpy all year
-// (palette lock).
+// or bush). ONE green cucumber: an elongated, slightly-curved cylinder with
+// rounded ends and a ribbed dark-green skin, resting at a gentle diagonal on a
+// grassy pad, with a tiny yellow cucumber flower + small leaf at the stem end.
+// The SAME silhouette is drawn every season — only colour and the small
+// dressing change. The cucumber stays GREEN all year (palette lock); ripeness
+// reads as colour/shade only.
 //
-// Enforced by a single parameterized `paint(ctx, p, bob)`:
-//   - draw(season)      = paint(ctx, SP[season], 0)
-//   - anim(season)      = micro-motion + paint(ctx, SP[season], bobAt(t))
-//   - transition(from)  = paint(ctx, lerpP(SP[from], SP[from+1], smoother(p)), 0)
+// This is the BOLD variant (mirrors pepper.bold.ts): seasons swing HARD on
+// colour + a real seasonal prop (blossom / fallen leaf / snow cap + base snow),
+// and the idle is LOUD rather than subtle:
 //
-// Because every season is the same paint with tweened params, transitions are
-// seamless: transition(0) ≡ draw(from) and transition(1) ≡ draw(to). The bob
-// uses A*(1-cos(w t))*0.5 so bob(0)=0 with zero velocity → seamless idle.
+//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the cucumber rocks
+//       about its resting base with a squash, ~10–12 design-px at the raised
+//       tip. Zero velocity at the window edges (seamless).
+//   IDLE SPECIAL (~18s, win ~1.1s): a bigger SHAKE/BOUNCE — a squash-stretch
+//       hop ~12–14 design-px up, anticipation crouch → stretch → squash
+//       landing that overshoots then settles.
 //
-// Origin-centered in the −24..+24 design box, light from upper-left, flat
-// cel-shaded with a soft dark outline. Pure Canvas-2D vector drawing.
+// Architecture mirrors pepper.bold.ts: a single parameterized
+// `paint(ctx, p, pose)` where `interface P` holds tweenable season params
+// (colours + prop amounts) and `pose` holds the idle gesture
+// (bob / lean / squash). Because every season is the same paint with tweened P,
+// transitions are seamless:
+//   transition(0) ≡ draw(from), transition(1) ≡ draw(to).
+// REST pose has all zeros, so draw(season) = paint(ctx, SP[season], REST) and
+// the idle's pose is 0 at every action-window edge → seamless loop.
+//
+// Origin-centered in the −24..+24 design box (actions may paint outside it),
+// light from upper-left, flat cel-shaded with a soft dark outline. Pure
+// Canvas-2D vector drawing — never throws, clamps everything, save/restore.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
 import { SEASON_NAMES, type SeasonName } from "../types.js";
 
-// ── Tweenable params ─────────────────────────────────────────────────────────
+// ── Tweenable season params ──────────────────────────────────────────────────
 
 type RGB = [number, number, number];
 
-/** Every field tweens (number or RGB). NO booleans / season strings — the
- *  paint must be a pure function of these so transitions interpolate cleanly. */
+/** Every field tweens (number or RGB). NO booleans / season strings — paint is
+ *  a pure function of these so transitions interpolate cleanly. */
 interface P {
-  skinLight: RGB;   // lit upper face of the cucumber skin
-  skinMid: RGB;     // body tone
-  skinDark: RGB;    // shadowed underside / ribs
-  speckle: RGB;     // pale speckles dotting the skin
-  flower: RGB;      // the little yellow cucumber blossom at the stem end
-  leaf: RGB;        // the small leaf at the stem end
-  padGrass: RGB;    // top of the grass pad
-  padDark: RGB;     // shaded pad underside
-  soil: RGB;        // contact / base soil under the cucumber
-  outline: RGB;     // soft dark outline tint
-  light: RGB;       // ambient light tint laid over the whole tile
-  lightAmt: number; // 0..1 strength of the ambient light wash
-  ripeness: number; // 0..1 (reserved colour cue; structure unchanged)
-  gloss: number;    // 0..1 specular sheen along the skin
-  speckleAmt: number; // 0..1 visibility of pale skin speckles
-  frostAmt: number; // 0..1 cool frost dusting on the skin
-  snowCapAmt: number; // 0..1 snow ridge along the cucumber's upper side
-  padSnowAmt: number; // 0..1 snow blanket on the pad
-  blossomAmt: number; // 0..1 tiny blossoms on the pad (spring)
-  fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
+  skinLight: RGB;        // lit upper face of the cucumber skin
+  skinMid: RGB;          // body tone
+  skinDark: RGB;         // shadowed underside / ribs
+  speckle: RGB;          // pale speckles dotting the skin
+  flower: RGB;           // the little yellow cucumber blossom at the stem end
+  leaf: RGB;             // the small leaf at the stem end
+  padGrass: RGB;         // top of the grass pad
+  padDark: RGB;          // shaded pad underside
+  soil: RGB;             // contact / base soil under the cucumber
+  outline: RGB;          // soft dark outline tint
+  light: RGB;            // ambient light tint laid over the whole tile
+  lightAmt: number;      // 0..1 strength of the ambient light wash
+  gloss: number;         // 0..1 specular sheen along the skin
+  speckleAmt: number;    // 0..1 visibility of pale skin speckles
+  frostAmt: number;      // 0..1 cool frost dusting on the skin (winter)
+  snowCapAmt: number;    // 0..1 snow ridge along the cucumber's upper side (winter)
+  padSnowAmt: number;    // 0..1 snow blanket at the base / on the pad (winter)
+  blossomAmt: number;    // 0..1 blossom on the pad (spring)
+  fallenLeafAmt: number; // 0..1 fallen leaf on the pad (autumn)
 }
+
+/** The idle gesture, separate from season identity. All zero = REST. */
+interface Pose {
+  bob: number;     // vertical offset in design px (negative = up)
+  lean: number;    // raised-tip sway, radians (rock side to side)
+  squashX: number; // additive horizontal scale (+0.18 = 18% wider)
+  squashY: number; // additive vertical scale (+0.18 = 18% taller)
+}
+
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
 
@@ -95,7 +114,6 @@ function lerpP(a: P, b: P, t: number): P {
     outline: lerpRGB(a.outline, b.outline, t),
     light: lerpRGB(a.light, b.light, t),
     lightAmt: lerp(a.lightAmt, b.lightAmt, t),
-    ripeness: lerp(a.ripeness, b.ripeness, t),
     gloss: lerp(a.gloss, b.gloss, t),
     speckleAmt: lerp(a.speckleAmt, b.speckleAmt, t),
     frostAmt: lerp(a.frostAmt, b.frostAmt, t),
@@ -110,7 +128,6 @@ function clampP(p: P): P {
   return {
     ...p,
     lightAmt: clamp01(p.lightAmt),
-    ripeness: clamp01(p.ripeness),
     gloss: clamp01(p.gloss),
     speckleAmt: clamp01(p.speckleAmt),
     frostAmt: clamp01(p.frostAmt),
@@ -121,49 +138,52 @@ function clampP(p: P): P {
   };
 }
 
-// ── Per-season params ────────────────────────────────────────────────────────
+function safeNum(x: number): number {
+  return Number.isFinite(x) ? x : 0;
+}
+
+// ── Per-season params — pushed HARD ──────────────────────────────────────────
 
 const SP: Record<SeasonName, P> = {
-  // Spring — small young PALE-green cucumber, dewy lime pad + tiny blossom.
+  // Spring — small young PALE-green cucumber, dewy lime pad + a yellow flower
+  // and prominent pad blossoms. Soft cool-bright light.
   Spring: {
-    skinLight: [186, 222, 120],
-    skinMid: [126, 186, 78],
-    skinDark: [76, 138, 58],
-    speckle: [214, 240, 168],
-    flower: [255, 224, 96],
-    leaf: [120, 188, 84],
-    padGrass: [128, 206, 86],
-    padDark: [72, 138, 58],
+    skinLight: [192, 228, 124],
+    skinMid: [128, 190, 78],
+    skinDark: [74, 138, 56],
+    speckle: [220, 244, 172],
+    flower: [255, 226, 96],
+    leaf: [122, 192, 86],
+    padGrass: [128, 210, 86],
+    padDark: [70, 140, 58],
     soil: [120, 84, 48],
-    outline: [40, 70, 34],
-    light: [232, 244, 226],
-    lightAmt: 0.16,
-    ripeness: 0.2,
-    gloss: 0.3,
-    speckleAmt: 0.45,
+    outline: [36, 72, 32],
+    light: [232, 246, 224],
+    lightAmt: 0.18,
+    gloss: 0.34,
+    speckleAmt: 0.5,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
-    blossomAmt: 0.85,
+    blossomAmt: 1.0,
     fallenLeafAmt: 0,
   },
-  // Summer — full firm MID-green cucumber, crisp pale speckles (PEAK). Warm
-  // light, strong sheen, saturated mid-green pad.
+  // Summer — full vivid GREEN cucumber at peak, crisp pale speckles, max gloss.
+  // Bright warm light, saturated mid-green pad.
   Summer: {
-    skinLight: [150, 210, 96],
-    skinMid: [78, 162, 60],
-    skinDark: [40, 108, 46],
-    speckle: [206, 238, 156],
+    skinLight: [156, 224, 92],
+    skinMid: [70, 178, 56],
+    skinDark: [30, 112, 42],
+    speckle: [210, 244, 156],
     flower: [255, 214, 70],
-    leaf: [86, 164, 66],
-    padGrass: [86, 168, 70],
-    padDark: [44, 110, 48],
+    leaf: [78, 172, 62],
+    padGrass: [82, 178, 70],
+    padDark: [40, 116, 50],
     soil: [126, 86, 48],
-    outline: [26, 70, 34],
-    light: [255, 240, 206],
-    lightAmt: 0.18,
-    ripeness: 0.75,
-    gloss: 0.9,
+    outline: [20, 72, 32],
+    light: [255, 244, 204],
+    lightAmt: 0.2,
+    gloss: 1.0,
     speckleAmt: 1.0,
     frostAmt: 0,
     snowCapAmt: 0,
@@ -171,77 +191,75 @@ const SP: Record<SeasonName, P> = {
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
-  // Autumn — dulling DEEPER green, a touch waxy / overripe; olive-tan pad,
-  // fallen leaves. Low amber light. Still clearly green.
+  // Autumn — dulling DEEP-green cucumber, a touch waxy / overripe; olive-tan
+  // pad + a fallen leaf. Low amber light. Still clearly green.
   Autumn: {
-    skinLight: [120, 158, 74],
-    skinMid: [70, 116, 52],
-    skinDark: [42, 78, 38],
-    speckle: [168, 188, 128],
-    flower: [220, 188, 84],
-    leaf: [132, 138, 64],
-    padGrass: [150, 152, 86],
-    padDark: [104, 96, 52],
+    skinLight: [116, 152, 68],
+    skinMid: [62, 108, 46],
+    skinDark: [36, 70, 34],
+    speckle: [162, 184, 120],
+    flower: [218, 184, 80],
+    leaf: [134, 138, 62],
+    padGrass: [152, 152, 84],
+    padDark: [106, 96, 50],
     soil: [120, 80, 44],
-    outline: [34, 56, 30],
-    light: [248, 210, 150],
-    lightAmt: 0.2,
-    ripeness: 1.0,
-    gloss: 0.5,
-    speckleAmt: 0.6,
+    outline: [28, 52, 28],
+    light: [250, 206, 142],
+    lightAmt: 0.24,
+    gloss: 0.42,
+    speckleAmt: 0.55,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
-    fallenLeafAmt: 0.85,
+    fallenLeafAmt: 1.0,
   },
-  // Winter — frost-dusted green cucumber + a small snow cap, still clearly
-  // GREEN underneath; snowy pad, cool blue-grey light.
+  // Winter — frost-dusted GREEN cucumber still clearly green, a bold snow cap
+  // along its upper ridge + a snow drift at the base; cool blue-grey light.
   Winter: {
-    skinLight: [120, 168, 110],
-    skinMid: [70, 126, 78],
-    skinDark: [44, 88, 58],
-    speckle: [206, 230, 224],
-    flower: [228, 206, 120],
-    leaf: [104, 142, 96],
-    padGrass: [176, 196, 214],
-    padDark: [120, 146, 172],
-    soil: [128, 110, 96],
-    outline: [40, 56, 56],
-    light: [206, 226, 252],
-    lightAmt: 0.3,
-    ripeness: 0.85,
+    skinLight: [118, 170, 108],
+    skinMid: [64, 126, 76],
+    skinDark: [40, 86, 56],
+    speckle: [210, 234, 228],
+    flower: [226, 204, 118],
+    leaf: [102, 142, 94],
+    padGrass: [182, 202, 220],
+    padDark: [122, 150, 178],
+    soil: [132, 116, 102],
+    outline: [38, 56, 56],
+    light: [200, 224, 255],
+    lightAmt: 0.34,
     gloss: 0.3,
-    speckleAmt: 0.35,
-    frostAmt: 0.7,
-    snowCapAmt: 0.85,
-    padSnowAmt: 0.9,
+    speckleAmt: 0.32,
+    frostAmt: 0.78,
+    snowCapAmt: 1.0,
+    padSnowAmt: 1.0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
 };
 
-// ── The single parameterized paint ───────────────────────────────────────────
-
-// Cucumber geometry — an elongated cylinder lying on a gentle diagonal, the
-// SAME silhouette every season. It runs from the lower-left (blossom/stem end,
-// up by the pad) to the upper-right, slightly curved. Origin-centered.
+// ── Cucumber geometry — the SAME silhouette every season ──────────────────────
 //
-// We define the body along a central spine of points (in design px) and a
-// half-thickness; both ends are rounded. Drawing is done by stroking a fat
-// rounded capsule for the outline, then a thinner one for the body fill.
+// An elongated cylinder lying on a gentle diagonal. It runs from the lower-left
+// (stem/flower end, near the pad) to the upper-right (raised blossom-scar tip),
+// slightly curved. We define a central spine of points (design px) plus a
+// half-thickness; both ends round in. The idle pose pivots near the resting
+// base so the lean rocks the RAISED tip side to side.
 
 const CUKE_HALF = 6.4; // half-thickness of the cucumber barrel
 
-// Spine endpoints + a slight curve control. The cucumber lies diagonally with
-// a gentle banana-curve. Lower-left end (A) carries the stem/flower; the
-// upper-right end (B) is the blossom-scar tip.
 const CUKE_AX = -13.5; // stem-end x (lower-left)
 const CUKE_AY = 9.5;   // stem-end y (resting near the pad)
 const CUKE_BX = 14.5;  // far-tip x (upper-right)
 const CUKE_BY = -7.5;  // far-tip y (raised)
 const CUKE_CX = 1.5;   // curve control x (bows the belly downward)
 const CUKE_CY = 5.5;   // curve control y
+
+// Idle pivot — near the resting stem end so lean rocks the raised tip and
+// squash anchors at the base (it "sits" on the pad).
+const CUKE_PIVOT_X = -9;
+const CUKE_PIVOT_Y = 11;
 
 /** Sample the curved spine at parameter s∈[0,1] (quadratic Bézier A→C→B). */
 function spineAt(s: number): [number, number] {
@@ -251,33 +269,34 @@ function spineAt(s: number): [number, number] {
   return [x, y];
 }
 
-/** Trace the rounded-capsule cucumber body into the current ctx path, with a
- *  vertical bob offset applied. Same outline for every season. */
-function cucumberBodyPath(ctx: CanvasRenderingContext2D, bob: number, half: number): void {
-  // Walk one side of the spine offset by +half (normal), round the far tip,
-  // walk back offset by −half, round the near (stem) end.
+/** Outward unit normal of the spine at s (perpendicular to the tangent). */
+function spineNormal(s: number): [number, number] {
+  const [nx, ny] = spineAt(Math.min(1, s + 0.001));
+  const [mx, my] = spineAt(Math.max(0, s - 0.001));
+  const tx = nx - mx;
+  const ty = ny - my;
+  const len = Math.hypot(tx, ty) || 1;
+  return [-ty / len, tx / len];
+}
+
+/** Local taper so the ends round in. */
+function taperAt(s: number): number {
+  return 0.55 + 0.45 * Math.sin(Math.PI * s);
+}
+
+/** Trace the rounded-capsule cucumber body into the current ctx path. Same
+ *  outline for every season (the idle pose is applied as a ctx transform). */
+function cucumberBodyPath(ctx: CanvasRenderingContext2D, half: number): void {
   const N = 14;
   const top: Array<[number, number]> = [];
   const bottomPts: Array<[number, number]> = [];
   for (let i = 0; i <= N; i++) {
     const s = i / N;
     const [px, py] = spineAt(s);
-    // tangent via finite difference
-    const [nx, ny] = spineAt(Math.min(1, s + 0.001));
-    const [mx, my] = spineAt(Math.max(0, s - 0.001));
-    let tx = nx - mx;
-    let ty = ny - my;
-    const len = Math.hypot(tx, ty) || 1;
-    tx /= len;
-    ty /= len;
-    // normal (perpendicular)
-    const onx = -ty;
-    const ony = tx;
-    // taper a touch toward each end so the ends round in
-    const taper = 0.55 + 0.45 * Math.sin(Math.PI * s);
-    const h = half * taper;
-    top.push([px + onx * h, py + ony * h + bob]);
-    bottomPts.push([px - onx * h, py - ony * h + bob]);
+    const [onx, ony] = spineNormal(s);
+    const h = half * taperAt(s);
+    top.push([px + onx * h, py + ony * h]);
+    bottomPts.push([px - onx * h, py - ony * h]);
   }
   ctx.beginPath();
   ctx.moveTo(top[0][0], top[0][1]);
@@ -286,16 +305,25 @@ function cucumberBodyPath(ctx: CanvasRenderingContext2D, bob: number, half: numb
   ctx.closePath();
 }
 
-/** The whole tile from ONLY `p` and `bob`. */
-function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
+// ── The single parameterized paint ───────────────────────────────────────────
+
+/** The whole tile from ONLY `p` (season identity) and `pose` (idle gesture). */
+function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
   const p = clampP(raw);
+  const pose: Pose = {
+    bob: safeNum(rawPose.bob),
+    lean: safeNum(rawPose.lean),
+    squashX: safeNum(rawPose.squashX),
+    squashY: safeNum(rawPose.squashY),
+  };
+
   ctx.save();
   try {
     ctx.globalAlpha = 1;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
-    // ── Pad: low flat grass ellipse, x∈[−18,+18], centre y≈+19 ──────────────
+    // ── Pad: low flat grass ellipse (does NOT move with the pose) ────────────
     ctx.fillStyle = rgba(p.padDark, 0.4);
     ctx.beginPath();
     ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
@@ -343,7 +371,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
-      [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+      ([[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]] as Array<[number, number]>).forEach(([sx, sy]) => {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -369,12 +397,12 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       });
     }
 
-    // fallen leaves on the pad (autumn)
+    // fallen leaf on the pad (autumn)
     if (p.fallenLeafAmt > 0.01) {
       const a = p.fallenLeafAmt;
       const leaves: Array<[number, number, number, RGB]> = [
-        [-12, 19.6, -0.5, [196, 120, 40]],
-        [12, 18.6, 0.7, [176, 72, 32]],
+        [-12, 19.6, -0.5, [206, 124, 38]],
+        [12, 18.6, 0.7, [182, 70, 28]],
       ];
       leaves.forEach(([lx, ly, rot, col]) => {
         ctx.save();
@@ -382,42 +410,51 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
         ctx.rotate(rot);
         ctx.fillStyle = rgba(col, a);
         ctx.beginPath();
-        ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 3.6, 2.0, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = rgba([90, 44, 16], a);
-        ctx.lineWidth = 0.7;
+        ctx.lineWidth = 0.8;
         ctx.beginPath();
-        ctx.moveTo(-3, 0);
-        ctx.lineTo(3, 0);
+        ctx.moveTo(-3.4, 0);
+        ctx.lineTo(3.4, 0);
         ctx.stroke();
         ctx.restore();
       });
     }
 
-    // ── Soil contact patch + contact shadow under the resting cucumber ──────
+    // ── Contact shadow under the cucumber (follows the bob for grounding) ─────
+    const shadowSpread = 1 + clamp01(pose.bob < 0 ? -pose.bob / 14 : 0) * 0.5;
     ctx.fillStyle = rgb(p.soil);
     ctx.beginPath();
-    ctx.ellipse(0, 15 + bob, 13, 2.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 15.4, 12 * shadowSpread, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgba(p.outline, 0.28);
+    ctx.fillStyle = rgba(p.outline, 0.28 / shadowSpread);
     ctx.beginPath();
-    ctx.ellipse(2.5, 15.6 + bob, 14, 2.4, -0.18, 0, Math.PI * 2);
+    ctx.ellipse(2.5, 16, 13 * shadowSpread, 2.4, -0.18, 0, Math.PI * 2);
     ctx.fill();
 
-    // ── Subject: the cucumber (SAME silhouette every season) ────────────────
+    // ── Subject: the cucumber, under the idle pose transform ─────────────────
+    ctx.save();
+    // Pivot near the resting base so lean rocks the raised tip and squash
+    // anchors at the base. bob raises the whole body.
+    ctx.translate(CUKE_PIVOT_X, CUKE_PIVOT_Y + pose.bob);
+    ctx.rotate(pose.lean);
+    ctx.scale(1 + pose.squashX, 1 + pose.squashY);
+    ctx.translate(-CUKE_PIVOT_X, -CUKE_PIVOT_Y);
+
     // 1) soft dark outline pass (drawn a touch fatter)
-    cucumberBodyPath(ctx, bob, CUKE_HALF + 0.9);
+    cucumberBodyPath(ctx, CUKE_HALF + 0.9);
     ctx.fillStyle = rgb(p.outline);
     ctx.fill();
 
     // 2) body fill, clipped so the outline reads as a rim
     ctx.save();
-    cucumberBodyPath(ctx, bob, CUKE_HALF);
+    cucumberBodyPath(ctx, CUKE_HALF);
     ctx.clip();
 
     // base mid tone
     ctx.fillStyle = rgb(p.skinMid);
-    ctx.fillRect(-24, -24, 48, 48);
+    ctx.fillRect(-26, -26, 52, 52);
 
     // light from upper-left: a lit band running along the upper side of the
     // barrel, dark underside — gives the cylinder its round volume.
@@ -429,7 +466,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     litGrad.addColorStop(1, rgb(p.skinDark));
     ctx.fillStyle = litGrad;
     ctx.globalAlpha = 0.92;
-    ctx.fillRect(-24, -24, 48, 48);
+    ctx.fillRect(-26, -26, 52, 52);
     ctx.globalAlpha = 1;
 
     // ridged ribs — a few long grooves running the length of the cucumber,
@@ -441,14 +478,9 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       for (let i = 0; i <= 14; i++) {
         const s = i / 14;
         const [px, py] = spineAt(s);
-        const [nx, ny] = spineAt(Math.min(1, s + 0.001));
-        const [mx, my] = spineAt(Math.max(0, s - 0.001));
-        let tx = nx - mx, ty = ny - my;
-        const len = Math.hypot(tx, ty) || 1;
-        const onx = -ty / len, ony = tx / len;
-        const taper = 0.55 + 0.45 * Math.sin(Math.PI * s);
-        const h = CUKE_HALF * taper * off;
-        const x = px + onx * h, y = py + ony * h + bob;
+        const [onx, ony] = spineNormal(s);
+        const h = CUKE_HALF * taperAt(s) * off;
+        const x = px + onx * h, y = py + ony * h;
         if (i === 0) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -465,35 +497,25 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       ];
       bumps.forEach(([s, off, r]) => {
         const [px, py] = spineAt(s);
-        const [nx, ny] = spineAt(Math.min(1, s + 0.001));
-        const [mx, my] = spineAt(Math.max(0, s - 0.001));
-        let tx = nx - mx, ty = ny - my;
-        const len = Math.hypot(tx, ty) || 1;
-        const onx = -ty / len, ony = tx / len;
-        const taper = 0.55 + 0.45 * Math.sin(Math.PI * s);
-        const h = CUKE_HALF * taper * off;
+        const [onx, ony] = spineNormal(s);
+        const h = CUKE_HALF * taperAt(s) * off;
         ctx.beginPath();
-        ctx.arc(px + onx * h, py + ony * h + bob, r, 0, Math.PI * 2);
+        ctx.arc(px + onx * h, py + ony * h, r, 0, Math.PI * 2);
         ctx.fill();
       });
     }
 
     // specular sheen — a soft bright streak along the upper-lit side
     if (p.gloss > 0.02) {
-      ctx.strokeStyle = rgba([255, 255, 255], 0.18 + 0.5 * p.gloss);
+      ctx.strokeStyle = rgba([255, 255, 255], 0.16 + 0.6 * p.gloss);
       ctx.lineWidth = 1.6;
       ctx.beginPath();
       for (let i = 2; i <= 12; i++) {
         const s = i / 14;
         const [px, py] = spineAt(s);
-        const [nx, ny] = spineAt(Math.min(1, s + 0.001));
-        const [mx, my] = spineAt(Math.max(0, s - 0.001));
-        let tx = nx - mx, ty = ny - my;
-        const len = Math.hypot(tx, ty) || 1;
-        const onx = -ty / len, ony = tx / len;
-        const taper = 0.55 + 0.45 * Math.sin(Math.PI * s);
-        const h = CUKE_HALF * taper * -0.55;
-        const x = px + onx * h, y = py + ony * h + bob;
+        const [onx, ony] = spineNormal(s);
+        const h = CUKE_HALF * taperAt(s) * -0.55;
+        const x = px + onx * h, y = py + ony * h;
         if (i === 2) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -503,43 +525,34 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     // frost dusting (winter) — cool blue speckle on the upward skin
     if (p.frostAmt > 0.02) {
       ctx.fillStyle = rgba([210, 230, 250], 0.22 * p.frostAmt);
-      ctx.fillRect(-24, -24, 48, 28);
+      ctx.fillRect(-26, -26, 52, 30);
       ctx.fillStyle = rgba([235, 246, 255], 0.7 * p.frostAmt);
       const speck: Array<[number, number]> = [
         [0.2, -0.4], [0.36, -0.1], [0.5, -0.35], [0.66, 0.0], [0.8, -0.3], [0.9, -0.5],
       ];
       speck.forEach(([s, off]) => {
         const [px, py] = spineAt(s);
-        const [nx, ny] = spineAt(Math.min(1, s + 0.001));
-        const [mx, my] = spineAt(Math.max(0, s - 0.001));
-        let tx = nx - mx, ty = ny - my;
-        const len = Math.hypot(tx, ty) || 1;
-        const onx = -ty / len, ony = tx / len;
+        const [onx, ony] = spineNormal(s);
         const h = CUKE_HALF * off;
         ctx.beginPath();
-        ctx.arc(px + onx * h, py + ony * h + bob, 0.7, 0, Math.PI * 2);
+        ctx.arc(px + onx * h, py + ony * h, 0.7, 0, Math.PI * 2);
         ctx.fill();
       });
     }
 
-    ctx.restore(); // end clip
+    ctx.restore(); // end body clip
 
     // 3) snow cap ridge along the cucumber's upper side (winter), over the body
     if (p.snowCapAmt > 0.02) {
       const a = p.snowCapAmt;
-      ctx.fillStyle = rgba([246, 251, 255], 0.92 * a);
+      ctx.fillStyle = rgba([246, 251, 255], 0.95 * a);
       ctx.beginPath();
       for (let i = 2; i <= 12; i++) {
         const s = i / 14;
         const [px, py] = spineAt(s);
-        const [nx, ny] = spineAt(Math.min(1, s + 0.001));
-        const [mx, my] = spineAt(Math.max(0, s - 0.001));
-        let tx = nx - mx, ty = ny - my;
-        const len = Math.hypot(tx, ty) || 1;
-        const onx = -ty / len, ony = tx / len;
-        const taper = 0.55 + 0.45 * Math.sin(Math.PI * s);
-        const h = CUKE_HALF * taper * -0.82;
-        const x = px + onx * h, y = py + ony * h + bob;
+        const [onx, ony] = spineNormal(s);
+        const h = CUKE_HALF * taperAt(s) * -0.82;
+        const x = px + onx * h, y = py + ony * h;
         if (i === 2) ctx.moveTo(x, y);
         else ctx.lineTo(x, y);
       }
@@ -547,21 +560,16 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       for (let i = 12; i >= 2; i--) {
         const s = i / 14;
         const [px, py] = spineAt(s);
-        const [nx, ny] = spineAt(Math.min(1, s + 0.001));
-        const [mx, my] = spineAt(Math.max(0, s - 0.001));
-        let tx = nx - mx, ty = ny - my;
-        const len = Math.hypot(tx, ty) || 1;
-        const onx = -ty / len, ony = tx / len;
-        const taper = 0.55 + 0.45 * Math.sin(Math.PI * s);
-        const h = CUKE_HALF * taper * -0.38;
-        ctx.lineTo(px + onx * h, py + ony * h + bob);
+        const [onx, ony] = spineNormal(s);
+        const h = CUKE_HALF * taperAt(s) * -0.38;
+        ctx.lineTo(px + onx * h, py + ony * h);
       }
       ctx.closePath();
       ctx.fill();
-      ctx.fillStyle = rgba([205, 222, 242], 0.4 * a);
+      ctx.fillStyle = rgba([205, 222, 242], 0.45 * a);
       const [mx2, my2] = spineAt(0.5);
       ctx.beginPath();
-      ctx.ellipse(mx2, my2 - CUKE_HALF * 0.6 + bob, 7, 1.4, -0.6, 0, Math.PI * 2);
+      ctx.ellipse(mx2, my2 - CUKE_HALF * 0.6, 7, 1.4, -0.6, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -569,20 +577,20 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     // The stem end is the near (lower-left) tip A.
     const [sx0, sy0] = spineAt(0.0);
     const stemTipX = sx0 - 3.2;
-    const stemTipY = sy0 - 2.6 + bob;
+    const stemTipY = sy0 - 2.6;
 
     // short green stem joining the cucumber to the blossom
     ctx.strokeStyle = rgb(p.outline);
     ctx.lineWidth = 2.6;
     ctx.beginPath();
-    ctx.moveTo(sx0, sy0 + bob);
-    ctx.quadraticCurveTo(sx0 - 2.4, sy0 - 1.6 + bob, stemTipX, stemTipY);
+    ctx.moveTo(sx0, sy0);
+    ctx.quadraticCurveTo(sx0 - 2.4, sy0 - 1.6, stemTipX, stemTipY);
     ctx.stroke();
     ctx.strokeStyle = rgb(p.leaf);
     ctx.lineWidth = 1.4;
     ctx.beginPath();
-    ctx.moveTo(sx0, sy0 + bob);
-    ctx.quadraticCurveTo(sx0 - 2.4, sy0 - 1.6 + bob, stemTipX, stemTipY);
+    ctx.moveTo(sx0, sy0);
+    ctx.quadraticCurveTo(sx0 - 2.4, sy0 - 1.6, stemTipX, stemTipY);
     ctx.stroke();
 
     // small leaf beside the stem
@@ -604,7 +612,6 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     // the little yellow cucumber blossom at the very stem tip — five petals
     ctx.save();
     ctx.translate(stemTipX, stemTipY);
-    // petals
     ctx.fillStyle = rgb(p.flower);
     for (let k = 0; k < 5; k++) {
       const ang = (k / 5) * Math.PI * 2 - 0.3;
@@ -612,7 +619,6 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       ctx.ellipse(Math.cos(ang) * 2.0, Math.sin(ang) * 2.0, 1.5, 1.0, ang, 0, Math.PI * 2);
       ctx.fill();
     }
-    // petal outline + warm centre
     ctx.strokeStyle = rgba(p.outline, 0.45);
     ctx.lineWidth = 0.6;
     for (let k = 0; k < 5; k++) {
@@ -627,7 +633,9 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     ctx.fill();
     ctx.restore();
 
-    // ── Ambient light wash over the whole tile (per-season tint) ────────────
+    ctx.restore(); // end pose transform
+
+    // ── Ambient light wash over the whole tile (per-season tint) ─────────────
     if (p.lightAmt > 0.001) {
       ctx.globalAlpha = 1;
       const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
@@ -642,101 +650,136 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
   }
 }
 
-// ── Idle bob (seamless, zero-velocity at t=0) ────────────────────────────────
+// ── Idle pose clock — two-tier occasional action ─────────────────────────────
 
-// A*(1-cos(w t))*0.5 → 0 at t=0 with zero velocity; period 2π/w.
-function bobAt(t: number, amp = 0.8, w = 1.5): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+/** Returns 0..1 progress through an action window of length `win` starting at
+ *  phase offset within `period`, else −1 (at rest). Seamless because the pose
+ *  built from q is zero (with zero velocity) at q=0 and q=1. */
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
+}
+
+// A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
+function hump(q: number): number {
+  const s = Math.sin(Math.PI * q);
+  return s * s;
+}
+
+// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
+function anticipate(q: number): number {
+  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
+  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
+  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+}
+
+/** Build the idle pose from the wall clock. Two tiers:
+ *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+function poseFromClock(t: number): Pose {
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+
+  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
+  // ~0.16 rad lean about the base pivot → raised tip travels ~10–12 px.
+  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  if (qC >= 0) {
+    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
+    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
+    pose.lean += 0.17 * env * rock;
+    // little squat at the base as it rocks (settle weight side to side)
+    pose.squashY += -0.06 * hump(qC);
+    pose.squashX += 0.05 * hump(qC);
+  }
+
+  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
+  // Anticipation crouch → stretch up ~12–14px → squash landing → settle.
+  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  if (qS >= 0) {
+    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
+    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
+    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
+    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
+    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
+
+    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
+    pose.bob += crouch * 1.6 - air * 13.0;
+    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
+    const apex = air; // 0..1 in the air
+    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
+    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
+    // a tiny lean wiggle on the way down for life
+    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+  }
+
+  // Reference anticipate() so it stays part of the seamless-curve toolkit and
+  // contributes a faint windup tilt to the common wobble (still 0 at edges).
+  if (qC >= 0) {
+    pose.lean += 0.02 * anticipate(qC);
+  }
+
+  return pose;
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
 
 function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
-  return (ctx) => paint(ctx, SP[season], 0);
-}
-
-/** The flower's resting screen position (matches paint's placement) at bob=0,
- *  so the season micro-motion can make it nod. */
-function flowerAnchor(bob: number): [number, number] {
-  const [sx0, sy0] = spineAt(0.0);
-  return [sx0 - 3.2, sy0 - 2.6 + bob];
+  return (ctx) => paint(ctx, SP[season], REST);
 }
 
 function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
   return (ctx, t) => {
-    const bob = bobAt(t);
-    // Per-season additive micro-motion drawn OVER the static paint. The subject
-    // bob itself is 0 at t=0; micro-motion is additive sheen / dressing.
-    paint(ctx, SP[season], bob);
+    const tt = Number.isFinite(t) ? t : 0;
+    paint(ctx, SP[season], poseFromClock(tt));
 
+    // Light additive season micro-sparkle (dressing only — never the subject's
+    // own colour/brightness). Kept tiny so the POSE action is the star.
     ctx.save();
     try {
       ctx.globalAlpha = 1;
-
-      // The little flower nods gently every season (a soft additive petal hint
-      // riding on a tiny rotation about its anchor).
-      const [fx, fy] = flowerAnchor(bob);
-      const nod = Math.sin(t * 1.6) * 0.18;
-      ctx.save();
-      ctx.translate(fx, fy);
-      ctx.rotate(nod);
-      ctx.fillStyle = rgba(SP[season].flower, 0.5);
-      ctx.beginPath();
-      ctx.ellipse(0, -2.2, 1.3, 0.9, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-
-      if (season === "Spring") {
-        // dew shimmer — a soft pulsing glint that drifts along the skin
-        const g = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.2));
-        const [gx, gy] = spineAt(0.45 + 0.1 * Math.sin(t * 1.1));
-        ctx.fillStyle = `rgba(255,255,255,${g})`;
-        ctx.beginPath();
-        ctx.arc(gx, gy - 3 + bob, 1.1 + g * 0.8, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Summer") {
-        // a bright glint runs ALONG the skin (seamless via fract)
-        const prog = (t * 0.45) % 1;
-        const [gx, gy] = spineAt(0.1 + prog * 0.8);
-        ctx.fillStyle = "rgba(255,255,255,0.85)";
-        ctx.beginPath();
-        ctx.ellipse(gx, gy - CUKE_HALF * 0.5 + bob, 2.0, 1.1, -0.7, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,0.35)";
-        ctx.beginPath();
-        ctx.ellipse(gx, gy - CUKE_HALF * 0.2 + bob, 1.2, 0.7, -0.7, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Autumn") {
-        // faint slow sheen pulsing along the upper side
-        const s = 0.1 + 0.14 * (0.5 + 0.5 * Math.sin(t * 0.9));
-        const [gx, gy] = spineAt(0.5);
-        ctx.fillStyle = `rgba(255,236,200,${s})`;
-        ctx.beginPath();
-        ctx.ellipse(gx, gy - 2 + bob, 6, 2.6, -0.7, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        // Winter — drifting snowflakes + cold sheen
+      if (season === "Winter") {
         const seeds: Array<[number, number, number]> = [
           [-9, 0.0, 1.0], [6, 0.4, 0.9], [12, 0.7, 0.8], [-2, 0.25, 0.9],
         ];
         ctx.fillStyle = "#ffffff";
-        seeds.forEach(([fxs, phase, r]) => {
-          const prog = ((t / 3.0 + phase) % 1 + 1) % 1;
-          const fys = -22 + prog * 40;
-          const dx = fxs + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
+        seeds.forEach(([fx, phase, r]) => {
+          const prog = ((tt / 3.0 + phase) % 1 + 1) % 1;
+          const fy = -22 + prog * 40;
+          const dx = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
           ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog * Math.PI);
           ctx.beginPath();
-          ctx.arc(dx, fys, r, 0, Math.PI * 2);
+          ctx.arc(dx, fy, r, 0, Math.PI * 2);
           ctx.fill();
         });
-        ctx.globalAlpha = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.8));
-        const [gx, gy] = spineAt(0.5);
-        ctx.fillStyle = "rgba(210,232,255,1)";
+        ctx.globalAlpha = 1;
+      } else if (season === "Spring") {
+        // a couple of drifting petals
+        ctx.fillStyle = "rgba(255,240,248,0.9)";
+        for (let i = 0; i < 2; i++) {
+          const prog = ((tt / 4.0 + i * 0.5) % 1 + 1) % 1;
+          const px = (i === 0 ? -10 : 9) + Math.sin(prog * Math.PI * 2) * 3;
+          const py = -18 + prog * 34;
+          ctx.globalAlpha = 0.35 + 0.4 * Math.sin(prog * Math.PI);
+          ctx.beginPath();
+          ctx.ellipse(px, py, 1.4, 0.9, prog * 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      } else if (season === "Autumn") {
+        // one slow tumbling leaf
+        const prog = ((tt / 5.0) % 1 + 1) % 1;
+        const px = 11 - prog * 6 + Math.sin(prog * Math.PI * 3) * 2;
+        const py = -16 + prog * 32;
+        ctx.globalAlpha = 0.4 + 0.4 * Math.sin(prog * Math.PI);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(prog * Math.PI * 4);
+        ctx.fillStyle = "rgba(196,96,32,1)";
         ctx.beginPath();
-        ctx.ellipse(gx, gy - 1 + bob, 7, 3.2, -0.7, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 2.4, 1.3, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
         ctx.globalAlpha = 1;
       }
+      // Summer: no extra dressing — the bounce + glossy green is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();
@@ -744,14 +787,14 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   };
 }
 
-// ── Forward season→season transitions ────────────────────────────────────────
+// ── Forward season→season transitions (seamless endpoints) ───────────────────
 
 function makeTransition(fromIdx: 0 | 1 | 2): (ctx: CanvasRenderingContext2D, p: number) => void {
   const from = SP[SEASON_NAMES[fromIdx]];
   const to = SP[SEASON_NAMES[fromIdx + 1]];
   return (ctx, pp) => {
     const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(from, to, k), 0);
+    paint(ctx, lerpP(from, to, k), REST);
   };
 }
 
