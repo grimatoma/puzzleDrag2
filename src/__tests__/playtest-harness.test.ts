@@ -167,28 +167,28 @@ describe("progression spine — code-derived oracle", () => {
     expect(buildProgressionSpine()).toEqual(buildProgressionSpine());
   });
 
-  it("fresh-save reachability is the farm cluster only (mine/fish gated behind the quarry)", () => {
+  it("fresh-save reachability spans the whole spine now (softlock fixed); only the token-gated capital stays locked", () => {
     const o = buildProgressionSpine().oracle;
-    expect(o.freshSaveReachable).toEqual(["crossroads", "home", "meadow", "orchard"]);
-    // Every playable board reachable on a fresh save is a farm board.
-    expect(o.freshSavePlayableBoards).toEqual(["home", "meadow", "orchard"]);
+    // The farm cluster is reachable from the start...
+    for (const z of ["home", "meadow", "orchard", "crossroads"]) expect(o.freshSaveReachable).toContain(z);
+    // ...and now that home can climb to City, the quarry opens and the mine/fish
+    // zones behind it become reachable too.
+    for (const z of ["quarry", "caves", "forge", "harbor", "mirefen"]) expect(o.freshSaveReachable).toContain(z);
+    // The Old Capital remains gated behind Hearth-Tokens.
+    expect(o.freshSaveReachable).not.toContain("oldcapital");
   });
 
-  it("detects the home Outpost→Hamlet softlock and explains the bread→block chain", () => {
+  it("reports no softlock: home climbs its full farm-goods ladder, yet still cannot produce mine goods", () => {
     const spine = buildProgressionSpine();
     const o = spine.oracle;
-    expect(o.softlock).not.toBeNull();
-    expect(o.softlock?.stuckZone).toBe("home");
-    expect(o.softlock?.stuckTier).toBe(0);
-    expect(o.softlock?.stuckTierName).toBe("Outpost");
-    expect(o.softlock?.blockedRung).toBe("Hamlet");
-    expect(o.softlock?.primaryMissing).toContain("bread");
-    // The wall explainer must surface WHY bread is unobtainable: the Bakery's own
-    // build cost needs `block`, a mine good unreachable from a fresh save.
+    // The 2026-06-23 fix re-costs Town 1 onto farm goods alone, so the spine is open.
+    expect(o.softlock).toBeNull();
     const home = spine.zones.find((z) => z.id === "home")!;
-    const breadMiss = home.wall?.missing.find((m) => m.key === "bread");
-    expect(breadMiss?.reason).toContain("block");
-    // home can never stock a mine good on its own farm board.
+    // Home reaches the top of its own ladder (City) with no wall...
+    expect(home.maxSelfTier).toBe(home.tiers.length - 1);
+    expect(home.wall).toBeNull();
+    // ...purely on farm goods — it can never stock a mine good (e.g. `block`) on its
+    // own board, which is exactly why the ladder must not demand one.
     expect(o.homeProducible).not.toContain("block");
   });
 
@@ -242,14 +242,17 @@ describe("progression spine — cross-run diff", () => {
     expect(d.changes).toHaveLength(0);
   });
 
-  it("classifies a cleared softlock as critical and a tier-cost edit as minor", () => {
-    const current = buildProgressionSpine();
-    const baseline = clone(current);
-    // Baseline = a prior state with no softlock and a cheaper Hamlet rung; current
-    // = the real locked spine. The diff is current-vs-baseline.
-    baseline.oracle.softlock = null;
-    const ham = baseline.zones.find((z) => z.id === "home")!.tiers.find((t) => t.id === "hamlet")!;
-    delete ham.upgradeCost.bread;
+  it("classifies a softlock change as critical and a tier-cost edit as minor", () => {
+    // The live spine is now unlocked, so synthesize the regression in `current`:
+    // a softlock reappears, and Hamlet's bread cost is absent from the baseline.
+    const baseline = buildProgressionSpine();
+    const current = clone(baseline);
+    current.oracle.softlock = {
+      isLocked: true, stuckZone: "home", stuckTier: 0, stuckTierName: "Outpost",
+      blockedRung: "Hamlet", primaryMissing: ["bread"], summary: "synthetic regression",
+    };
+    const baseHam = baseline.zones.find((z) => z.id === "home")!.tiers.find((t) => t.id === "hamlet")!;
+    delete baseHam.upgradeCost.bread; // before: no bread; after (current): bread:10
 
     const d = diffSpines(baseline, current);
     expect(d.unchanged).toBe(false);

@@ -173,7 +173,7 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
   <hr>
   <div class="statline">
     <div class="stat e"><b>A–E</b><span>journey phases</span></div>
-    <div class="stat"><b>1</b><span>blocker (softlock)</span></div>
+    <div class="stat m"><b>✓</b><span>softlock fixed</span></div>
     <div class="stat g"><b>20–35</b><span>runs to mid-game</span></div>
     <div class="stat m"><b>~10×</b><span>value-per-tile spread</span></div>
   </div>
@@ -211,7 +211,7 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
   <h2>Four objectives, one target player</h2>
   <p class="lede">The headline objective is fixing the progression stall so the journey can actually execute; the other three follow once the spine runs.</p>
   <div class="grid">
-    <div class="card accent"><h4>1 · Fix the progression stall</h4><p>The highest-leverage change. Home cannot climb past Outpost today (see <a href="#findings" data-go="findings">the softlock</a>). Unblock the ladder so the campaign can reach mid-game.</p></div>
+    <div class="card mossL"><h4>1 · Fix the progression stall <span class="chip c-done">DONE</span></h4><p>The highest-leverage change — <strong>fixed 2026-06-23</strong>. Town 1 was re-costed onto farm goods alone (Bakery off <code>block</code> + unlocked at Outpost; Village/City off all mine goods), so home now climbs Outpost→City and the whole spine opens. The <a href="#findings" data-go="findings">oracle confirms no softlock</a>.</p></div>
     <div class="card accent"><h4>2 · Compress the value spread</h4><p>Realized value-per-tile spans ~10×. Pull marquee resources toward a <strong>3–4× ceiling</strong> over the median so no single tile family dominates.</p></div>
     <div class="card accent"><h4>3 · Tune pacing / time-to-content</h4><p>Land the milestone bands: a <strong>steady ~1–2 weeks</strong> (≈ 20–35 mid-core sessions) to mid-game, with coins a softer secondary gate.</p></div>
     <div class="card accent"><h4>4 · Reduce grind / friction</h4><p>Smooth the early loop so the first rungs feel earned — a "balanced middle": cozy surface, light strategy, few hard walls.</p></div>
@@ -228,6 +228,45 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
     <li><strong>No real-money mechanics</strong> (assumed); premium, if ever, only skips real-time timers — never buys puzzle advantage.</li>
     <li><strong>Save-compatibility</strong> — value tweaks are safe; structural/persisted-shape changes need a <code>SAVE_SCHEMA</code> bump + migration.</li>
     <li><strong>Don't silently break</strong> the family-value, campaign, or progression-shape snapshot tests — update them intentionally.</li>
+  </ul>
+</section>
+
+<section>
+  <p class="kick">Next session · the working conversation</p>
+  <h2>Discussion agenda — the rough outline to flesh out together</h2>
+  <p class="lede">This pass fixed the blocking softlock and captured the direction below. The <strong>next session is a live design conversation</strong>, not a document — this agenda is its kicking-off point. The plan: keep a <em>rough</em> whole-game outline, but <strong>deeply design &amp; balance only the first two zones</strong> so we have a playable, progressing slice; everything past the <strong>founding of the third zone</strong> stays deliberately open.</p>
+
+  <div class="call tip">
+    <h4>The committed shape so far</h4>
+    <p><strong>Zone web (Zelda-BotW model).</strong> You can always push toward the Old Capital finale, but the smart path is developing branch zones, each with its own identity. Completing a biome yields a Hearth-Token; the tokens open the finale — you choose <em>which</em> zones to clear.<br>
+    <strong>Zone 1 = farm only</strong> (Hearthwood Vale). <strong>Zone 2 = farm + mine</strong> in one settlement — it teaches <em>the combination</em>: the farm feeds the rations that buy mine turns. <strong>Zone 3+ = open</strong> for now.<br>
+    <strong>The zones already exist in code</strong> (home, meadow, orchard · harbor, mirefen · quarry, caves, forge) — they are real but <em>undifferentiated</em>. The work is giving each a unique twist + balancing it, not inventing them.</p>
+  </div>
+
+  <h3>Systems to design / decide</h3>
+  <table>
+    <thead><tr><th>System</th><th>Where it stands in code</th><th>The decision</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Workers</strong> <span class="chip c-p1">critical</span></td><td>Real system exists: a global <code>villagers</code> pool, a ~30-entry worker catalog, hire/fire, and Housing's <code>worker_pool_step</code> (+1 villager/season). Workers already cut the <em>income</em> threshold — but <strong>not</strong> the on-board chain length (<code>effectiveMinChain</code> floors at 3, reads only the boss).</td><td>Wire <strong>houses → workers → shorter chains</strong> (the missing chain-length channel). Per-zone pool or global? Magnitudes?</td></tr>
+      <tr><td><strong>Building-ability specials</strong> <span class="chip c-wired">built</span></td><td>The engine is done &amp; live: 14+ effect types (turn budget, bonus yield, preserve board, grant tool, season bonus, threshold / recipe reductions, worker pool, …) flow through a mature aggregator across buildings / workers / tiles.</td><td>Not "build it" — <strong>assign specials to buildings per zone as balance levers</strong>, and add any new channel (chain-length; an active "Extra Turn").</td></tr>
+      <tr><td><strong>Zone completion / capstone</strong></td><td>Today: build enough + choose a keeper path → a biome Hearth-Token. No per-zone boss. The <code>fairground</code> node exists but is a stub; permanent <em>global</em> abilities do <strong>not</strong> exist yet (new machinery).</td><td>Reframe "sub-boss" as a <strong>big capstone project</strong> (e.g., launch a Fair)? Does completion grant a permanent ability (new engine) or stay token-only for the first two zones?</td></tr>
+      <tr><td><strong>Cross-zone value</strong></td><td>Inventory is siloed per zone. A Caravan Post + market already provide a costed trade channel.</td><td>Hybrid: permanent abilities / tokens (global) + a controlled Caravan <strong>trade valve</strong>. For the first two zones the value is mostly the intra-zone rations → mine-turns loop.</td></tr>
+      <tr><td><strong>Crafting substance</strong> <span class="chip c-open">open</span></td><td>Crafting is a silent instant button.</td><td>Give it weight via an <strong>in-game-time gate</strong> (ferments over a season); leaning toward an orchard fruit line. Pick the lever.</td></tr>
+      <tr><td><strong>Hazards</strong></td><td>Mine dangers (cave-in / gas / mole) exist on the quarry board.</td><td><strong>Zone 2's mine is hazard-free</strong> on purpose (a clean intro). Hazards become a <em>later-zone</em> complication — build a few twists first, placeholder the rest.</td></tr>
+      <tr><td><strong>Value spread &amp; coin pacing</strong> <span class="chip c-known">known</span></td><td>Value-per-tile spans ~10×; coins reach the founding price in ~2 runs.</td><td>Compress toward a 3–4× ceiling (the harness emits the change-list); make coins a soft secondary gate via the <strong>action-start cost</strong> (per-board entry coins). Defer the deep tune to the cross-zone sim.</td></tr>
+    </tbody>
+    <caption>Each row is "what's already in the code" vs "the call to make live" — so the conversation starts from reality, not a blank page.</caption>
+  </table>
+
+  <h3>Open questions to settle live</h3>
+  <ul>
+    <li><strong>Zone-2 board model.</strong> Can one settlement own <em>both</em> a farm and a mine board, and how does the player switch between them? (Today <code>home</code> is farm-only, <code>quarry</code> mine-only — feasibility unverified.)</li>
+    <li><strong>Zone roster &amp; twists.</strong> Keep all eight board zones or consolidate? What is each zone's one unique twist — and which two or three do we build first vs. leave as high-level placeholders?</li>
+    <li><strong>Token gate.</strong> Keep the existing "one of each biome (farm / mine / harbor) → finale," or move to an N-of-M choice?</li>
+    <li><strong>Worker pool.</strong> Per-zone or one global pool? How much chain-length reduction is healthy?</li>
+    <li><strong>Capstone scope.</strong> Build the Fair / capstone + permanent-ability engine now, or keep the first two zones on the existing keeper→token path and spec the capstone for zone 3+?</li>
+    <li><strong>Balance target.</strong> Confirm "feels balanced through the <em>founding of the third zone</em>" as the bar for this slice (perfection past that is out of scope).</li>
+    <li><strong>Next downstream wall.</strong> The quarry's top rung (Foundry City) still needs <code>gold_bar</code> it can't yet source — a Phase-D item, not a softlock. Address when we build the mine chain out.</li>
   </ul>
 </section>
 
@@ -544,16 +583,16 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
 <div class="panel" id="findings">
 
 <section>
-  <p class="kick">Headline finding · severity: blocker</p>
-  <h2>The progression softlock</h2>
-  <div class="call lock">
-    <h4>⚠ Home cannot progress past Outpost (tier 0) — a circular hard lock.</h4>
+  <p class="kick">Headline finding · severity: blocker · <span style="color:var(--moss)">RESOLVED 2026-06-23</span></p>
+  <h2>The progression softlock — fixed</h2>
+  <div class="call">
+    <h4>✓ Fixed. (Was: home could not progress past Outpost (tier 0) — a circular hard lock.)</h4>
     <p>Home's first rung (Hamlet) needs crafted <code>bread</code>; bread needs the <strong>Bakery</strong>, which both costs <code>block</code> (a mine good) <em>and</em> only unlocks <em>at</em> Hamlet — the rung it gates. Mine goods come only from the quarry, and the quarry carries <code>requiresZoneTier {home, tier 3 (City)}</code> — which itself needs mine goods. The dependency eats its own tail. A fresh save has no escape: orders/daily-rewards grant only coins, inventory is siloed per zone, and the market's buy UI is itself mine-gated.</p>
   </div>
-  <p>It is now <strong>code-derived</strong>, not just traced: the progression oracle (<code>src/playtest/progression.ts</code>) computes fresh-save reachability and pins the wall at home Outpost→Hamlet on <code>bread</code>. The live dependency ring, reachable-zone map, and per-zone walls are drawn from the code in the <a href="progression-timeline.html">progression dashboard →</a> (kept there so they can't drift; this doc owns the <em>narrative</em> and the <em>fix</em>).</p>
+  <p>The diagnosis was <strong>code-derived</strong>, not just traced: the progression oracle (<code>src/playtest/progression.ts</code>) computed fresh-save reachability and pinned the wall at home Outpost→Hamlet on <code>bread</code>. After the fix it reports <strong>no softlock</strong> — home reaches its full self-tier (3/3) and the whole spine opens. The live reachability map + per-zone walls are drawn from the code in the <a href="progression-timeline.html">progression dashboard →</a> (kept there so they can't drift; this doc owns the <em>narrative</em> and the <em>fix</em>).</p>
   <div class="call tip">
-    <h4>The fix — make Town 1 self-contained on farm goods <span class="chip c-ship">decided</span></h4>
-    <p>Re-cost the home tier ladder + the Bakery off <strong>all</strong> mine goods and unlock the Bakery at <strong>Outpost</strong>, so the farm→bread→tier-up loop closes on farm goods alone (mine goods first demanded in Town 2). Lever: <code>cartography/data.ts</code> <code>tiers[].upgradeCost</code> + <code>BUILDINGS[].cost</code>. This is the smallest change that flips the oracle RED→green; pair with a modest quarry-gate lowering so the mine opens by mid-Town-1.</p>
+    <h4>The fix — Town 1 made self-contained on farm goods <span class="chip c-done">APPLIED 2026-06-23</span></h4>
+    <p>Re-costed the home tier ladder + the Bakery off <strong>all</strong> mine goods and moved the Bakery's unlock to <strong>Outpost</strong>, so the farm→bread→tier-up loop closes on farm goods alone (mine goods are first demanded in Town 2). Concretely: Bakery <code>block:6 → hay_bundle:6</code> and unlock Hamlet→Outpost (<code>constants.ts</code> + <code>cartography/data.ts</code>); home Village &amp; City <code>upgradeCost</code> re-costed to farm goods only (<code>bread / pie / soup / eggs / plank / flour / hay_bundle</code>). The quarry gate stays at home = City — the new design wants Town 1 fully grown <em>before</em> Zone 2 (farm + mine) opens. <strong>Verified:</strong> the oracle flips RED→green, the reviewed baseline is re-accepted, and all 21 harness tests pass (progression-shape snapshot updated intentionally).</p>
   </div>
 </section>
 
@@ -561,9 +600,9 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
   <p class="kick">The other standing findings</p>
   <h2>Findings</h2>
   <div class="grid">
-    <div class="card warnL"><h4>Home progression circular lock <span class="chip c-block">BLOCKER</span></h4>
-      <p>The headline above. Almost certainly a regression from PR #1299 (zones-as-spine) not reconciling the authored home tier/building costs against the new gate.</p>
-      <span class="src">id: home-progression-circular-lock · lever: cartography/data.ts</span></div>
+    <div class="card mossL"><h4>Home progression circular lock <span class="chip c-done">RESOLVED</span></h4>
+      <p>Fixed 2026-06-23 (see headline). Was a regression from PR #1299 (zones-as-spine) not reconciling the authored home tier/building costs against the new gate. Town 1 now climbs Outpost→City on farm goods alone.</p>
+      <span class="src">id: home-progression-circular-lock · fix: cartography/data.ts + constants.ts</span></div>
     <div class="card goldL"><h4>Family-value spread ~10× <span class="chip c-known">KNOWN</span></h4>
       <p>Realized value-per-tile spans ~10× (<code>pearls</code> ≈ 133/tile vs <code>pie</code> ≈ 12.9/tile; &gt; 3× median flagged). The per-run harness emits a compression change-list toward a 3–4× ceiling.</p>
       <span class="src">id: family-value-spread · source: familyValueSpread</span></div>
@@ -587,7 +626,7 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
   <table>
     <thead><tr><th>Gap</th><th class="num">Phase</th><th>Status</th><th>What's needed</th></tr></thead>
     <tbody>
-      <tr><td><strong>The softlock fix</strong> — Town 1 self-contained on farm goods</td><td class="num">B</td><td><span class="chip c-missing">BLOCKER</span></td><td>re-cost home ladder + Bakery off mine goods; unlock Bakery at Outpost</td></tr>
+      <tr><td><strong>The softlock fix</strong> — Town 1 self-contained on farm goods</td><td class="num">B</td><td><span class="chip c-done">DONE</span></td><td>re-costed home ladder + Bakery off mine goods; Bakery unlocks at Outpost (2026-06-23)</td></tr>
       <tr><td><strong>The combination</strong> — food→mine-turns, raw vs crafted</td><td class="num">C</td><td><span class="chip c-partial">VERIFY</span></td><td>confirm Kitchen→supplies + raw-food fallback are wired and tuned as a soft gradient</td></tr>
       <tr><td><strong>Crafting substance</strong> — the open fork</td><td class="num">B–C</td><td><span class="chip c-open">UNDECIDED</span></td><td>pick juice + light in-game-time gate (recommended) vs real-time timer</td></tr>
       <tr><td><strong>Capstone boss placement</strong> — end of Town 2</td><td class="num">C</td><td><span class="chip c-partial">PARTIAL</span></td><td>bosses exist; the end-of-Town-2 encounter wiring is the build target</td></tr>
@@ -619,12 +658,12 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
   <table>
     <thead><tr><th>Milestone</th><th class="num">Target runs</th><th>Status today</th></tr></thead>
     <tbody>
-      <tr><td>home_found_2 — coins for founding #2</td><td class="num">6–15</td><td><span class="chip c-inv">~2 RUNS</span> coins arrive too fast to be the gate</td></tr>
-      <tr><td>home_tier1 — Hamlet</td><td class="num">3–8</td><td><span class="chip c-lock">UNREACHABLE</span> needs bread → Bakery → block</td></tr>
-      <tr><td>home_tier2 — Village</td><td class="num">10–20</td><td><span class="chip c-lock">UNREACHABLE</span> needs block / coke / silver_bar</td></tr>
-      <tr><td>home_tier3 — City <span class="chip c-known">MID-GAME</span></td><td class="num">20–35</td><td><span class="chip c-lock">UNREACHABLE</span> circular gate</td></tr>
+      <tr><td>home_found_2 — coins for founding #2</td><td class="num">6–15</td><td><span class="chip c-inv">~2 RUNS</span> coins still arrive too fast — a tuning item</td></tr>
+      <tr><td>home_tier1 — Hamlet</td><td class="num">3–8</td><td><span class="chip c-done">REACHABLE</span> bread now bakes from farm goods at Outpost</td></tr>
+      <tr><td>home_tier2 — Village</td><td class="num">10–20</td><td><span class="chip c-done">REACHABLE</span> re-costed to farm goods</td></tr>
+      <tr><td>home_tier3 — City <span class="chip c-known">MID-GAME</span></td><td class="num">20–35</td><td><span class="chip c-done">REACHABLE</span> full ladder opens on farm goods (run-count still to validate)</td></tr>
     </tbody>
-    <caption>profile.kpiTargets — bands worked backward from "mid-core ~2.5 sessions/day, steady ~1–2 weeks." Three of four are walled by the softlock today.</caption>
+    <caption>profile.kpiTargets — bands worked backward from "mid-core ~2.5 sessions/day, steady ~1–2 weeks." The softlock is cleared; the run-counts still need validating once the pacing sim crosses zones.</caption>
   </table>
 
   <h3>The harness — the deterministic sim</h3>
@@ -677,6 +716,12 @@ footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-fam
         <td><strong>Consolidated</strong> the Balance Profile into this single player-first doc (absorbed the journey doc; archived the older progression-redesign / zone-tier-ladder specs). Kept the code-generated progression dashboard as the separate live data view.</td>
         <td>One comprehensive, well-ordered document to track instead of several overlapping ones.</td>
         <td>This doc is the single authored source; the dashboard is the generated spine; <code>profile.json</code> is the machine config.</td>
+      </tr>
+      <tr>
+        <td class="num">2026-06-23</td>
+        <td><strong>Fixed the progression softlock</strong> (Town 1 self-contained on farm goods: Bakery off <code>block</code> + unlocked at Outpost; home Village/City re-costed to farm goods). Captured the next-session <strong>design agenda</strong>: BotW-style zone web, Zone 2 = farm+mine, workers→shorter-chains, the (already-built) building-ability specials layer, capstone/Fair completion, and the first-two-zones balance focus.</td>
+        <td>Unblock the spine so the journey can execute; tee up a focused working conversation on the rough game outline + zone identities.</td>
+        <td>Oracle RED→green (home 0/3→3/3, all board zones reachable); baseline re-accepted; 21/21 harness tests pass; lint/typecheck/build green. Direction recorded in the Overview agenda.</td>
       </tr>
       <tr><td colspan="4" style="text-align:center;color:var(--ink-faint);font-style:italic">— next pass appends here —</td></tr>
     </tbody>

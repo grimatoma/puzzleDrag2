@@ -399,17 +399,30 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
 {
   "oracle": {
     "freshSavePlayableBoards": [
+      "caves",
+      "forge",
+      "harbor",
       "home",
       "meadow",
+      "mirefen",
       "orchard",
+      "quarry",
     ],
     "freshSaveReachable": [
+      "caves",
       "crossroads",
+      "fairground",
+      "forge",
+      "harbor",
       "home",
       "meadow",
+      "mirefen",
       "orchard",
+      "pit",
+      "quarry",
     ],
     "homeProducible": [
+      "bread",
       "eggs",
       "flour",
       "hay_bundle",
@@ -425,32 +438,22 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       "exists": false,
       "note": "MARKET_PRICES lists block/iron_bar/coke/bread as buyable and BUY_RESOURCE does not itself check the caravan post, but the buy UI is shown only once caravan_post is built (Inventory.tsx) — and caravan_post costs block+iron_bar. So the market is a latent escape valve that is itself mine-gated. Opening it (an early buyable starter good, or ungating the buy UI) is the cheapest lever.",
     },
-    "softlock": {
-      "blockedRung": "Hamlet",
-      "isLocked": true,
-      "primaryMissing": [
-        "bread",
-      ],
-      "stuckTier": 0,
-      "stuckTierName": "Outpost",
-      "stuckZone": "home",
-      "summary": "A fresh save can reach only 3 playable board(s) (home, meadow, orchard) — all farm. Home, the progression spine, cannot climb past Outpost (tier 0): the Hamlet rung needs bread, which home can neither produce nor craft. Every mine/fish zone that could supply those goods is gated behind the quarry (home tier 3), and the home ladder itself demands mine goods from tier 2 on — a circular lock with no first step.",
-    },
+    "softlock": null,
     "walls": [
       {
         "wall": {
           "missing": [
             {
-              "key": "bread",
-              "reason": "crafted at the Bakery, whose own build cost needs block (also unobtainable here)",
+              "key": "gold_bar",
+              "reason": "no source reachable from this settlement's board or stations",
             },
           ],
-          "reachedName": "Outpost",
-          "reachedTier": 0,
-          "toName": "Hamlet",
-          "toTier": 1,
+          "reachedName": "Smeltworks",
+          "reachedTier": 4,
+          "toName": "Foundry City",
+          "toTier": 5,
         },
-        "zone": "home",
+        "zone": "quarry",
       },
     ],
   },
@@ -458,14 +461,9 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
     {
       "gate": null,
       "id": "home",
-      "maxSelfTier": 0,
+      "maxSelfTier": 3,
       "reachableFromFreshSave": true,
-      "wall": {
-        "missing": [
-          "bread",
-        ],
-        "toName": "Hamlet",
-      },
+      "wall": null,
     },
     {
       "gate": null,
@@ -495,7 +493,7 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       },
       "id": "quarry",
       "maxSelfTier": 4,
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "wall": {
         "missing": [
           "gold_bar",
@@ -510,14 +508,14 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       },
       "id": "caves",
       "maxSelfTier": 0,
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "wall": null,
     },
     {
       "gate": null,
       "id": "fairground",
       "maxSelfTier": 0,
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "wall": null,
     },
     {
@@ -527,14 +525,14 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       },
       "id": "forge",
       "maxSelfTier": 0,
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "wall": null,
     },
     {
       "gate": null,
       "id": "pit",
       "maxSelfTier": 0,
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "wall": null,
     },
     {
@@ -544,14 +542,14 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       },
       "id": "harbor",
       "maxSelfTier": 0,
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "wall": null,
     },
     {
       "gate": null,
       "id": "mirefen",
       "maxSelfTier": 3,
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "wall": null,
     },
     {

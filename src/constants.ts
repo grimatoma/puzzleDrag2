@@ -785,7 +785,7 @@ export const BUILDINGS = [
   { id: "hearth", name: "Hearth", desc: "The heart of the village. Keeps folk warm and anchors the community.", cost: { coins: 0 }, lv: 1, x: 60, y: 360, w: 90, h: 110, look: { color: "#a8431a" } },
   { id: "mill", name: "Mill", desc: "Grinds and sorts harvest goods — reduces the flour needed to bake bread by 1.", cost: { plank: 6, bread: 8, block: 2, iron_bar: 8 }, lv: 1, x: 200, y: 380, w: 80, h: 90, look: { color: "#c8923a" },
     abilities: [{ id: "recipe_input_reduce", params: { recipe: "rec_bread", input: "flour", amount: 1 } }] },
-  { id: "bakery", name: "Bakery", desc: "Craft baked goods — bread, honey rolls, harvest pies — to sell for coins.", cost: { plank: 8, block: 6, eggs: 4 }, lv: 1, x: 320, y: 360, w: 100, h: 110, look: { color: "#8a4a26" } },
+  { id: "bakery", name: "Bakery", desc: "Craft baked goods — bread, honey rolls, harvest pies — to sell for coins.", cost: { plank: 8, hay_bundle: 6, eggs: 4 }, lv: 1, x: 320, y: 360, w: 100, h: 110, look: { color: "#8a4a26" } },
   { id: "inn", name: "Inn", desc: "A warm roadside inn where travellers rest by the fire.", cost: { plank: 8, hay_bundle: 4, bread: 3 }, lv: 2, x: 470, y: 350, w: 110, h: 130, look: { color: "#4f6b3a" } },
   {
     id: "granary",

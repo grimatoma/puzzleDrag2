@@ -514,6 +514,7 @@
           "unlocks": [
             "hearth",
             "mill",
+            "bakery",
             "granary",
             "inn"
           ]
@@ -531,7 +532,6 @@
           },
           "unlocks": [
             "larder",
-            "bakery",
             "housing",
             "silo"
           ]
@@ -541,15 +541,12 @@
           "name": "Village",
           "plots": 12,
           "upgradeCost": {
-            "eggs": 10,
-            "soup": 12,
-            "meat": 2,
-            "block": 20,
-            "coke": 14,
-            "silver_bar": 14,
-            "milk": 1,
-            "cocoa": 2,
-            "ink": 2
+            "eggs": 12,
+            "soup": 14,
+            "bread": 16,
+            "pie": 6,
+            "plank": 14,
+            "hay_bundle": 10
           },
           "unlocks": [
             "stable",
@@ -568,16 +565,12 @@
           "name": "City",
           "plots": 20,
           "upgradeCost": {
-            "honey": 3,
-            "horseshoe": 3,
-            "block": 20,
-            "coke": 10,
-            "cut_gem": 4,
-            "gold_bar": 13,
-            "ink": 2,
-            "iron_bar": 30,
-            "jade": 1,
-            "pearls": 1
+            "bread": 28,
+            "pie": 14,
+            "soup": 18,
+            "eggs": 18,
+            "plank": 18,
+            "flour": 12
           },
           "unlocks": [
             "workshop",
@@ -597,19 +590,8 @@
         }
       ],
       "reachableFromFreshSave": true,
-      "maxSelfTier": 0,
-      "wall": {
-        "reachedTier": 0,
-        "reachedName": "Outpost",
-        "toTier": 1,
-        "toName": "Hamlet",
-        "missing": [
-          {
-            "key": "bread",
-            "reason": "crafted at the Bakery, whose own build cost needs block (also unobtainable here)"
-          }
-        ]
-      }
+      "maxSelfTier": 3,
+      "wall": null
     },
     {
       "id": "meadow",
@@ -768,7 +750,7 @@
           ]
         }
       ],
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "maxSelfTier": 4,
       "wall": {
         "reachedTier": 4,
@@ -801,7 +783,7 @@
       },
       "requiresHearthTokens": false,
       "tiers": [],
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "maxSelfTier": 0,
       "wall": null
     },
@@ -818,7 +800,7 @@
       "gate": null,
       "requiresHearthTokens": false,
       "tiers": [],
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "maxSelfTier": 0,
       "wall": null
     },
@@ -840,7 +822,7 @@
       },
       "requiresHearthTokens": false,
       "tiers": [],
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "maxSelfTier": 0,
       "wall": null
     },
@@ -857,7 +839,7 @@
       "gate": null,
       "requiresHearthTokens": false,
       "tiers": [],
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "maxSelfTier": 0,
       "wall": null
     },
@@ -879,7 +861,7 @@
       },
       "requiresHearthTokens": false,
       "tiers": [],
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "maxSelfTier": 0,
       "wall": null
     },
@@ -955,7 +937,7 @@
           ]
         }
       ],
-      "reachableFromFreshSave": false,
+      "reachableFromFreshSave": true,
       "maxSelfTier": 3,
       "wall": null
     },
@@ -1041,17 +1023,30 @@
   ],
   "oracle": {
     "freshSaveReachable": [
+      "caves",
       "crossroads",
+      "fairground",
+      "forge",
+      "harbor",
       "home",
       "meadow",
-      "orchard"
+      "mirefen",
+      "orchard",
+      "pit",
+      "quarry"
     ],
     "freshSavePlayableBoards": [
+      "caves",
+      "forge",
+      "harbor",
       "home",
       "meadow",
-      "orchard"
+      "mirefen",
+      "orchard",
+      "quarry"
     ],
     "homeProducible": [
+      "bread",
       "eggs",
       "flour",
       "hay_bundle",
@@ -1065,32 +1060,22 @@
     ],
     "walls": [
       {
-        "zone": "home",
+        "zone": "quarry",
         "wall": {
-          "reachedTier": 0,
-          "reachedName": "Outpost",
-          "toTier": 1,
-          "toName": "Hamlet",
+          "reachedTier": 4,
+          "reachedName": "Smeltworks",
+          "toTier": 5,
+          "toName": "Foundry City",
           "missing": [
             {
-              "key": "bread",
-              "reason": "crafted at the Bakery, whose own build cost needs block (also unobtainable here)"
+              "key": "gold_bar",
+              "reason": "no source reachable from this settlement's board or stations"
             }
           ]
         }
       }
     ],
-    "softlock": {
-      "isLocked": true,
-      "stuckZone": "home",
-      "stuckTier": 0,
-      "stuckTierName": "Outpost",
-      "blockedRung": "Hamlet",
-      "primaryMissing": [
-        "bread"
-      ],
-      "summary": "A fresh save can reach only 3 playable board(s) (home, meadow, orchard) — all farm. Home, the progression spine, cannot climb past Outpost (tier 0): the Hamlet rung needs bread, which home can neither produce nor craft. Every mine/fish zone that could supply those goods is gated behind the quarry (home tier 3), and the home ladder itself demands mine goods from tier 2 on — a circular lock with no first step."
-    },
+    "softlock": null,
     "marketEscape": {
       "exists": false,
       "note": "MARKET_PRICES lists block/iron_bar/coke/bread as buyable and BUY_RESOURCE does not itself check the caravan post, but the buy UI is shown only once caravan_post is built (Inventory.tsx) — and caravan_post costs block+iron_bar. So the market is a latent escape valve that is itself mine-gated. Opening it (an early buyable starter good, or ungating the buy UI) is the cheapest lever."

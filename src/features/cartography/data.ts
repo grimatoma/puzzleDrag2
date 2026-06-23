@@ -252,16 +252,17 @@ export const MAP_NODES: MapNode[] = [
     // Plots grow 3 → 6 → 12 → 20. Each rung absorbs one or two rungs of the old
     // 6-rung PC2 Camp→Manor ladder: its `unlocks` are the union of the absorbed
     // rungs (so the cumulative union still equals `buildings[]`, test-enforced)
-    // and its `upgradeCost` is the SUM of the absorbed rungs' costs, so the total
-    // resource climb to City is unchanged. Costs are resource-only (coins=0).
+    // and its `upgradeCost` is FARM-ONLY (softlock fix, 2026-06-23): Town 1 climbs
+    // Outpost→City on farm goods alone — mine goods first appear in Town 2 — so the
+    // farm→bread→tier-up loop cannot deadlock. Costs are resource-only (coins=0).
     tiers: [
       {
         id: "outpost", name: "Outpost", plots: 3,
-        unlocks: [BuildingId.Hearth, BuildingId.Mill, BuildingId.Granary, BuildingId.Inn],
+        unlocks: [BuildingId.Hearth, BuildingId.Mill, BuildingId.Bakery, BuildingId.Granary, BuildingId.Inn],
       },
       {
         id: "hamlet", name: "Hamlet", plots: 6,
-        unlocks: [BuildingId.Larder, BuildingId.Bakery, BuildingId.Housing, BuildingId.Silo],
+        unlocks: [BuildingId.Larder, BuildingId.Housing, BuildingId.Silo],
         upgradeCost: { resources: { hay_bundle: 3, plank: 5, bread: 10, eggs: 4, soup: 2 } },
       },
       {
@@ -270,7 +271,7 @@ export const MAP_NODES: MapNode[] = [
           BuildingId.Stable, BuildingId.Apiary, BuildingId.Sawmill, BuildingId.Watchtower,
           BuildingId.Brewery, BuildingId.Chapel, BuildingId.Housing2, BuildingId.Apothecary, BuildingId.Kitchen,
         ],
-        upgradeCost: { resources: { eggs: 10, soup: 12, meat: 2, block: 20, coke: 14, silver_bar: 14, milk: 1, cocoa: 2, ink: 2 } },
+        upgradeCost: { resources: { eggs: 12, soup: 14, bread: 16, pie: 6, plank: 14, hay_bundle: 10 } },
       },
       {
         id: "city", name: "City", plots: 20,
@@ -279,7 +280,7 @@ export const MAP_NODES: MapNode[] = [
           BuildingId.PowderStore, BuildingId.Portal, BuildingId.Observatory, BuildingId.Lighthouse,
           BuildingId.Barn, BuildingId.HarborDock, BuildingId.Fishmonger, BuildingId.Smokehouse,
         ],
-        upgradeCost: { resources: { honey: 3, horseshoe: 3, block: 20, coke: 10, cut_gem: 4, gold_bar: 13, ink: 2, iron_bar: 30, jade: 1, pearls: 1 } },
+        upgradeCost: { resources: { bread: 28, pie: 14, soup: 18, eggs: 18, plank: 18, flour: 12 } },
       },
     ],
   },
