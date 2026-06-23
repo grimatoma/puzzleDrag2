@@ -13,6 +13,7 @@ import {
   runPlaytest,
   runCampaign,
   buildProgressionSpine,
+  diffSpines,
   familyValueSpread,
   buildChainCollectedPayload,
   type Chain,
@@ -221,6 +222,59 @@ describe("progression spine — code-derived oracle", () => {
       oracle: spine.oracle,
     };
     expect(snapshot).toMatchSnapshot();
+  });
+});
+
+describe("progression spine — cross-run diff", () => {
+  const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x)) as T;
+
+  it("no baseline → establishing (not a change)", () => {
+    const d = diffSpines(null, buildProgressionSpine());
+    expect(d.hasBaseline).toBe(false);
+    expect(d.unchanged).toBe(true);
+    expect(d.changes).toHaveLength(0);
+  });
+
+  it("identical spines → no changes", () => {
+    const spine = buildProgressionSpine();
+    const d = diffSpines(clone(spine), spine);
+    expect(d.unchanged).toBe(true);
+    expect(d.changes).toHaveLength(0);
+  });
+
+  it("classifies a cleared softlock as critical and a tier-cost edit as minor", () => {
+    const current = buildProgressionSpine();
+    const baseline = clone(current);
+    // Baseline = a prior state with no softlock and a cheaper Hamlet rung; current
+    // = the real locked spine. The diff is current-vs-baseline.
+    baseline.oracle.softlock = null;
+    const ham = baseline.zones.find((z) => z.id === "home")!.tiers.find((t) => t.id === "hamlet")!;
+    delete ham.upgradeCost.bread;
+
+    const d = diffSpines(baseline, current);
+    expect(d.unchanged).toBe(false);
+    const softlock = d.changes.find((c) => c.path === "oracle.softlock");
+    expect(softlock?.severity).toBe("critical");
+    expect(softlock?.before).toBe("none");
+    expect(softlock?.after).toContain("bread");
+    const tierCost = d.changes.find((c) => c.path === "zone:home.tier:hamlet.cost");
+    expect(tierCost?.severity).toBe("minor");
+    expect(tierCost?.after).toContain("bread:10");
+    // Severity counts are tallied for the dashboard banner.
+    expect(d.counts.critical).toBeGreaterThanOrEqual(1);
+    // Sorted critical-first.
+    expect(d.changes[0].severity).toBe("critical");
+  });
+
+  it("a newly reachable zone is a critical change (the fix-opened-the-spine signal)", () => {
+    const current = buildProgressionSpine();
+    const baseline = clone(current);
+    // Pretend the quarry was unreachable in the baseline; now it's reachable.
+    const q = baseline.zones.find((z) => z.id === "quarry")!;
+    q.reachableFromFreshSave = !current.zones.find((z) => z.id === "quarry")!.reachableFromFreshSave;
+    const d = diffSpines(baseline, current);
+    const reach = d.changes.find((c) => c.path === "zone:quarry.reachable");
+    expect(reach?.severity).toBe("critical");
   });
 });
 

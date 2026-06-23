@@ -617,6 +617,18 @@ function, so the picture *cannot* diverge from the build. Then:
   arrives as collateral from a *structural* progression rework, not a deliberate
   number change — so a guard that watches the shape, not the values, is what
   catches it.)
+- **Diff it across runs** — a balance pass is iterative, so the map must be a
+  *living instrument*, not a one-time snapshot. Keep a committed **baseline** of
+  the last *reviewed* spine; on every regeneration, diff the fresh spine against
+  it and surface **what moved** — did the softlock clear, did a zone become
+  reachable, did a tier cost change — classified by significance (a created/
+  cleared softlock or a reachability flip is *critical*; a gate or wall move is
+  *major*; a cost tweak is *minor*). Render changed facts as **outdated** in the
+  report (strike the old value, show the new) so a stale claim reads as stale at a
+  glance, and promote the baseline only on an explicit **review/accept** step (the
+  snapshot-test model: see the diff, then accept). This closes the loop: change a
+  number → regenerate → the map tells you, in the designer's own terms, exactly
+  what your change did to the journey.
 
 ### How to read it with the designer
 

@@ -183,7 +183,10 @@ artifact — handbook §10). Its measurement harness is the seeded playtest rig:
   milestone + the tier-stall finding, by actually playing);
 - `npm run playtest -- --progression` — the *structural* spine: fresh-save reachability + the per-zone
   siloed oracle + softlock detection, derived from the constants (no runs played). Rewrites the
-  progression-timeline data block and emits `progression.json`. Guarded by the progression-shape snapshot
-  in `src/__tests__/playtest-harness.test.ts`.
+  progression-timeline data block and emits `progression.json`. Also **diffs against the committed
+  baseline** (`reference/docs/balance/progression.baseline.json`) and flags what changed since the last
+  review — the dashboard marks changed facts as outdated. Once reviewed, `--progression --accept` promotes
+  the current spine to the baseline. Guarded by the progression-shape + diff snapshots in
+  `src/__tests__/playtest-harness.test.ts`.
 
 Load the Profile to resume a balance pass there.

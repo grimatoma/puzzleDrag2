@@ -495,3 +495,131 @@ export function renderProgressionReport(spine: ProgressionSpine): string {
   L.push("");
   return L.join("\n");
 }
+
+// ── Cross-run diff — detect what changed vs the last reviewed baseline ────────
+//
+// `--progression` re-derives the spine every run; this diffs the fresh spine
+// against the committed BASELINE (reference/docs/balance/progression.baseline.json
+// — the last state a human signed off on) so a balance pass can SEE what moved:
+// did the softlock clear, did a zone become reachable, did a tier cost change. The
+// report and dashboard then mark changed facts so stale claims read as outdated.
+// `--progression --accept` promotes the current spine to the baseline once the
+// changes have been reviewed (the snapshot-test model: review, then accept).
+
+export type ChangeSeverity = "critical" | "major" | "minor" | "structural";
+
+export interface SpineChange {
+  severity: ChangeSeverity;
+  category: string;
+  /** Stable key identifying the fact (e.g. `zone:home.tier:hamlet.cost`). */
+  path: string;
+  /** Human identity of the fact (e.g. "Hearthwood Vale → Hamlet cost"). */
+  name: string;
+  kind: "added" | "removed" | "changed";
+  before: string | null;
+  after: string | null;
+}
+
+export interface ProgressionDiff {
+  hasBaseline: boolean;
+  unchanged: boolean;
+  counts: Record<ChangeSeverity, number>;
+  changes: SpineChange[];
+  headline: string;
+}
+
+interface Fact { value: string; severity: ChangeSeverity; category: string; name: string; }
+
+/** Flatten a spine to comparable, balance-relevant facts keyed by a stable path. */
+function spineFacts(spine: ProgressionSpine): Map<string, Fact> {
+  const f = new Map<string, Fact>();
+  const put = (path: string, value: string | number | boolean, severity: ChangeSeverity, category: string, name: string) =>
+    f.set(path, { value: String(value), severity, category, name });
+
+  const sl = spine.oracle.softlock;
+  put("oracle.softlock", sl ? `${sl.stuckZone}@${sl.stuckTierName} — ${sl.blockedRung} needs ${sl.primaryMissing.join("+")}` : "none",
+    "critical", "softlock", "Softlock");
+
+  for (const z of spine.zones) {
+    // Reachability is the highest-signal balance fact: what content is actually
+    // attainable. A fix that opens the spine flips several of these at once.
+    put(`zone:${z.id}.reachable`, z.reachableFromFreshSave ? "reachable" : "locked", "critical", "reachability", `${z.name} (fresh-save reach)`);
+    put(`zone:${z.id}.gate`, z.requiresHearthTokens ? "hearth-tokens" : z.gate ? `${z.gate.zone} ≥ t${z.gate.tier}` : "none", "major", "gate", `${z.name} gate`);
+    put(`zone:${z.id}.wall`, z.wall ? `${z.wall.reachedName}→${z.wall.toName} needs ${z.wall.missing.map((m) => m.key).join("+")}` : "none", "major", "wall", `${z.name} wall`);
+    if (z.tiers.length) {
+      put(`zone:${z.id}.maxSelfTier`, `${z.maxSelfTier}/${z.tiers.length - 1}`, "major", "self-tier", `${z.name} reachable self-tier`);
+    }
+    put(`zone:${z.id}.entry`, `${z.entryCoins}c`, "minor", "entry-cost", `${z.name} entry cost`);
+    for (const t of z.tiers) {
+      const cost = Object.entries(t.upgradeCost).sort(([a], [b]) => a.localeCompare(b)).map(([k, v]) => `${k}:${v}`).join(", ") || "free";
+      put(`zone:${z.id}.tier:${t.id}.cost`, cost, "minor", "tier-cost", `${z.name} → ${t.name} cost`);
+    }
+  }
+  for (const r of spine.recipes) {
+    put(`recipe:${r.item}`, `${r.station}/t${r.tier}/${[...r.inputs].sort().join("+")}`, "minor", "recipe", `Recipe: ${r.item}`);
+  }
+  return f;
+}
+
+const SEVERITY_ORDER: Record<ChangeSeverity, number> = { critical: 0, major: 1, minor: 2, structural: 3 };
+
+/** Diff the current spine against a baseline (the last reviewed state). Pure. */
+export function diffSpines(baseline: ProgressionSpine | null, current: ProgressionSpine): ProgressionDiff {
+  const counts: Record<ChangeSeverity, number> = { critical: 0, major: 0, minor: 0, structural: 0 };
+  if (!baseline) {
+    return {
+      hasBaseline: false, unchanged: true, counts, changes: [],
+      headline: "No baseline yet — establishing one now. Future runs will diff against it.",
+    };
+  }
+  const base = spineFacts(baseline);
+  const cur = spineFacts(current);
+  const changes: SpineChange[] = [];
+  for (const key of new Set([...base.keys(), ...cur.keys()])) {
+    const b = base.get(key);
+    const c = cur.get(key);
+    if (b && c) {
+      if (b.value !== c.value) {
+        changes.push({ severity: c.severity, category: c.category, path: key, name: c.name, kind: "changed", before: b.value, after: c.value });
+        counts[c.severity]++;
+      }
+    } else if (c) {
+      // A fact present now but not in the baseline — a new zone/tier/recipe.
+      changes.push({ severity: "structural", category: c.category, path: key, name: c.name, kind: "added", before: null, after: c.value });
+      counts.structural++;
+    } else if (b) {
+      changes.push({ severity: "structural", category: b.category, path: key, name: b.name, kind: "removed", before: b.value, after: null });
+      counts.structural++;
+    }
+  }
+  changes.sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity] || a.path.localeCompare(b.path));
+  const unchanged = changes.length === 0;
+  const headline = unchanged
+    ? "Spine unchanged since the last reviewed baseline."
+    : `${changes.length} change(s) since last review — ${counts.critical} critical, ${counts.major} major, ${counts.minor} minor` +
+      (counts.structural ? `, ${counts.structural} structural` : "") + ".";
+  return { hasBaseline: true, unchanged, counts, changes, headline };
+}
+
+/** Markdown for the diff section (appended to the progression report). */
+export function renderProgressionDiff(diff: ProgressionDiff): string {
+  const L: string[] = [];
+  L.push("## Changes since last review");
+  L.push("");
+  if (!diff.hasBaseline) { L.push(`_${diff.headline}_`); L.push(""); return L.join("\n"); }
+  L.push((diff.unchanged ? "✓ " : "⚠ ") + diff.headline);
+  L.push("");
+  if (diff.unchanged) return L.join("\n");
+  L.push("Facts that moved vs the committed baseline. Anything below is **outdated** in the prior" +
+    " report. Once reviewed, run `npm run playtest -- --progression --accept` to make this the new" +
+    " baseline (clears the flags).");
+  L.push("");
+  L.push("| Severity | What | Before | After |");
+  L.push("|---|---|---|---|");
+  for (const c of diff.changes) {
+    const what = c.kind === "added" ? `NEW · ${c.name}` : c.kind === "removed" ? `REMOVED · ${c.name}` : c.name;
+    L.push(`| ${c.severity} | ${what} | ${c.before ?? "—"} | ${c.after ?? "—"} |`);
+  }
+  L.push("");
+  return L.join("\n");
+}

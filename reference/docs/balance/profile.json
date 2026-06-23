@@ -66,8 +66,9 @@
   "harness": {
     "perRun": "npm run playtest -- --zones home --runs 10 --seed 1   (coins/run, coins/turn, family-value spread, change-list)",
     "campaign": "npm run playtest -- --campaign --zones home --runs 30 --seed 1   (runs-to-coin-milestone + tier-stall pacing, by playing)",
-    "progression": "npm run playtest -- --progression   (CODE-DERIVED spine: fresh-save reachability + per-zone siloed oracle + softlock detection, no runs played. Rewrites reference/docs/balance/progression-timeline.html data block + emits progression.json)",
-    "progressionMap": "reference/docs/balance/progression-timeline.html   (the interactive alignment artifact — handbook §10)",
+    "progression": "npm run playtest -- --progression   (CODE-DERIVED spine: fresh-save reachability + per-zone siloed oracle + softlock detection, no runs played. Rewrites the progression-timeline SPINE+DIFF blocks + emits progression.json/progression-diff.json)",
+    "progressionDiff": "every --progression run diffs the fresh spine vs the committed baseline (reference/docs/balance/progression.baseline.json — the last REVIEWED spine, tracked) and flags what moved since (softlock created/cleared + reachability flips = critical; gate/wall = major; cost tweak = minor); the dashboard marks changed facts OUTDATED. `--progression --accept` promotes current → baseline (the snapshot-test model: review the diff, then accept).",
+    "progressionMap": "reference/docs/balance/progression-timeline.html   (the interactive alignment artifact — handbook §10; Overview banner + Changes tab show the cross-run diff)",
     "tests": "npx vitest run src/__tests__/playtest-harness.test.ts   (determinism + per-run/campaign/progression-shape snapshot drift guards)",
     "code": "src/playtest/  (run.ts per-run loop, campaign.ts pacing loop, progression.ts structural oracle, metrics.ts spread, targets.ts bands)",
     "knownGap": "the campaign PACING sim is FARM-board-only and doesn't model crafting/buildings/mine, so it can't yet validate a stall FIX end-to-end by playing. The progression.ts oracle now covers the STRUCTURE (reachability + softlock) statically and pins it in CI; extending the pacing sim to cross zones is the remaining tooling task."

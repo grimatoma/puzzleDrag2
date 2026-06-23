@@ -14,6 +14,7 @@ npm run playtest -- --zones home --runs 10 --seed 1 --out reference/docs/playtes
 #        --rows <n>  --cols <n>  --out <dir>  --no-write
 #        --campaign      sequential progression PACING (runs-to-milestone + tier stall)
 #        --progression   code-derived STRUCTURE (reachability + per-zone oracle + softlock)
+#        --accept        (with --progression) promote the current spine to the baseline
 ```
 
 Three modes:
@@ -26,10 +27,21 @@ Three modes:
   the constants (`MAP_NODES`/`BUILDINGS`/`RECIPES`): fresh-save zone reachability, a
   **per-zone siloed** affordability oracle, and **softlock detection** (a circular /
   unreachable gate). Writes `progression.json` / `progression-report.md` and refreshes
-  the inlined data block in `reference/docs/balance/progression-timeline.html` (the
-  interactive [progression map](../balance/progression-timeline.html)). The structural
+  the inlined `SPINE` + `DIFF` data blocks in `reference/docs/balance/progression-timeline.html`
+  (the interactive [progression map](../balance/progression-timeline.html)). The structural
   guard is the progression-shape snapshot in the harness test — a constant edit that
   re-gates a zone or re-opens the softlock breaks it intentionally.
+
+  **Cross-run diff.** Every `--progression` run also diffs the fresh spine against the
+  committed **baseline** `reference/docs/balance/progression.baseline.json` (the last
+  *reviewed* state — tracked, not git-ignored) and reports **what moved** since then,
+  classified by severity (a created/cleared softlock or a reachability flip is critical;
+  a gate/wall move is major; a cost tweak is minor). The report and dashboard mark changed
+  facts as **outdated** (struck-through old value → new), so during a tuning loop you see
+  exactly what a constant change did to the journey. Writes `progression-diff.json` /
+  `progression-diff.md`. Once the changes are reviewed, **`--progression --accept`** promotes
+  the current spine to the baseline (the snapshot-test model: see the diff, then accept).
+  The diff logic is unit-tested in the harness test.
 
 This writes four (git-ignored) artifacts into this folder:
 
