@@ -8,6 +8,7 @@
  * accent stays config-synced.
  *
  * Section grouping (from wikiNav.ts WIKI_SECTIONS):
+ *   systems    — steel blue   (#46627a — the "how it works" hub)
  *   board      — earthy green  (UI_COLORS.green: #5a9e4b)
  *   economy    — ember/amber   (brand family: #d6612a / #c97c20)
  *   world      — plum/berry    (#7e7aa6 / violet, deepened)
@@ -32,6 +33,7 @@ export const ACCENT_EMBER = "#d6612a";
 // palette-coherent derivative. No purple-on-white; no rainbow.
 
 const SECTION_ACCENT: Record<string, string> = {
+  systems:     "#46627a",         // steel blue — cool & structural, distinct from the rest
   board:       UI_COLORS.green,   // #5a9e4b — earthy, naturalistic
   economy:     "#c97c20",         // amber — stays in the ember/warm family, clearly distinct
   world:       "#7e6aa6",         // intentional deepening of UI_COLORS.violet (#7e7aa6)

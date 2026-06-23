@@ -188,6 +188,9 @@ const KNOWN_NULL_CONCEPTS: ReadonlySet<string> = new Set([
   "keepers",
   "boons",
   "dailyRewards",
+  // Curated mechanics hub — prose-first pages, no structured Zod schema
+  // (the article falls back to LiveConfigFallback like the others above).
+  "systems",
 ]);
 
 describe("conceptSchemas — exhaustive CONCEPTS coverage", () => {

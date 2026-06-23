@@ -189,6 +189,10 @@ export function ledeFor(conceptId: string, key: string, entity: Rec): string {
       s = `${name} is a modal surface.`;
       break;
 
+    case "systems":
+      s = String(entity?.blurb ?? `${name} is one of the game's core systems.`);
+      break;
+
     default:
       s = `${name}.`;
   }
