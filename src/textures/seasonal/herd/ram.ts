@@ -1,22 +1,29 @@
-// Seasonal art for the HERD RAM board tile (`tile_herd_ram`).
+// Production seasonal art for the HERD RAM board tile (`tile_herd_ram`) — the
+// approved BOLD direction, the horned counterpart to the sheep. A single
+// parameterized `paint(ctx, p, pose)` + four `P` presets + lerped transitions,
+// pushed so the seasons read at a glance and the idle is a real, fun ACTION
+// rather than a subtle breath.
 //
-// A SINGLE parameterized paint renders the whole tile (grass pad + the one
-// sturdy woolly ram + seasonal dressing) from a tweenable parameter set `P`.
-// The four seasons are just four `P` presets; the three forward transitions
-// lerp EVERY field of `P` through a quintic smoothstep, so transition(0) ===
-// the from-season still and transition(1) === the to-season still — no snap.
+// PALETTE LOCK: it is ALWAYS the same cream-fleeced, dark-faced ram with big
+// spiralling CURLED HORNS on the sides of its head. Seasons change only its
+// fleece VOLUME (recently-shorn thin in spring → thick fluffy winter fleece),
+// the pad colour, the light wash, and BOLD dressing — snow on the back, a little
+// winter SCARF, a breath-fog puff, blossoms, a fallen leaf, frost (which also
+// dusts the horns). The ram's identity colours and curled-horn silhouette never
+// change for any `P` (only fleece volume scales the wool).
 //
-// PALETTE LOCK: the ram is ALWAYS the same cream-fleeced, broad-faced ram with
-// big spiralling CURLED HORNS on the sides of its head. Seasons change only its
-// fleece VOLUME (lighter recently-shorn slimmer fleece in spring → heavy thick
-// puffed wool in winter), the pad colour, the light wash, and dressing (blossom,
-// fallen leaves, frost, frosted horns, back-snow, breath-fog). The horns and
-// the ram's cream identity colour never change — winter only frosts them.
+// IDLE (two-tier occasional action, carried through a `pose` object):
+//   • COMMON ~6s (win ~0.9–1.0s): a CHEW — head/jaw bobs ~8–12px as it chews,
+//     with an ear-flick, a tail wag and a small body squash.
+//   • RARE  ~18s (win ~1.1–1.3s, phase +3s): a HEAD-BUTT charge feint — the ram
+//     lowers its horned head and lunges forward ~14–18px then rocks back
+//     (anticipation pull-back → butt → settle). It may exit the box at the apex.
+// Both gestures return to REST with zero value AND zero velocity at the window
+// edges (raised-cosine windows), so `anim(…, t)` is seamless and `anim(…, 0)`
+// (and `draw`) sit exactly at rest.
 //
-// Origin-centered in the −24..+24 design box. Animations are deterministic
-// (sin/cos/modulo of `t` in seconds), seamless, and subtle. The subject's
-// breathing bob has zero velocity at t=0 (A*(1-cos(w t))*0.5) so anim(…,0)
-// matches the still exactly.
+// Origin-centered in the −24..+24 design box. Deterministic in `t` (seconds).
+// Never throws; clamps every scalar; save/restore + globalAlpha reset.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
 import { SEASON_NAMES, type SeasonName } from "../types.js";
@@ -29,6 +36,11 @@ function clamp01(x: number): number {
   return x < 0 ? 0 : x > 1 ? 1 : x;
 }
 
+// coerce any non-finite scalar to a safe fallback (never throw / never NaN)
+function safeNum(x: number, fallback = 0): number {
+  return Number.isFinite(x) ? x : fallback;
+}
+
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
@@ -37,7 +49,7 @@ function lerpRGB(a: RGB, b: RGB, t: number): RGB {
   return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 }
 
-function rgb(c: RGB, a = 1): string {
+function rgba(c: RGB, a = 1): string {
   const r = Math.round(clamp01(c[0] / 255) * 255);
   const g = Math.round(clamp01(c[1] / 255) * 255);
   const b = Math.round(clamp01(c[2] / 255) * 255);
@@ -49,10 +61,107 @@ function smoother(x: number): number {
   return x * x * x * (x * (6 * x - 15) + 10);
 }
 
-// breathing bob: A*(1-cos(w t))*0.5 — value AND velocity are 0 at t=0,
-// seamless over a 2π/w period, peak amplitude A.
-function bobAt(t: number, amp = 1.1, w = 1.5): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+// Two-tier occasional-action clock. Returns a phase in [0,1) WITHIN the action
+// window (the fraction of the way through the gesture), or −1 when at rest. The
+// window opens once per `period` at `phase` seconds in, and is `win` long.
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
+}
+
+// A raised-cosine "bump" 0→1→0 over q∈[0,1], with zero slope at both ends, so a
+// gesture grows in and settles out seamlessly (no velocity at the window edges).
+function bump(q: number): number {
+  if (q < 0 || q > 1) return 0;
+  return 0.5 - 0.5 * Math.cos(q * Math.PI * 2);
+}
+
+// Anticipation→action shape for the HEAD-BUTT: a brief pull-back (negative)
+// before the lunge, then a clean drive forward and settle. q∈[0,1]. Returns a
+// THRUST factor in roughly −0.22..+1 (negative = pull-back/wind-up, positive =
+// lunging forward). Zero value AND slope at q=0 and q=1.
+function buttShape(q: number): number {
+  if (q <= 0 || q >= 1) return 0;
+  const antiEnd = 0.28; // first slice = wind-up / pull-back
+  if (q < antiEnd) {
+    // pull back a little (anticipation), zero slope at q=0
+    const a = q / antiEnd;
+    return -0.22 * (0.5 - 0.5 * Math.cos(a * Math.PI));
+  }
+  // lunge forward arc, zero at the seam to the wind-up and at q=1
+  const a = (q - antiEnd) / (1 - antiEnd);
+  return Math.sin(a * Math.PI);
+}
+
+// ── The idle POSE (carries all action state into paint) ──────────────────────
+
+interface Pose {
+  bob: number; // whole-body vertical lift (design px, + = up)
+  lean: number; // whole-body horizontal lunge (design px, + = forward/left)
+  squashX: number; // body horizontal scale multiplier (squash/stretch)
+  squashY: number; // body vertical scale multiplier
+  head: number; // extra head dip/lower (design px, + = down)
+  chew: number; // 0..1 jaw open amount for the chew
+  ear: number; // 0..1 near-ear flick amount
+  tail: number; // signed tail wag (design px sideways)
+  hop: number; // 0..1 head-butt drive intensity (drives fog + brace)
+}
+
+const REST: Pose = { bob: 0, lean: 0, squashX: 1, squashY: 1, head: 0, chew: 0, ear: 0, tail: 0, hop: 0 };
+
+// Build a pose from the wall clock: a common CHEW every ~6s and a rare HEAD-BUTT
+// charge feint every ~18s. Returns to REST (all zeros / unit scales) at every
+// window edge.
+function poseFromClock(tIn: number): Pose {
+  const t = safeNum(tIn, 0);
+  const pose: Pose = { bob: 0, lean: 0, squashX: 1, squashY: 1, head: 0, chew: 0, ear: 0, tail: 0, hop: 0 };
+
+  // COMMON ~6s: CHEW (win ~1.0s). Head bobs ~8–12px, jaw chatters, ear flicks,
+  // tail wags, small body squash. Built from raised-cosine windows → seamless.
+  // Phase 3.0 opens the window at t≈3.0 (well clear of t=0, so anim(0) === REST).
+  const cq = actionQ(t, 6, 1.0, 3.0);
+  if (cq >= 0) {
+    const env = bump(cq); // 0→1→0 over the window
+    // two chew bobs within the window (head dips down ~8–12px at the peak)
+    pose.head = env * (4.0 + 8.0 * Math.abs(Math.sin(cq * Math.PI * 2)));
+    pose.bob = -env * 1.6; // body settles a touch as it lowers to chew
+    pose.chew = env * (0.5 + 0.5 * Math.abs(Math.sin(cq * Math.PI * 2)));
+    pose.ear = env;
+    pose.tail = Math.sin(cq * Math.PI * 6) * env * 2.8; // a few wags sideways
+    // a small body squash as it leans down into the chew
+    pose.squashY = 1 - env * 0.05;
+    pose.squashX = 1 + env * 0.04;
+  }
+
+  // RARE ~18s: HEAD-BUTT charge feint (win ~1.2s, phase +3s past the chew).
+  // The ram lowers its horned head and lunges forward ~14–18px then rocks back:
+  // wind-up pull-back → drive → settle. May exit the box at the apex.
+  const hq = actionQ(t, 18, 1.2, 3.0);
+  if (hq >= 0) {
+    const s = buttShape(hq); // −0.22..+1 (wind-up then forward drive)
+    const env = bump(hq); // overall gesture envelope (0 at edges)
+    if (s < 0) {
+      // wind-up: rock back & rear up slightly, head rises before the strike
+      const c = -s; // 0..0.22
+      pose.lean = -c * 18; // pull BACK (right) before the lunge
+      pose.bob = c * 5; // shoulders rise during the wind-up
+      pose.head = -c * 6; // head lifts (chin up) in anticipation
+      pose.squashY = 1 + c * 0.5;
+      pose.squashX = 1 - c * 0.3;
+    } else {
+      // strike: drive head DOWN and FORWARD ~14–18px (horns lead)
+      pose.lean = s * 17; // lunge forward (toward lower-left)
+      pose.head = s * 11; // head lowers hard as it butts
+      pose.bob = -s * 3; // shoulders dip into the drive
+      pose.squashX = 1 + s * 0.16; // stretch forward
+      pose.squashY = 1 - s * 0.1;
+      pose.hop = s; // peak drive intensity (fog burst + braced legs)
+    }
+    // a tail flag through the whole feint
+    pose.tail += Math.sin(hq * Math.PI) * env * 1.6;
+  }
+
+  return pose;
 }
 
 // ── Tweenable parameter set ─────────────────────────────────────────────────
@@ -60,9 +169,9 @@ function bobAt(t: number, amp = 1.1, w = 1.5): number {
 interface P {
   fleeceLight: RGB; // bright top of the cream wool
   fleeceShadow: RGB; // shaded underside of the cream wool
-  faceCoat: RGB; // broad face fur (the warm tan parts)
+  faceDark: RGB; // broad dark face
   faceShade: RGB; // shaded side of the face
-  hornLight: RGB; // lit side of the curled horns (locked, cream-tan keratin)
+  hornLight: RGB; // lit side of the curled horns (locked keratin)
   hornShade: RGB; // shaded ridges of the horns
   legDark: RGB; // short legs + hooves (the dark parts)
   padGrass: RGB; // top of the ground pad
@@ -70,101 +179,117 @@ interface P {
   outline: RGB; // soft dark outline tint
   lightWash: RGB; // overall colour-of-light wash
   lightWashAmt: number; // 0..1 strength of the light wash
-  fleeceVolume: number; // 0..1 puff of the wool outline (shorn → heavy)
+  fleeceVolume: number; // 0..1 BOLD puff of the wool (thin spring → thick winter)
   frostAmt: number; // 0..1 frost sparkle on the fleece + frosted horns
   backSnowAmt: number; // 0..1 snow settled on its back
   padSnowAmt: number; // 0..1 snow blanket on the pad
-  blossomAmt: number; // 0..1 tiny blossoms on the pad
-  fallenLeafAmt: number; // 0..1 fallen leaves on the pad
+  blossomAmt: number; // 0..1 blossoms on the pad
+  fallenLeafAmt: number; // 0..1 fallen leaf on the pad
   breathFogAmt: number; // 0..1 breath puff at the muzzle
+  glossAmt: number; // 0..1 healthy fleece gloss / sheen
+  scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
+  scarfColor: RGB; // scarf colour (locked deep teal, fades in via alpha)
 }
 
-// Four season presets. The ram stays the SAME cream woolly broad-faced ram with
-// big curled horns; only fleece volume + pad + light + dressing differ.
+// Four BOLD season presets. The ram stays the SAME cream woolly dark-faced ram
+// with big curled horns; only volume + pad + light + dressing differ — pushed
+// HARD so each season reads at a glance.
 const SP: Record<SeasonName, P> = {
   Spring: {
     fleeceLight: [248, 244, 232], // cream
-    fleeceShadow: [212, 204, 184],
-    faceCoat: [216, 196, 162],
-    faceShade: [176, 154, 120],
+    fleeceShadow: [210, 202, 184],
+    faceDark: [58, 52, 56],
+    faceShade: [42, 38, 42],
     hornLight: [224, 206, 168],
     hornShade: [168, 144, 104],
-    legDark: [92, 78, 64],
-    padGrass: [126, 198, 86], // bright lime dewy grass
-    soil: [86, 132, 54],
-    outline: [62, 52, 42],
-    lightWash: [212, 238, 255], // cool-bright, dewy
-    lightWashAmt: 0.16,
-    fleeceVolume: 0.16, // recently-shorn: lighter, slimmer fleece
+    legDark: [70, 60, 56],
+    padGrass: [118, 214, 78], // vivid fresh lime
+    soil: [78, 140, 48],
+    outline: [60, 52, 44],
+    lightWash: [196, 240, 255], // cool-bright
+    lightWashAmt: 0.2,
+    fleeceVolume: 0.08, // BOLD: clearly recently-shorn, very thin coat (sleeker)
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
-    blossomAmt: 0.6,
+    blossomAmt: 0.9,
     fallenLeafAmt: 0,
     breathFogAmt: 0,
+    glossAmt: 0.18, // cool-bright but not peak gloss
+    scarfAmt: 0,
+    scarfColor: [38, 132, 138],
   },
   Summer: {
-    fleeceLight: [250, 246, 232], // cream, richest
-    fleeceShadow: [210, 200, 178],
-    faceCoat: [220, 198, 160],
-    faceShade: [178, 154, 116],
+    fleeceLight: [250, 248, 234], // cream, richest
+    fleeceShadow: [208, 200, 178],
+    faceDark: [54, 48, 50],
+    faceShade: [40, 36, 38],
     hornLight: [226, 206, 166],
     hornShade: [166, 142, 100],
-    legDark: [88, 74, 60],
-    padGrass: [86, 168, 64], // saturated mid-green
-    soil: [58, 110, 40],
-    outline: [58, 48, 40],
-    lightWash: [255, 244, 206], // warm
-    lightWashAmt: 0.14,
-    fleeceVolume: 0.52, // full fleece (PEAK)
+    legDark: [66, 56, 52],
+    padGrass: [72, 184, 58], // saturated mid-green
+    soil: [48, 116, 36],
+    outline: [56, 48, 42],
+    lightWash: [255, 238, 178], // warm
+    lightWashAmt: 0.2,
+    fleeceVolume: 0.52, // full healthy fleece (PEAK)
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
     breathFogAmt: 0,
+    glossAmt: 0.95, // BOLD glossy peak
+    scarfAmt: 0,
+    scarfColor: [38, 132, 138],
   },
   Autumn: {
-    fleeceLight: [244, 236, 218], // cream warming
-    fleeceShadow: [204, 192, 168],
-    faceCoat: [212, 188, 148],
-    faceShade: [170, 144, 104],
+    fleeceLight: [244, 234, 214], // cream warming
+    fleeceShadow: [200, 188, 164],
+    faceDark: [56, 46, 44],
+    faceShade: [42, 34, 34],
     hornLight: [220, 198, 154],
     hornShade: [160, 134, 92],
-    legDark: [86, 70, 56],
-    padGrass: [156, 142, 78], // olive-tan
-    soil: [104, 84, 44],
-    outline: [60, 48, 38],
-    lightWash: [255, 206, 138], // low amber
-    lightWashAmt: 0.2,
-    fleeceVolume: 0.74, // fuller, thicker
+    legDark: [64, 52, 46],
+    padGrass: [172, 138, 64], // olive-tan browning
+    soil: [112, 82, 40],
+    outline: [58, 46, 38],
+    lightWash: [255, 184, 96], // low amber, BOLD
+    lightWashAmt: 0.3,
+    fleeceVolume: 0.8, // warm-tinted fuller fleece
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
-    fallenLeafAmt: 0.7,
+    fallenLeafAmt: 0.95,
     breathFogAmt: 0,
+    glossAmt: 0.28, // dulled gloss
+    scarfAmt: 0,
+    scarfColor: [38, 132, 138],
   },
   Winter: {
-    fleeceLight: [250, 250, 246], // cream, cooled toward white by the light
-    fleeceShadow: [212, 214, 214],
-    faceCoat: [206, 192, 168],
-    faceShade: [164, 150, 132],
+    fleeceLight: [250, 251, 252], // cream cooled toward white by the cold light
+    fleeceShadow: [206, 216, 228],
+    faceDark: [60, 56, 64],
+    faceShade: [44, 42, 50],
     hornLight: [216, 204, 184], // keratin reads cooler under cold light
     hornShade: [156, 142, 120],
-    legDark: [80, 72, 70],
-    padGrass: [222, 232, 244], // snow on the pad
-    soil: [150, 168, 190],
-    outline: [70, 66, 72],
-    lightWash: [206, 222, 248], // cool blue-grey
-    lightWashAmt: 0.24,
-    fleeceVolume: 1, // heavy thick puffed wool
-    frostAmt: 0.7,
-    backSnowAmt: 0.7,
-    padSnowAmt: 0.85,
+    legDark: [66, 62, 66],
+    padGrass: [226, 238, 250], // snow on the pad
+    soil: [146, 166, 192],
+    outline: [70, 68, 78],
+    lightWash: [188, 212, 252], // cool blue-grey, BOLD
+    lightWashAmt: 0.34,
+    fleeceVolume: 1, // BOLD: thick fluffy winter fleece
+    frostAmt: 0.85,
+    backSnowAmt: 0.92,
+    padSnowAmt: 0.95,
     blossomAmt: 0,
     fallenLeafAmt: 0,
-    breathFogAmt: 0.7,
+    breathFogAmt: 0.85,
+    glossAmt: 0.12, // matte under cold overcast
+    scarfAmt: 1, // a little scarf appears in winter
+    scarfColor: [38, 132, 138],
   },
 };
 
@@ -172,7 +297,7 @@ function lerpP(a: P, b: P, t: number): P {
   return {
     fleeceLight: lerpRGB(a.fleeceLight, b.fleeceLight, t),
     fleeceShadow: lerpRGB(a.fleeceShadow, b.fleeceShadow, t),
-    faceCoat: lerpRGB(a.faceCoat, b.faceCoat, t),
+    faceDark: lerpRGB(a.faceDark, b.faceDark, t),
     faceShade: lerpRGB(a.faceShade, b.faceShade, t),
     hornLight: lerpRGB(a.hornLight, b.hornLight, t),
     hornShade: lerpRGB(a.hornShade, b.hornShade, t),
@@ -189,6 +314,9 @@ function lerpP(a: P, b: P, t: number): P {
     blossomAmt: lerp(a.blossomAmt, b.blossomAmt, t),
     fallenLeafAmt: lerp(a.fallenLeafAmt, b.fallenLeafAmt, t),
     breathFogAmt: lerp(a.breathFogAmt, b.breathFogAmt, t),
+    glossAmt: lerp(a.glossAmt, b.glossAmt, t),
+    scarfAmt: lerp(a.scarfAmt, b.scarfAmt, t),
+    scarfColor: lerpRGB(a.scarfColor, b.scarfColor, t),
   };
 }
 
@@ -196,14 +324,16 @@ function lerpP(a: P, b: P, t: number): P {
 function clampP(p: P): P {
   return {
     ...p,
-    lightWashAmt: clamp01(p.lightWashAmt),
-    fleeceVolume: clamp01(p.fleeceVolume),
-    frostAmt: clamp01(p.frostAmt),
-    backSnowAmt: clamp01(p.backSnowAmt),
-    padSnowAmt: clamp01(p.padSnowAmt),
-    blossomAmt: clamp01(p.blossomAmt),
-    fallenLeafAmt: clamp01(p.fallenLeafAmt),
-    breathFogAmt: clamp01(p.breathFogAmt),
+    lightWashAmt: clamp01(safeNum(p.lightWashAmt)),
+    fleeceVolume: clamp01(safeNum(p.fleeceVolume)),
+    frostAmt: clamp01(safeNum(p.frostAmt)),
+    backSnowAmt: clamp01(safeNum(p.backSnowAmt)),
+    padSnowAmt: clamp01(safeNum(p.padSnowAmt)),
+    blossomAmt: clamp01(safeNum(p.blossomAmt)),
+    fallenLeafAmt: clamp01(safeNum(p.fallenLeafAmt)),
+    breathFogAmt: clamp01(safeNum(p.breathFogAmt)),
+    glossAmt: clamp01(safeNum(p.glossAmt)),
+    scarfAmt: clamp01(safeNum(p.scarfAmt)),
   };
 }
 
@@ -212,25 +342,25 @@ function clampP(p: P): P {
 // the low flat grass pad the ram stands on
 function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
   // soft contact shadow, offset to lower-right (light is upper-left)
-  ctx.fillStyle = rgb([0, 0, 0], 0.18);
+  ctx.fillStyle = rgba([0, 0, 0], 0.18);
   ctx.beginPath();
   ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // shaded underside of the pad
-  ctx.fillStyle = rgb(p.soil);
+  ctx.fillStyle = rgba(p.soil);
   ctx.beginPath();
   ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // grass top
-  ctx.fillStyle = rgb(p.padGrass);
+  ctx.fillStyle = rgba(p.padGrass);
   ctx.beginPath();
   ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // tufted top edge
-  ctx.strokeStyle = rgb(p.padGrass);
+  ctx.strokeStyle = rgba(p.padGrass);
   ctx.lineWidth = 1.4;
   ctx.lineCap = "round";
   for (let i = -16; i <= 16; i += 4) {
@@ -244,63 +374,63 @@ function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
   ctx.lineCap = "butt";
 
   // small highlight band on the pad (light from upper-left)
-  ctx.fillStyle = rgb([255, 255, 255], 0.1);
+  ctx.fillStyle = rgba([255, 255, 255], 0.1);
   ctx.beginPath();
   ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // snow blanket over the pad (winter)
+  // snow blanket over the pad (winter) — BOLD coverage
   if (p.padSnowAmt > 0.001) {
-    ctx.fillStyle = rgb([244, 250, 255], 0.85 * p.padSnowAmt);
+    ctx.fillStyle = rgba([246, 251, 255], 0.92 * p.padSnowAmt);
     ctx.beginPath();
-    ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 18.4, 17.4, 4.9, 0, 0, Math.PI * 2);
     ctx.fill();
-    // a couple of frost glints on the snow
-    ctx.fillStyle = rgb([255, 255, 255], 0.7 * p.padSnowAmt);
-    for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]] as const) {
+    // a few frost glints on the snow
+    ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
+    for (const [sx, sy] of [[-10, 19], [6, 20], [12, 18], [-2, 21]] as const) {
       ctx.beginPath();
-      ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+      ctx.arc(sx, sy, 0.9, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  // tiny blossoms (spring)
+  // BOLD blossom on the pad (spring)
   if (p.blossomAmt > 0.001) {
-    for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]] as const) {
-      ctx.fillStyle = rgb([255, 250, 252], 0.9 * p.blossomAmt);
+    for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19], [-5, 20.4]] as const) {
+      ctx.fillStyle = rgba([255, 244, 250], 0.95 * p.blossomAmt);
       for (let k = 0; k < 5; k++) {
         const a = (k / 5) * Math.PI * 2;
         ctx.beginPath();
-        ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
+        ctx.arc(bx + Math.cos(a) * 1.3, by + Math.sin(a) * 1.3, 1.0, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.fillStyle = rgb([252, 214, 110], p.blossomAmt);
+      ctx.fillStyle = rgba([252, 208, 96], p.blossomAmt);
       ctx.beginPath();
-      ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
+      ctx.arc(bx, by, 0.9, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  // a couple of fallen leaves (autumn)
+  // a BOLD fallen leaf (autumn)
   if (p.fallenLeafAmt > 0.001) {
     const leaves: Array<[number, number, number, RGB]> = [
-      [-11, 20, -0.5, [196, 96, 36]],
-      [10, 20.5, 0.7, [212, 150, 52]],
-      [2, 21, 0.2, [168, 80, 40]],
+      [10, 20.4, 0.7, [214, 132, 40]],
+      [-11, 20, -0.5, [192, 88, 34]],
+      [1, 21, 0.2, [170, 76, 38]],
     ];
     for (const [lx, ly, rot, col] of leaves) {
       ctx.save();
       ctx.translate(lx, ly);
       ctx.rotate(rot);
-      ctx.fillStyle = rgb(col, p.fallenLeafAmt);
+      ctx.fillStyle = rgba(col, p.fallenLeafAmt);
       ctx.beginPath();
-      ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 3.0, 1.7, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = rgb([110, 60, 26], p.fallenLeafAmt);
-      ctx.lineWidth = 0.6;
+      ctx.strokeStyle = rgba([110, 58, 24], p.fallenLeafAmt);
+      ctx.lineWidth = 0.7;
       ctx.beginPath();
-      ctx.moveTo(-2.4, 0);
-      ctx.lineTo(2.4, 0);
+      ctx.moveTo(-2.8, 0);
+      ctx.lineTo(2.8, 0);
       ctx.stroke();
       ctx.restore();
     }
@@ -309,7 +439,7 @@ function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
 
 // one short, sturdy leg: a stubby dark cylinder with a hoof at the base
 function paintLeg(ctx: CanvasRenderingContext2D, p: P, x: number, topY: number, baseY: number): void {
-  ctx.strokeStyle = rgb(p.legDark);
+  ctx.strokeStyle = rgba(p.legDark);
   ctx.lineWidth = 3.4; // sturdy ram legs read a touch thicker than the sheep's
   ctx.lineCap = "round";
   ctx.beginPath();
@@ -317,18 +447,18 @@ function paintLeg(ctx: CanvasRenderingContext2D, p: P, x: number, topY: number, 
   ctx.lineTo(x, baseY);
   ctx.stroke();
   // hoof
-  ctx.fillStyle = rgb([30, 26, 26]);
+  ctx.fillStyle = rgba([30, 26, 26]);
   ctx.beginPath();
   ctx.ellipse(x, baseY, 1.9, 1.2, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.lineCap = "butt";
 }
 
-// the fluffy fleece body — a lumpy cloud whose lumps grow modestly with volume.
+// the fluffy fleece body — a lumpy cloud whose lumps grow BOLDLY with volume.
 // the ram body is a touch larger/sturdier than the sheep.
 function paintFleeceBody(ctx: CanvasRenderingContext2D, p: P, cx: number, cy: number, fill: string, scallop: number): void {
-  // volume modestly puffs the wool: from slim (shorn) to heavy (winter)
-  const vol = 0.86 + p.fleeceVolume * 0.42;
+  // BOLD volume: from clearly-shorn slim to thick fluffy winter fleece
+  const vol = 0.78 + p.fleeceVolume * 0.6;
   const rx = 13.6 * vol;
   const ry = 9.8 * vol;
   ctx.fillStyle = fill;
@@ -336,9 +466,9 @@ function paintFleeceBody(ctx: CanvasRenderingContext2D, p: P, cx: number, cy: nu
   ctx.beginPath();
   ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   ctx.fill();
-  // scalloped wool lumps around the perimeter
+  // scalloped wool lumps around the perimeter — bigger with volume
   const lumps = 11;
-  const lumpR = (2.3 + p.fleeceVolume * 1.7) * scallop;
+  const lumpR = (2.0 + p.fleeceVolume * 2.6) * scallop;
   for (let i = 0; i < lumps; i++) {
     const a = (i / lumps) * Math.PI * 2 - Math.PI / 2;
     const lx = cx + Math.cos(a) * rx * 0.98;
@@ -360,7 +490,6 @@ function paintHorn(ctx: CanvasRenderingContext2D, p: P, ox: number, oy: number, 
   const steps = 22;
   const a0 = side === 1 ? -1.1 : Math.PI + 1.1; // start angle near the crown
   const r0 = 5.6; // outer radius at the base of the curl
-  // ridge outline pass first (dark), then lit keratin, then shade ridges.
   type Disc = { x: number; y: number; r: number };
   const discs: Disc[] = [];
   for (let i = 0; i <= steps; i++) {
@@ -374,21 +503,21 @@ function paintHorn(ctx: CanvasRenderingContext2D, p: P, ox: number, oy: number, 
   }
 
   // dark outline halo
-  ctx.fillStyle = rgb(p.outline);
+  ctx.fillStyle = rgba(p.outline);
   for (const d of discs) {
     ctx.beginPath();
     ctx.arc(d.x, d.y, d.r + 0.9, 0, Math.PI * 2);
     ctx.fill();
   }
   // lit keratin body
-  ctx.fillStyle = rgb(p.hornLight);
+  ctx.fillStyle = rgba(p.hornLight);
   for (const d of discs) {
     ctx.beginPath();
     ctx.arc(d.x, d.y, d.r, 0, Math.PI * 2);
     ctx.fill();
   }
   // shaded inner ridge of the spiral (offset down-right for groove read)
-  ctx.fillStyle = rgb(p.hornShade);
+  ctx.fillStyle = rgba(p.hornShade);
   for (let i = 0; i < discs.length; i++) {
     const d = discs[i];
     ctx.beginPath();
@@ -396,7 +525,7 @@ function paintHorn(ctx: CanvasRenderingContext2D, p: P, ox: number, oy: number, 
     ctx.fill();
   }
   // a few ridge ticks across the horn for the corrugated keratin look
-  ctx.strokeStyle = rgb(p.hornShade, 0.7);
+  ctx.strokeStyle = rgba(p.hornShade, 0.7);
   ctx.lineWidth = 0.7;
   for (let i = 2; i < discs.length - 1; i += 2) {
     const d = discs[i];
@@ -408,7 +537,7 @@ function paintHorn(ctx: CanvasRenderingContext2D, p: P, ox: number, oy: number, 
 
   // winter: frost dusting the upward ridges of the horn
   if (p.frostAmt > 0.001) {
-    ctx.fillStyle = rgb([255, 255, 255], 0.8 * p.frostAmt);
+    ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.frostAmt);
     for (let i = 0; i < discs.length; i += 3) {
       const d = discs[i];
       ctx.beginPath();
@@ -418,68 +547,91 @@ function paintHorn(ctx: CanvasRenderingContext2D, p: P, ox: number, oy: number, 
   }
 }
 
-// the whole ram, standing front-¾ turned toward lower-left
-function paintRam(ctx: CanvasRenderingContext2D, p: P, bob: number): void {
-  // body centre lifts with the breathing bob
+// the whole ram, standing front-¾ turned toward lower-left, posed by `pose`
+function paintRam(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
+  // legs stay PLANTED on the pad (they brace during the butt rather than slide).
   const bx = -1;
-  const by = 4 - bob;
+  const bodyY = 4 - pose.bob; // body centre lifts/dips with the gesture
+  const legTopBase = bodyY + 7; // where the short ram legs meet the fleece
 
   // SHORT legs first (behind the fleece). Two back, two front; contact on pad.
   ctx.save();
   ctx.globalAlpha = 0.85;
-  paintLeg(ctx, p, bx + 6.8, by + 7, 18.6);
-  paintLeg(ctx, p, bx - 7.8, by + 7, 18.9);
+  paintLeg(ctx, p, bx + 6.8, legTopBase, 18.6);
+  paintLeg(ctx, p, bx - 7.8, legTopBase, 18.9);
   ctx.restore();
   // front legs
-  paintLeg(ctx, p, bx + 3.6, by + 7, 19.2);
-  paintLeg(ctx, p, bx - 4.6, by + 7, 19.4);
+  paintLeg(ctx, p, bx + 3.6, legTopBase, 19.2);
+  paintLeg(ctx, p, bx - 4.6, legTopBase, 19.4);
 
-  // FLEECE — dark outline pass first, then light fill on top (layered like wheat)
-  paintFleeceBody(ctx, p, bx, by, rgb(p.outline), 1.18); // outline halo
-  paintFleeceBody(ctx, p, bx, by, rgb(p.fleeceShadow), 1.0); // shaded wool
+  // The whole upper body (fleece + head + horns + dressing) is drawn under a
+  // squash/stretch + lunge transform centred on the body, so the head-butt
+  // reads with anticipation wind-up + forward drive.
+  ctx.save();
+  ctx.translate(bx - pose.lean, bodyY);
+  ctx.scale(pose.squashX, pose.squashY);
+  ctx.translate(-bx, -bodyY);
+
+  const by = bodyY;
+
+  // FLEECE — dark outline pass first, then shaded wool, then light wool (layered)
+  paintFleeceBody(ctx, p, bx, by, rgba(p.outline), 1.18); // outline halo
+  paintFleeceBody(ctx, p, bx, by, rgba(p.fleeceShadow), 1.0); // shaded wool
   // light wool offset up-left (light from upper-left)
   ctx.save();
   ctx.translate(-1.4, -1.6);
-  paintFleeceBody(ctx, p, bx, by, rgb(p.fleeceLight), 0.82);
+  paintFleeceBody(ctx, p, bx, by, rgba(p.fleeceLight), 0.82);
   ctx.restore();
 
-  // snow settled on the back (winter) — a soft white cap on top of the fleece
-  if (p.backSnowAmt > 0.001) {
-    ctx.fillStyle = rgb([248, 252, 255], 0.92 * p.backSnowAmt);
+  // healthy fleece gloss — a soft sheen band across the wool (BOLD in summer)
+  if (p.glossAmt > 0.02) {
+    ctx.save();
+    ctx.globalCompositeOperation = "soft-light";
+    ctx.fillStyle = rgba([255, 255, 255], 0.45 * p.glossAmt);
     ctx.beginPath();
-    ctx.ellipse(bx - 1, by - 8, 9.4 * (0.9 + p.fleeceVolume * 0.3), 3.6, -0.08, 0, Math.PI * 2);
+    ctx.ellipse(bx - 3, by - 3.5, 7.5, 3.4, -0.35, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb([255, 255, 255], 0.85 * p.backSnowAmt);
-    for (const [dx, dy] of [[-5, -8.8], [1, -9.4], [5, -8.4]] as const) {
+    ctx.restore();
+  }
+
+  // snow settled on the back (winter) — BOLD white cap on top of the fleece
+  if (p.backSnowAmt > 0.001) {
+    ctx.fillStyle = rgba([248, 252, 255], 0.95 * p.backSnowAmt);
+    ctx.beginPath();
+    ctx.ellipse(bx - 1, by - 8.2, 10 * (0.9 + p.fleeceVolume * 0.35), 4.0, -0.08, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba([255, 255, 255], 0.9 * p.backSnowAmt);
+    for (const [dx, dy] of [[-6, -9], [0, -9.8], [6, -8.6], [-2, -10.2]] as const) {
       ctx.beginPath();
-      ctx.arc(bx + dx, by + dy, 1.6 + p.fleeceVolume * 0.4, 0, Math.PI * 2);
+      ctx.arc(bx + dx, by + dy, 1.8 + p.fleeceVolume * 0.5, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
   // frost sparkle across the fleece (winter)
   if (p.frostAmt > 0.001) {
-    ctx.fillStyle = rgb([255, 255, 255], 0.8 * p.frostAmt);
+    ctx.fillStyle = rgba([255, 255, 255], 0.85 * p.frostAmt);
     const pts: Array<[number, number]> = [
       [-8, 0], [-3, 4], [4, -2], [8, 2], [0, -3], [-5, -5], [6, 5],
     ];
     for (const [fx, fy] of pts) {
       ctx.beginPath();
-      ctx.arc(bx + fx, by + fy, 0.7, 0, Math.PI * 2);
+      ctx.arc(bx + fx, by + fy, 0.8, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
   // ── HEAD (front-¾, lower-left) — broad face + big curled horns lock identity ─
   const hx = bx - 11;
-  const hy = by + 3;
+  const hy = by + 3 + pose.head; // chew / head-butt lowers the head
 
-  // ears (tucked under the horns), behind the face
-  ctx.fillStyle = rgb(p.faceShade);
+  // ears (tucked under the horns), behind the face. The near (left) ear flicks.
+  ctx.fillStyle = rgba(p.faceShade);
   for (const sideE of [-1, 1] as const) {
     ctx.save();
     ctx.translate(hx + sideE * 4.4, hy - 1.5);
-    ctx.rotate(sideE * 0.7 + 0.1);
+    const flick = sideE === -1 ? pose.ear * 0.6 : 0;
+    ctx.rotate(sideE * 0.7 + 0.1 + sideE * flick);
     ctx.beginPath();
     ctx.ellipse(0, 0, 3.2, 1.6, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -487,7 +639,7 @@ function paintRam(ctx: CanvasRenderingContext2D, p: P, bob: number): void {
   }
 
   // a small wool tuft on the crown (between the horns) — keeps it woolly
-  ctx.fillStyle = rgb(p.fleeceLight);
+  ctx.fillStyle = rgba(p.fleeceLight);
   ctx.beginPath();
   ctx.ellipse(hx, hy - 5, 3.2, 2.3, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -497,51 +649,58 @@ function paintRam(ctx: CanvasRenderingContext2D, p: P, bob: number): void {
   paintHorn(ctx, p, hx, hy - 2.2, -1);
   paintHorn(ctx, p, hx, hy - 2.2, 1);
 
-  // BROAD face — a wide, soft muzzle, tilted toward lower-left
+  // BROAD face — a wide, soft dark muzzle, tilted toward lower-left
   ctx.save();
   ctx.translate(hx, hy);
-  ctx.rotate(0.22);
+  ctx.rotate(0.22 + pose.head * 0.015);
   // outline
-  ctx.fillStyle = rgb(p.outline);
+  ctx.fillStyle = rgba(p.outline);
   ctx.beginPath();
   ctx.ellipse(0, 0, 6.0, 5.6, 0, 0, Math.PI * 2); // broad (wider than tall)
   ctx.fill();
-  // face coat fill
-  ctx.fillStyle = rgb(p.faceCoat);
+  // dark face fill
+  ctx.fillStyle = rgba(p.faceDark);
   ctx.beginPath();
   ctx.ellipse(0, 0, 5.3, 4.9, 0, 0, Math.PI * 2);
   ctx.fill();
   // shaded right side of the broad face
-  ctx.fillStyle = rgb(p.faceShade);
+  ctx.fillStyle = rgba(p.faceShade);
   ctx.beginPath();
   ctx.ellipse(1.8, 0.6, 3.4, 4.4, 0, 0, Math.PI * 2);
   ctx.fill();
   // muzzle — a paler broad nose-bridge running down the face
-  ctx.fillStyle = rgb(p.fleeceLight, 0.55);
+  ctx.fillStyle = rgba(p.fleeceLight, 0.4);
   ctx.beginPath();
   ctx.ellipse(-0.6, 1.4, 2.0, 3.6, 0, 0, Math.PI * 2);
   ctx.fill();
   // gentle cheek light (upper-left)
-  ctx.fillStyle = rgb([255, 255, 255], 0.14);
+  ctx.fillStyle = rgba([255, 255, 255], 0.14);
   ctx.beginPath();
   ctx.ellipse(-2.0, -1.8, 2.0, 2.4, 0, 0, Math.PI * 2);
   ctx.fill();
   // eyes
-  ctx.fillStyle = rgb([245, 244, 236]);
+  ctx.fillStyle = rgba([245, 244, 236]);
   for (const ex of [-2.0, 2.0]) {
     ctx.beginPath();
     ctx.arc(ex, -1.3, 1.1, 0, Math.PI * 2);
     ctx.fill();
   }
-  ctx.fillStyle = rgb([26, 22, 22]);
+  ctx.fillStyle = rgba([26, 22, 22]);
   for (const ex of [-1.8, 2.2]) {
     // horizontal ram-pupil read as a small dark oval
     ctx.beginPath();
     ctx.ellipse(ex, -1.1, 0.7, 0.5, 0, 0, Math.PI * 2);
     ctx.fill();
   }
+  // jaw / mouth — opens as it chews
+  if (pose.chew > 0.01) {
+    ctx.fillStyle = rgba([18, 16, 18]);
+    ctx.beginPath();
+    ctx.ellipse(0, 3.4, 1.5, 0.6 + pose.chew * 1.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
   // nostrils on the broad muzzle
-  ctx.fillStyle = rgb([24, 20, 20]);
+  ctx.fillStyle = rgba([24, 20, 20]);
   for (const ex of [-1.0, 1.0]) {
     ctx.beginPath();
     ctx.ellipse(ex, 3.6, 0.5, 0.8, 0, 0, Math.PI * 2);
@@ -549,17 +708,76 @@ function paintRam(ctx: CanvasRenderingContext2D, p: P, bob: number): void {
   }
   ctx.restore();
 
-  // small tail tuft at the upper-right rear of the fleece
-  ctx.fillStyle = rgb(p.fleeceLight);
+  // ── SCARF (winter) — a little knitted band around the neck, below the head ──
+  if (p.scarfAmt > 0.001) {
+    const sx = hx + 4.6;
+    const sy = hy - 0.4;
+    ctx.save();
+    ctx.globalAlpha = clamp01(p.scarfAmt);
+    // wrap band
+    ctx.fillStyle = rgba(p.scarfColor);
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, 5.4, 3.0, 0.32, 0, Math.PI * 2);
+    ctx.fill();
+    // darker underside for depth
+    ctx.fillStyle = rgba([
+      Math.max(0, p.scarfColor[0] - 26),
+      Math.max(0, p.scarfColor[1] - 40),
+      Math.max(0, p.scarfColor[2] - 40),
+    ]);
+    ctx.beginPath();
+    ctx.ellipse(sx + 0.6, sy + 1.4, 5.0, 1.6, 0.32, 0, Math.PI * 2);
+    ctx.fill();
+    // hanging tail of the scarf, with a knitted notch + fringe
+    ctx.fillStyle = rgba(p.scarfColor);
+    ctx.beginPath();
+    ctx.moveTo(sx - 2.6, sy + 1.8);
+    ctx.lineTo(sx + 1.0, sy + 2.4);
+    ctx.lineTo(sx + 0.2, sy + 8.4);
+    ctx.lineTo(sx - 3.2, sy + 7.6);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba([
+      Math.max(0, p.scarfColor[0] - 34),
+      Math.max(0, p.scarfColor[1] - 54),
+      Math.max(0, p.scarfColor[2] - 54),
+    ]);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(sx - 1.4, sy + 3.2);
+    ctx.lineTo(sx - 1.8, sy + 7.8);
+    ctx.stroke();
+    // fringe at the bottom
+    ctx.strokeStyle = rgba(p.scarfColor);
+    ctx.lineWidth = 0.9;
+    ctx.lineCap = "round";
+    for (const fx of [-3.0, -1.8, -0.6]) {
+      ctx.beginPath();
+      ctx.moveTo(sx + fx, sy + 7.8);
+      ctx.lineTo(sx + fx - 0.2, sy + 9.4);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    ctx.restore();
+  }
+
+  // tail tuft at the upper-right rear of the fleece — wags via pose
+  ctx.fillStyle = rgba(p.fleeceLight);
   ctx.beginPath();
-  ctx.arc(bx + 13, by - 1, 2.5 + p.fleeceVolume * 0.6, 0, Math.PI * 2);
+  ctx.arc(bx + 13 + pose.tail, by - 1 - Math.abs(pose.tail) * 0.25, 2.5 + p.fleeceVolume * 0.7, 0, Math.PI * 2);
   ctx.fill();
 
-  // breath-fog puff at the muzzle (winter) — at rest a faint static puff
+  ctx.restore(); // end squash/stretch + lunge transform
+
+  // breath-fog puff at the muzzle (winter) — drawn OUTSIDE the body transform so
+  // it reads as air, not body. Static base puff + a burst during the head-butt.
   if (p.breathFogAmt > 0.001) {
-    ctx.fillStyle = rgb([235, 244, 255], 0.4 * p.breathFogAmt);
+    const muzX = hx - pose.lean; // follows the lunging head
+    const muzY = hy + 4;
+    const reach = 5.0 + pose.hop * 4.0;
+    ctx.fillStyle = rgba([235, 244, 255], (0.34 + 0.3 * pose.hop) * p.breathFogAmt);
     ctx.beginPath();
-    ctx.ellipse(hx - 6.5, hy + 4, 3.4, 2.3, 0.2, 0, Math.PI * 2);
+    ctx.ellipse(muzX - reach, muzY, 3.0 + pose.hop * 2.2, 2.0 + pose.hop * 1.4, 0.2, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -569,7 +787,7 @@ function paintLightWash(ctx: CanvasRenderingContext2D, p: P): void {
   if (p.lightWashAmt <= 0.001) return;
   ctx.save();
   ctx.globalCompositeOperation = "soft-light";
-  ctx.fillStyle = rgb(p.lightWash, p.lightWashAmt);
+  ctx.fillStyle = rgba(p.lightWash, p.lightWashAmt);
   ctx.beginPath();
   ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -578,12 +796,12 @@ function paintLightWash(ctx: CanvasRenderingContext2D, p: P): void {
 
 // ── THE single paint ────────────────────────────────────────────────────────
 
-function paint(ctx: CanvasRenderingContext2D, pIn: P, bob: number): void {
+function paint(ctx: CanvasRenderingContext2D, pIn: P, pose: Pose): void {
   const p = clampP(pIn);
   ctx.save();
   try {
     paintPad(ctx, p);
-    paintRam(ctx, p, bob);
+    paintRam(ctx, p, pose);
     paintLightWash(ctx, p);
   } finally {
     ctx.globalAlpha = 1;
@@ -595,167 +813,104 @@ function paint(ctx: CanvasRenderingContext2D, pIn: P, bob: number): void {
 // ── Per-season builders ─────────────────────────────────────────────────────
 
 function draw(season: SeasonName) {
-  return (ctx: CanvasRenderingContext2D): void => paint(ctx, SP[season], 0);
+  return (ctx: CanvasRenderingContext2D): void => paint(ctx, SP[season], REST);
 }
 
 function anim(season: SeasonName) {
   return (ctx: CanvasRenderingContext2D, t: number): void => {
-    const p = clampP(SP[season]);
-    const bob = bobAt(t); // SUBJECT breathing bob, 0 at t=0
+    paint(ctx, SP[season], poseFromClock(safeNum(t, 0)));
+  };
+}
 
-    // head-dip once per loop layered into the breathing bob — the head sinks a
-    // little then lifts; seamless (0 at the loop edges). Small, never silhouette.
-    const loop = (t % 6) / 6; // 0..1, 6s idle loop
-    const dipGate = Math.max(0, Math.sin(loop * Math.PI)) ** 2; // smooth bump
-    const headDip = dipGate * 1.4;
+// ── Forward transitions (lerp EVERY field through quintic smoothstep) ─────────
 
-    paint(ctx, SP[season], bob);
+// A monotone ease that is EXACT at the endpoints but can lead or lag.
+function biasedEase(k: number, bias: number): number {
+  const x = clamp01(k);
+  return Math.pow(smoother(x), bias);
+}
 
-    // ── Additive micro-motion, drawn over the painted tile ──────────────────
+// Staged transition. The whole-tile look lerps from SP[from] (p=0) to SP[to]
+// (p=1) — so transition(0) === draw(from) and transition(1) === draw(to)
+// EXACTLY (drawn at REST, matching the idle hand-off). The fleece VOLUME leads
+// (coat fluffs early); snow / frost / breath-fog / scarf LAG (settle late).
+function makeTransition(fromIdx: 0 | 1 | 2) {
+  const from = SEASON_NAMES[fromIdx];
+  const to = SEASON_NAMES[fromIdx + 1];
+  return (ctx: CanvasRenderingContext2D, pp: number): void => {
+    const p = clamp01(safeNum(pp, 0));
+    const kBase = smoother(p);
+    const kCoat = biasedEase(p, 0.62); // fleece volume LEADS
+    const kSnow = biasedEase(p, 1.7); // snow / frost / fog / scarf LAG
+
+    const a = SP[from];
+    const b = SP[to];
+    const blended: P = lerpP(a, b, kBase);
+    blended.fleeceVolume = lerp(a.fleeceVolume, b.fleeceVolume, kCoat);
+    blended.backSnowAmt = lerp(a.backSnowAmt, b.backSnowAmt, kSnow);
+    blended.padSnowAmt = lerp(a.padSnowAmt, b.padSnowAmt, kSnow);
+    blended.frostAmt = lerp(a.frostAmt, b.frostAmt, kSnow);
+    blended.breathFogAmt = lerp(a.breathFogAmt, b.breathFogAmt, kSnow);
+    blended.scarfAmt = lerp(a.scarfAmt, b.scarfAmt, kSnow);
+
+    paint(ctx, blended, REST);
+
+    // Transient overlays (strength ∝ sin(π·p): exactly 0 at both ends).
+    const trans = Math.sin(Math.PI * p);
+    if (trans <= 0.0008) return;
+
     ctx.save();
     try {
       const bx = -1;
-      const by = 4 - bob;
-      const hx = bx - 11;
-      const hy = by + 3 + headDip; // dipped head position
+      const by = 4;
 
-      // ear-flick once per loop: a brief sin pulse, seamless (0 at edges).
-      const flickGate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 6;
-      const flick = Math.sin(t * 9) * flickGate;
-
-      // redraw the dipped broad face + a flicking ear over the rest pose so the
-      // head-dip reads. (Kept subtle; horns/silhouette stay put.)
-      if (headDip > 0.05) {
-        ctx.save();
-        ctx.translate(hx, hy);
-        ctx.rotate(0.22);
-        ctx.fillStyle = rgb(p.outline);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 6.0, 5.6, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = rgb(p.faceCoat);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 5.3, 4.9, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = rgb(p.faceShade);
-        ctx.beginPath();
-        ctx.ellipse(1.8, 0.6, 3.4, 4.4, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = rgb([245, 244, 236]);
-        for (const ex of [-2.0, 2.0]) {
+      // Loose fluff motes lifting off the thickening coat — reads the fleece
+      // visibly fluffing/growing. Present in EVERY morph (deterministic in p).
+      const fluff = trans * (0.4 + 0.6 * Math.max(0, b.fleeceVolume - a.fleeceVolume + 0.4));
+      if (fluff > 0.01) {
+        ctx.fillStyle = rgba([255, 255, 255], 0.5 * fluff);
+        const motes: Array<[number, number, number]> = [
+          [-8, -8, 1.1], [3, -10, 1.4], [9, -6, 0.9], [-3, -11, 1.0],
+        ];
+        for (const [mx, my, mr] of motes) {
+          const rise = (1 - Math.cos(Math.PI * p)) * 2.2;
           ctx.beginPath();
-          ctx.arc(ex, -1.3, 1.1, 0, Math.PI * 2);
+          ctx.arc(bx + mx, by + my - rise, mr * (0.7 + 0.5 * trans), 0, Math.PI * 2);
           ctx.fill();
         }
-        ctx.fillStyle = rgb([26, 22, 22]);
-        for (const ex of [-1.8, 2.2]) {
-          ctx.beginPath();
-          ctx.ellipse(ex, -1.1, 0.7, 0.5, 0, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.fillStyle = rgb([24, 20, 20]);
-        for (const ex of [-1.0, 1.0]) {
-          ctx.beginPath();
-          ctx.ellipse(ex, 3.6, 0.5, 0.8, 0, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.restore();
       }
 
-      // ear flick (redraw a flicking ear over the existing one)
-      ctx.fillStyle = rgb(p.faceShade);
-      ctx.save();
-      ctx.translate(hx + 4.4, hy - 1.5);
-      ctx.rotate(0.6 + flick * 0.5);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 3.2, 1.6, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+      // Snow settling onto the back during autumn→winter (target gains snow).
+      const snowGain = Math.max(0, b.backSnowAmt - a.backSnowAmt);
+      if (snowGain > 0.01) {
+        ctx.fillStyle = rgba([255, 255, 255], 0.8 * trans * snowGain);
+        const land = smoother(p);
+        const flecks: Array<[number, number]> = [
+          [-6, -10], [-1, -11], [4, -9.5], [7, -8],
+        ];
+        for (const [fxx, fyy] of flecks) {
+          const fall = (1 - land) * 6;
+          ctx.beginPath();
+          ctx.arc(bx + fxx, by + fyy - fall, 1.0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
 
-      // tail flick
-      ctx.fillStyle = rgb(p.fleeceLight);
-      ctx.beginPath();
-      ctx.arc(bx + 13 + flick * 1.4, by - 1, 2.5 + p.fleeceVolume * 0.6, 0, Math.PI * 2);
-      ctx.fill();
-
-      if (season === "Spring") {
-        // dew shimmer — a soft glint that pulses on the grass/blossoms
-        const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-        ctx.fillStyle = rgb([255, 255, 255], g);
+      // A breath-fog puff appearing as the cold sets in (target gains fog).
+      const fogGain = Math.max(0, b.breathFogAmt - a.breathFogAmt);
+      if (fogGain > 0.01) {
+        const hx = bx - 11;
+        const hy = by + 3;
+        ctx.fillStyle = rgba([235, 244, 255], 0.4 * trans * fogGain);
         ctx.beginPath();
-        ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
+        ctx.ellipse(hx - (4 + trans * 3), hy + 4, 2.6 + trans * 1.8, 1.8 + trans * 1.2, 0.2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.beginPath();
-        ctx.arc(10, 19.6, 0.9 + g * 0.8, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Summer") {
-        // soft fleece sheen sweeping across the wool
-        const s = 0.5 + 0.5 * Math.sin(t * 1.1);
-        const sx = bx - 9 + s * 18;
-        ctx.save();
-        ctx.globalCompositeOperation = "soft-light";
-        ctx.fillStyle = rgb([255, 255, 255], 0.35);
-        ctx.beginPath();
-        ctx.ellipse(sx, by - 2, 3, 6, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      } else if (season === "Autumn") {
-        // a fallen leaf stirs — gentle rock + tiny drift, seamless
-        const a = Math.sin(t * 1.3) * 0.5;
-        const dx = Math.sin(t * 0.7) * 1.2;
-        ctx.save();
-        ctx.translate(10 + dx, 20.5);
-        ctx.rotate(0.7 + a);
-        ctx.fillStyle = rgb([212, 150, 52], p.fallenLeafAmt);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      } else {
-        // Winter: breath-fog puff gently pulses outward from the muzzle +
-        // a drifting snowflake + a cold sheen.
-        const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
-        const reach = 4 + breathe * 3;
-        ctx.fillStyle = rgb([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
-        ctx.beginPath();
-        ctx.ellipse(hx - 2 - reach, hy + 4, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
-        ctx.fill();
-
-        // one drifting snowflake on a seamless 3.4s fall
-        const prog = ((t / 3.4) % 1 + 1) % 1;
-        const fy = -20 + prog * 36;
-        const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-        ctx.fillStyle = rgb([255, 255, 255], 0.85);
-        ctx.beginPath();
-        ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
-        ctx.fill();
-
-        // cold sheen pulse on the fleece
-        const sheen = 0.5 + 0.5 * Math.sin(t * 0.8);
-        ctx.save();
-        ctx.globalCompositeOperation = "soft-light";
-        ctx.fillStyle = rgb([206, 224, 255], 0.12 + sheen * 0.14);
-        ctx.beginPath();
-        ctx.ellipse(bx, by, 13.6, 9.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
       }
     } finally {
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
       ctx.restore();
     }
-  };
-}
-
-// ── Forward transitions (lerp EVERY field through quintic smoothstep) ────────
-
-function makeTransition(fromIdx: 0 | 1 | 2) {
-  const from = SEASON_NAMES[fromIdx];
-  const to = SEASON_NAMES[fromIdx + 1];
-  return (ctx: CanvasRenderingContext2D, pp: number): void => {
-    const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(SP[from], SP[to], k), 0);
   };
 }
 
