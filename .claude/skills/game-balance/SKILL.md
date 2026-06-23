@@ -175,9 +175,14 @@ anti-grind pacing"; "no real-money mechanics"; "wants every resource family viab
 
 ## Instance #1 — puzzleDrag2
 This skill was proven on puzzleDrag2 (a single-player, turn-based, transitive-economy farming game). Its
-Balance Profile lives at `reference/docs/balance/index.html` + `reference/docs/balance/profile.json`, with
-the **progression map** at `reference/docs/balance/progression-timeline.html` (the code-derived alignment
-artifact — handbook §10). Its measurement harness is the seeded playtest rig:
+Balance Profile lives at `reference/docs/balance/index.html` — the **single, comprehensive, player-first
+design doc** (Overview → ① Journey → ② Systems → ③ Economy/Balancing → ④ Findings/Gaps → ⑤ Spine/Simulation
+→ Decision log; the standalone journey doc was folded in and the older progression-redesign / zone-tier-ladder
+specs archived to `reference/docs/archive/`) — plus `reference/docs/balance/profile.json` (machine config).
+The **live progression spine** is the separate, code-generated `reference/docs/balance/progression-timeline.html`
+(the can't-drift alignment artifact — handbook §10; kept focused as the generated data view, not prose).
+Three artifacts, one job each: authored narrative (index.html) · generated spine (progression-timeline.html)
+· machine config (profile.json). Its measurement harness is the seeded playtest rig:
 - `npm run playtest` — per-run economy + the family-value spread audit;
 - `npm run playtest -- --campaign --zones home --runs 30 --seed 1` — progression *pacing* (runs-to-coin-
   milestone + the tier-stall finding, by actually playing);
