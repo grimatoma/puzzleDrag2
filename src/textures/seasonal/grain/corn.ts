@@ -1,164 +1,86 @@
-// Seasonal art for the CORN farm tile (`tile_grain_corn`, category grain).
+// Production seasonal art for the CORN grain tile (`tile_grain_corn`).
 //
-// Identity rule: the subject is ALWAYS a single upright corn COB standing on a
-// turf pad — husk leaves wrapping the cob with a silk tuft on top. There is no
-// stalk and no plant, just the iconic cob. Every season shares the SAME
-// silhouette/outline; only colour + frost/snow + pad dressing change.
+// A single upright corn PLANT — a tall central cob/ear wrapped in husk leaves
+// with a silk tassel on top, flanked by long blade leaves, standing on a small
+// grassy pad. The SAME plant is drawn every season (identity-safe): the cob,
+// husk, blade leaves and pad keep one silhouette/structure. The seasons swing
+// hard on COLOUR + frost/snow/leaves + light props ONLY — corn never morphs
+// into something else.
 //
-// Architecture: a single parameterized `paint(ctx, p, bob)` draws the whole
-// tile from a tweenable parameter set `P`. The four seasons are four `P`
-// values in `SP`. `draw` = paint at rest, `anim` = paint at a seamless idle
-// bob plus additive per-season micro-motion, and each `transition` lerps every
-// field of `P` between neighbouring seasons through a smoothstep so the morph
-// starts exactly on the `from` still and ends exactly on the `to` still.
+//   IDLE COMMON  (~6s, win ~0.9s): a RUSTLE traveling-wave sway — the stalk and
+//       leaves bend ~10–14 design-px side-to-side with a gentle base squash,
+//       like wind passing through. Pivot near the base of the pad so the top
+//       travels most. Anticipation → peak → settle, zero velocity at the edges.
+//   IDLE SPECIAL (~18s, win ~1.2s, phase +3s so it never collides): a STRONG
+//       GUST BEND — the whole plant leans hard (~16–20 design-px at the top)
+//       then springs back with follow-through (anticipation → big bend →
+//       overshoot → settle). May paint outside the −24..+24 box at the apex.
 //
-// Drawn origin-centered in the ~-24..+24 design box; the caller has already
-// translated to the tile centre. Pure Canvas-2D vector art — no images, DOM,
-// or libraries. Reads at ~64px.
+// The architecture is a single parameterized `paint(ctx, p, pose)` where
+// `interface P` holds tweenable season params (colours + prop amounts) and
+// `pose` holds the idle gesture (bob / lean / squash / leafWave). Because every
+// season is the same paint with tweened P, transitions are seamless:
+//   transition(0) ≡ draw(from), transition(1) ≡ draw(to).
+// REST pose has all zeros, so draw(season) = paint(ctx, SP[season], REST) and
+// the idle's pose is 0 at every action-window edge → seamless loop.
+//
+// Origin-centered in the −24..+24 design box (actions may paint outside it),
+// light from upper-left, flat cel-shaded with a soft dark outline. Pure
+// Canvas-2D vector drawing — never throws, clamps everything, save/restore.
 
-import type {
-  SeasonalTileEntry,
-  SeasonalTransitionSet,
-  SeasonName,
-} from "../types.js";
+import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
+import { SEASON_NAMES, type SeasonName } from "../types.js";
 
-// ── Tweenable parameter set ─────────────────────────────────────────────────
-// EVERY value that differs between seasons lives here as a number or a number
-// tuple so it can be interpolated. Colours are [r,g,b]; amounts are 0..1.
+// ── Tweenable season params ──────────────────────────────────────────────────
 
 type RGB = [number, number, number];
 
+/** Every field tweens (number or RGB). NO booleans / season strings — paint is
+ *  a pure function of these so transitions interpolate cleanly. */
 interface P {
-  // light / ground
-  shadowAmt: number; // contact-shadow strength 0..1
-  // pad
-  padGrass: RGB; // turf disc top colour
-  padGrassDark: RGB; // turf underside / shaded colour
-  padSnowAmt: number; // 0..1 white snow cover over the pad
-  blossomAmt: number; // 0..1 pale blossom resting on the pad (spring)
-  fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
-  // husk (the leaves wrapping the cob)
-  huskLight: RGB; // lit husk colour
-  huskDark: RGB; // shaded husk / outline tint
-  huskBrownAmt: number; // 0..1 drying/browning at the husk edges (autumn)
-  huskOpen: number; // 0..1 how far the husk peels open at the top/front
-  // kernels (revealed through the open husk)
-  kernel: RGB; // kernel face colour
-  kernelDeep: RGB; // kernel shadow colour
-  kernelDent: number; // 0..1 how dented/deep-gold the kernels look
-  // silk tuft on top
-  silk: RGB; // silk strand colour
-  // outline
-  outline: RGB; // soft dark outline tint
-  // winter dressing
-  frostAmt: number; // 0..1 frost dusting sparkle on upward surfaces
-  snowCapAmt: number; // 0..1 snow cap sitting on top of the cob/husk
-  // surface gloss / dew
-  gloss: number; // 0..1 subtle sheen highlight on the cob
+  huskLight: RGB;        // lit face of the husk leaves wrapping the cob
+  huskMid: RGB;          // husk body tone
+  huskDark: RGB;         // shaded husk / outline-side
+  bladeLight: RGB;       // lit face of the long flanking blade leaves
+  bladeDark: RGB;        // shaded blade leaf
+  kernel: RGB;           // exposed kernel / ear face colour
+  kernelDeep: RGB;       // kernel shadow colour
+  silk: RGB;             // silk tassel strands on top of the ear
+  padGrass: RGB;         // top of the grass pad
+  padDark: RGB;          // shaded pad underside
+  soil: RGB;             // contact / base soil under the plant
+  outline: RGB;          // soft dark outline tint
+  light: RGB;            // ambient light tint laid over the whole tile
+  lightAmt: number;      // 0..1 strength of the ambient light wash
+  gloss: number;         // 0..1 specular sheen on the ear/husk
+  ripeness: number;      // 0..1 how much golden ear shows through the husk
+  frostAmt: number;      // 0..1 cool frost dusting on the plant (winter)
+  snowCapAmt: number;    // 0..1 snow cap on the top of the ear/tassel (winter)
+  padSnowAmt: number;    // 0..1 snow blanket at the base / on the pad (winter)
+  blossomAmt: number;    // 0..1 forming tassel-blossom on the pad (spring)
+  fallenLeafAmt: number; // 0..1 fallen leaf on the pad (autumn)
 }
 
-// ── Season parameter sets ───────────────────────────────────────────────────
+/** The idle gesture, separate from season identity. All zero = REST. */
+interface Pose {
+  bob: number;      // vertical offset in design px (negative = up)
+  lean: number;     // base-of-plant sway, radians (rock/bend side to side)
+  squashX: number;  // additive horizontal scale (+0.18 = 18% wider)
+  squashY: number;  // additive vertical scale (+0.18 = 18% taller)
+  leafWave: number; // extra traveling-wave bend at the leaf tips, radians
+}
 
-const SP: Record<SeasonName, P> = {
-  // Spring — fresh lightly-desaturated pastel; husk tight & fully closed,
-  // fresh green, a little dew; bright lime dewy pad + a pale blossom.
-  Spring: {
-    shadowAmt: 0.5,
-    padGrass: [142, 214, 96],
-    padGrassDark: [86, 150, 60],
-    padSnowAmt: 0,
-    blossomAmt: 1,
-    fallenLeafAmt: 0,
-    huskLight: [126, 196, 92],
-    huskDark: [62, 116, 50],
-    huskBrownAmt: 0,
-    huskOpen: 0,
-    kernel: [232, 214, 120],
-    kernelDeep: [190, 162, 80],
-    kernelDent: 0,
-    silk: [206, 224, 150],
-    outline: [44, 70, 36],
-    frostAmt: 0,
-    snowCapAmt: 0,
-    gloss: 0.5,
-  },
-  // Summer — richest, most-saturated palette (PEAK); husk peels open to show
-  // plump bright-yellow kernels in neat rows, golden silk, vivid green husk.
-  Summer: {
-    shadowAmt: 0.7,
-    padGrass: [104, 184, 70],
-    padGrassDark: [62, 126, 46],
-    padSnowAmt: 0,
-    blossomAmt: 0,
-    fallenLeafAmt: 0,
-    huskLight: [108, 184, 66],
-    huskDark: [48, 104, 40],
-    huskBrownAmt: 0,
-    huskOpen: 1,
-    kernel: [255, 214, 64],
-    kernelDeep: [206, 150, 28],
-    kernelDent: 0,
-    silk: [240, 214, 120],
-    outline: [40, 66, 32],
-    frostAmt: 0,
-    snowCapAmt: 0,
-    gloss: 0.8,
-  },
-  // Autumn — gold/orange/rust; husk drying, curling & browning at edges,
-  // kernels deeper gold & a touch dented; silk rust-brown; fallen leaves.
-  Autumn: {
-    shadowAmt: 0.55,
-    padGrass: [158, 150, 78],
-    padGrassDark: [112, 96, 50],
-    padSnowAmt: 0,
-    blossomAmt: 0,
-    fallenLeafAmt: 1,
-    huskLight: [176, 150, 72],
-    huskDark: [104, 76, 32],
-    huskBrownAmt: 1,
-    huskOpen: 0.9,
-    kernel: [232, 168, 44],
-    kernelDeep: [168, 108, 24],
-    kernelDent: 1,
-    silk: [168, 108, 56],
-    outline: [70, 48, 24],
-    frostAmt: 0,
-    snowCapAmt: 0,
-    gloss: 0.45,
-  },
-  // Winter — cool blue-grey light; husk muted green-grey, kernels still
-  // visible; snow cap + frost dusting on upward surfaces; pad snow-covered.
-  Winter: {
-    shadowAmt: 0.4,
-    padGrass: [120, 138, 122],
-    padGrassDark: [86, 104, 96],
-    padSnowAmt: 1,
-    blossomAmt: 0,
-    fallenLeafAmt: 0,
-    huskLight: [120, 150, 110],
-    huskDark: [70, 96, 76],
-    huskBrownAmt: 0.2,
-    huskOpen: 0.55,
-    kernel: [214, 188, 110],
-    kernelDeep: [156, 132, 78],
-    kernelDent: 0.4,
-    silk: [196, 200, 198],
-    outline: [54, 66, 60],
-    frostAmt: 1,
-    snowCapAmt: 1,
-    gloss: 0.35,
-  },
-};
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, leafWave: 0 };
 
-// ── Helpers: colour + interpolation ─────────────────────────────────────────
+// ── Local math helpers ───────────────────────────────────────────────────────
 
 function clamp01(x: number): number {
-  return x < 0 ? 0 : x > 1 ? 1 : x;
+  if (!(x >= 0)) return 0; // also catches NaN
+  if (x > 1) return 1;
+  return x;
 }
 
-function rgb([r, g, b]: RGB, a = 1): string {
-  return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`;
-}
+const smoother = (x: number): number => x * x * x * (x * (6 * x - 15) + 10);
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
@@ -168,741 +90,727 @@ function lerpRGB(a: RGB, b: RGB, t: number): RGB {
   return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 }
 
-/** Interpolate EVERY field of P (tuples component-wise, scalars linearly). */
+function rgb(c: RGB): string {
+  return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+}
+
+function rgba(c: RGB, a: number): string {
+  return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp01(a)})`;
+}
+
 function lerpP(a: P, b: P, t: number): P {
   return {
-    shadowAmt: lerp(a.shadowAmt, b.shadowAmt, t),
+    huskLight: lerpRGB(a.huskLight, b.huskLight, t),
+    huskMid: lerpRGB(a.huskMid, b.huskMid, t),
+    huskDark: lerpRGB(a.huskDark, b.huskDark, t),
+    bladeLight: lerpRGB(a.bladeLight, b.bladeLight, t),
+    bladeDark: lerpRGB(a.bladeDark, b.bladeDark, t),
+    kernel: lerpRGB(a.kernel, b.kernel, t),
+    kernelDeep: lerpRGB(a.kernelDeep, b.kernelDeep, t),
+    silk: lerpRGB(a.silk, b.silk, t),
     padGrass: lerpRGB(a.padGrass, b.padGrass, t),
-    padGrassDark: lerpRGB(a.padGrassDark, b.padGrassDark, t),
+    padDark: lerpRGB(a.padDark, b.padDark, t),
+    soil: lerpRGB(a.soil, b.soil, t),
+    outline: lerpRGB(a.outline, b.outline, t),
+    light: lerpRGB(a.light, b.light, t),
+    lightAmt: lerp(a.lightAmt, b.lightAmt, t),
+    gloss: lerp(a.gloss, b.gloss, t),
+    ripeness: lerp(a.ripeness, b.ripeness, t),
+    frostAmt: lerp(a.frostAmt, b.frostAmt, t),
+    snowCapAmt: lerp(a.snowCapAmt, b.snowCapAmt, t),
     padSnowAmt: lerp(a.padSnowAmt, b.padSnowAmt, t),
     blossomAmt: lerp(a.blossomAmt, b.blossomAmt, t),
     fallenLeafAmt: lerp(a.fallenLeafAmt, b.fallenLeafAmt, t),
-    huskLight: lerpRGB(a.huskLight, b.huskLight, t),
-    huskDark: lerpRGB(a.huskDark, b.huskDark, t),
-    huskBrownAmt: lerp(a.huskBrownAmt, b.huskBrownAmt, t),
-    huskOpen: lerp(a.huskOpen, b.huskOpen, t),
-    kernel: lerpRGB(a.kernel, b.kernel, t),
-    kernelDeep: lerpRGB(a.kernelDeep, b.kernelDeep, t),
-    kernelDent: lerp(a.kernelDent, b.kernelDent, t),
-    silk: lerpRGB(a.silk, b.silk, t),
-    outline: lerpRGB(a.outline, b.outline, t),
-    frostAmt: lerp(a.frostAmt, b.frostAmt, t),
-    snowCapAmt: lerp(a.snowCapAmt, b.snowCapAmt, t),
-    gloss: lerp(a.gloss, b.gloss, t),
   };
 }
 
-/** Clamp every amount field so paint never sees out-of-range values. */
 function clampP(p: P): P {
   return {
     ...p,
-    shadowAmt: clamp01(p.shadowAmt),
+    lightAmt: clamp01(p.lightAmt),
+    gloss: clamp01(p.gloss),
+    ripeness: clamp01(p.ripeness),
+    frostAmt: clamp01(p.frostAmt),
+    snowCapAmt: clamp01(p.snowCapAmt),
     padSnowAmt: clamp01(p.padSnowAmt),
     blossomAmt: clamp01(p.blossomAmt),
     fallenLeafAmt: clamp01(p.fallenLeafAmt),
-    huskBrownAmt: clamp01(p.huskBrownAmt),
-    huskOpen: clamp01(p.huskOpen),
-    kernelDent: clamp01(p.kernelDent),
-    frostAmt: clamp01(p.frostAmt),
-    snowCapAmt: clamp01(p.snowCapAmt),
-    gloss: clamp01(p.gloss),
   };
 }
 
-// Quintic smootherstep, used for transitions (zero velocity at both ends).
-const smoother = (x: number): number => x * x * x * (x * (6 * x - 15) + 10);
+function safeNum(x: number): number {
+  return Number.isFinite(x) ? x : 0;
+}
 
-// ── Shared cob geometry (IDENTICAL silhouette every season) ─────────────────
+// ── Per-season params — pushed HARD ──────────────────────────────────────────
 
-const COB_TOP = -22; // tip of the cob
-const COB_BOT = 14; // base sits on the pad
-const COB_HALF = 8.5; // half-width at the belly
+const SP: Record<SeasonName, P> = {
+  // Spring — young GREEN corn, fresh light-green husk + leaves, a small forming
+  // tassel/blossom on the pad, cool-bright light. Ear barely showing.
+  Spring: {
+    huskLight: [150, 216, 96],
+    huskMid: [98, 184, 64],
+    huskDark: [52, 128, 50],
+    bladeLight: [142, 210, 92],
+    bladeDark: [60, 140, 56],
+    kernel: [220, 226, 132],
+    kernelDeep: [168, 184, 92],
+    silk: [206, 226, 150],
+    padGrass: [126, 214, 84],
+    padDark: [64, 146, 56],
+    soil: [120, 84, 48],
+    outline: [30, 72, 30],
+    light: [226, 248, 218],
+    lightAmt: 0.18,
+    gloss: 0.3,
+    ripeness: 0.08,
+    frostAmt: 0,
+    snowCapAmt: 0,
+    padSnowAmt: 0,
+    blossomAmt: 1.0,
+    fallenLeafAmt: 0,
+  },
+  // Summer — peak: tall lush GREEN plant, ripening golden ear starting to show,
+  // high gloss, warm bright light.
+  Summer: {
+    huskLight: [120, 198, 70],
+    huskMid: [78, 166, 54],
+    huskDark: [42, 110, 44],
+    bladeLight: [108, 192, 64],
+    bladeDark: [44, 120, 48],
+    kernel: [255, 214, 64],
+    kernelDeep: [208, 152, 30],
+    silk: [240, 214, 120],
+    padGrass: [86, 184, 74],
+    padDark: [44, 120, 52],
+    soil: [128, 88, 48],
+    outline: [34, 80, 34],
+    light: [255, 244, 200],
+    lightAmt: 0.2,
+    gloss: 1.0,
+    ripeness: 0.55,
+    frostAmt: 0,
+    snowCapAmt: 0,
+    padSnowAmt: 0,
+    blossomAmt: 0,
+    fallenLeafAmt: 0,
+  },
+  // Autumn — GOLDEN heavy ripe ear, leaves yellow/tan drying, a fallen leaf on
+  // the pad, dulled gloss, amber light. The "golden heavy heads" peak.
+  Autumn: {
+    huskLight: [206, 176, 84],
+    huskMid: [168, 132, 56],
+    huskDark: [112, 80, 36],
+    bladeLight: [198, 168, 80],
+    bladeDark: [128, 96, 44],
+    kernel: [240, 178, 50],
+    kernelDeep: [176, 114, 26],
+    silk: [176, 116, 60],
+    padGrass: [162, 150, 78],
+    padDark: [110, 90, 46],
+    soil: [120, 78, 42],
+    outline: [70, 48, 22],
+    light: [250, 198, 132],
+    lightAmt: 0.26,
+    gloss: 0.34,
+    ripeness: 1.0,
+    frostAmt: 0,
+    snowCapAmt: 0,
+    padSnowAmt: 0,
+    blossomAmt: 0,
+    fallenLeafAmt: 1.0,
+  },
+  // Winter — frosted corn: stalk/leaves dried tan, a bold snow cap on the top
+  // of the ear/tassel + a snow blanket at the base, cool blue-grey light. Still
+  // clearly corn.
+  Winter: {
+    huskLight: [188, 184, 150],
+    huskMid: [150, 148, 120],
+    huskDark: [98, 100, 86],
+    bladeLight: [178, 176, 146],
+    bladeDark: [110, 116, 104],
+    kernel: [212, 192, 128],
+    kernelDeep: [150, 134, 88],
+    silk: [200, 206, 206],
+    padGrass: [182, 202, 220],
+    padDark: [122, 150, 178],
+    soil: [132, 116, 102],
+    outline: [56, 60, 62],
+    light: [200, 224, 255],
+    lightAmt: 0.36,
+    gloss: 0.3,
+    ripeness: 0.7,
+    frostAmt: 0.82,
+    snowCapAmt: 1.0,
+    padSnowAmt: 1.0,
+    blossomAmt: 0,
+    fallenLeafAmt: 0,
+  },
+};
 
-/** Draw the cob kernel-body outline path. The shape is constant across all P. */
-function cobBodyPath(ctx: CanvasRenderingContext2D): void {
+// ── Corn plant geometry — the SAME silhouette every season ───────────────────
+
+const EAR_TOP = -20;          // tip of the ear (under the tassel)
+const EAR_BOT = 14;           // base of the ear, sitting on the pad
+const EAR_HALF = 8.5;         // half-width at the belly of the ear
+const PLANT_PIVOT_Y = 17;     // bend/lean about a point near the base of the pad
+
+/** Trace the upright ear/cob body path (origin-local, unposed). Constant. */
+function earBodyPath(ctx: CanvasRenderingContext2D): void {
+  const t = EAR_TOP;
+  const b = EAR_BOT;
+  const h = EAR_HALF;
   ctx.beginPath();
-  ctx.moveTo(0, COB_TOP);
-  ctx.bezierCurveTo(COB_HALF, COB_TOP + 6, COB_HALF, -2, COB_HALF * 0.86, 6);
-  ctx.bezierCurveTo(COB_HALF * 0.7, COB_BOT - 2, 4, COB_BOT, 0, COB_BOT);
-  ctx.bezierCurveTo(-4, COB_BOT, -COB_HALF * 0.7, COB_BOT - 2, -COB_HALF * 0.86, 6);
-  ctx.bezierCurveTo(-COB_HALF, -2, -COB_HALF, COB_TOP + 6, 0, COB_TOP);
+  ctx.moveTo(0, t - 2);
+  ctx.bezierCurveTo(h * 0.8, t + 2, h, lerp(t, b, 0.3), h * 0.92, lerp(t, b, 0.55));
+  ctx.bezierCurveTo(h * 0.84, b - 2, 4, b, 0, b + 0.5);
+  ctx.bezierCurveTo(-4, b, -h * 0.84, b - 2, -h * 0.92, lerp(t, b, 0.55));
+  ctx.bezierCurveTo(-h, lerp(t, b, 0.3), -h * 0.8, t + 2, 0, t - 2);
   ctx.closePath();
 }
 
-/** The back husk wrap path (constant extent; opening only rotates leaf tips). */
-function huskBackPath(ctx: CanvasRenderingContext2D): void {
-  ctx.beginPath();
-  ctx.moveTo(-COB_HALF, COB_TOP + 7);
-  ctx.quadraticCurveTo(-COB_HALF - 1, 4, -5, COB_BOT + 1);
-  ctx.lineTo(5, COB_BOT + 1);
-  ctx.quadraticCurveTo(COB_HALF + 1, 4, COB_HALF, COB_TOP + 7);
-  ctx.quadraticCurveTo(0, COB_TOP + 1, -COB_HALF, COB_TOP + 7);
-  ctx.closePath();
-}
+// ── The single parameterized paint ───────────────────────────────────────────
 
-// ── Sub-part painters (all driven only by p) ────────────────────────────────
+/** The whole tile from ONLY `p` (season identity) and `pose` (idle gesture). */
+function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
+  const p = clampP(raw);
+  const pose: Pose = {
+    bob: safeNum(rawPose.bob),
+    lean: safeNum(rawPose.lean),
+    squashX: safeNum(rawPose.squashX),
+    squashY: safeNum(rawPose.squashY),
+    leafWave: safeNum(rawPose.leafWave),
+  };
 
-/** Soft contact shadow toward the lower-right, on transparency. */
-function contactShadow(ctx: CanvasRenderingContext2D, p: P): void {
   ctx.save();
-  ctx.fillStyle = `rgba(0,0,0,${0.26 * p.shadowAmt})`;
-  ctx.beginPath();
-  ctx.ellipse(3, 21, 15, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
+  try {
+    ctx.globalAlpha = 1;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
 
-/** Low flat turf disc pad with tufted edge + shaded underside, plus snow. */
-function pad(ctx: CanvasRenderingContext2D, p: P): void {
-  // shaded underside
-  ctx.fillStyle = rgb(p.padGrassDark);
-  ctx.beginPath();
-  ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // top turf face
-  ctx.fillStyle = rgb(p.padGrass);
-  ctx.beginPath();
-  ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // soft tufted edge — little blades around the rim
-  ctx.strokeStyle = rgb(p.padGrassDark);
-  ctx.lineWidth = 1.3;
-  ctx.lineCap = "round";
-  for (let i = 0; i < 11; i++) {
-    const a = (i / 11) * Math.PI * 2;
-    const ex = Math.cos(a) * 17.2;
-    const ey = 19 + Math.sin(a) * 4.6;
+    // ── Pad: low flat grass ellipse (does NOT move with the pose) ────────────
+    ctx.fillStyle = rgba(p.padDark, 0.4);
     ctx.beginPath();
-    ctx.moveTo(ex, ey);
-    ctx.lineTo(ex + Math.cos(a) * 1.8, ey + Math.sin(a) * 1.4 - 1.4);
-    ctx.stroke();
-  }
-  // lit blades on top
-  ctx.strokeStyle = rgb(lerpRGB(p.padGrass, [255, 255, 255], 0.25));
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + 0.3;
-    const ex = Math.cos(a) * 12;
-    const ey = 18 + Math.sin(a) * 3.2;
-    ctx.beginPath();
-    ctx.moveTo(ex, ey);
-    ctx.lineTo(ex + 0.6, ey - 2);
-    ctx.stroke();
-  }
-  ctx.lineCap = "butt";
-
-  // snow cover over the pad (winter)
-  if (p.padSnowAmt > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = p.padSnowAmt;
-    const snow = ctx.createLinearGradient(0, 14, 0, 23);
-    snow.addColorStop(0, "#f3f7fd");
-    snow.addColorStop(1, "#cbd8e6");
-    ctx.fillStyle = snow;
-    ctx.beginPath();
-    ctx.ellipse(0, 19, 17, 4.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    // frost sparkle specks on the pad
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    const specks: Array<[number, number]> = [
-      [-10, 18], [-3, 20], [6, 18.5], [12, 19.5], [2, 17.5],
-    ];
-    specks.forEach(([sx, sy]) => {
+
+    ctx.fillStyle = rgb(p.padDark);
+    ctx.beginPath();
+    ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb(p.padGrass);
+    ctx.beginPath();
+    ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // tufted top edge
+    ctx.strokeStyle = rgb(p.padDark);
+    ctx.lineWidth = 1.1;
+    for (let i = -7; i <= 7; i++) {
+      const tx = i * 2.4;
+      const ty = 19 - Math.sqrt(Math.max(0, 1 - (tx / 18) ** 2)) * 5.2;
       ctx.beginPath();
-      ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+      ctx.moveTo(tx, ty + 0.4);
+      ctx.lineTo(tx - 0.8, ty - 2.4);
+      ctx.stroke();
+    }
+    // grass-top highlight glints
+    ctx.strokeStyle = rgba([255, 255, 255], 0.18);
+    ctx.lineWidth = 1;
+    for (let i = -5; i <= 5; i += 2) {
+      const tx = i * 2.6 - 2;
+      ctx.beginPath();
+      ctx.moveTo(tx, 18.4);
+      ctx.lineTo(tx - 0.6, 16.6);
+      ctx.stroke();
+    }
+
+    // pad snow blanket (winter)
+    if (p.padSnowAmt > 0.01) {
+      ctx.fillStyle = rgba([244, 250, 255], 0.92 * p.padSnowAmt);
+      ctx.beginPath();
+      ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba([210, 226, 244], 0.5 * p.padSnowAmt);
+      ctx.beginPath();
+      ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
+      ([[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]] as Array<[number, number]>).forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // forming tassel-blossom on the pad (spring)
+    if (p.blossomAmt > 0.01) {
+      const a = p.blossomAmt;
+      const spots: Array<[number, number]> = [[-13, 18.5], [12, 17.8], [-4, 21]];
+      spots.forEach(([bx, by], idx) => {
+        ctx.fillStyle = rgba(idx === 1 ? [255, 244, 214] : [255, 250, 240], 0.95 * a);
+        for (let k = 0; k < 5; k++) {
+          const ang = (k / 5) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.ellipse(bx + Math.cos(ang) * 1.6, by + Math.sin(ang) * 1.1, 1.2, 0.9, ang, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = rgba([255, 214, 90], a);
+        ctx.beginPath();
+        ctx.arc(bx, by, 1.0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // fallen leaf on the pad (autumn)
+    if (p.fallenLeafAmt > 0.01) {
+      const a = p.fallenLeafAmt;
+      const leaves: Array<[number, number, number, RGB]> = [
+        [-12, 19.6, -0.5, [206, 152, 38]],
+        [12, 18.6, 0.7, [182, 110, 28]],
+      ];
+      leaves.forEach(([lx, ly, rot, col]) => {
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(rot);
+        ctx.fillStyle = rgba(col, a);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 3.8, 1.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba([90, 54, 16], a);
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(-3.6, 0);
+        ctx.lineTo(3.6, 0);
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    // ── Contact shadow under the plant (follows the lean for grounding) ──────
+    const tipShift = pose.lean * (PLANT_PIVOT_Y - EAR_TOP); // how far the tip leans
+    const shadowSpread = 1 + clamp01(pose.bob < 0 ? -pose.bob / 16 : 0) * 0.4;
+    ctx.fillStyle = rgb(p.soil);
+    ctx.beginPath();
+    ctx.ellipse(0 + tipShift * 0.16, EAR_BOT + 2.5, 9 * shadowSpread, 2.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba(p.outline, 0.26 / shadowSpread);
+    ctx.beginPath();
+    ctx.ellipse(2.5 + tipShift * 0.18, EAR_BOT + 3, 11 * shadowSpread, 2.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── Subject: the corn plant, under the idle pose transform ───────────────
+    ctx.save();
+    // Pivot near the base of the pad so lean bends the TOP side-to-side and the
+    // top travels most; squash anchors at the base (it "stands" on the pad).
+    ctx.translate(0, PLANT_PIVOT_Y + pose.bob);
+    ctx.rotate(pose.lean);
+    ctx.scale(1 + pose.squashX, 1 + pose.squashY);
+    ctx.translate(0, -PLANT_PIVOT_Y);
+
+    const top = EAR_TOP;
+    const bot = EAR_BOT;
+
+    // 1) Flanking blade leaves BEHIND the ear (long, drawn first so the cob
+    //    sits in front). Each leaf tip gets the traveling-wave bend (leafWave),
+    //    larger at the tip — like wind passing through.
+    const blades: Array<[number, number]> = [
+      // [side, magnitude] — outer blades sweep further with the wave
+      [-1, 1.0],
+      [1, 1.0],
+      [-1, 0.55],
+      [1, 0.55],
+    ];
+    blades.forEach(([side, mag], idx) => {
+      const baseX = side * 3.4;
+      const baseY = bot - 1;
+      const reach = idx < 2 ? 17 : 11;        // outer blades longer
+      const rise = idx < 2 ? 20 : 13;
+      const wave = pose.leafWave * mag * (idx < 2 ? 1.0 : 0.7);
+      const tipX = baseX + side * reach + Math.sin(wave) * reach * 0.9;
+      const tipY = baseY - rise + Math.cos(wave) * 2.2;
+      const midX = baseX + side * reach * 0.45 + Math.sin(wave) * reach * 0.4;
+      const midY = baseY - rise * 0.55;
+
+      // dark base pass
+      ctx.fillStyle = rgb(p.bladeDark);
+      ctx.beginPath();
+      ctx.moveTo(baseX - side * 1.6, baseY);
+      ctx.quadraticCurveTo(midX - side * 3.4, midY, tipX, tipY);
+      ctx.quadraticCurveTo(midX + side * 2.2, midY + 3.2, baseX + side * 2.2, baseY);
+      ctx.closePath();
+      ctx.fill();
+
+      // lit leaf face inset
+      ctx.fillStyle = rgb(p.bladeLight);
+      ctx.beginPath();
+      ctx.moveTo(baseX - side * 0.6, baseY - 0.8);
+      ctx.quadraticCurveTo(midX - side * 2.2, midY, tipX - side * 1.4, tipY + 1.4);
+      ctx.quadraticCurveTo(midX + side * 1.4, midY + 2.4, baseX + side * 1.6, baseY - 0.8);
+      ctx.closePath();
+      ctx.fill();
+
+      // central vein
+      ctx.strokeStyle = rgba(p.huskDark, 0.7);
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(baseX + side * 0.4, baseY - 1);
+      ctx.quadraticCurveTo(midX, midY, tipX - side * 0.8, tipY + 0.8);
+      ctx.stroke();
+    });
+
+    // 2) soft dark outline pass behind the ear
+    earBodyPath(ctx);
+    ctx.fillStyle = rgb(p.outline);
+    ctx.fill();
+
+    // 3) ear body fill (the husk-wrapped cob), clipped to the body
+    ctx.save();
+    earBodyPath(ctx);
+    ctx.clip();
+
+    // husk base fill
+    ctx.fillStyle = rgb(p.huskMid);
+    ctx.fillRect(-EAR_HALF - 3, top - 8, (EAR_HALF + 3) * 2, bot - top + 14);
+
+    // lit husk panel (light from upper-left)
+    const litGrad = ctx.createLinearGradient(-EAR_HALF, top - 4, EAR_HALF, bot);
+    litGrad.addColorStop(0, rgb(p.huskLight));
+    litGrad.addColorStop(0.5, rgb(p.huskMid));
+    litGrad.addColorStop(1, rgb(p.huskDark));
+    ctx.fillStyle = litGrad;
+    ctx.globalAlpha = 0.92;
+    ctx.beginPath();
+    ctx.ellipse(-1.5, lerp(top, bot, 0.46), EAR_HALF + 2, (bot - top) * 0.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+
+    // golden ear showing through the parted husk — grows with `ripeness`.
+    if (p.ripeness > 0.02) {
+      const rp = p.ripeness;
+      const earW = (EAR_HALF - 1.5) * (0.45 + 0.55 * rp);
+      const earTopY = top + 3;
+      const earBotY = bot - 2;
+      // kernel field
+      ctx.fillStyle = rgb(p.kernelDeep);
+      ctx.beginPath();
+      ctx.ellipse(0, lerp(earTopY, earBotY, 0.5), earW, (earBotY - earTopY) * 0.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // rows of kernels
+      const rows = 8;
+      for (let r = 0; r < rows; r++) {
+        const y = lerp(earTopY, earBotY, r / (rows - 1));
+        const widthHere = earW * Math.sqrt(Math.max(0, 1 - ((y - lerp(earTopY, earBotY, 0.5)) / ((earBotY - earTopY) * 0.5)) ** 2));
+        const cols = 4;
+        for (let c = 0; c < cols; c++) {
+          const fx = (c / (cols - 1) - 0.5) * 2 * (widthHere - 1.0);
+          const sx = fx + (r % 2 === 0 ? 0 : (widthHere - 1.0) / (cols - 1));
+          if (Math.abs(sx) > widthHere - 0.4) continue;
+          ctx.fillStyle = rgb(p.kernel);
+          ctx.beginPath();
+          ctx.ellipse(sx, y, 1.5, 1.7, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = rgba(lerpRGB(p.kernel, [255, 255, 255], 0.5), 0.5 * (0.4 + 0.6 * p.gloss));
+          ctx.beginPath();
+          ctx.ellipse(sx - 0.5, y - 0.6, 0.7, 0.8, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    // husk seam creases (vertical grooves on the wrap)
+    ctx.strokeStyle = rgba(p.huskDark, 0.8);
+    ctx.lineWidth = 1.6;
+    [-5.6, 5.4].forEach((cx) => {
+      ctx.beginPath();
+      ctx.moveTo(cx, top + 2);
+      ctx.quadraticCurveTo(cx * 1.1, lerp(top, bot, 0.55), cx * 0.8, bot - 1.5);
+      ctx.stroke();
+    });
+    ctx.strokeStyle = rgba(p.huskLight, 0.5);
+    ctx.lineWidth = 1.0;
+    [-3.4, 3.2].forEach((cx) => {
+      ctx.beginPath();
+      ctx.moveTo(cx, top + 2);
+      ctx.quadraticCurveTo(cx, lerp(top, bot, 0.5), cx, bot - 3);
+      ctx.stroke();
+    });
+
+    // specular sheen on the ear/husk
+    if (p.gloss > 0.02) {
+      ctx.fillStyle = rgba([255, 255, 255], 0.14 + 0.5 * p.gloss);
+      ctx.beginPath();
+      ctx.ellipse(-4.8, lerp(top, bot, 0.34), 1.6, (bot - top) * 0.26, -0.12, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // frost dusting (winter)
+    if (p.frostAmt > 0.02) {
+      ctx.fillStyle = rgba([210, 230, 250], 0.26 * p.frostAmt);
+      ctx.beginPath();
+      ctx.ellipse(-1, lerp(top, bot, 0.26), EAR_HALF, (bot - top) * 0.3, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba([235, 246, 255], 0.7 * p.frostAmt);
+      const speck: Array<[number, number]> = [
+        [-6, top + 3], [-2, top + 1], [3, top + 3], [6, top + 5],
+        [-5, lerp(top, bot, 0.42)], [4, lerp(top, bot, 0.46)], [0, lerp(top, bot, 0.3)],
+      ];
+      speck.forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    ctx.restore(); // end ear clip
+
+    // 4) parting husk-leaf tips at the top of the ear (constant extent; they
+    //    flare a touch with ripeness so the golden ear reads as "open").
+    const flare = 0.3 + 0.4 * p.ripeness;
+    ctx.fillStyle = rgb(p.huskDark);
+    ([[-1], [1]] as Array<[number]>).forEach(([side]) => {
+      ctx.beginPath();
+      ctx.moveTo(side * (EAR_HALF * 0.5), top + 4);
+      ctx.quadraticCurveTo(side * (EAR_HALF + 2) * flare, top - 6, side * (EAR_HALF * 0.4), top - 2);
+      ctx.quadraticCurveTo(side * 1.5, top + 2, side * (EAR_HALF * 0.5), top + 4);
+      ctx.closePath();
       ctx.fill();
     });
-    ctx.restore();
-  }
-}
+    ctx.fillStyle = rgb(p.huskLight);
+    ([[-1], [1]] as Array<[number]>).forEach(([side]) => {
+      ctx.beginPath();
+      ctx.moveTo(side * (EAR_HALF * 0.5), top + 3);
+      ctx.quadraticCurveTo(side * (EAR_HALF + 1) * flare, top - 5, side * (EAR_HALF * 0.42), top - 1.4);
+      ctx.quadraticCurveTo(side * 1.6, top + 1.6, side * (EAR_HALF * 0.5), top + 3);
+      ctx.closePath();
+      ctx.fill();
+    });
 
-/** Pale blossom resting on the pad (spring dressing). */
-function blossom(ctx: CanvasRenderingContext2D, p: P): void {
-  if (p.blossomAmt < 0.02) return;
-  ctx.save();
-  ctx.globalAlpha = p.blossomAmt;
-  ctx.translate(-12, 19);
-  ctx.fillStyle = "rgba(255,240,248,0.96)";
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.ellipse(Math.cos(a) * 2.4, Math.sin(a) * 1.4, 1.7, 1.1, a, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.fillStyle = "rgba(248,206,96,0.95)";
-  ctx.beginPath();
-  ctx.arc(0, 0, 1.1, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-/** A couple of fallen leaves on the pad (autumn dressing). */
-function fallenLeaves(ctx: CanvasRenderingContext2D, p: P): void {
-  if (p.fallenLeafAmt < 0.02) return;
-  ctx.save();
-  ctx.globalAlpha = p.fallenLeafAmt;
-  const leaves: Array<[number, number, number, string]> = [
-    [-12, 20, -0.5, "#c8772b"],
-    [11, 20.5, 0.7, "#b8531f"],
-  ];
-  leaves.forEach(([lx, ly, rot, col]) => {
-    ctx.save();
-    ctx.translate(lx, ly);
-    ctx.rotate(rot);
-    ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 3.4, 1.7, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(90,48,16,0.7)";
+    // 5) silk tassel on top of the ear (rides with the pose; sways with lean)
+    const sway = pose.lean * 12 + pose.leafWave * 6;
+    ctx.strokeStyle = rgba(p.silk, 0.95);
+    ctx.lineWidth = 1.1;
+    const strands: Array<[number, number]> = [
+      [-4, -0.6], [-2, -0.25], [0, 0], [2, 0.25], [4, 0.6],
+    ];
+    strands.forEach(([sx, leanK], i) => {
+      const tipX = sx + leanK * 6 + sway * (0.4 + i * 0.12);
+      const tipY = top - 8 - Math.abs(sx) * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(sx * 0.4, top - 1);
+      ctx.quadraticCurveTo(sx * 0.7 + sway * 0.3, top - 4.5, tipX, tipY);
+      ctx.stroke();
+    });
+    ctx.strokeStyle = rgba(lerpRGB(p.silk, [255, 255, 255], 0.4), 0.8);
     ctx.lineWidth = 0.7;
-    ctx.beginPath();
-    ctx.moveTo(-3.2, 0);
-    ctx.lineTo(3.2, 0);
-    ctx.stroke();
-    ctx.restore();
-  });
-  ctx.restore();
-}
-
-/** The kernel body of the cob (rows of kernels), revealed where husk opens. */
-function cobKernels(ctx: CanvasRenderingContext2D, p: P): void {
-  ctx.save();
-  // clip to the cob body so kernels never spill past the silhouette
-  cobBodyPath(ctx);
-  ctx.clip();
-
-  // base fill (deep) then rows of lit kernels
-  ctx.fillStyle = rgb(p.kernelDeep);
-  cobBodyPath(ctx);
-  ctx.fill();
-
-  const dentPush = p.kernelDent * 0.6; // dented kernels read smaller/darker
-  for (let row = 0; row < 9; row++) {
-    const y = COB_TOP + 4 + row * 3.6;
-    const halfAtRow = COB_HALF * 0.82 * (1 - Math.abs((y + 4) / 30) * 0.18);
-    const cols = 5;
-    for (let c = 0; c < cols; c++) {
-      const fx = (c / (cols - 1) - 0.5) * 2 * (halfAtRow - 1.4);
-      const sx = fx + (row % 2 === 0 ? 0 : (halfAtRow - 1.4) / (cols - 1));
-      if (Math.abs(sx) > halfAtRow - 0.6) continue;
-      const kr = 1.9 - dentPush;
-      const face = lerpRGB(p.kernel, p.kernelDeep, dentPush * 0.5);
-      ctx.fillStyle = rgb(face);
+    strands.forEach(([sx, leanK], i) => {
+      const tipX = sx + leanK * 6 + sway * (0.4 + i * 0.12);
+      const tipY = top - 8 - Math.abs(sx) * 0.3;
       ctx.beginPath();
-      ctx.ellipse(sx, y, kr, kr * 1.15, 0, 0, Math.PI * 2);
+      ctx.moveTo(sx * 0.55 + sway * 0.2, top - 4.5);
+      ctx.lineTo(tipX, tipY);
+      ctx.stroke();
+    });
+
+    // 6) snow cap on the top of the ear/tassel (winter)
+    if (p.snowCapAmt > 0.02) {
+      const a = p.snowCapAmt;
+      ctx.fillStyle = rgba([246, 251, 255], 0.95 * a);
+      ctx.beginPath();
+      ctx.moveTo(-EAR_HALF * 0.86, top + 3);
+      ctx.quadraticCurveTo(-5, top - 8, 0, top - 6.5);
+      ctx.quadraticCurveTo(5, top - 8, EAR_HALF * 0.86, top + 3);
+      ctx.quadraticCurveTo(6.5, top + 5.5, 2, top + 3.6);
+      ctx.quadraticCurveTo(0, top + 6, -2, top + 3.6);
+      ctx.quadraticCurveTo(-6.5, top + 5.5, -EAR_HALF * 0.86, top + 3);
+      ctx.closePath();
       ctx.fill();
-      // local kernel highlight (not a bloom)
-      ctx.fillStyle = rgb(lerpRGB(face, [255, 255, 255], 0.4 * p.gloss));
+      ctx.fillStyle = rgba([205, 222, 242], 0.5 * a);
       ctx.beginPath();
-      ctx.ellipse(sx - 0.5, y - 0.6, kr * 0.5, kr * 0.55, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, top + 3.4, EAR_HALF * 0.66, 1.7, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-  }
-  ctx.restore();
 
-  // soft outline around the kernel body
-  ctx.strokeStyle = rgb(p.outline, 0.85);
-  ctx.lineWidth = 1.1;
-  cobBodyPath(ctx);
-  ctx.stroke();
-}
+    ctx.restore(); // end pose transform
 
-/** Silk tuft on top of the cob. */
-function silkTuft(ctx: CanvasRenderingContext2D, p: P, sway: number): void {
-  ctx.save();
-  ctx.translate(0, COB_TOP);
-  ctx.strokeStyle = rgb(p.silk, 0.95);
-  ctx.lineWidth = 1.1;
-  ctx.lineCap = "round";
-  const strands: Array<[number, number]> = [
-    [-4, -0.5], [-2, -0.2], [0, 0], [2, 0.2], [4, 0.5],
-  ];
-  strands.forEach(([sx, lean], i) => {
-    const tipX = sx + lean * 6 + sway * (0.4 + i * 0.12);
-    const tipY = -7 - Math.abs(sx) * 0.3;
-    ctx.beginPath();
-    ctx.moveTo(sx * 0.4, 0);
-    ctx.quadraticCurveTo(sx * 0.7 + sway * 0.3, -3.5, tipX, tipY);
-    ctx.stroke();
-  });
-  // lit tips
-  ctx.strokeStyle = rgb(lerpRGB(p.silk, [255, 255, 255], 0.4), 0.8);
-  ctx.lineWidth = 0.7;
-  strands.forEach(([sx, lean], i) => {
-    const tipX = sx + lean * 6 + sway * (0.4 + i * 0.12);
-    const tipY = -7 - Math.abs(sx) * 0.3;
-    ctx.beginPath();
-    ctx.moveTo(sx * 0.55 + sway * 0.2, -3.5);
-    ctx.lineTo(tipX, tipY);
-    ctx.stroke();
-  });
-  ctx.lineCap = "butt";
-  ctx.restore();
-}
-
-/** The husk leaves wrapping the cob. `huskOpen` peels the front/top leaves
- *  back to reveal the kernels; the OUTLINE/extent of the husk is constant. */
-function husk(ctx: CanvasRenderingContext2D, p: P, leafFlutter: number): void {
-  // browning blended into both husk tones at the edges (autumn)
-  const light = lerpRGB(p.huskLight, [150, 104, 44], p.huskBrownAmt * 0.5);
-  const dark = lerpRGB(p.huskDark, [96, 64, 28], p.huskBrownAmt * 0.6);
-
-  // back husk fill — dark leaf body behind the cob giving the wrap volume
-  ctx.fillStyle = rgb(dark);
-  huskBackPath(ctx);
-  ctx.fill();
-
-  // Two husk leaves per side, anchored at the base; the tip peels outward by
-  // `open` (never shrinks the husk footprint, only rotates the tip).
-  const leaves: Array<[number, number, number]> = [
-    [-1, -7.5, 1],
-    [-1, -4, 0.3],
-    [1, 7.5, 1],
-    [1, 4, 0.3],
-  ];
-  leaves.forEach(([side, baseX, fw]) => {
-    const open = p.huskOpen * (0.45 + (0.55 * Math.abs(baseX)) / 7.5);
-    const tipX = baseX + side * (2 + open * 9);
-    const tipY = COB_TOP + 5 - open * 7 + leafFlutter * fw;
-    const midX = baseX + side * (1 + open * 4);
-    const midY = -4;
-
-    // dark base pass for depth
-    ctx.fillStyle = rgb(dark);
-    ctx.beginPath();
-    ctx.moveTo(baseX, COB_BOT);
-    ctx.quadraticCurveTo(midX - side * 3, midY, tipX, tipY);
-    ctx.quadraticCurveTo(midX + side * 1.5, midY + 3, baseX + side * 2, COB_BOT);
-    ctx.closePath();
-    ctx.fill();
-
-    // lit leaf face inset
-    ctx.fillStyle = rgb(light);
-    ctx.beginPath();
-    ctx.moveTo(baseX + side * 0.6, COB_BOT - 1);
-    ctx.quadraticCurveTo(midX - side * 2, midY, tipX - side * 1.2, tipY + 1.2);
-    ctx.quadraticCurveTo(midX + side * 1, midY + 2.5, baseX + side * 1.8, COB_BOT - 1);
-    ctx.closePath();
-    ctx.fill();
-
-    // central vein
-    ctx.strokeStyle = rgb(dark, 0.7);
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(baseX + side * 1, COB_BOT - 1);
-    ctx.quadraticCurveTo(midX, midY, tipX - side * 0.8, tipY + 0.8);
-    ctx.stroke();
-
-    // browning crisp at the very tip (autumn)
-    if (p.huskBrownAmt > 0.05) {
-      ctx.fillStyle = rgb([120, 78, 32], p.huskBrownAmt);
-      ctx.beginPath();
-      ctx.ellipse(tipX, tipY, 1.6, 1.1, side * 0.6, 0, Math.PI * 2);
-      ctx.fill();
+    // ── Ambient light wash over the whole tile (per-season tint) ─────────────
+    if (p.lightAmt > 0.001) {
+      ctx.globalAlpha = 1;
+      const lg = ctx.createRadialGradient(-10, -16, 2, -10, -16, 48);
+      lg.addColorStop(0, rgba(p.light, p.lightAmt));
+      lg.addColorStop(1, rgba(p.light, p.lightAmt * 0.25));
+      ctx.fillStyle = lg;
+      ctx.fillRect(-24, -24, 48, 48);
     }
-  });
-
-  // husk outline along the wrap
-  ctx.strokeStyle = rgb(p.outline, 0.85);
-  ctx.lineWidth = 1.1;
-  ctx.beginPath();
-  ctx.moveTo(-COB_HALF, COB_TOP + 7);
-  ctx.quadraticCurveTo(-COB_HALF - 1, 4, -5, COB_BOT + 1);
-  ctx.lineTo(5, COB_BOT + 1);
-  ctx.quadraticCurveTo(COB_HALF + 1, 4, COB_HALF, COB_TOP + 7);
-  ctx.stroke();
-}
-
-/** Frost dusting + snow cap on the cob's upward surfaces (winter). */
-function frostAndSnow(ctx: CanvasRenderingContext2D, p: P): void {
-  // snow cap sitting on top of the husk/cob tip
-  if (p.snowCapAmt > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = p.snowCapAmt;
-    const cap = ctx.createLinearGradient(0, COB_TOP - 3, 0, COB_TOP + 6);
-    cap.addColorStop(0, "#ffffff");
-    cap.addColorStop(1, "#dbe6f2");
-    ctx.fillStyle = cap;
-    ctx.beginPath();
-    ctx.moveTo(-COB_HALF + 1, COB_TOP + 7);
-    ctx.quadraticCurveTo(-6, COB_TOP - 4, 0, COB_TOP - 3);
-    ctx.quadraticCurveTo(6, COB_TOP - 4, COB_HALF - 1, COB_TOP + 7);
-    ctx.quadraticCurveTo(0, COB_TOP + 3, -COB_HALF + 1, COB_TOP + 7);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-  // frost dusting — fine pale specks on the upper-left (lit) surfaces
-  if (p.frostAmt > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = 0.7 * p.frostAmt;
-    ctx.fillStyle = "#eaf3ff";
-    const specks: Array<[number, number]> = [
-      [-5, -14], [-2, -8], [-6, -2], [-3, 3], [3, -12],
-      [5, -5], [1, -16], [-4, 8],
-    ];
-    specks.forEach(([sx, sy]) => {
-      ctx.beginPath();
-      ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
-      ctx.fill();
-    });
+  } finally {
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
 }
 
-/** Subtle sheen highlight on the cob (dew/gloss), never a bloom. */
-function sheen(ctx: CanvasRenderingContext2D, p: P): void {
-  if (p.gloss < 0.02) return;
-  ctx.save();
-  cobBodyPath(ctx);
-  ctx.clip();
-  const g = ctx.createLinearGradient(-COB_HALF, COB_TOP, COB_HALF * 0.4, COB_BOT);
-  g.addColorStop(0, `rgba(255,255,255,${0.22 * p.gloss})`);
-  g.addColorStop(0.5, "rgba(255,255,255,0)");
-  ctx.fillStyle = g;
-  cobBodyPath(ctx);
-  ctx.fill();
-  ctx.restore();
+// ── Idle pose clock — two-tier occasional action ─────────────────────────────
+
+/** Returns 0..1 progress through an action window of length `win` starting at
+ *  phase offset within `period`, else −1 (at rest). Seamless because the pose
+ *  built from q is zero (with zero velocity) at q=0 and q=1. */
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
 }
 
-// ── The single parameterized paint ──────────────────────────────────────────
-// Draws the WHOLE tile from p + a vertical idle offset `bob` (design px;
-// bob=0 = rest pose). Optional micro-dressing args are additive and tiny.
-
-interface Micro {
-  leafFlutter?: number; // husk-leaf tip flutter (autumn)
-  silkSway?: number; // silk strand sway
-  glint?: number; // 0..1 travelling glint position on the cob (summer)
-  extraFlakes?: Array<[number, number, number]>; // drifting snowflakes (winter)
-  dew?: number; // 0..1 dew shimmer pulse (spring)
-  coldSheen?: number; // 0..1 faint cold sheen pulse (winter)
-  // ── transition-only transient overlays (each ∝ sin(π·p), 0 at both ends) ──
-  peelGlow?: number; // 0..1 soft light spilling from the opening husk (Spring→Summer)
-  deepenWash?: number; // 0..1 warm amber wash as kernels deepen/dent (Summer→Autumn)
-  settleFall?: number; // 0..1 a few specks settling as the snow cap forms (Autumn→Winter)
+// A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
+// sin^2(pi q) → smooth in/out, peak at q=0.5.
+function hump(q: number): number {
+  const s = Math.sin(Math.PI * q);
+  return s * s;
 }
 
-function paint(
-  ctx: CanvasRenderingContext2D,
-  pRaw: P,
-  bob: number,
-  micro?: Micro,
-): void {
-  const p = clampP(pRaw);
-  const m = micro ?? {};
+// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
+// (1-cos) envelope keeps velocity zero at the edges; a windup tilt rides on top.
+function anticipate(q: number): number {
+  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
+  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
+  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+}
 
-  // Pad + ground dressing are drawn at rest (do not bob with the subject).
-  contactShadow(ctx, p);
-  pad(ctx, p);
-  blossom(ctx, p);
-  fallenLeaves(ctx, p);
+/** Build the idle pose from the wall clock. Two tiers:
+ *   common RUSTLE every ~6s (win 0.9s), rare GUST BEND every ~18s (win 1.2s). */
+function poseFromClock(t: number): Pose {
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, leafWave: 0 };
 
-  // Subject bobs as a whole.
-  ctx.save();
-  ctx.translate(0, bob);
-
-  husk(ctx, p, m.leafFlutter ?? 0);
-  cobKernels(ctx, p);
-  sheen(ctx, p);
-
-  // travelling glint along the kernels (summer micro-motion, additive)
-  if (m.glint !== undefined && p.huskOpen > 0.2) {
-    ctx.save();
-    cobBodyPath(ctx);
-    ctx.clip();
-    const gy = COB_TOP + 4 + m.glint * 28;
-    const grad = ctx.createRadialGradient(-1, gy, 0, -1, gy, 5);
-    grad.addColorStop(0, "rgba(255,252,220,0.7)");
-    grad.addColorStop(1, "rgba(255,252,220,0)");
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.ellipse(-1, gy, 5, 3, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
+  // ── COMMON: rustle traveling-wave sway (~6s, win 0.9s) ──
+  // The stalk/leaves bend ~10–14px side-to-side. lean bends the whole plant;
+  // leafWave adds an extra delayed wave at the leaf tips so the wind reads as
+  // "passing through". Pivot near the base ⇒ the top (arm ≈ 37px) travels most.
+  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  if (qC >= 0) {
+    const env = Math.sin(Math.PI * qC);        // 0..1..0, zero at edges
+    const rock = Math.sin(qC * Math.PI * 3);   // 1.5 rocks within the window
+    pose.lean += 0.13 * env * rock;            // ~0.13 rad → ~12px at the tip
+    // leaf tips trail the stalk by a quarter cycle → traveling wave
+    pose.leafWave += 0.4 * env * Math.sin(qC * Math.PI * 3 - Math.PI * 0.5);
+    // gentle base squash as the gust loads the plant
+    pose.squashY += -0.05 * hump(qC);
+    pose.squashX += 0.045 * hump(qC);
+    // faint windup tilt (keeps anticipate() in the seamless toolkit; 0 at edges)
+    pose.lean += 0.02 * anticipate(qC);
   }
 
-  silkTuft(ctx, p, m.silkSway ?? 0);
-  frostAndSnow(ctx, p);
-
-  // faint cold sheen pulse (winter), additive, tiny — over upward surfaces
-  if (m.coldSheen !== undefined && m.coldSheen > 0.01) {
-    ctx.save();
-    cobBodyPath(ctx);
-    ctx.clip();
-    ctx.globalAlpha = 0.12 * m.coldSheen;
-    ctx.fillStyle = "#cfe6ff";
-    cobBodyPath(ctx);
-    ctx.fill();
-    ctx.restore();
+  // ── RARE SPECIAL: strong GUST BEND (~18s, win 1.2s, phase +3s) ──
+  // Anticipation lean back → big bend over (~16–20px at the top) → overshoot
+  // the other way → settle. May paint outside the box at the apex (fine).
+  const qS = actionQ(t, 18.0, 1.2, 3.0);
+  if (qS >= 0) {
+    const env = Math.sin(Math.PI * qS); // 0..1..0, zero velocity at edges
+    // windup (small back-lean) → strong forward bend → overshoot → settle.
+    // A decaying oscillation gives the anticipation + follow-through, all
+    // scaled by env so it is exactly 0 with zero velocity at q=0 and q=1.
+    const bend =
+      -0.16 * Math.sin(qS * Math.PI)            // main hard bend over (one way)
+      + 0.07 * Math.sin(qS * Math.PI * 2)       // anticipation + overshoot wobble
+      - 0.03 * Math.sin(qS * Math.PI * 3);      // smaller follow-through settle
+    pose.lean += env * bend;                    // ~0.21 rad peak → ~18–20px at tip
+    // leaves whip with the bend, trailing a touch
+    pose.leafWave += env * (1.3 * Math.sin(qS * Math.PI) + 0.5 * Math.sin(qS * Math.PI * 2 - 0.6));
+    // the plant compresses/loads at the base through the bend, lifts slightly
+    pose.squashY += hump(qS) * 0.1 - Math.abs(env) * 0.04;
+    pose.squashX += -hump(qS) * 0.08;
+    pose.bob += -hump(qS) * 1.4; // slight lift as it whips over
   }
 
-  // ── Transition transients (each fully zero at p=0 and p=1) ───────────────
+  return pose;
+}
 
-  // Spring→Summer: a soft warm glow spilling out of the opening husk, peaking
-  // mid-morph as the leaves curl back — reads as the cob "opening up".
-  if (m.peelGlow !== undefined && m.peelGlow > 0.01) {
+// ── Per-season draw / anim ───────────────────────────────────────────────────
+
+function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
+  return (ctx) => paint(ctx, SP[season], REST);
+}
+
+function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
+  return (ctx, t) => {
+    const tt = Number.isFinite(t) ? t : 0;
+    paint(ctx, SP[season], poseFromClock(tt));
+
+    // Light additive season micro-sparkle (dressing only — never the subject's
+    // own colour/brightness). Kept tiny so the POSE action is the star.
     ctx.save();
-    cobBodyPath(ctx);
-    ctx.clip();
-    const a = clamp01(m.peelGlow);
-    const glow = ctx.createRadialGradient(0, -2, 0, 0, -2, 13);
-    glow.addColorStop(0, `rgba(255,246,196,${0.5 * a})`);
-    glow.addColorStop(1, "rgba(255,246,196,0)");
-    ctx.fillStyle = glow;
-    cobBodyPath(ctx);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // Summer→Autumn: a warm amber wash pooling low on the cob as the kernels
-  // deepen and dent — a clear colour-deepening gesture, separate from peeling.
-  if (m.deepenWash !== undefined && m.deepenWash > 0.01) {
-    ctx.save();
-    cobBodyPath(ctx);
-    ctx.clip();
-    const a = clamp01(m.deepenWash);
-    const wash = ctx.createLinearGradient(0, COB_TOP + 4, 0, COB_BOT);
-    wash.addColorStop(0, "rgba(196,120,28,0)");
-    wash.addColorStop(1, `rgba(168,96,20,${0.34 * a})`);
-    ctx.fillStyle = wash;
-    cobBodyPath(ctx);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // dew shimmer (spring), additive, a tiny pulsing droplet glint
-  if (m.dew !== undefined && m.dew > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = m.dew;
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.beginPath();
-    ctx.arc(-3, -6, 0.9 + 0.5 * m.dew, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(2, 2, 0.7, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  ctx.restore(); // end subject bob
-
-  // Autumn→Winter: a short fall of settling specks drifting down onto the cob
-  // as the husk mutes and the snow cap forms — vanishes at both endpoints.
-  if (m.settleFall !== undefined && m.settleFall > 0.01) {
-    ctx.save();
-    const a = clamp01(m.settleFall);
-    ctx.fillStyle = "#f1f7ff";
-    const specks: Array<[number, number]> = [
-      [-7, -10], [-2, -16], [4, -12], [6, -4], [-4, 2], [1, -7],
-    ];
-    specks.forEach(([sx, sy], i) => {
-      // each speck eases downward as the morph proceeds, then fades out
-      const fall = (1 - a) * 9; // higher early in the morph, settles by the end
-      ctx.globalAlpha = 0.8 * a;
-      ctx.beginPath();
-      ctx.arc(sx + (i % 2 === 0 ? -0.6 : 0.6) * fall, sy - fall, 0.85, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-
-  // drifting snowflakes (winter), additive, in tile space (not bobbed)
-  if (m.extraFlakes) {
-    ctx.save();
-    ctx.fillStyle = "#ffffff";
-    m.extraFlakes.forEach(([fx, fy, r]) => {
-      ctx.globalAlpha = 0.85;
-      ctx.beginPath();
-      ctx.arc(fx, fy, r, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-
-  ctx.globalAlpha = 1;
-}
-
-// ── Idle bob: seamless, zero at t=0 with zero velocity ──────────────────────
-// A*(1-cos(w t))*0.5 : value 0 and derivative 0 at t=0, seamless loop period 2π/w.
-
-// Idle period is ~5s: w = 2π/5 ≈ 1.257 rad/s (roughly half the previous 1.5).
-const IDLE_W = (2 * Math.PI) / 5; // rad/s — one breath every ~5 seconds
-
-function bobAt(t: number): number {
-  const A = 1.4; // peak rise in design px
-  return -A * (1 - Math.cos(IDLE_W * t)) * 0.5; // negative = rises upward
-}
-
-// A smooth "gesture" envelope on the breath cycle: 0 at t=0 (and each loop
-// boundary), rising and easing back — gives the silk sway / flutter a single
-// readable swing per ~5s loop rather than a fast jitter.
-function gesture(t: number): number {
-  return Math.sin(IDLE_W * t); // seamless over the 5s period, 0 at t=0
-}
-
-// ── Per-season draw + anim ──────────────────────────────────────────────────
-
-function drawCornSpring(ctx: CanvasRenderingContext2D): void {
-  paint(ctx, SP.Spring, 0);
-}
-function drawCornSummer(ctx: CanvasRenderingContext2D): void {
-  paint(ctx, SP.Summer, 0);
-}
-function drawCornAutumn(ctx: CanvasRenderingContext2D): void {
-  paint(ctx, SP.Autumn, 0);
-}
-function drawCornWinter(ctx: CanvasRenderingContext2D): void {
-  paint(ctx, SP.Winter, 0);
-}
-
-function animCornSpring(ctx: CanvasRenderingContext2D, t: number): void {
-  // Slow silk sway at the top (one swing per ~5s loop) + a faint dew shimmer
-  // that breathes on the same slow cycle. Subject bob is zero at t=0.
-  const g = gesture(t);
-  const dew = 0.3 + 0.3 * (0.5 - 0.5 * Math.cos(IDLE_W * t));
-  paint(ctx, SP.Spring, bobAt(t), {
-    silkSway: g * 1.1,
-    dew,
-  });
-}
-
-function animCornSummer(ctx: CanvasRenderingContext2D, t: number): void {
-  // Slow silk sway + a single travelling kernel glint that crosses the cob
-  // once per ~10s (two breath loops) so it reads as a clear slow sweep.
-  const glint = (t / 10) % 1; // seamless 0..1 sweep, ~10s per pass
-  paint(ctx, SP.Summer, bobAt(t), {
-    silkSway: gesture(t) * 1.3,
-    glint,
-  });
-}
-
-function animCornAutumn(ctx: CanvasRenderingContext2D, t: number): void {
-  // Slow husk-leaf flutter (one readable curl-back swing per ~5s loop) plus a
-  // gentle silk sway slightly offset so the gesture stays legible.
-  const leafFlutter = gesture(t) * 1.5;
-  paint(ctx, SP.Autumn, bobAt(t), {
-    leafFlutter,
-    silkSway: Math.sin(IDLE_W * t - 0.6) * 0.9,
-  });
-}
-
-function animCornWinter(ctx: CanvasRenderingContext2D, t: number): void {
-  // Slow drifting flakes + a faint cold sheen breathing on the ~5s cycle.
-  const seeds: Array<[number, number, number]> = [
-    [-6, 1.1, 0.0],
-    [7, 0.9, 0.5],
-  ];
-  const span = 36;
-  const flakes: Array<[number, number, number]> = seeds.map(([fx, r, phase]) => {
-    // slower descent: one fall every ~7.2s per flake (halved fall rate).
-    const prog = (((t / 7.2 + phase) % 1) + 1) % 1;
-    const fy = -22 + prog * span;
-    const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
-    return [driftX, fy, r];
-  });
-  const coldSheen = 0.5 - 0.5 * Math.cos(IDLE_W * t);
-  paint(ctx, SP.Winter, bobAt(t), {
-    silkSway: gesture(t) * 0.6,
-    extraFlakes: flakes,
-    coldSheen,
-  });
-}
-
-// ── Transitions: lerp every field through a smoothstep ──────────────────────
-// transition(ctx,0) === draw(from); transition(ctx,1) === draw(to). No snap.
-
-// A transient envelope that is EXACTLY 0 at p=0 and p=1 and peaks at p=0.5.
-// Every transition overlay scales by this so endpoints are untouched.
-const transient = (p: number): number => Math.sin(Math.PI * clamp01(p));
-
-// Staged interpolation: drive ONE subset of P fields by `early` (a remapped,
-// front-loaded smootherstep) and the REST by `late`, so a transition can read
-// as two distinct gestures. Both `early(0)=late(0)=0` and `early(1)=late(1)=1`,
-// so the endpoints remain EXACTLY draw(from) / draw(to).
-function stageEarly(p: number): number {
-  // front-loaded: completes its travel by ~p=0.7, eased.
-  return smoother(clamp01(p / 0.7));
-}
-function stageLate(p: number): number {
-  // back-loaded: barely moves until ~p=0.35, eased.
-  return smoother(clamp01((p - 0.3) / 0.7));
-}
-
-/** Build a P where `huskKeys` follow `te` and everything else follows `tl`. */
-function stagedP(
-  from: P,
-  to: P,
-  te: number,
-  tl: number,
-  huskLeads: boolean,
-): P {
-  const full = lerpP(from, to, tl);
-  const huskT = huskLeads ? te : tl;
-  const restHusk: Pick<P, "huskOpen" | "huskLight" | "huskDark" | "huskBrownAmt"> = {
-    huskOpen: lerp(from.huskOpen, to.huskOpen, huskT),
-    huskLight: lerpRGB(from.huskLight, to.huskLight, huskT),
-    huskDark: lerpRGB(from.huskDark, to.huskDark, huskT),
-    huskBrownAmt: lerp(from.huskBrownAmt, to.huskBrownAmt, huskT),
+    try {
+      ctx.globalAlpha = 1;
+      if (season === "Winter") {
+        const seeds: Array<[number, number, number]> = [
+          [-9, 0.0, 1.0], [6, 0.4, 0.9], [11, 0.7, 0.8], [-2, 0.25, 0.9],
+        ];
+        ctx.fillStyle = "#ffffff";
+        seeds.forEach(([fx, phase, r]) => {
+          const prog = ((tt / 3.0 + phase) % 1 + 1) % 1;
+          const fy = -24 + prog * 42;
+          const dx = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
+          ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog * Math.PI);
+          ctx.beginPath();
+          ctx.arc(dx, fy, r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+      } else if (season === "Spring") {
+        // a couple of drifting petals
+        ctx.fillStyle = "rgba(255,248,232,0.9)";
+        for (let i = 0; i < 2; i++) {
+          const prog = ((tt / 4.0 + i * 0.5) % 1 + 1) % 1;
+          const px = (i === 0 ? -10 : 9) + Math.sin(prog * Math.PI * 2) * 3;
+          const py = -20 + prog * 36;
+          ctx.globalAlpha = 0.35 + 0.4 * Math.sin(prog * Math.PI);
+          ctx.beginPath();
+          ctx.ellipse(px, py, 1.4, 0.9, prog * 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      } else if (season === "Autumn") {
+        // one slow tumbling leaf
+        const prog = ((tt / 5.0) % 1 + 1) % 1;
+        const px = 12 - prog * 7 + Math.sin(prog * Math.PI * 3) * 2;
+        const py = -18 + prog * 34;
+        ctx.globalAlpha = 0.4 + 0.4 * Math.sin(prog * Math.PI);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(prog * Math.PI * 4);
+        ctx.fillStyle = "rgba(208,150,40,1)";
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.globalAlpha = 1;
+      }
+      // Summer: no extra dressing — the gust + glossy golden ear is the show.
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
   };
-  return { ...full, ...restHusk };
 }
 
-// Spring→Summer: the husk PEELING OPEN leads (front-loaded), with a soft warm
-// glow spilling from the opening. Colours/silk follow a touch behind.
-function springToSummer(ctx: CanvasRenderingContext2D, pp: number): void {
-  const p = clamp01(pp);
-  const te = stageEarly(p);
-  const tl = stageLate(p);
-  paint(ctx, stagedP(SP.Spring, SP.Summer, te, tl, true), 0, {
-    peelGlow: 0.55 * transient(p),
-  });
-}
+// ── Forward season→season transitions (seamless endpoints) ───────────────────
 
-// Summer→Autumn: the kernels DEEPENING/DENTING leads while the husk dries a
-// touch behind, with a warm amber wash that swells then fades.
-function summerToAutumn(ctx: CanvasRenderingContext2D, pp: number): void {
-  const p = clamp01(pp);
-  const te = stageEarly(p);
-  const tl = stageLate(p);
-  // kernels + dent follow the EARLY stage; husk dries on the LATE stage.
-  const full = lerpP(SP.Summer, SP.Autumn, tl);
-  const staged: P = {
-    ...full,
-    kernel: lerpRGB(SP.Summer.kernel, SP.Autumn.kernel, te),
-    kernelDeep: lerpRGB(SP.Summer.kernelDeep, SP.Autumn.kernelDeep, te),
-    kernelDent: lerp(SP.Summer.kernelDent, SP.Autumn.kernelDent, te),
+function makeTransition(fromIdx: 0 | 1 | 2): (ctx: CanvasRenderingContext2D, p: number) => void {
+  const from = SP[SEASON_NAMES[fromIdx]];
+  const to = SP[SEASON_NAMES[fromIdx + 1]];
+  return (ctx, pp) => {
+    const k = smoother(clamp01(pp));
+    paint(ctx, lerpP(from, to, k), REST);
   };
-  paint(ctx, staged, 0, {
-    deepenWash: transient(p),
-  });
 }
 
-// Autumn→Winter: the husk MUTES (cools/greys) first while the snow cap + frost
-// settle a touch behind, with a brief fall of settling specks.
-function autumnToWinter(ctx: CanvasRenderingContext2D, pp: number): void {
-  const p = clamp01(pp);
-  const te = stageEarly(p);
-  const tl = stageLate(p);
-  const full = lerpP(SP.Autumn, SP.Winter, tl);
-  // husk colour mutes early; snow/frost amounts arrive late (default tl).
-  const staged: P = {
-    ...full,
-    huskLight: lerpRGB(SP.Autumn.huskLight, SP.Winter.huskLight, te),
-    huskDark: lerpRGB(SP.Autumn.huskDark, SP.Winter.huskDark, te),
-    huskBrownAmt: lerp(SP.Autumn.huskBrownAmt, SP.Winter.huskBrownAmt, te),
-  };
-  paint(ctx, staged, 0, {
-    settleFall: transient(p),
-  });
-}
+const springToSummer = makeTransition(0);
+const summerToAutumn = makeTransition(1);
+const autumnToWinter = makeTransition(2);
 
-// ── Exports ─────────────────────────────────────────────────────────────────
+// ── Exports ──────────────────────────────────────────────────────────────────
 
 export const VARIANTS: SeasonalTileEntry = {
-  Spring: { draw: drawCornSpring, anim: animCornSpring },
-  Summer: { draw: drawCornSummer, anim: animCornSummer },
-  Autumn: { draw: drawCornAutumn, anim: animCornAutumn },
-  Winter: { draw: drawCornWinter, anim: animCornWinter },
+  Spring: { draw: draw("Spring"), anim: anim("Spring") },
+  Summer: { draw: draw("Summer"), anim: anim("Summer") },
+  Autumn: { draw: draw("Autumn"), anim: anim("Autumn") },
+  Winter: { draw: draw("Winter"), anim: anim("Winter") },
 };
 
 export const TRANSITIONS: SeasonalTransitionSet = {

@@ -248,6 +248,15 @@ export function seasonalBakedActive(key: string): boolean {
   return true;
 }
 
+/** Whether `key` is rendering its live, re-baked all-VECTOR seasonal art right now
+ *  (seasonal art active, and not on the baked pixel route). Such tiles carry their
+ *  idle ACTION inside the vector `anim` (a canopy sway, a peck, a hop), so the caller
+ *  must NOT also apply the sprite-rotation ambient sway — it would fight the in-art
+ *  motion. Precisely `seasonalArtActive(key) && !seasonalBakedActive(key)`. */
+export function seasonalVectorActive(key: string): boolean {
+  return seasonalArtActive(key) && !seasonalBakedActive(key);
+}
+
 /** Whether `key` could render baked art under the current settings — lets menu icons
  *  decide whether to kick the art load and prefer the baked reference (the
  *  vector-preferred keys only qualify while the override is on). */

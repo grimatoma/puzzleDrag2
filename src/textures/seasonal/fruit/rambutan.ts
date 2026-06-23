@@ -1,5 +1,4 @@
-// Seasonal art for the RAMBUTAN fruit tile (`tile_fruit_rambutan`).
-// Module: src/textures/seasonal/fruit/rambutan.ts
+// BOLD seasonal art for the RAMBUTAN fruit tile (`tile_fruit_rambutan`).
 //
 // CATEGORY: Fruit. The iconic harvested ITEM only — a small cluster of 2–3 oval
 // rambutan fruit, each covered in soft curved spiky HAIRS (the signature shaggy
@@ -8,24 +7,36 @@
 // same sprig) — only colour, ripeness shade and the small dressing/frost/snow
 // amounts change. Ripeness = colour, never an identity change.
 //
-// Architecture mirrors veg/pepper.ts exactly: ONE parameterized
-// `paint(ctx, p, bob)` drives all four seasons and the three forward morphs:
-//   - draw(season)      = paint(ctx, SP[season], 0)
-//   - anim(season)      = micro-motion + paint(ctx, SP[season], bobAt(t))
-//   - transition(from)  = paint(ctx, lerpP(SP[from], SP[from+1], smoother(p)), 0)
-// so transition(0) ≡ draw(from) and transition(1) ≡ draw(to) — seamless. The
-// bob uses A*(1-cos(w t))*0.5 so bob(0)=0 with zero velocity.
+// This is the APPROVED "bold & fun" direction (mirrors veg/pepper.bold.ts):
+// seasons swing HARD on colour + a real seasonal prop, and the idle is loud
+// rather than subtle:
 //
-// PALETTE LOCK: ripe rambutan stays RED with soft hairy spines; ripeness shows
-// as green→red→crimson→snow-dulled-red in surface colour only.
+//   IDLE COMMON  (~6s, win ~0.9s): a soft WOBBLE — the whole hairy cluster
+//       rocks/leans side-to-side with the soft hairs jiggling, a squash at the
+//       base. Anticipation → peak → settle, zero velocity at the window edges
+//       (seamless).
+//   IDLE SPECIAL (~18s, win ~1.1s): a bigger BOUNCE — a squash-stretch hop
+//       ~12–13 design-px up, anticipation crouch, stretch on the way up, and a
+//       squash landing that overshoots then settles (the cluster may briefly
+//       exit the box).
 //
-// Origin-centered in the −24..+24 design box, light from upper-left, flat
-// cel-shaded with a soft dark outline. Pure Canvas-2D vector drawing.
+// Architecture mirrors pepper.bold.ts: a single parameterized
+// `paint(ctx, p, pose)` where `interface P` holds tweenable season params
+// (colours + prop amounts) and `pose` holds the idle gesture (bob / lean /
+// squash). Because every season is the same paint with tweened P, transitions
+// are seamless:
+//   transition(0) ≡ draw(from), transition(1) ≡ draw(to).
+// REST pose has all zeros, so draw(season) = paint(ctx, SP[season], REST) and
+// the idle's pose is 0 at every action-window edge → seamless loop.
+//
+// Origin-centered in the −24..+24 design box (actions may paint outside it),
+// light from upper-left, flat cel-shaded with a soft dark outline. Pure
+// Canvas-2D vector drawing — never throws, clamps everything, save/restore.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
 import { SEASON_NAMES, type SeasonName } from "../types.js";
 
-// ── Tweenable params ─────────────────────────────────────────────────────────
+// ── Tweenable season params ──────────────────────────────────────────────────
 
 type RGB = [number, number, number];
 
@@ -54,6 +65,16 @@ interface P {
   blossomAmt: number; // 0..1 tiny blossoms on the pad (spring)
   fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
 }
+
+/** The idle gesture, separate from season identity. All zero = REST. */
+interface Pose {
+  bob: number;     // vertical offset in design px (negative = up)
+  lean: number;    // top-of-cluster sway, radians (rock side to side)
+  squashX: number; // additive horizontal scale (+0.18 = 18% wider)
+  squashY: number; // additive vertical scale (+0.18 = 18% taller)
+}
+
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
 
@@ -122,117 +143,121 @@ function clampP(p: P): P {
   };
 }
 
-// ── Per-season params ────────────────────────────────────────────────────────
+function safeNum(x: number): number {
+  return Number.isFinite(x) ? x : 0;
+}
+
+// ── Per-season params — pushed HARD ──────────────────────────────────────────
 
 const SP: Record<SeasonName, P> = {
-  // Spring — green spiky young fruit, hairs greenish; dewy lime pad + blossom.
+  // Spring — clearly GREEN spiky young fruit, hairs greenish; dewy lime pad +
+  // a prominent blossom.
   Spring: {
-    skinLight: [168, 214, 104],
-    skinMid: [112, 174, 70],
-    skinDark: [64, 120, 50],
-    spineLight: [186, 222, 120],
-    spineDark: [96, 150, 64],
-    leaf: [108, 168, 70],
-    stem: [126, 110, 70],
-    padGrass: [128, 206, 86],
-    padDark: [72, 138, 58],
+    skinLight: [170, 224, 96],
+    skinMid: [104, 182, 60],
+    skinDark: [52, 118, 44],
+    spineLight: [190, 230, 118],
+    spineDark: [92, 156, 60],
+    leaf: [104, 172, 64],
+    stem: [122, 110, 66],
+    padGrass: [126, 214, 84],
+    padDark: [64, 146, 56],
     soil: [120, 84, 48],
-    outline: [44, 70, 34],
-    light: [232, 244, 226],
+    outline: [36, 72, 30],
+    light: [228, 248, 214],
     lightAmt: 0.16,
-    ripeness: 0.12,
+    ripeness: 0.1,
     gloss: 0.2,
-    spineTipGreen: 0.9,
+    spineTipGreen: 0.95,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
-    blossomAmt: 0.85,
+    blossomAmt: 1.0,
     fallenLeafAmt: 0,
   },
-  // Summer — full ripe RED hairy fruit with green-tipped spines (PEAK); mid-green pad.
+  // Summer — full vivid RED hairy fruit at PEAK, max gloss, bright warm light.
   Summer: {
-    skinLight: [240, 78, 64],
-    skinMid: [206, 36, 40],
-    skinDark: [142, 18, 30],
-    spineLight: [232, 86, 70],
-    spineDark: [150, 26, 32],
-    leaf: [86, 150, 56],
+    skinLight: [255, 92, 70],
+    skinMid: [222, 34, 38],
+    skinDark: [148, 16, 28],
+    spineLight: [244, 96, 76],
+    spineDark: [156, 26, 32],
+    leaf: [80, 156, 52],
     stem: [120, 92, 56],
-    padGrass: [86, 168, 70],
-    padDark: [44, 110, 48],
-    soil: [126, 86, 48],
-    outline: [82, 16, 24],
-    light: [255, 240, 206],
+    padGrass: [80, 178, 70],
+    padDark: [40, 116, 50],
+    soil: [128, 88, 48],
+    outline: [88, 14, 22],
+    light: [255, 244, 200],
     lightAmt: 0.18,
-    ripeness: 0.8,
-    gloss: 0.9,
-    spineTipGreen: 0.55, // green-tipped spines at peak
+    ripeness: 0.85,
+    gloss: 1.0,
+    spineTipGreen: 0.5, // green-tipped spines at peak
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
-  // Autumn — deep crimson overripe fruit, spines darkening; olive-tan pad + leaves.
+  // Autumn — deep crimson overripe fruit, spines darkening; amber pad + leaves.
   Autumn: {
-    skinLight: [186, 52, 48],
-    skinMid: [150, 28, 36],
-    skinDark: [92, 18, 28],
-    spineLight: [156, 56, 50],
-    spineDark: [96, 30, 30],
+    skinLight: [180, 46, 44],
+    skinMid: [138, 24, 34],
+    skinDark: [82, 16, 26],
+    spineLight: [150, 50, 46],
+    spineDark: [90, 28, 30],
     leaf: [150, 120, 60],
     stem: [110, 82, 48],
-    padGrass: [150, 152, 86],
-    padDark: [104, 96, 52],
-    soil: [120, 80, 44],
-    outline: [66, 16, 22],
-    light: [248, 210, 150],
+    padGrass: [160, 150, 78],
+    padDark: [108, 88, 46],
+    soil: [120, 78, 42],
+    outline: [58, 14, 20],
+    light: [250, 198, 132],
     lightAmt: 0.2,
     ripeness: 1.0,
-    gloss: 0.42,
-    spineTipGreen: 0.12, // spines darkening, little green left
+    gloss: 0.36,
+    spineTipGreen: 0.1, // spines darkening, little green left
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
-    fallenLeafAmt: 0.85,
+    fallenLeafAmt: 1.0,
   },
-  // Winter — snow-dusted dull-red fruit + frost on spines; red still visible,
-  // snowy pad, cool light.
+  // Winter — cool blue-grey light; frost-dusted DULL-red fruit still clearly
+  // red, a bold snow cap on the shoulders + a snow blanket on the pad.
   Winter: {
-    skinLight: [180, 86, 78],
-    skinMid: [144, 52, 56],
-    skinDark: [92, 36, 46],
-    spineLight: [176, 100, 96],
-    spineDark: [110, 56, 60],
-    leaf: [118, 130, 96],
+    skinLight: [186, 92, 84],
+    skinMid: [148, 56, 60],
+    skinDark: [94, 38, 48],
+    spineLight: [182, 106, 102],
+    spineDark: [112, 58, 62],
+    leaf: [120, 132, 98],
     stem: [110, 96, 80],
-    padGrass: [176, 196, 214],
-    padDark: [120, 146, 172],
-    soil: [128, 110, 96],
-    outline: [54, 38, 50],
-    light: [206, 226, 252],
-    lightAmt: 0.3,
+    padGrass: [182, 202, 220],
+    padDark: [122, 150, 178],
+    soil: [132, 116, 102],
+    outline: [50, 38, 54],
+    light: [200, 224, 255],
+    lightAmt: 0.32,
     ripeness: 0.85,
-    gloss: 0.22,
-    spineTipGreen: 0.05,
-    frostAmt: 0.72,
-    snowCapAmt: 0.85,
-    padSnowAmt: 0.9,
+    gloss: 0.24,
+    spineTipGreen: 0.04,
+    frostAmt: 0.8,
+    snowCapAmt: 1.0,
+    padSnowAmt: 1.0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
 };
 
-// ── The single parameterized paint ───────────────────────────────────────────
-
-// Cluster geometry constants — the SAME hairy-cluster silhouette every season.
+// ── Cluster geometry — the SAME hairy-cluster silhouette every season ────────
 // Three oval fruit: two front-low, one tucked behind/above; each ~oval ~12 tall.
 // Each fruit gets a deterministic ring of soft curved spines (the signature
-// shaggy hairs). Origin-centered, resting low on the pad.
+// shaggy hairs). Origin-centered, resting low on the pad. The whole cluster
+// rocks/squashes about a pivot near the base under the idle pose.
 interface FruitDef {
   cx: number;
-  cy: number; // centre (before bob)
+  cy: number; // centre (before pose)
   rx: number;
   ry: number; // oval radii
   rot: number; // slight tilt
@@ -246,6 +271,10 @@ const FRUIT: FruitDef[] = [
   { cx: 0.4, cy: 1.6, rx: 6.6, ry: 7.8, rot: 0.02, spines: 16 },
 ];
 
+// The cluster pivots about a point near the base so lean rocks the TOP and
+// squash anchors at the resting contact.
+const CLUSTER_PIVOT_Y = 16; // near the soil contact
+
 /** Deterministic pseudo-random in [0,1) for spine jitter — stable per call. */
 function jit(i: number): number {
   const s = Math.sin(i * 12.9898 + 4.1) * 43758.5453;
@@ -254,22 +283,24 @@ function jit(i: number): number {
 
 /** Draw the soft curved spines (hairs) radiating from one fruit. The spine
  *  LAYOUT is identical every season (same silhouette); only colours / frost
- *  change. `seed` offsets the deterministic jitter so each fruit differs. */
+ *  change. `seed` offsets the deterministic jitter so each fruit differs.
+ *  `jiggle` (radians) adds a tiny per-spine wobble for the idle hairs-jiggle. */
 function drawSpines(
   ctx: CanvasRenderingContext2D,
   f: FruitDef,
-  bob: number,
   seed: number,
   p: P,
   pass: "outline" | "fill",
+  jiggle: number,
 ): void {
   const cx = f.cx;
-  const cy = f.cy + bob;
+  const cy = f.cy;
   const n = f.spines;
   for (let i = 0; i < n; i++) {
     const base = (i / n) * Math.PI * 2 + f.rot;
     // bias spines outward; skip the very bottom (sits in the cluster)
-    const ang = base + (jit(i + seed) - 0.5) * 0.18;
+    const wob = jiggle * (jit(i * 2 + seed) - 0.5);
+    const ang = base + (jit(i + seed) - 0.5) * 0.18 + wob;
     const downness = Math.cos(ang); // +1 = downward
     if (downness > 0.55) continue; // hide hairs tucked under the fruit
     const len = 3.4 + jit(i * 3 + seed) * 2.2;
@@ -302,21 +333,21 @@ function drawSpines(
 }
 
 /** Trace one fruit's oval body into the current path. */
-function fruitPath(ctx: CanvasRenderingContext2D, f: FruitDef, bob: number, grow = 0): void {
+function fruitPath(ctx: CanvasRenderingContext2D, f: FruitDef, grow = 0): void {
   ctx.beginPath();
-  ctx.ellipse(f.cx, f.cy + bob, f.rx + grow, f.ry + grow, f.rot, 0, Math.PI * 2);
+  ctx.ellipse(f.cx, f.cy, f.rx + grow, f.ry + grow, f.rot, 0, Math.PI * 2);
 }
 
 /** Draw a single fruit body (cel-shaded rind, no spines). */
-function drawFruitBody(ctx: CanvasRenderingContext2D, f: FruitDef, bob: number, p: P): void {
-  const cy = f.cy + bob;
+function drawFruitBody(ctx: CanvasRenderingContext2D, f: FruitDef, p: P): void {
+  const cy = f.cy;
   // mid body
   ctx.fillStyle = rgb(p.skinMid);
-  fruitPath(ctx, f, bob);
+  fruitPath(ctx, f);
   ctx.fill();
   // lit upper-left face
   ctx.save();
-  fruitPath(ctx, f, bob);
+  fruitPath(ctx, f);
   ctx.clip();
   const g = ctx.createLinearGradient(f.cx - f.rx, cy - f.ry, f.cx + f.rx, cy + f.ry);
   g.addColorStop(0, rgb(p.skinLight));
@@ -353,16 +384,25 @@ function drawFruitBody(ctx: CanvasRenderingContext2D, f: FruitDef, bob: number, 
   ctx.restore();
 }
 
-/** The whole tile from ONLY `p` and `bob`. */
-function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
+// ── The single parameterized paint ───────────────────────────────────────────
+
+/** The whole tile from ONLY `p` (season identity) and `pose` (idle gesture). */
+function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
   const p = clampP(raw);
+  const pose: Pose = {
+    bob: safeNum(rawPose.bob),
+    lean: safeNum(rawPose.lean),
+    squashX: safeNum(rawPose.squashX),
+    squashY: safeNum(rawPose.squashY),
+  };
+
   ctx.save();
   try {
     ctx.globalAlpha = 1;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
-    // ── Pad: low flat grass ellipse, x∈[−18,+18], centre y≈+19 ──────────────
+    // ── Pad: low flat grass ellipse (does NOT move with the pose) ────────────
     ctx.fillStyle = rgba(p.padDark, 0.4);
     ctx.beginPath();
     ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
@@ -410,7 +450,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
-      [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+      ([[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]] as Array<[number, number]>).forEach(([sx, sy]) => {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -461,28 +501,45 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       });
     }
 
-    // ── Soil contact patch + contact shadow under the cluster ───────────────
+    // ── Contact shadow under the cluster (follows the bob/lean for grounding) ─
+    const tipShift = pose.lean * (CLUSTER_PIVOT_Y - 1); // how far the top leans
+    const shadowSpread = 1 + clamp01(pose.bob < 0 ? -pose.bob / 14 : 0) * 0.5;
     ctx.fillStyle = rgb(p.soil);
     ctx.beginPath();
-    ctx.ellipse(0, 16 + bob + 1.5, 10, 2.8, 0, 0, Math.PI * 2);
+    ctx.ellipse(0 + tipShift * 0.18, 17.5, 10 * shadowSpread, 2.8, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgba(p.outline, 0.28);
+    ctx.fillStyle = rgba(p.outline, 0.28 / shadowSpread);
     ctx.beginPath();
-    ctx.ellipse(2.5, 16 + bob + 2, 12, 2.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(2.5 + tipShift * 0.2, 18, 12 * shadowSpread, 2.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── Subject: the hairy cluster, under the idle pose transform ────────────
+    ctx.save();
+    // Pivot near the base so lean rocks the cluster side-to-side and squash
+    // anchors at the base (it "sits" on the pad). bob raises the whole cluster.
+    ctx.translate(0, CLUSTER_PIVOT_Y + pose.bob);
+    ctx.rotate(pose.lean);
+    ctx.scale(1 + pose.squashX, 1 + pose.squashY);
+    ctx.translate(0, -CLUSTER_PIVOT_Y);
+
+    // soft contact shadow under the cluster (inside the transform so it tracks)
+    ctx.fillStyle = rgba(p.outline, 0.22);
+    ctx.beginPath();
+    ctx.ellipse(0, 15.5, 9.5, 2.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // ── Sprig: short woody stem rising to one leaf (behind the cluster) ──────
-    const sy = -3 + bob;
+    const sy = -3;
     ctx.strokeStyle = rgb(p.outline);
     ctx.lineWidth = 3.0;
     ctx.beginPath();
-    ctx.moveTo(1.5, 1.5 + bob);
+    ctx.moveTo(1.5, 1.5);
     ctx.quadraticCurveTo(3.5, sy - 2, 5.5, sy - 7);
     ctx.stroke();
     ctx.strokeStyle = rgb(p.stem);
     ctx.lineWidth = 1.7;
     ctx.beginPath();
-    ctx.moveTo(1.5, 1.5 + bob);
+    ctx.moveTo(1.5, 1.5);
     ctx.quadraticCurveTo(3.5, sy - 2, 5.5, sy - 7);
     ctx.stroke();
     // one leaf at the sprig tip
@@ -492,20 +549,22 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     fruitLeaf(ctx, p);
     ctx.restore();
 
-    // ── Subject: the hairy cluster (SAME silhouette every season) ───────────
+    // ── The hairy cluster (SAME silhouette every season) ────────────────────
     // Draw back fruit first (the tucked-up one), then the two front fruit, so
     // the front overlaps. For each: spine OUTLINE pass, body, then spine FILL.
+    // hairsJiggle is 0 at REST (seamless); the idle adds a tiny per-spine wobble.
+    const hairsJiggle = clamp01(Math.abs(pose.lean) / 0.17 + Math.abs(pose.bob) / 13) * 0.12;
     const order = [2, 0, 1]; // back, front-left, front-right
     order.forEach((idx) => {
       const f = FRUIT[idx];
       // soft dark outline ring under the body
-      fruitPath(ctx, f, bob, 1.1);
+      fruitPath(ctx, f, 1.1);
       ctx.fillStyle = rgb(p.outline);
       ctx.fill();
       // spine outline pass (dark, fat) then body, then lit spine pass over
-      drawSpines(ctx, f, bob, idx * 7 + 1, p, "outline");
-      drawFruitBody(ctx, f, bob, p);
-      drawSpines(ctx, f, bob, idx * 7 + 1, p, "fill");
+      drawSpines(ctx, f, idx * 7 + 1, p, "outline", hairsJiggle);
+      drawFruitBody(ctx, f, p);
+      drawSpines(ctx, f, idx * 7 + 1, p, "fill", hairsJiggle);
     });
 
     // snow caps on the shoulders of the cluster (winter) — over the spines
@@ -513,7 +572,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       const a = p.snowCapAmt;
       ctx.fillStyle = rgba([246, 251, 255], 0.95 * a);
       [FRUIT[0], FRUIT[1], FRUIT[2]].forEach((f) => {
-        const cy = f.cy + bob;
+        const cy = f.cy;
         ctx.beginPath();
         ctx.moveTo(f.cx - f.rx * 0.7, cy - f.ry * 0.6);
         ctx.quadraticCurveTo(f.cx - 1, cy - f.ry - 2, f.cx, cy - f.ry - 1.4);
@@ -524,6 +583,8 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
         ctx.fill();
       });
     }
+
+    ctx.restore(); // end pose transform
 
     // ── Ambient light wash over the whole tile (per-season tint) ────────────
     if (p.lightAmt > 0.001) {
@@ -565,72 +626,104 @@ function fruitLeaf(ctx: CanvasRenderingContext2D, p: P): void {
   ctx.stroke();
 }
 
-// ── Idle bob (seamless, zero-velocity at t=0) ────────────────────────────────
+// ── Idle pose clock — two-tier occasional action ─────────────────────────────
 
-// A*(1-cos(w t))*0.5 → 0 at t=0 with zero velocity; period 2π/w.
-function bobAt(t: number, amp = 0.9, w = 1.5): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+/** Returns 0..1 progress through an action window of length `win` starting at
+ *  phase offset within `period`, else −1 (at rest). Seamless because the pose
+ *  built from q is zero (with zero velocity) at q=0 and q=1. */
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
+}
+
+// A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
+// sin^2(pi q) → smooth in/out, peak at q=0.5.
+function hump(q: number): number {
+  const s = Math.sin(Math.PI * q);
+  return s * s;
+}
+
+// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
+// Dips slightly negative early (anticipation) then a strong positive peak.
+function anticipate(q: number): number {
+  // windup wave: a small negative lobe then a big positive lobe, both returning
+  // to zero at the edges. (1-cos) envelope keeps velocity zero at q=0,1.
+  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
+  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
+  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+}
+
+/** Build the idle pose from the wall clock. Two tiers:
+ *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+function poseFromClock(t: number): Pose {
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+
+  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
+  // Two rocks left→right→left, ~0.17 rad lean → the soft hairs jiggle and the
+  // whole cluster rocks ~ pivotArm*0.17 at the top.
+  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  if (qC >= 0) {
+    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
+    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
+    pose.lean += 0.17 * env * rock;
+    // little squat at the base as it rocks (settle weight side to side)
+    pose.squashY += -0.06 * hump(qC);
+    pose.squashX += 0.05 * hump(qC);
+  }
+
+  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
+  // Anticipation crouch → stretch up ~12–13px → squash landing → settle.
+  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  if (qS >= 0) {
+    // Hop height profile: brief crouch (q<0.18), launch arc, squash landing.
+    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
+    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
+    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
+    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
+    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
+
+    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
+    pose.bob += crouch * 1.6 - air * 12.5;
+    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
+    const apex = air; // 0..1 in the air
+    pose.squashY += apex * 0.18 - crouch * 0.12 - land * 0.16;
+    pose.squashX += -apex * 0.13 + crouch * 0.10 + land * 0.14;
+    // a tiny lean wiggle on the way down for life
+    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+  }
+
+  // Reference anticipate() so it stays part of the seamless-curve toolkit and
+  // contributes a faint windup tilt to the common wobble (still 0 at edges).
+  if (qC >= 0) {
+    pose.lean += 0.02 * anticipate(qC);
+  }
+
+  return pose;
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
 
 function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
-  return (ctx) => paint(ctx, SP[season], 0);
+  return (ctx) => paint(ctx, SP[season], REST);
 }
 
 function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
   return (ctx, t) => {
-    const bob = bobAt(t);
-    paint(ctx, SP[season], bob);
+    const tt = Number.isFinite(t) ? t : 0;
+    paint(ctx, SP[season], poseFromClock(tt));
 
+    // Light additive season micro-sparkle (dressing only — never the subject's
+    // own colour/brightness). Kept tiny so the POSE action is the star.
     ctx.save();
     try {
       ctx.globalAlpha = 1;
-
-      // Soft spine quiver — a faint shimmering veil over the cluster every
-      // season (the hairs "quiver subtly"); additive, tiny, never the silhouette.
-      const quiver = 0.06 + 0.05 * (0.5 + 0.5 * Math.sin(t * 3.4));
-      ctx.strokeStyle = `rgba(255,255,255,${quiver})`;
-      ctx.lineWidth = 0.8;
-      FRUIT.forEach((f, idx) => {
-        const cy = f.cy + bob;
-        const a = (idx * 1.3) - 0.8 + Math.sin(t * 2.6 + idx) * 0.05;
-        ctx.beginPath();
-        ctx.moveTo(f.cx + Math.sin(a) * f.rx, cy - Math.cos(a) * f.ry);
-        ctx.lineTo(f.cx + Math.sin(a) * (f.rx + 4), cy - Math.cos(a) * (f.ry + 4));
-        ctx.stroke();
-      });
-
-      if (season === "Spring") {
-        // dew shimmer — a soft pulsing glint travelling gently on the cluster
-        const g = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.2));
-        ctx.fillStyle = `rgba(255,255,255,${g})`;
-        const gy = 2 + bob + Math.sin(t * 1.1) * 1.4;
-        ctx.beginPath();
-        ctx.arc(-6, gy, 1.0 + g * 0.7, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Summer") {
-        // a faint glint on the upper-left fruit shoulder (peak)
-        const s = 0.3 + 0.4 * (0.5 + 0.5 * Math.sin(t * 1.8));
-        ctx.fillStyle = `rgba(255,255,255,${s})`;
-        ctx.beginPath();
-        ctx.ellipse(-9, 4 + bob, 1.3, 2.0, -0.3, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Autumn") {
-        // faint slow amber sheen pulsing on the shoulder
-        const s = 0.1 + 0.14 * (0.5 + 0.5 * Math.sin(t * 0.9));
-        ctx.fillStyle = `rgba(255,228,190,${s})`;
-        ctx.beginPath();
-        ctx.ellipse(-5, 3 + bob, 5.2, 3.6, -0.2, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        // Winter — drifting snowflakes + cold sheen
+      if (season === "Winter") {
         const seeds: Array<[number, number, number]> = [
           [-9, 0.0, 1.0], [6, 0.4, 0.9], [11, 0.7, 0.8], [-2, 0.25, 0.9],
         ];
         ctx.fillStyle = "#ffffff";
         seeds.forEach(([fx, phase, r]) => {
-          const prog = ((t / 3.0 + phase) % 1 + 1) % 1;
+          const prog = ((tt / 3.0 + phase) % 1 + 1) % 1;
           const fy = -22 + prog * 38;
           const dx = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
           ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog * Math.PI);
@@ -638,13 +731,37 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
           ctx.arc(dx, fy, r, 0, Math.PI * 2);
           ctx.fill();
         });
-        ctx.globalAlpha = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.8));
-        ctx.fillStyle = "rgba(210,232,255,1)";
+        ctx.globalAlpha = 1;
+      } else if (season === "Spring") {
+        // a couple of drifting petals
+        ctx.fillStyle = "rgba(255,240,248,0.9)";
+        for (let i = 0; i < 2; i++) {
+          const prog = ((tt / 4.0 + i * 0.5) % 1 + 1) % 1;
+          const px = (i === 0 ? -10 : 9) + Math.sin(prog * Math.PI * 2) * 3;
+          const py = -18 + prog * 34;
+          ctx.globalAlpha = 0.35 + 0.4 * Math.sin(prog * Math.PI);
+          ctx.beginPath();
+          ctx.ellipse(px, py, 1.4, 0.9, prog * 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      } else if (season === "Autumn") {
+        // one slow tumbling leaf
+        const prog = ((tt / 5.0) % 1 + 1) % 1;
+        const px = 11 - prog * 6 + Math.sin(prog * Math.PI * 3) * 2;
+        const py = -16 + prog * 32;
+        ctx.globalAlpha = 0.4 + 0.4 * Math.sin(prog * Math.PI);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(prog * Math.PI * 4);
+        ctx.fillStyle = "rgba(196,96,32,1)";
         ctx.beginPath();
-        ctx.ellipse(-3, 5 + bob, 7, 5, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 2.4, 1.3, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
         ctx.globalAlpha = 1;
       }
+      // Summer: no extra dressing — the bounce + vivid red is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();
@@ -652,14 +769,14 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   };
 }
 
-// ── Forward season→season transitions ────────────────────────────────────────
+// ── Forward season→season transitions (seamless endpoints) ───────────────────
 
 function makeTransition(fromIdx: 0 | 1 | 2): (ctx: CanvasRenderingContext2D, p: number) => void {
   const from = SP[SEASON_NAMES[fromIdx]];
   const to = SP[SEASON_NAMES[fromIdx + 1]];
   return (ctx, pp) => {
     const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(from, to, k), 0);
+    paint(ctx, lerpP(from, to, k), REST);
   };
 }
 

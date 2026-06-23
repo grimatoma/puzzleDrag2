@@ -1,57 +1,79 @@
-// Seasonal art for the GOLDEN APPLE fruit tile (`tile_fruit_golden_apple`).
+// BOLD seasonal art for the GOLDEN APPLE fruit tile (`tile_fruit_golden_apple`).
 //
 // One glowing GOLDEN apple — classic apple silhouette with a short stem and a
-// small leaf — resting low-centre on a grassy pad, a faint warm shimmer/sheen on
-// its metallic-gold skin. The SAME apple silhouette is drawn every season; only
-// colour, dressing (blossom / fallen leaves / snow / frost), light tint, gloss
-// and the warm sheen change. This is enforced by a single parameterized
-// `paint(ctx, p, bob)`:
-//   - draw(season)      = paint(ctx, SP[season], 0)
-//   - anim(season)      = micro-motion + paint(ctx, SP[season], bobAt(t))
-//   - transition(from)  = paint(ctx, lerpP(SP[from], SP[from+1], smoother(p)), 0)
+// small leaf — resting low-centre on a grassy pad. The SAME apple silhouette is
+// drawn every season; only colour, light, gloss and the seasonal dressing
+// (blossom / fallen leaf / snow cap + frost / base snow) change. This is the
+// APPROVED "bold & fun" direction: the seasons swing HARD on light + a real
+// seasonal prop, and the idle is a two-tier WC3-style occasional action rather
+// than a constant nudge:
 //
-// Because every season is the same paint with tweened params, transitions are
-// seamless: transition(0) ≡ draw(from) and transition(1) ≡ draw(to). The bob
-// uses A*(1-cos(w t))*0.5 so bob(0)=0 with zero velocity → seamless idle.
+//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the apple rocks/leans
+//       ~10–12 design-px at the top with a little squash at the base.
+//       Anticipation → peak → settle, zero velocity at the window edges.
+//   IDLE SPECIAL (~18s, win ~1.2s): a small SPARKLE BURST — instead of a plain
+//       bounce, the magical golden apple flares bright and radiates a few gold
+//       sparkle rays/stars for ~1s (a tiny lift rides under it), then settles.
+//       The rays may paint OUTSIDE the −24..+24 box (no engine clip).
+//
+// Architecture mirrors pepper.bold.ts: a single parameterized `paint(ctx,p,pose)`
+// where `interface P` holds tweenable season params (colours + prop amounts) and
+// `pose` holds the idle gesture (bob / lean / squash + the sparkle burst).
+// Because every season is the same paint with tweened P, transitions are
+// seamless: transition(0) ≡ draw(from), transition(1) ≡ draw(to). REST pose has
+// all zeros (burst < 0 = off), so draw(season) = paint(ctx, SP[season], REST) and
+// the idle's pose is 0 at every action-window edge → seamless loop.
 //
 // PALETTE LOCK: the apple stays a glowing warm GOLD all year. Ripeness shows in
-// richness/shade only — NEVER a hue change away from gold. The travelling
-// specular glint is the subject's signature, but overall brightness stays
-// constant (no flash/bloom).
+// richness/shade only — NEVER a hue change away from gold. The gold glow stays
+// locked bright even under winter frost.
 //
-// Origin-centered in the −24..+24 design box, light from upper-left, flat
-// cel-shaded with a soft dark outline. Pure Canvas-2D vector drawing.
+// Origin-centered in the −24..+24 design box (the sparkle burst may paint
+// outside it), light from upper-left, flat cel-shaded with a soft dark outline.
+// Pure Canvas-2D vector drawing — never throws, clamps everything, save/restore,
+// resets globalAlpha.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
 import { SEASON_NAMES, type SeasonName } from "../types.js";
 
-// ── Tweenable params ─────────────────────────────────────────────────────────
+// ── Tweenable season params ──────────────────────────────────────────────────
 
 type RGB = [number, number, number];
 
-/** Every field tweens (number or RGB). NO booleans / season strings — the
- *  paint must be a pure function of these so transitions interpolate cleanly. */
+/** Every field tweens (number or RGB). NO booleans / season strings — paint is a
+ *  pure function of these so transitions interpolate cleanly. */
 interface P {
-  skinLight: RGB;   // lit upper-left face of the gold skin
-  skinMid: RGB;     // body gold tone
-  skinDark: RGB;    // shadowed lower-right / underside gold
-  stem: RGB;        // short woody stem
-  leaf: RGB;        // the small leaf
-  padGrass: RGB;    // top of the grass pad
-  padDark: RGB;     // shaded pad underside
-  soil: RGB;        // contact / base soil under the apple
-  outline: RGB;     // soft dark outline tint
-  light: RGB;       // ambient light tint laid over the whole tile
-  lightAmt: number; // 0..1 strength of the ambient light wash
-  ripeness: number; // 0..1 richness of the gold (shade only — locked hue)
-  gloss: number;    // 0..1 specular gloss / sheen strength on the skin
-  frostAmt: number; // 0..1 cool frost dusting on the skin (winter)
-  snowCapAmt: number; // 0..1 snow cap on the apple's shoulders (winter)
-  padSnowAmt: number; // 0..1 snow blanket on the pad (winter)
-  blossomAmt: number; // 0..1 tiny blossoms on the pad (spring)
+  skinLight: RGB;        // lit upper-left face of the gold skin
+  skinMid: RGB;          // body gold tone
+  skinDark: RGB;         // shadowed lower-right / underside gold
+  stem: RGB;             // short woody stem
+  leaf: RGB;             // the small leaf
+  padGrass: RGB;         // top of the grass pad
+  padDark: RGB;          // shaded pad underside
+  soil: RGB;             // contact / base soil under the apple
+  outline: RGB;          // soft dark outline tint
+  light: RGB;            // ambient light tint laid over the whole tile
+  lightAmt: number;      // 0..1 strength of the ambient light wash
+  ripeness: number;      // 0..1 richness of the gold (shade only — locked hue)
+  gloss: number;         // 0..1 specular gloss / sheen strength on the skin
+  frostAmt: number;      // 0..1 cool frost dusting on the skin (winter)
+  snowCapAmt: number;    // 0..1 snow cap on the apple's shoulders (winter)
+  padSnowAmt: number;    // 0..1 snow blanket on the pad (winter)
+  blossomAmt: number;    // 0..1 tiny blossoms on the pad (spring)
   fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
-  leafTurn: number; // 0..1 leaf turning amber (autumn) — leaf colour cue only
+  leafTurn: number;      // 0..1 leaf turning amber (autumn) — leaf colour cue only
 }
+
+/** The idle gesture, separate from season identity. All zero / burst<0 = REST. */
+interface Pose {
+  bob: number;     // vertical offset in design px (negative = up)
+  lean: number;    // top-of-apple sway, radians (rock side to side)
+  squashX: number; // additive horizontal scale (+0.18 = 18% wider)
+  squashY: number; // additive vertical scale (+0.18 = 18% taller)
+  burst: number;   // 0..1 progress of the rare sparkle burst (<0 = off)
+}
+
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, burst: -1 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
 
@@ -118,7 +140,11 @@ function clampP(p: P): P {
   };
 }
 
-// ── Per-season params ────────────────────────────────────────────────────────
+function safeNum(x: number): number {
+  return Number.isFinite(x) ? x : 0;
+}
+
+// ── Per-season params — pushed HARD (gold stays LOCKED) ──────────────────────
 // PALETTE LOCK: skinLight/Mid/Dark stay in the GOLD family every season. Only
 // richness/shade shift — never the hue away from gold.
 
@@ -137,27 +163,27 @@ const SP: Record<SeasonName, P> = {
     light: [234, 244, 222],
     lightAmt: 0.16,
     ripeness: 0.35,
-    gloss: 0.45,
+    gloss: 0.5,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
-    blossomAmt: 0.85,
+    blossomAmt: 1.0,
     fallenLeafAmt: 0,
     leafTurn: 0,
   },
   // Summer — bright polished PEAK gold; saturated mid-green pad; strong sheen.
   Summer: {
-    skinLight: [255, 234, 130],
-    skinMid: [246, 196, 58],
-    skinDark: [196, 142, 30],
+    skinLight: [255, 236, 132],
+    skinMid: [250, 198, 54],
+    skinDark: [198, 142, 28],
     stem: [112, 82, 42],
     leaf: [86, 170, 70],
     padGrass: [86, 168, 70],
     padDark: [44, 110, 48],
     soil: [126, 86, 48],
     outline: [96, 62, 16],
-    light: [255, 240, 200],
-    lightAmt: 0.18,
+    light: [255, 240, 196],
+    lightAmt: 0.2,
     ripeness: 0.7,
     gloss: 1.0,
     frostAmt: 0,
@@ -167,7 +193,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     leafTurn: 0,
   },
-  // Autumn — rich deep glowing-gold; olive-tan pad; fallen leaves; leaf turning amber.
+  // Autumn — rich deep glowing-gold; olive-tan pad; fallen leaves; leaf to amber.
   Autumn: {
     skinLight: [248, 214, 104],
     skinMid: [224, 168, 44],
@@ -178,55 +204,54 @@ const SP: Record<SeasonName, P> = {
     padDark: [104, 96, 52],
     soil: [120, 80, 44],
     outline: [82, 52, 14],
-    light: [248, 208, 142],
-    lightAmt: 0.2,
+    light: [250, 200, 128],
+    lightAmt: 0.24,
     ripeness: 1.0,
-    gloss: 0.6,
+    gloss: 0.62,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
-    fallenLeafAmt: 0.85,
+    fallenLeafAmt: 1.0,
     leafTurn: 0.9,
   },
-  // Winter — frost-rimmed gold + small snow cap; gold still glowing through cool
-  // light; snowy pad. The apple stays CLEARLY gold underneath the frost.
+  // Winter — frost-rimmed gold + a bold snow cap + base snow; gold STAYS bright
+  // and glowing through the cool light. Clearly snowy.
   Winter: {
-    skinLight: [240, 222, 152],
-    skinMid: [214, 176, 78],
-    skinDark: [152, 120, 56],
+    skinLight: [242, 224, 150],
+    skinMid: [216, 178, 76],
+    skinDark: [152, 120, 52],
     stem: [104, 86, 64],
     leaf: [128, 150, 120],
-    padGrass: [176, 196, 214],
-    padDark: [120, 146, 172],
+    padGrass: [182, 202, 220],
+    padDark: [122, 150, 178],
     soil: [128, 110, 96],
     outline: [70, 56, 44],
-    light: [206, 226, 252],
-    lightAmt: 0.3,
-    ripeness: 0.8,
-    gloss: 0.4,
-    frostAmt: 0.7,
-    snowCapAmt: 0.85,
-    padSnowAmt: 0.9,
+    light: [200, 224, 255],
+    lightAmt: 0.34,
+    ripeness: 0.82,
+    gloss: 0.46,
+    frostAmt: 0.78,
+    snowCapAmt: 1.0,
+    padSnowAmt: 1.0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
     leafTurn: 0,
   },
 };
 
-// ── The single parameterized paint ───────────────────────────────────────────
+// ── Apple geometry — the SAME silhouette every season ─────────────────────────
+// The classic apple shape sits low-centre on the pad. Origin-centered.
 
-// Apple geometry constants (the SAME silhouette every season). The classic
-// apple shape sits low-centre on the pad. Origin-centered.
 const APP_TOP = -8;  // shoulder line (top of the body, just under the dimple)
 const APP_BOT = 17;  // base resting on the pad
 const APP_HALF = 13; // half-width of the body at its widest
+const APP_PIVOT_Y = APP_BOT - 1; // rock/lean about a point near the base
 
-/** Trace the classic apple silhouette (heart-ish, with a top dimple) into the
- *  current ctx path. `bob` shifts the whole body vertically. */
-function appleBodyPath(ctx: CanvasRenderingContext2D, bob: number): void {
-  const t = APP_TOP + bob;
-  const b = APP_BOT + bob;
+/** Trace the classic apple silhouette (heart-ish, with a top dimple), unposed. */
+function appleBodyPath(ctx: CanvasRenderingContext2D): void {
+  const t = APP_TOP;
+  const b = APP_BOT;
   const h = APP_HALF;
   const midY = lerp(t, b, 0.42);
   ctx.beginPath();
@@ -249,16 +274,46 @@ function appleBodyPath(ctx: CanvasRenderingContext2D, bob: number): void {
   ctx.closePath();
 }
 
-/** The whole tile from ONLY `p` and `bob`. */
-function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
+// Apple centre (in design-box coords, before pose) — anchor for the sparkle burst.
+const APP_CX = 0;
+const APP_CY = lerp(APP_TOP, APP_BOT, 0.42);
+
+// ── Small dressing helper ─────────────────────────────────────────────────────
+
+/** A four-pointed sparkle star at (x,y). */
+function sparkle(ctx: CanvasRenderingContext2D, x: number, y: number, r: number, alpha: number, color: string): void {
+  if (r <= 0 || alpha <= 0) return;
+  ctx.fillStyle = `rgba(${color},${clamp01(alpha)})`;
+  ctx.beginPath();
+  ctx.moveTo(x, y - r);
+  ctx.quadraticCurveTo(x + r * 0.2, y - r * 0.2, x + r, y);
+  ctx.quadraticCurveTo(x + r * 0.2, y + r * 0.2, x, y + r);
+  ctx.quadraticCurveTo(x - r * 0.2, y + r * 0.2, x - r, y);
+  ctx.quadraticCurveTo(x - r * 0.2, y - r * 0.2, x, y - r);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ── The single parameterized paint ───────────────────────────────────────────
+
+/** The whole tile from ONLY `p` (season identity) and `pose` (idle gesture). */
+function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
   const p = clampP(raw);
+  const pose: Pose = {
+    bob: safeNum(rawPose.bob),
+    lean: safeNum(rawPose.lean),
+    squashX: safeNum(rawPose.squashX),
+    squashY: safeNum(rawPose.squashY),
+    burst: rawPose.burst, // <0 = off; used as 0..1 only when >=0
+  };
+
   ctx.save();
   try {
     ctx.globalAlpha = 1;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
-    // ── Pad: low flat grass ellipse, x∈[−18,+18], centre y≈+19 ──────────────
+    // ── Pad: low flat grass ellipse (does NOT move with the pose) ────────────
     ctx.fillStyle = rgba(p.padDark, 0.4);
     ctx.beginPath();
     ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
@@ -306,7 +361,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
-      [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+      ([[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]] as Array<[number, number]>).forEach(([sx, sy]) => {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -357,29 +412,39 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       });
     }
 
-    // ── Soil contact patch + contact shadow directly under the apple base ────
+    // ── Contact shadow under the apple (follows the lean/bob for grounding) ───
+    const tipShift = pose.lean * (APP_PIVOT_Y - APP_TOP); // how far the top leans
+    const shadowSpread = 1 + clamp01(pose.bob < 0 ? -pose.bob / 14 : 0) * 0.5;
     ctx.fillStyle = rgb(p.soil);
     ctx.beginPath();
-    ctx.ellipse(0, APP_BOT + bob + 1.5, 9, 2.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(0 + tipShift * 0.18, APP_BOT + 1.5, 9 * shadowSpread, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgba(p.outline, 0.28);
+    ctx.fillStyle = rgba(p.outline, 0.28 / shadowSpread);
     ctx.beginPath();
-    ctx.ellipse(2.5, APP_BOT + bob + 2, 11, 2.4, 0, 0, Math.PI * 2);
+    ctx.ellipse(2.5 + tipShift * 0.2, APP_BOT + 2, 11 * shadowSpread, 2.4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // ── Subject: the golden apple (SAME silhouette every season) ────────────
-    const top = APP_TOP + bob;
-    const bot = APP_BOT + bob;
+    // ── Subject: the golden apple, under the idle pose transform ──────────────
+    ctx.save();
+    // Pivot near the base so lean rocks the TOP side-to-side and squash anchors
+    // at the base (it "sits" on the pad). bob raises the whole body.
+    ctx.translate(0, APP_PIVOT_Y + pose.bob);
+    ctx.rotate(pose.lean);
+    ctx.scale(1 + pose.squashX, 1 + pose.squashY);
+    ctx.translate(0, -APP_PIVOT_Y);
+
+    const top = APP_TOP;
+    const bot = APP_BOT;
     const midY = lerp(top, bot, 0.42);
 
     // 1) soft dark outline pass (full body in outline tint, body fills inset)
-    appleBodyPath(ctx, bob);
+    appleBodyPath(ctx);
     ctx.fillStyle = rgb(p.outline);
     ctx.fill();
 
     // 2) body fill, clipped so the outline reads as a soft rim
     ctx.save();
-    appleBodyPath(ctx, bob);
+    appleBodyPath(ctx);
     ctx.clip();
 
     // base mid gold
@@ -404,8 +469,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     ctx.ellipse(5, bot - 5, APP_HALF * 0.8, (bot - top) * 0.42, -0.3, 0, Math.PI * 2);
     ctx.fill();
 
-    // soft warm sheen band across the upper-left shoulder (constant brightness;
-    // the travelling glint in anim() rides over this)
+    // soft warm sheen band across the upper-left shoulder + metallic gold glints
     if (p.gloss > 0.02) {
       ctx.fillStyle = rgba([255, 250, 220], 0.18 + 0.34 * p.gloss);
       ctx.beginPath();
@@ -441,7 +505,16 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       });
     }
 
-    ctx.restore(); // end clip
+    // RARE burst — a clipped inner gold flare so the apple itself glows brighter
+    if (pose.burst >= 0) {
+      const env = Math.sin(clamp01(pose.burst) * Math.PI); // 0->1->0
+      ctx.fillStyle = rgba([255, 248, 206], 0.5 * env);
+      ctx.beginPath();
+      ctx.ellipse(-1, midY, APP_HALF + 2, (bot - top) * 0.6, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore(); // end body clip
 
     // 3) snow cap on the shoulders (winter) — hugging the top rim, over the body
     if (p.snowCapAmt > 0.02) {
@@ -502,6 +575,50 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     ctx.stroke();
     ctx.restore();
 
+    ctx.restore(); // end pose transform
+
+    // ── RARE idle SPARKLE BURST — radiating gold rays + stars (UNCLIPPED) ─────
+    // A few gold rays sweeping out from the apple center, plus stars at the tips.
+    // Fits the magical golden apple; may paint outside the −24..+24 box (no clip).
+    if (pose.burst >= 0) {
+      const b = clamp01(pose.burst);
+      const env = Math.sin(b * Math.PI);  // overall envelope, 0->1->0
+      const reach = 9 + 15 * b;            // rays grow outward over the window
+      const cx = APP_CX;
+      const cy = APP_CY + pose.bob;
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      // central warm-gold flare
+      const flare = ctx.createRadialGradient(cx, cy, 0, cx, cy, 16 + 8 * b);
+      flare.addColorStop(0, `rgba(255,250,210,${0.8 * env})`);
+      flare.addColorStop(0.4, `rgba(255,224,130,${0.4 * env})`);
+      flare.addColorStop(1, "rgba(255,210,90,0)");
+      ctx.fillStyle = flare;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 22 + 8 * b, 0, Math.PI * 2);
+      ctx.fill();
+      // a few radiating gold rays (5), slow spin
+      const rays = 5;
+      const spin = b * 0.5 - Math.PI / 2; // start pointing up
+      for (let i = 0; i < rays; i++) {
+        const ang = (i / rays) * Math.PI * 2 + spin;
+        const ex = cx + Math.cos(ang) * reach;
+        const ey = cy + Math.sin(ang) * reach;
+        const grad = ctx.createLinearGradient(cx, cy, ex, ey);
+        grad.addColorStop(0, `rgba(255,248,206,${0.7 * env})`);
+        grad.addColorStop(1, "rgba(255,224,130,0)");
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.lineTo(ex, ey);
+        ctx.stroke();
+        // a gold star at each ray tip
+        sparkle(ctx, ex, ey, 1.4 + 1.2 * env, 0.85 * env, "255,246,200");
+      }
+      ctx.restore();
+    }
+
     // ── Ambient light wash over the whole tile (per-season tint) ────────────
     if (p.lightAmt > 0.001) {
       ctx.globalAlpha = 1;
@@ -517,77 +634,94 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
   }
 }
 
-// ── Idle bob (seamless, zero-velocity at t=0) ────────────────────────────────
+// ── Idle pose clock — two-tier occasional action ─────────────────────────────
 
-// A*(1-cos(w t))*0.5 → 0 at t=0 with zero velocity; period 2π/w.
-function bobAt(t: number, amp = 0.9, w = 1.5): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+/** Returns 0..1 progress through an action window of length `win` starting at
+ *  phase offset within `period`, else −1 (at rest). Seamless because the pose
+ *  built from q is zero (with zero velocity) at q=0 and q=1. */
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
+}
+
+const COMMON_PERIOD = 6;
+const COMMON_WIN = 0.9;
+const RARE_PERIOD = 18;
+const RARE_WIN = 1.2;
+
+// A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
+function hump(q: number): number {
+  const s = Math.sin(Math.PI * q);
+  return s * s;
+}
+
+// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
+function anticipate(q: number): number {
+  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
+  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
+  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+}
+
+/** Build the idle pose from the wall clock. Two tiers:
+ *   common WOBBLE every ~6s (win 0.9s), rare SPARKLE BURST every ~18s (win 1.2s). */
+function poseFromClock(t: number): Pose {
+  const tt = Number.isFinite(t) ? t : 0;
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, burst: -1 };
+
+  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
+  // ~0.17 rad lean → top travels ~ pivotArm*0.17. Arm ≈ (APP_PIVOT_Y - APP_TOP)
+  // ≈ 24 px → ~10–12 px sway at the top.
+  const qC = actionQ(tt, COMMON_PERIOD, COMMON_WIN, 0.0);
+  if (qC >= 0) {
+    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
+    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
+    pose.lean += 0.17 * env * rock;
+    // little squat at the base as it rocks (settle weight side to side)
+    pose.squashY += -0.06 * hump(qC);
+    pose.squashX += 0.05 * hump(qC);
+    // faint windup tilt from the seamless-curve toolkit (still 0 at edges)
+    pose.lean += 0.02 * anticipate(qC);
+  }
+
+  // ── RARE SPECIAL: SPARKLE BURST (~18s, win 1.2s) ──
+  // A small lift rides under the burst (anticipation dip → pop up → settle),
+  // while the radiating gold rays/stars are drawn in paint() from pose.burst.
+  const qS = actionQ(tt, RARE_PERIOD, RARE_WIN, 3.0); // phase 3s so it stays clear of the wobble
+  if (qS >= 0) {
+    pose.burst = qS;
+    const env = Math.sin(qS * Math.PI);                 // 0->1->0
+    const antic = Math.sin(qS * Math.PI * 2) * (1 - qS); // brief downbeat early
+    pose.bob += -6 * env - 1.6 * Math.max(0, antic);     // gentle ~6px lift
+    pose.squashY += 0.10 * env;                          // soft stretch on the flare
+    pose.squashX += -0.07 * env;
+  }
+
+  return pose;
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
 
 function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
-  return (ctx) => paint(ctx, SP[season], 0);
+  return (ctx) => paint(ctx, SP[season], REST);
 }
 
 function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
   return (ctx, t) => {
-    const bob = bobAt(t);
-    paint(ctx, SP[season], bob);
+    const tt = Number.isFinite(t) ? t : 0;
+    paint(ctx, SP[season], poseFromClock(tt));
 
-    const top = APP_TOP + bob;
-    const bot = APP_BOT + bob;
-
+    // Light additive season micro-dressing (drifting particles — never the
+    // subject's own colour/brightness). Kept tiny so the POSE action is the star.
     ctx.save();
     try {
       ctx.globalAlpha = 1;
-
-      // SIGNATURE: a soft golden specular glint travels across the skin every
-      // loop — subtle, constant peak brightness (no flash). Present in ALL
-      // seasons so the gold reads as glowing metal; season extras layer over it.
-      {
-        const prog = (t * 0.4) % 1; // seamless 0..1 sweep, period 2.5s
-        // travel diagonally from upper-left shoulder down toward lower-right
-        const gx = lerp(-6.5, 6.5, prog);
-        const gy = lerp(top + 3, bot - 5, prog);
-        // fade in/out at the ends so it never pops
-        const edge = Math.sin(prog * Math.PI);
-        ctx.fillStyle = `rgba(255,252,228,${0.5 * edge})`;
-        ctx.beginPath();
-        ctx.ellipse(gx, gy, 1.7, 2.7, -0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = `rgba(255,245,200,${0.22 * edge})`;
-        ctx.beginPath();
-        ctx.ellipse(gx + 1.2, gy + 0.6, 3.4, 2.0, -0.3, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      if (season === "Spring") {
-        // dew shimmer — a soft pulsing glint resting on the gold skin
-        const g = 0.22 + 0.26 * (0.5 + 0.5 * Math.sin(t * 2.2));
-        ctx.fillStyle = `rgba(255,255,255,${g})`;
-        const gy = top + 4 + Math.sin(t * 1.1) * 1.0;
-        ctx.beginPath();
-        ctx.arc(-5.5, gy, 1.0 + g * 0.7, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Autumn") {
-        // autumn leaf flutter — the small leaf gives a gentle extra wobble
-        const fl = Math.sin(t * 2.6) * 0.16;
-        ctx.translate(-1, top - 5 + bob * 0);
-        ctx.rotate(-0.7 + fl);
-        const amber: RGB = [212, 150, 54];
-        ctx.fillStyle = rgba(amber, 0.5 + 0.2 * (0.5 + 0.5 * Math.sin(t * 2.6)));
-        ctx.beginPath();
-        ctx.ellipse(-3.2, -0.6, 3.6, 1.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Winter") {
-        // drifting snowflakes + a faint cold sheen over the gold
+      if (season === "Winter") {
         const seeds: Array<[number, number, number]> = [
           [-9, 0.0, 1.0], [6, 0.4, 0.9], [11, 0.7, 0.8], [-2, 0.25, 0.9],
         ];
         ctx.fillStyle = "#ffffff";
         seeds.forEach(([fx, phase, r]) => {
-          const prog = ((t / 3.0 + phase) % 1 + 1) % 1;
+          const prog = ((tt / 3.0 + phase) % 1 + 1) % 1;
           const fy = -22 + prog * 38;
           const dx = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
           ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog * Math.PI);
@@ -595,15 +729,37 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
           ctx.arc(dx, fy, r, 0, Math.PI * 2);
           ctx.fill();
         });
-        ctx.globalAlpha = 0.1 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.8));
-        ctx.fillStyle = "rgba(210,232,255,1)";
+        ctx.globalAlpha = 1;
+      } else if (season === "Spring") {
+        // a couple of drifting petals
+        ctx.fillStyle = "rgba(255,240,248,0.9)";
+        for (let i = 0; i < 2; i++) {
+          const prog = ((tt / 4.0 + i * 0.5) % 1 + 1) % 1;
+          const px = (i === 0 ? -10 : 9) + Math.sin(prog * Math.PI * 2) * 3;
+          const py = -18 + prog * 34;
+          ctx.globalAlpha = 0.35 + 0.4 * Math.sin(prog * Math.PI);
+          ctx.beginPath();
+          ctx.ellipse(px, py, 1.4, 0.9, prog * 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      } else if (season === "Autumn") {
+        // one slow tumbling leaf
+        const prog = ((tt / 5.0) % 1 + 1) % 1;
+        const px = 11 - prog * 6 + Math.sin(prog * Math.PI * 3) * 2;
+        const py = -16 + prog * 32;
+        ctx.globalAlpha = 0.4 + 0.4 * Math.sin(prog * Math.PI);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(prog * Math.PI * 4);
+        ctx.fillStyle = "rgba(196,120,32,1)";
         ctx.beginPath();
-        ctx.ellipse(-3, lerp(top, bot, 0.42), 6, 4, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 2.4, 1.3, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer needs no extra: the signature travelling glint on peak gold IS
-      // the summer idle.
+      // Summer: no extra dressing — the peak gold + the sparkle burst is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();
@@ -611,14 +767,14 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   };
 }
 
-// ── Forward season→season transitions ────────────────────────────────────────
+// ── Forward season→season transitions (seamless endpoints) ───────────────────
 
 function makeTransition(fromIdx: 0 | 1 | 2): (ctx: CanvasRenderingContext2D, p: number) => void {
   const from = SP[SEASON_NAMES[fromIdx]];
   const to = SP[SEASON_NAMES[fromIdx + 1]];
   return (ctx, pp) => {
     const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(from, to, k), 0);
+    paint(ctx, lerpP(from, to, k), REST);
   };
 }
 

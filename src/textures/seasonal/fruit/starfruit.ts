@@ -1,54 +1,71 @@
-// Seasonal art for the STARFRUIT fruit tile (`tile_fruit_starfruit`).
+// BOLD seasonal art variant for the STARFRUIT fruit tile (`tile_fruit_starfruit`).
 //
 // One CARAMBOLA / starfruit — an oblong fruit with 5 prominent raised
-// longitudinal ridges, so its profile edges read as the points of a star.
-// A small stem leaf and a constant ridged outline. The SAME ridged silhouette
-// is drawn every season — only colour and dressing (frost, snow cap, pad
-// blossoms / fallen leaves / snow, light tint, gloss) change. Ripeness shows
-// as colour only: green (spring) → bright yellow (summer peak) → amber (autumn)
-// → frosted-but-still-yellow (winter). This is enforced by a single
-// parameterized `paint(ctx, p, bob)`:
-//   - draw(season)      = paint(ctx, SP[season], 0)
-//   - anim(season)      = micro-motion + paint(ctx, SP[season], bobAt(t))
-//   - transition(from)  = paint(ctx, lerpP(SP[from], SP[from+1], smoother(p)), 0)
+// longitudinal ridges, so its profile edges read as the points of a star. The
+// SAME ridged silhouette is drawn every season; identity is constant. Seasons
+// swing HARD on colour + a real seasonal prop, and the idle is LOUD (WC3-style
+// two-tier occasional action) rather than a faint bob:
 //
-// Because every season is the same paint with tweened params, transitions are
-// seamless: transition(0) ≡ draw(from) and transition(1) ≡ draw(to). The bob
-// uses A*(1-cos(w t))*0.5 so bob(0)=0 with zero velocity → seamless idle.
+//   IDLE COMMON  (~6s, win ~0.9s): a gentle WOBBLE — the star rocks/leans about
+//       its base with a tiny spin-tease, ~10–12 design-px sway at the top tip,
+//       squashing slightly at the base. Anticipation → peak → settle, zero
+//       velocity at the window edges (seamless).
+//   IDLE SPECIAL (~18s, win ~1.1s): a bigger BOUNCE — a squash-stretch hop
+//       ~12–14 design-px up, with anticipation crouch, stretch on the way up,
+//       and a squash landing that overshoots then settles.
 //
-// Origin-centered in the −24..+24 design box, light from upper-left, flat
-// cel-shaded with a soft dark outline. Pure Canvas-2D vector drawing.
+// Architecture mirrors pepper.bold.ts: a single parameterized
+// `paint(ctx, p, pose)` where `interface P` holds tweenable season params
+// (colours + prop amounts) and `pose` holds the idle gesture (bob / lean /
+// squash). Because every season is the same paint with tweened P, transitions
+// are seamless: transition(0) ≡ draw(from), transition(1) ≡ draw(to). REST pose
+// is all zeros, so draw(season) = paint(ctx, SP[season], REST) and the idle's
+// pose is 0 at every action-window edge → seamless loop.
+//
+// Origin-centered in the −24..+24 design box (actions may paint outside it),
+// light from upper-left, flat cel-shaded with a soft dark outline. Pure
+// Canvas-2D vector drawing — never throws, clamps everything, save/restore.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
 import { SEASON_NAMES, type SeasonName } from "../types.js";
 
-// ── Tweenable params ─────────────────────────────────────────────────────────
+// ── Tweenable season params ──────────────────────────────────────────────────
 
 type RGB = [number, number, number];
 
-/** Every field tweens (number or RGB). NO booleans / season strings — the
- *  paint must be a pure function of these so transitions interpolate cleanly. */
+/** Every field tweens (number or RGB). NO booleans / season strings — paint is a
+ *  pure function of these so transitions interpolate cleanly. */
 interface P {
-  skinLight: RGB;   // lit ridge crests of the starfruit flesh
-  skinMid: RGB;     // body tone
-  skinDark: RGB;    // shadowed valleys between ridges / underside
-  edge: RGB;        // translucent ridge-edge tint (the star points)
-  leaf: RGB;        // small stem leaf
-  padGrass: RGB;    // top of the grass pad
-  padDark: RGB;     // shaded pad underside
-  soil: RGB;        // contact / base soil under the fruit
-  outline: RGB;     // soft dark outline tint
-  light: RGB;       // ambient light tint laid over the whole tile
-  lightAmt: number; // 0..1 strength of the ambient light wash
-  ripeness: number; // 0..1 (colour cue: green→yellow; informs edge translucency)
-  gloss: number;    // 0..1 specular gloss-streak strength on the skin
-  edgeBrown: number; // 0..1 ridge-edge browning (autumn over-ripe cue)
-  frostAmt: number; // 0..1 cool frost dusting on the skin
-  snowCapAmt: number; // 0..1 snow cap on the top ridge of the fruit
-  padSnowAmt: number; // 0..1 snow blanket on the pad
-  blossomAmt: number; // 0..1 tiny blossoms on the pad (spring)
-  fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
+  skinLight: RGB;        // lit ridge crests of the starfruit flesh
+  skinMid: RGB;          // body tone
+  skinDark: RGB;         // shadowed valleys between ridges / underside
+  edge: RGB;             // translucent ridge-edge tint (the star points)
+  leaf: RGB;             // small stem leaf
+  padGrass: RGB;         // top of the grass pad
+  padDark: RGB;          // shaded pad underside
+  soil: RGB;             // contact / base soil under the fruit
+  outline: RGB;          // soft dark outline tint
+  light: RGB;            // ambient light tint laid over the whole tile
+  lightAmt: number;      // 0..1 strength of the ambient light wash
+  ripeness: number;      // 0..1 (informs edge translucency / point glow)
+  gloss: number;         // 0..1 specular gloss-streak strength on the skin
+  edgeBrown: number;     // 0..1 ridge-edge browning (autumn over-ripe cue)
+  frostAmt: number;      // 0..1 cool frost dusting on the skin (winter)
+  snowCapAmt: number;    // 0..1 snow cap on the top ridge of the fruit (winter)
+  padSnowAmt: number;    // 0..1 snow blanket at the base / on the pad (winter)
+  blossomAmt: number;    // 0..1 blossom on the pad (spring)
+  fallenLeafAmt: number; // 0..1 fallen leaf on the pad (autumn)
 }
+
+/** The idle gesture, separate from season identity. All zero = REST. */
+interface Pose {
+  bob: number;     // vertical offset in design px (negative = up)
+  lean: number;    // top-of-fruit sway, radians (rock side to side / spin-tease)
+  squashX: number; // additive horizontal scale (+0.18 = 18% wider)
+  squashY: number; // additive vertical scale (+0.18 = 18% taller)
+}
+
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
 
@@ -115,46 +132,52 @@ function clampP(p: P): P {
   };
 }
 
-// ── Per-season params ────────────────────────────────────────────────────────
+function safeNum(x: number): number {
+  return Number.isFinite(x) ? x : 0;
+}
+
+// ── Per-season params — pushed HARD ──────────────────────────────────────────
 
 const SP: Record<SeasonName, P> = {
-  // Spring — unripe GREEN starfruit, crisp ridges; bright lime dewy pad + blossom.
+  // Spring — clearly GREEN unripe starfruit, crisp ridges; lime dewy pad + a
+  // prominent blossom.
   Spring: {
-    skinLight: [186, 224, 110],
-    skinMid: [126, 188, 70],
-    skinDark: [78, 140, 52],
-    edge: [206, 234, 138],
+    skinLight: [176, 226, 96],
+    skinMid: [104, 186, 58],
+    skinDark: [56, 130, 44],
+    edge: [202, 236, 132],
     leaf: [104, 168, 58],
-    padGrass: [128, 206, 86],
-    padDark: [72, 138, 58],
+    padGrass: [128, 212, 86],
+    padDark: [68, 142, 56],
     soil: [120, 84, 48],
-    outline: [50, 86, 36],
-    light: [232, 244, 226],
-    lightAmt: 0.16,
-    ripeness: 0.2,
-    gloss: 0.3,
-    edgeBrown: 0,
-    frostAmt: 0,
-    snowCapAmt: 0,
-    padSnowAmt: 0,
-    blossomAmt: 0.85,
-    fallenLeafAmt: 0,
-  },
-  // Summer — PEAK: bright ripe YELLOW star, translucent edges; warm light, gloss.
-  Summer: {
-    skinLight: [255, 240, 120],
-    skinMid: [248, 208, 52],
-    skinDark: [206, 158, 30],
-    edge: [255, 248, 170],
-    leaf: [86, 158, 50],
-    padGrass: [86, 168, 70],
-    padDark: [44, 110, 48],
-    soil: [126, 86, 48],
-    outline: [150, 110, 24],
-    light: [255, 240, 206],
+    outline: [34, 78, 30],
+    light: [228, 248, 214],
     lightAmt: 0.18,
-    ripeness: 0.9,
-    gloss: 0.95,
+    ripeness: 0.18,
+    gloss: 0.28,
+    edgeBrown: 0,
+    frostAmt: 0,
+    snowCapAmt: 0,
+    padSnowAmt: 0,
+    blossomAmt: 1.0,
+    fallenLeafAmt: 0,
+  },
+  // Summer — PEAK: bright vivid YELLOW ripe star, translucent glowing edges; warm
+  // light, max gloss.
+  Summer: {
+    skinLight: [255, 244, 120],
+    skinMid: [255, 214, 36],
+    skinDark: [212, 158, 22],
+    edge: [255, 250, 176],
+    leaf: [86, 158, 50],
+    padGrass: [84, 174, 70],
+    padDark: [42, 112, 48],
+    soil: [126, 86, 48],
+    outline: [156, 112, 18],
+    light: [255, 244, 200],
+    lightAmt: 0.2,
+    ripeness: 0.95,
+    gloss: 1.0,
     edgeBrown: 0,
     frostAmt: 0,
     snowCapAmt: 0,
@@ -162,74 +185,76 @@ const SP: Record<SeasonName, P> = {
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
-  // Autumn — amber-ripe star, ridge edges browning; gold/rust pad + fallen leaves.
+  // Autumn — deep AMBER-ripe star, ridge edges browning; gold/rust pad + a
+  // fallen leaf.
   Autumn: {
-    skinLight: [248, 206, 96],
-    skinMid: [228, 162, 46],
-    skinDark: [176, 112, 32],
-    edge: [220, 168, 86],
+    skinLight: [250, 196, 78],
+    skinMid: [232, 152, 36],
+    skinDark: [166, 100, 26],
+    edge: [222, 162, 76],
     leaf: [148, 130, 56],
-    padGrass: [150, 152, 86],
-    padDark: [104, 96, 52],
-    soil: [120, 80, 44],
-    outline: [120, 78, 28],
-    light: [248, 210, 150],
-    lightAmt: 0.2,
+    padGrass: [156, 152, 84],
+    padDark: [108, 92, 50],
+    soil: [120, 78, 42],
+    outline: [110, 66, 22],
+    light: [250, 198, 132],
+    lightAmt: 0.24,
     ripeness: 1.0,
-    gloss: 0.45,
-    edgeBrown: 0.7,
+    gloss: 0.4,
+    edgeBrown: 0.78,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
-    fallenLeafAmt: 0.85,
+    fallenLeafAmt: 1.0,
   },
-  // Winter — cool blue-grey light; frost-dusted YELLOW star still visible, snow
-  // cap on the top ridge; snowy pad.
+  // Winter — cool blue-grey light; frost-dusted YELLOW star still clearly reads
+  // as a star; a bold snow cap on the top ridge + a snow drift at the base.
   Winter: {
-    skinLight: [236, 220, 132],
-    skinMid: [214, 188, 76],
-    skinDark: [158, 136, 64],
-    edge: [228, 224, 176],
+    skinLight: [236, 222, 130],
+    skinMid: [210, 184, 70],
+    skinDark: [150, 130, 60],
+    edge: [228, 226, 178],
     leaf: [124, 142, 96],
-    padGrass: [176, 196, 214],
-    padDark: [120, 146, 172],
-    soil: [128, 110, 96],
-    outline: [86, 78, 56],
-    light: [206, 226, 252],
-    lightAmt: 0.3,
-    ripeness: 0.8,
-    gloss: 0.25,
-    edgeBrown: 0.15,
-    frostAmt: 0.7,
-    snowCapAmt: 0.85,
-    padSnowAmt: 0.9,
+    padGrass: [182, 202, 220],
+    padDark: [122, 150, 178],
+    soil: [132, 116, 102],
+    outline: [70, 66, 52],
+    light: [200, 224, 255],
+    lightAmt: 0.34,
+    ripeness: 0.82,
+    gloss: 0.26,
+    edgeBrown: 0.12,
+    frostAmt: 0.82,
+    snowCapAmt: 1.0,
+    padSnowAmt: 1.0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
 };
 
-// ── The single parameterized paint ───────────────────────────────────────────
+// ── Starfruit geometry — the SAME ridged silhouette every season ─────────────
 
-// Starfruit geometry constants (the SAME ridged silhouette every season). The
-// oblong fruit rests low on the pad, lying with its long axis near-upright but
-// tipped slightly, so we see one full ridge crest down the front and the points
-// of the star flaring at the shoulders and base. Origin-centered.
+// The oblong fruit rests low on the pad, lying with its long axis near-upright
+// but tipped slightly, so we see one full ridge crest down the front and the
+// points of the star flaring at the shoulders and base. Origin-centered.
 const SF_TOP = -16;    // top tip of the oblong fruit
 const SF_BOT = 16;     // base resting toward the pad
 const SF_HALF = 11;    // half-width across the widest ridges
 const SF_MIDY = 1;     // y of the widest belly (where the star points flare)
+const SF_PIVOT_Y = SF_BOT - 1; // rock/lean/squash about a point near the base
 
 // The five ridge crest x-offsets at the belly. The two outermost are the star
 // points seen edge-on; the centre three are the front-facing crests.
 const _RIDGES: number[] = [-SF_HALF, -5.4, 0, 5.4, SF_HALF];
 
-/** Trace the oblong, ridge-scalloped starfruit body path into the current
- *  ctx path. The belly bulges where the five star points flare. */
-function starfruitBodyPath(ctx: CanvasRenderingContext2D, bob: number): void {
-  const t = SF_TOP + bob;
-  const b = SF_BOT + bob;
-  const my = SF_MIDY + bob;
+/** Trace the oblong, ridge-scalloped starfruit body path into the current ctx
+ *  path (origin-local, unposed). The belly bulges where the five star points
+ *  flare. */
+function starfruitBodyPath(ctx: CanvasRenderingContext2D): void {
+  const t = SF_TOP;
+  const b = SF_BOT;
+  const my = SF_MIDY;
   const h = SF_HALF;
   ctx.beginPath();
   // top tip (pointed, where the stem will sit)
@@ -239,7 +264,7 @@ function starfruitBodyPath(ctx: CanvasRenderingContext2D, bob: number): void {
   ctx.quadraticCurveTo(h + 1.4, my - 4, h, my);
   ctx.quadraticCurveTo(h + 1.4, my + 5, h * 0.7, lerp(my, b, 0.55));
   // round the bottom-right toward the base tip
-  ctx.quadraticCurveTo(h * 0.5, b - 2, b * 0 + 0, b);
+  ctx.quadraticCurveTo(h * 0.5, b - 2, 0, b);
   // mirror up the left side
   ctx.quadraticCurveTo(-h * 0.5, b - 2, -h * 0.7, lerp(my, b, 0.55));
   ctx.quadraticCurveTo(-h - 1.4, my + 5, -h, my);
@@ -248,16 +273,25 @@ function starfruitBodyPath(ctx: CanvasRenderingContext2D, bob: number): void {
   ctx.closePath();
 }
 
-/** The whole tile from ONLY `p` and `bob`. */
-function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
+// ── The single parameterized paint ───────────────────────────────────────────
+
+/** The whole tile from ONLY `p` (season identity) and `pose` (idle gesture). */
+function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
   const p = clampP(raw);
+  const pose: Pose = {
+    bob: safeNum(rawPose.bob),
+    lean: safeNum(rawPose.lean),
+    squashX: safeNum(rawPose.squashX),
+    squashY: safeNum(rawPose.squashY),
+  };
+
   ctx.save();
   try {
     ctx.globalAlpha = 1;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
-    // ── Pad: low flat grass ellipse, x∈[−18,+18], centre y≈+19 ──────────────
+    // ── Pad: low flat grass ellipse (does NOT move with the pose) ────────────
     ctx.fillStyle = rgba(p.padDark, 0.4);
     ctx.beginPath();
     ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
@@ -305,14 +339,14 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
-      [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+      ([[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]] as Array<[number, number]>).forEach(([sx, sy]) => {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
         ctx.fill();
       });
     }
 
-    // blossoms on the pad (spring)
+    // blossom on the pad (spring)
     if (p.blossomAmt > 0.01) {
       const a = p.blossomAmt;
       const spots: Array<[number, number]> = [[-13, 18.5], [12, 17.8], [-4, 21]];
@@ -321,22 +355,22 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
         for (let k = 0; k < 5; k++) {
           const ang = (k / 5) * Math.PI * 2;
           ctx.beginPath();
-          ctx.ellipse(bx + Math.cos(ang) * 1.5, by + Math.sin(ang) * 1.0, 1.1, 0.8, ang, 0, Math.PI * 2);
+          ctx.ellipse(bx + Math.cos(ang) * 1.6, by + Math.sin(ang) * 1.1, 1.2, 0.9, ang, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.fillStyle = rgba([255, 214, 90], a);
         ctx.beginPath();
-        ctx.arc(bx, by, 0.9, 0, Math.PI * 2);
+        ctx.arc(bx, by, 1.0, 0, Math.PI * 2);
         ctx.fill();
       });
     }
 
-    // fallen leaves on the pad (autumn)
+    // fallen leaf on the pad (autumn)
     if (p.fallenLeafAmt > 0.01) {
       const a = p.fallenLeafAmt;
       const leaves: Array<[number, number, number, RGB]> = [
-        [-12, 19.6, -0.5, [196, 120, 40]],
-        [12, 18.6, 0.7, [176, 72, 32]],
+        [-12, 19.6, -0.5, [206, 124, 38]],
+        [12, 18.6, 0.7, [182, 70, 28]],
       ];
       leaves.forEach(([lx, ly, rot, col]) => {
         ctx.save();
@@ -344,42 +378,51 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
         ctx.rotate(rot);
         ctx.fillStyle = rgba(col, a);
         ctx.beginPath();
-        ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 3.6, 2.0, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = rgba([90, 44, 16], a);
-        ctx.lineWidth = 0.7;
+        ctx.lineWidth = 0.8;
         ctx.beginPath();
-        ctx.moveTo(-3, 0);
-        ctx.lineTo(3, 0);
+        ctx.moveTo(-3.4, 0);
+        ctx.lineTo(3.4, 0);
         ctx.stroke();
         ctx.restore();
       });
     }
 
-    // ── Soil contact patch directly under the fruit base ────────────────────
+    // ── Contact shadow under the fruit (follows the bob/lean for grounding) ──
+    const tipShift = pose.lean * (SF_PIVOT_Y - SF_TOP); // how far the tip leans
+    const shadowSpread = 1 + clamp01(pose.bob < 0 ? -pose.bob / 14 : 0) * 0.5;
     ctx.fillStyle = rgb(p.soil);
     ctx.beginPath();
-    ctx.ellipse(0, SF_BOT + bob + 1.5, 8, 2.4, 0, 0, Math.PI * 2);
+    ctx.ellipse(0 + tipShift * 0.18, SF_BOT + 1.5, 8 * shadowSpread, 2.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    // contact shadow of the fruit on the pad
-    ctx.fillStyle = rgba(p.outline, 0.28);
+    ctx.fillStyle = rgba(p.outline, 0.28 / shadowSpread);
     ctx.beginPath();
-    ctx.ellipse(2.5, SF_BOT + bob + 2, 10, 2.2, 0, 0, Math.PI * 2);
+    ctx.ellipse(2.5 + tipShift * 0.2, SF_BOT + 2, 10 * shadowSpread, 2.2, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // ── Subject: the starfruit (SAME ridged silhouette every season) ────────
-    const top = SF_TOP + bob;
-    const bot = SF_BOT + bob;
-    const my = SF_MIDY + bob;
+    // ── Subject: the starfruit, under the idle pose transform ────────────────
+    ctx.save();
+    // Pivot near the base so lean rocks the TOP side-to-side and squash anchors
+    // at the base (it "sits" on the pad). bob raises the whole body.
+    ctx.translate(0, SF_PIVOT_Y + pose.bob);
+    ctx.rotate(pose.lean);
+    ctx.scale(1 + pose.squashX, 1 + pose.squashY);
+    ctx.translate(0, -SF_PIVOT_Y);
 
-    // 1) soft dark outline pass (drawn slightly fatter underneath the body)
-    starfruitBodyPath(ctx, bob);
+    const top = SF_TOP;
+    const bot = SF_BOT;
+    const my = SF_MIDY;
+
+    // 1) soft dark outline pass
+    starfruitBodyPath(ctx);
     ctx.fillStyle = rgb(p.outline);
     ctx.fill();
 
-    // 2) mid body fill, inset so the outline shows as a rim
+    // 2) mid body fill, clipped to the body
     ctx.save();
-    starfruitBodyPath(ctx, bob);
+    starfruitBodyPath(ctx);
     ctx.clip();
 
     // base mid tone
@@ -400,7 +443,6 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
 
     // ── The five longitudinal ridges (the star points) ──────────────────────
     // valley grooves between the ridges run the length of the fruit (dark).
-    // The two centre valleys are most visible on the front face.
     ctx.strokeStyle = rgba(p.skinDark, 0.85);
     ctx.lineWidth = 2.0;
     [-2.7, 2.7].forEach((vx) => {
@@ -495,7 +537,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       });
     }
 
-    ctx.restore(); // end clip
+    ctx.restore(); // end body clip
 
     // 3) snow cap on the top ridge (winter) — drawn over, hugging the top tip
     if (p.snowCapAmt > 0.02) {
@@ -515,7 +557,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
       ctx.fill();
     }
 
-    // ── Stem + small leaf at the top tip (SAME placement every season) ──────
+    // ── Stem + small leaf at the top tip (rides with the pose transform) ─────
     const stemBaseY = top + 0.5;
     // short stem nub
     ctx.strokeStyle = rgb(p.outline);
@@ -550,7 +592,9 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
     ctx.quadraticCurveTo(6, stemBaseY - 6, 9, stemBaseY - 4.8);
     ctx.stroke();
 
-    // ── Ambient light wash over the whole tile (per-season tint) ────────────
+    ctx.restore(); // end pose transform
+
+    // ── Ambient light wash over the whole tile (per-season tint) ─────────────
     if (p.lightAmt > 0.001) {
       ctx.globalAlpha = 1;
       const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
@@ -565,89 +609,104 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
   }
 }
 
-// ── Idle bob (seamless, zero-velocity at t=0) ────────────────────────────────
+// ── Idle pose clock — two-tier occasional action ─────────────────────────────
 
-// A*(1-cos(w t))*0.5 → 0 at t=0 with zero velocity; period 2π/w.
-function bobAt(t: number, amp = 0.9, w = 1.5): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+/** Returns 0..1 progress through an action window of length `win` starting at
+ *  phase offset within `period`, else −1 (at rest). Seamless because the pose
+ *  built from q is zero (with zero velocity) at q=0 and q=1. */
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
+}
+
+// A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
+// sin^2(pi q) → smooth in/out, peak at q=0.5.
+function hump(q: number): number {
+  const s = Math.sin(Math.PI * q);
+  return s * s;
+}
+
+// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
+// Dips slightly negative early (anticipation) then a strong positive peak.
+function anticipate(q: number): number {
+  // windup wave: a small negative lobe then a big positive lobe, both returning
+  // to zero at the edges. (1-cos) envelope keeps velocity zero at q=0,1.
+  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, but velocity 0 at edges
+  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
+  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+}
+
+/** Build the idle pose from the wall clock. Two tiers:
+ *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+function poseFromClock(t: number): Pose {
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+
+  // ── COMMON: side-to-side wobble / spin-tease (~6s, win 0.9s) ──
+  // Two rocks left→right→left, ~0.16 rad lean → top tip travels ~ pivotArm*0.16.
+  // Tip arm ≈ (SF_PIVOT_Y - SF_TOP) ≈ 31 px → ~10–12 px sway at the top tip.
+  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  if (qC >= 0) {
+    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
+    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
+    pose.lean += 0.155 * env * rock;
+    // little squat at the base as it rocks (settle weight side to side)
+    pose.squashY += -0.06 * hump(qC);
+    pose.squashX += 0.05 * hump(qC);
+  }
+
+  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
+  // Anticipation crouch → stretch up ~12–14px → squash landing → settle.
+  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  if (qS >= 0) {
+    // Hop height profile: brief crouch (q<0.18), launch arc, squash landing.
+    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
+    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
+    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
+    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
+    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
+
+    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
+    pose.bob += crouch * 1.6 - air * 13.0;
+    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
+    const apex = air; // 0..1 in the air
+    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
+    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
+    // a tiny lean wiggle on the way down for life
+    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+  }
+
+  // Reference anticipate() so it stays part of the seamless-curve toolkit and
+  // contributes a faint windup tilt to the common wobble (still 0 at edges).
+  if (qC >= 0) {
+    pose.lean += 0.02 * anticipate(qC);
+  }
+
+  return pose;
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
 
 function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
-  return (ctx) => paint(ctx, SP[season], 0);
+  return (ctx) => paint(ctx, SP[season], REST);
 }
 
 function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
   return (ctx, t) => {
-    const bob = bobAt(t);
-    // Per-season additive micro-motion. The subject bob itself is 0 at t=0;
-    // micro-motion is additive sparkle/sheen and the small leaf flutter.
-    paint(ctx, SP[season], bob);
+    const tt = Number.isFinite(t) ? t : 0;
+    paint(ctx, SP[season], poseFromClock(tt));
 
+    // Light additive season micro-sparkle (dressing only — never the subject's
+    // own colour/brightness). Kept tiny so the POSE action is the star.
     ctx.save();
     try {
       ctx.globalAlpha = 1;
-
-      // Leaf flutter — gentle, in every season, layered over the tip. The leaf
-      // sits at the top tip; a small wobble rotates it about the stem base.
-      {
-        const top = SF_TOP + bob;
-        const stemBaseY = top + 0.5;
-        const flut = Math.sin(t * 3.1) * 0.12 + Math.sin(t * 1.7) * 0.05;
-        ctx.save();
-        ctx.translate(2.0, stemBaseY - 4.5);
-        ctx.rotate(flut);
-        ctx.fillStyle = rgb(SP[season].leaf);
-        ctx.beginPath();
-        ctx.moveTo(0, 0);
-        ctx.quadraticCurveTo(5.5, -4.5, 7.5, 0);
-        ctx.quadraticCurveTo(4, 1, 0, 0);
-        ctx.closePath();
-        ctx.fill();
-        ctx.strokeStyle = rgb(SP[season].outline);
-        ctx.lineWidth = 0.9;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      if (season === "Spring") {
-        // dew shimmer — a soft pulsing glint that travels gently on the skin
-        const g = 0.25 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.2));
-        ctx.fillStyle = `rgba(255,255,255,${g})`;
-        const gy = -2 + bob + Math.sin(t * 1.1) * 1.6;
-        ctx.beginPath();
-        ctx.arc(-4, gy, 1.1 + g * 0.8, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Summer") {
-        // bright glint travels DOWN a front ridge (seamless via fract)
-        const prog = (t * 0.5) % 1;
-        const top = SF_TOP + bob;
-        const bot = SF_BOT + bob;
-        const gy = lerp(top + 2, bot - 2, prog);
-        ctx.fillStyle = "rgba(255,255,255,0.9)";
-        ctx.beginPath();
-        ctx.ellipse(0, gy, 1.4, 2.6, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,0.4)";
-        ctx.beginPath();
-        ctx.ellipse(-3.5, gy * 0.97, 0.9, 1.9, -0.05, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Autumn") {
-        // faint slow amber sheen pulsing on the belly
-        const s = 0.12 + 0.16 * (0.5 + 0.5 * Math.sin(t * 0.9));
-        ctx.fillStyle = `rgba(255,228,170,${s})`;
-        ctx.beginPath();
-        ctx.ellipse(-3, 0 + bob, 4.5, 5.5, -0.15, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        // Winter — drifting snowflakes + cold sheen
+      if (season === "Winter") {
         const seeds: Array<[number, number, number]> = [
           [-9, 0.0, 1.0], [6, 0.4, 0.9], [11, 0.7, 0.8], [-2, 0.25, 0.9],
         ];
         ctx.fillStyle = "#ffffff";
         seeds.forEach(([fx, phase, r]) => {
-          const prog = ((t / 3.0 + phase) % 1 + 1) % 1;
+          const prog = ((tt / 3.0 + phase) % 1 + 1) % 1;
           const fy = -22 + prog * 38;
           const dx = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
           ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog * Math.PI);
@@ -655,13 +714,37 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
           ctx.arc(dx, fy, r, 0, Math.PI * 2);
           ctx.fill();
         });
-        ctx.globalAlpha = 0.12 + 0.12 * (0.5 + 0.5 * Math.sin(t * 0.8));
-        ctx.fillStyle = "rgba(210,232,255,1)";
+        ctx.globalAlpha = 1;
+      } else if (season === "Spring") {
+        // a couple of drifting petals
+        ctx.fillStyle = "rgba(255,240,248,0.9)";
+        for (let i = 0; i < 2; i++) {
+          const prog = ((tt / 4.0 + i * 0.5) % 1 + 1) % 1;
+          const px = (i === 0 ? -10 : 9) + Math.sin(prog * Math.PI * 2) * 3;
+          const py = -18 + prog * 34;
+          ctx.globalAlpha = 0.35 + 0.4 * Math.sin(prog * Math.PI);
+          ctx.beginPath();
+          ctx.ellipse(px, py, 1.4, 0.9, prog * 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      } else if (season === "Autumn") {
+        // one slow tumbling leaf
+        const prog = ((tt / 5.0) % 1 + 1) % 1;
+        const px = 11 - prog * 6 + Math.sin(prog * Math.PI * 3) * 2;
+        const py = -16 + prog * 32;
+        ctx.globalAlpha = 0.4 + 0.4 * Math.sin(prog * Math.PI);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(prog * Math.PI * 4);
+        ctx.fillStyle = "rgba(196,96,32,1)";
         ctx.beginPath();
-        ctx.ellipse(-2, 0 + bob, 5, 6, -0.15, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 2.4, 1.3, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
         ctx.globalAlpha = 1;
       }
+      // Summer: no extra dressing — the bounce + glossy vivid yellow is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();
@@ -669,14 +752,14 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   };
 }
 
-// ── Forward season→season transitions ────────────────────────────────────────
+// ── Forward season→season transitions (seamless endpoints) ───────────────────
 
 function makeTransition(fromIdx: 0 | 1 | 2): (ctx: CanvasRenderingContext2D, p: number) => void {
   const from = SP[SEASON_NAMES[fromIdx]];
   const to = SP[SEASON_NAMES[fromIdx + 1]];
   return (ctx, pp) => {
     const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(from, to, k), 0);
+    paint(ctx, lerpP(from, to, k), REST);
   };
 }
 

@@ -1,31 +1,31 @@
-// Seasonal art for the MOUNT HORSE board tile (`tile_mount_horse`).
+// Production seasonal art for the MOUNT HORSE board tile (`tile_mount_horse`) —
+// the approved bold direction, mirroring the herd-sheep reference architecture.
+// A single parameterized `paint(ctx, p, pose)` + four `P` presets + lerped
+// transitions, pushed so the seasons read at a glance and the idle is a real,
+// fun ACTION rather than a subtle breath.
 //
-// A SINGLE parameterized paint renders the whole tile (grass pad + the one
-// brown horse + seasonal dressing) from a tweenable parameter set `P`. The four
-// seasons are four `P` presets; the three forward transitions lerp EVERY field
-// of `P` through a quintic smoothstep, so transition(0) === the from-season
-// still and transition(1) === the to-season still — no snap.
+// PALETTE LOCK: it is ALWAYS the same graceful BROWN horse — a brown body, a
+// flowing DARK mane along the neck, a long DARK tail, a long head with perked
+// ears, slender legs with dark hooves, standing on a pad. Seasons change only
+// its coat VOLUME (sleek spring → thick shaggy winter coat), the coat GLOSS,
+// the pad colour, the light wash, and BOLD dressing — snow on the back, a
+// little winter SCARF, a breath-fog puff, a blossom, a fallen leaf, frost. The
+// horse's identity colours + silhouette never change; it is never morphed into
+// another animal and the signature mane + tail are always present.
 //
-// PALETTE LOCK: the horse is ALWAYS the same graceful BROWN horse — a brown
-// body, a flowing DARK mane along the neck, a long DARK tail, a long head with
-// perked ears, slender legs with dark hooves. The SILHOUETTE and the brown /
-// dark-mane / dark-tail IDENTITY colours are constant across all seasons. Only
-// the COAT thickness (`coatVolume` — sleek in spring → thick & shaggy in
-// winter), the pad colour, the light wash, and dressing (blossom, fallen
-// leaves, frost, back-snow, breath-fog) change. The horse is never recoloured,
-// hollowed, or swapped.
-//
-// Animal framing: the horse stands on the pad in front-¾, turned ~15–20° toward
-// lower-left; the full body is readable and may overhang the pad width; the
-// legs/hooves contact the pad.
+// IDLE (two-tier occasional action, carried through a `pose` object):
+//   • COMMON ~6s (win ~0.9s): a HEAD-BOB — the head dips/bobs ~10–14px with an
+//     ear-flick, a tail-swish, and a mane sway, plus a small body squash.
+//   • RARE  ~18s (win ~1.2s): a STAMP / head-toss — the horse tosses its head
+//     up (~14–18px) with the mane flying and stamps a front hoof, with
+//     anticipation → toss/stamp → settle. May exit the box at the apex.
+// Both gestures return to REST with zero value AND zero velocity at the window
+// edges (raised-cosine windows), so `anim(…, t)` is seamless and `anim(…, 0)`
+// (and `draw`) sit exactly at rest.
 //
 // Origin-centered in the −24..+24 design box, light from upper-left, flat
-// cel-shaded with a soft dark outline. Animations are deterministic
-// (sin/cos/modulo of `t` in seconds), seamless, and subtle: a slow breathing
-// bob (zero velocity at t=0 → anim(…,0) matches the still), the mane + tail
-// sway gently, an ear flick + a head toss once per loop, plus the per-season
-// micro-motion (spring dew shimmer, summer coat sheen, autumn leaf stir, winter
-// breath-fog pulse + drifting snowflake).
+// cel-shaded with a soft dark outline. Deterministic in `t` (seconds). Never
+// throws; clamps every scalar; save/restore + globalAlpha reset.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
 import { SEASON_NAMES, type SeasonName } from "../types.js";
@@ -35,9 +35,12 @@ import { SEASON_NAMES, type SeasonName } from "../types.js";
 type RGB = [number, number, number];
 
 function clamp01(x: number): number {
-  if (!(x >= 0)) return 0; // also catches NaN
-  if (x > 1) return 1;
-  return x;
+  return x < 0 ? 0 : x > 1 ? 1 : x;
+}
+
+// coerce a wild / non-finite scalar to a finite fallback (never propagate NaN)
+function safeNum(x: number, fallback = 0): number {
+  return Number.isFinite(x) ? x : fallback;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -48,7 +51,7 @@ function lerpRGB(a: RGB, b: RGB, t: number): RGB {
   return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 }
 
-function rgb(c: RGB, a = 1): string {
+function rgba(c: RGB, a = 1): string {
   const r = Math.round(clamp01(c[0] / 255) * 255);
   const g = Math.round(clamp01(c[1] / 255) * 255);
   const b = Math.round(clamp01(c[2] / 255) * 255);
@@ -56,20 +59,119 @@ function rgb(c: RGB, a = 1): string {
 }
 
 // quintic smoothstep — zero first & second derivative at both ends
-const smoother = (x: number): number => x * x * x * (x * (6 * x - 15) + 10);
+function smoother(x: number): number {
+  return x * x * x * (x * (6 * x - 15) + 10);
+}
 
-// breathing bob: A*(1-cos(w t))*0.5 — value AND velocity are 0 at t=0,
-// seamless over a 2π/w period, peak amplitude A.
-function bobAt(t: number, amp = 1.0, w = 1.35): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+// Two-tier occasional-action clock. Returns a phase in [0,1) WITHIN the action
+// window (the fraction of the way through the gesture), or −1 when at rest. The
+// window opens once per `period` at `phase` seconds in, and is `win` long.
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
+}
+
+// A raised-cosine "bump" 0→1→0 over q∈[0,1], with zero slope at both ends, so a
+// gesture grows in and settles out seamlessly (no velocity at the window edges).
+function bump(q: number): number {
+  if (q < 0 || q > 1) return 0;
+  return 0.5 - 0.5 * Math.cos(q * Math.PI * 2);
+}
+
+// Anticipation→action shape for the STAMP/head-toss: a brief gather (negative)
+// before the rise, then a clean arc up and settle. q∈[0,1]. Returns a factor in
+// roughly −0.2..+1 (negative = gather/anticipation, positive = peak toss).
+function tossShape(q: number): number {
+  if (q <= 0 || q >= 1) return 0;
+  const antiEnd = 0.24; // first slice = gather/anticipation
+  if (q < antiEnd) {
+    // gather down a little (anticipation), zero slope at q=0
+    const a = q / antiEnd;
+    return -0.2 * (0.5 - 0.5 * Math.cos(a * Math.PI));
+  }
+  // toss arc, zero at the seam to the gather and at q=1
+  const a = (q - antiEnd) / (1 - antiEnd);
+  return Math.sin(a * Math.PI);
+}
+
+// ── The idle POSE (carries all action state into paint) ──────────────────────
+
+interface Pose {
+  bob: number; // whole-body vertical bob (design px, + = up). Stamp lifts this.
+  lean: number; // signed body lean (design px sideways) during the toss
+  squashX: number; // body horizontal scale multiplier (squash/stretch)
+  squashY: number; // body vertical scale multiplier
+  head: number; // head dip (design px, + = down) for the bob / lift for toss
+  chew: number; // 0..1 muzzle/mouth motion amount
+  ear: number; // 0..1 near-ear flick amount
+  tail: number; // signed tail swish (design px sideways)
+  mane: number; // signed mane sway (design px sideways)
+  hop: number; // 0..1 front-hoof STAMP lift amount
+}
+
+const REST: Pose = { bob: 0, lean: 0, squashX: 1, squashY: 1, head: 0, chew: 0, ear: 0, tail: 0, mane: 0, hop: 0 };
+
+// Build a pose from the wall clock: a common HEAD-BOB every ~6s and a rare
+// STAMP / head-toss every ~18s. Returns to REST (all zeros / unit scales) at
+// every window edge.
+function poseFromClock(tIn: number): Pose {
+  const t = safeNum(tIn, 0);
+  const pose: Pose = { bob: 0, lean: 0, squashX: 1, squashY: 1, head: 0, chew: 0, ear: 0, tail: 0, mane: 0, hop: 0 };
+
+  // COMMON ~6s: HEAD-BOB (win ~0.9s). Head dips ~10–14px, an ear flicks, the
+  // tail swishes, the mane sways, small body squash. Built from raised-cosine
+  // windows → seamless. Phase 3.0 opens the window at t≈3.0 (well clear of t=0,
+  // so anim(0) sits exactly at REST).
+  const cq = actionQ(t, 6, 0.9, 3.0);
+  if (cq >= 0) {
+    const env = bump(cq); // 0→1→0 over the window
+    // two head dips within the window (head dips down ~10–14px at the peak)
+    pose.head = env * (6.0 + 8.0 * Math.abs(Math.sin(cq * Math.PI * 2)));
+    pose.chew = env * (0.4 + 0.6 * Math.abs(Math.sin(cq * Math.PI * 2)));
+    pose.ear = env;
+    pose.tail = Math.sin(cq * Math.PI * 6) * env * 3.2; // a few swishes sideways
+    pose.mane = Math.sin(cq * Math.PI * 4) * env * 2.0; // mane sways with the bob
+    // small body squash as the head dips down
+    pose.squashY = 1 - env * 0.05;
+    pose.squashX = 1 + env * 0.04;
+  }
+
+  // RARE ~18s: STAMP / head-toss (win ~1.2s, phase +3s vs the common). The horse
+  // tosses its head UP (~14–18px) with the mane flying and stamps a front hoof,
+  // with anticipation → toss/stamp → settle. May lift OUTSIDE the design box.
+  const hq = actionQ(t, 18, 1.2, 6.0);
+  if (hq >= 0) {
+    const s = tossShape(hq); // −0.2..+1 (gather then toss)
+    const peak = Math.max(0, s);
+    pose.bob += peak * 4.0; // a little whole-body lift at the apex
+    pose.head -= peak * 17; // head tosses UP ~14–18px (head uses + = down)
+    pose.mane += peak * 5.0; // mane flies during the toss
+    pose.hop = peak; // front-hoof stamp lift, peaks with the toss
+    pose.ear = Math.max(pose.ear, peak); // ears pin/flick during the toss
+    pose.tail += Math.sin(hq * Math.PI) * 2.2; // tail flags during the toss
+    if (s < 0) {
+      // anticipation gather: squash down/wide + a slight lean
+      const c = -s; // 0..0.2
+      pose.squashY = 1 - c * 0.8;
+      pose.squashX = 1 + c * 0.6;
+      pose.lean = -c * 2.0;
+    } else {
+      // toss: stretch tall/narrow + a forward lean
+      pose.squashY = 1 + s * 0.12;
+      pose.squashX = 1 - s * 0.08;
+      pose.lean = s * 1.6;
+    }
+  }
+
+  return pose;
 }
 
 // ── Tweenable parameter set ─────────────────────────────────────────────────
 //
-// IDENTITY colours (brown coat, dark mane/tail, pink muzzle, dark hooves/eyes)
-// stay nearly constant; they live in P only so the light wash + coat thickness
+// IDENTITY colours (brown coat, dark mane/tail, soft muzzle, dark hooves/eyes)
+// stay nearly constant — they live in P only so the light wash + coat thickness
 // can nudge them very slightly between seasons. Everything that genuinely
-// differs per season is the coat volume + pad + light + dressing amounts.
+// differs per season is the coat volume + gloss + pad + light + dressing.
 
 interface P {
   coatLight: RGB; // lit top of the brown coat
@@ -84,89 +186,98 @@ interface P {
   outline: RGB; // soft dark outline tint
   lightWash: RGB; // overall colour-of-light wash
   lightWashAmt: number; // 0..1 strength of the light wash
-  coatVolume: number; // 0..1 coat thickness (sleek → shaggy & puffed outline)
+  coatVolume: number; // 0..1 BOLD coat thickness (sleek → shaggy & puffed)
   gloss: number; // 0..1 glossy-coat sheen strength (summer peak)
   frostAmt: number; // 0..1 frost sparkle on the coat
   backSnowAmt: number; // 0..1 snow settled on its back
   padSnowAmt: number; // 0..1 snow blanket on the pad
-  blossomAmt: number; // 0..1 tiny blossoms on the pad (spring)
-  fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
+  blossomAmt: number; // 0..1 a blossom on the pad (spring)
+  fallenLeafAmt: number; // 0..1 a fallen leaf on the pad (autumn)
   breathFogAmt: number; // 0..1 breath puff at the muzzle (winter)
+  scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
+  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
 }
 
-// Four season presets. The horse stays the SAME brown, dark-maned, dark-tailed
-// horse; only coat volume + pad + light + dressing differ.
+// Four BOLD season presets. The horse stays the SAME brown, dark-maned,
+// dark-tailed horse; only coat volume + gloss + pad + light + dressing differ —
+// pushed HARD so each season reads at a glance.
 const SP: Record<SeasonName, P> = {
-  // Spring — sleek brown coat, dewy lime pad + blossom, cool-bright light.
+  // Spring — sleek shiny coat, dewy lime pad + a blossom, cool-bright light.
   Spring: {
-    coatLight: [168, 116, 70],
+    coatLight: [172, 118, 70],
     coatMid: [134, 86, 48],
     coatShadow: [92, 56, 30],
     mane: [54, 34, 22],
     maneShade: [34, 20, 12],
     muzzle: [128, 84, 70],
     hoofDark: [44, 34, 28],
-    padGrass: [128, 206, 86], // bright lime dewy grass
-    soil: [86, 132, 54],
+    padGrass: [124, 212, 80], // vivid fresh lime
+    soil: [80, 142, 50],
     outline: [50, 30, 18],
-    lightWash: [214, 240, 255], // cool-bright
-    lightWashAmt: 0.16,
-    coatVolume: 0.12, // sleek
-    gloss: 0.3,
+    lightWash: [200, 240, 255], // cool-bright
+    lightWashAmt: 0.2,
+    coatVolume: 0.08, // BOLD: clearly sleek, very thin coat
+    gloss: 0.55, // sleek shiny coat
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
-    blossomAmt: 0.65,
+    blossomAmt: 0.9,
     fallenLeafAmt: 0,
     breathFogAmt: 0,
+    scarfAmt: 0,
+    scarfColor: [206, 64, 60],
   },
-  // Summer — glossy brown coat (PEAK), saturated mid-green pad, warm light.
+  // Summer — glossy brown coat (PEAK), saturated mid-green pad, bright warm light.
   Summer: {
-    coatLight: [184, 124, 72],
+    coatLight: [186, 126, 74],
     coatMid: [146, 90, 46],
     coatShadow: [96, 56, 26],
     mane: [50, 30, 18],
     maneShade: [30, 17, 10],
     muzzle: [132, 86, 70],
     hoofDark: [40, 30, 24],
-    padGrass: [86, 170, 64], // saturated mid-green
-    soil: [58, 112, 40],
+    padGrass: [76, 186, 60], // saturated mid-green
+    soil: [50, 118, 38],
     outline: [46, 28, 16],
-    lightWash: [255, 244, 206], // warm
-    lightWashAmt: 0.14,
-    coatVolume: 0.42, // normal full coat
-    gloss: 0.95, // glossiest peak
+    lightWash: [255, 238, 178], // bright warm
+    lightWashAmt: 0.2,
+    coatVolume: 0.42, // full normal coat
+    gloss: 0.98, // glossiest peak
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
     breathFogAmt: 0,
+    scarfAmt: 0,
+    scarfColor: [206, 64, 60],
   },
-  // Autumn — slightly fuller coat, olive-tan browning pad, fallen leaves.
+  // Autumn — warm-tinted fuller coat, olive-tan pad + a fallen leaf, amber light.
   Autumn: {
-    coatLight: [172, 112, 64],
-    coatMid: [138, 84, 44],
+    coatLight: [176, 114, 64],
+    coatMid: [140, 84, 44],
     coatShadow: [92, 54, 28],
     mane: [52, 32, 20],
     maneShade: [32, 19, 11],
     muzzle: [126, 82, 68],
     hoofDark: [44, 33, 26],
-    padGrass: [156, 142, 78], // olive-tan
-    soil: [104, 84, 44],
+    padGrass: [168, 138, 70], // olive-tan browning
+    soil: [110, 84, 42],
     outline: [50, 30, 18],
-    lightWash: [255, 206, 138], // low amber
-    lightWashAmt: 0.2,
-    coatVolume: 0.62, // slightly fuller
-    gloss: 0.4,
+    lightWash: [255, 184, 100], // low amber, BOLD
+    lightWashAmt: 0.3,
+    coatVolume: 0.7, // fuller
+    gloss: 0.3, // dulled gloss
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
-    fallenLeafAmt: 0.7,
+    fallenLeafAmt: 0.95,
     breathFogAmt: 0,
+    scarfAmt: 0,
+    scarfColor: [206, 64, 60],
   },
-  // Winter — thick shaggy coat + back-snow + breath fog, snowy pad, cool light.
+  // Winter — thick shaggy coat + back-snow + scarf + breath fog, snowy pad, cool light.
   Winter: {
     coatLight: [150, 108, 74],
     coatMid: [118, 80, 50],
@@ -175,19 +286,21 @@ const SP: Record<SeasonName, P> = {
     maneShade: [30, 20, 14],
     muzzle: [124, 86, 76],
     hoofDark: [48, 40, 38],
-    padGrass: [222, 232, 244], // snow on the pad
-    soil: [150, 168, 190],
-    outline: [52, 38, 30],
-    lightWash: [206, 222, 248], // cool blue-grey
-    lightWashAmt: 0.24,
-    coatVolume: 1, // thick & shaggy
-    gloss: 0.2,
-    frostAmt: 0.65,
-    backSnowAmt: 0.7,
-    padSnowAmt: 0.85,
+    padGrass: [226, 238, 250], // snow on the pad
+    soil: [146, 166, 192],
+    outline: [56, 42, 34],
+    lightWash: [188, 212, 252], // cool blue-grey, BOLD
+    lightWashAmt: 0.34,
+    coatVolume: 1, // BOLD: thick & shaggy winter coat
+    gloss: 0.16, // matte
+    frostAmt: 0.8,
+    backSnowAmt: 0.9,
+    padSnowAmt: 0.95,
     blossomAmt: 0,
     fallenLeafAmt: 0,
-    breathFogAmt: 0.7,
+    breathFogAmt: 0.85,
+    scarfAmt: 1, // a little scarf appears in winter
+    scarfColor: [206, 64, 60],
   },
 };
 
@@ -213,6 +326,8 @@ function lerpP(a: P, b: P, t: number): P {
     blossomAmt: lerp(a.blossomAmt, b.blossomAmt, t),
     fallenLeafAmt: lerp(a.fallenLeafAmt, b.fallenLeafAmt, t),
     breathFogAmt: lerp(a.breathFogAmt, b.breathFogAmt, t),
+    scarfAmt: lerp(a.scarfAmt, b.scarfAmt, t),
+    scarfColor: lerpRGB(a.scarfColor, b.scarfColor, t),
   };
 }
 
@@ -229,6 +344,7 @@ function clampP(p: P): P {
     blossomAmt: clamp01(p.blossomAmt),
     fallenLeafAmt: clamp01(p.fallenLeafAmt),
     breathFogAmt: clamp01(p.breathFogAmt),
+    scarfAmt: clamp01(p.scarfAmt),
   };
 }
 
@@ -237,25 +353,25 @@ function clampP(p: P): P {
 // the low flat grass pad the horse stands on
 function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
   // soft contact shadow, offset to lower-right (light is upper-left)
-  ctx.fillStyle = rgb([0, 0, 0], 0.18);
+  ctx.fillStyle = rgba([0, 0, 0], 0.18);
   ctx.beginPath();
   ctx.ellipse(3, 21, 17, 4.6, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // shaded underside of the pad
-  ctx.fillStyle = rgb(p.soil);
+  ctx.fillStyle = rgba(p.soil);
   ctx.beginPath();
   ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // grass top
-  ctx.fillStyle = rgb(p.padGrass);
+  ctx.fillStyle = rgba(p.padGrass);
   ctx.beginPath();
   ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // tufted top edge
-  ctx.strokeStyle = rgb(p.padGrass);
+  ctx.strokeStyle = rgba(p.padGrass);
   ctx.lineWidth = 1.4;
   ctx.lineCap = "round";
   for (let i = -16; i <= 16; i += 4) {
@@ -269,89 +385,91 @@ function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
   ctx.lineCap = "butt";
 
   // small highlight band on the pad (light from upper-left)
-  ctx.fillStyle = rgb([255, 255, 255], 0.1);
+  ctx.fillStyle = rgba([255, 255, 255], 0.1);
   ctx.beginPath();
   ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // snow blanket over the pad (winter)
+  // snow blanket over the pad (winter) — BOLD coverage
   if (p.padSnowAmt > 0.001) {
-    ctx.fillStyle = rgb([244, 250, 255], 0.85 * p.padSnowAmt);
+    ctx.fillStyle = rgba([246, 251, 255], 0.92 * p.padSnowAmt);
     ctx.beginPath();
-    ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 18.4, 17.4, 4.9, 0, 0, Math.PI * 2);
     ctx.fill();
-    // a couple of frost glints on the snow
-    ctx.fillStyle = rgb([255, 255, 255], 0.7 * p.padSnowAmt);
-    for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]] as const) {
+    // a few frost glints on the snow
+    ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
+    for (const [sx, sy] of [[-10, 19], [6, 20], [12, 18], [-2, 21]] as const) {
       ctx.beginPath();
-      ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+      ctx.arc(sx, sy, 0.9, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  // tiny blossoms (spring)
+  // a BOLD blossom cluster (spring)
   if (p.blossomAmt > 0.001) {
-    for (const [bx, by] of [[-13, 18.5], [10, 20], [0, 21], [14, 19]] as const) {
-      ctx.fillStyle = rgb([255, 250, 252], 0.9 * p.blossomAmt);
+    for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19], [-5, 20.4]] as const) {
+      ctx.fillStyle = rgba([255, 244, 250], 0.95 * p.blossomAmt);
       for (let k = 0; k < 5; k++) {
         const a = (k / 5) * Math.PI * 2;
         ctx.beginPath();
-        ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
+        ctx.arc(bx + Math.cos(a) * 1.3, by + Math.sin(a) * 1.3, 1.0, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.fillStyle = rgb([252, 214, 110], p.blossomAmt);
+      ctx.fillStyle = rgba([252, 208, 96], p.blossomAmt);
       ctx.beginPath();
-      ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
+      ctx.arc(bx, by, 0.9, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  // a couple of fallen leaves (autumn)
+  // a BOLD fallen leaf (autumn)
   if (p.fallenLeafAmt > 0.001) {
     const leaves: Array<[number, number, number, RGB]> = [
-      [-12, 20, -0.5, [196, 96, 36]],
-      [11, 20.5, 0.7, [212, 150, 52]],
-      [2, 21, 0.2, [168, 80, 40]],
+      [10, 20.4, 0.7, [214, 132, 40]],
+      [-11, 20, -0.5, [192, 88, 34]],
+      [1, 21, 0.2, [170, 76, 38]],
     ];
     for (const [lx, ly, rot, col] of leaves) {
       ctx.save();
       ctx.translate(lx, ly);
       ctx.rotate(rot);
-      ctx.fillStyle = rgb(col, p.fallenLeafAmt);
+      ctx.fillStyle = rgba(col, p.fallenLeafAmt);
       ctx.beginPath();
-      ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 3.0, 1.7, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = rgb([110, 60, 26], p.fallenLeafAmt);
-      ctx.lineWidth = 0.6;
+      ctx.strokeStyle = rgba([110, 58, 24], p.fallenLeafAmt);
+      ctx.lineWidth = 0.7;
       ctx.beginPath();
-      ctx.moveTo(-2.4, 0);
-      ctx.lineTo(2.4, 0);
+      ctx.moveTo(-2.8, 0);
+      ctx.lineTo(2.8, 0);
       ctx.stroke();
       ctx.restore();
     }
   }
 }
 
-// one slender leg: a thin brown cannon with a dark hoof at the base
-function paintLeg(ctx: CanvasRenderingContext2D, p: P, x: number, topY: number, baseY: number): void {
+// one slender leg: a thin brown cannon with a dark hoof at the base. `lift`
+// raises the hoof off the pad (the front-hoof stamp).
+function paintLeg(ctx: CanvasRenderingContext2D, p: P, x: number, topY: number, baseY: number, lift = 0): void {
+  const footY = baseY - lift;
   // brown leg with outline
-  ctx.strokeStyle = rgb(p.outline);
+  ctx.strokeStyle = rgba(p.outline);
   ctx.lineWidth = 3.4;
   ctx.lineCap = "round";
   ctx.beginPath();
   ctx.moveTo(x, topY);
-  ctx.lineTo(x, baseY);
+  ctx.lineTo(x, footY);
   ctx.stroke();
-  ctx.strokeStyle = rgb(p.coatShadow);
+  ctx.strokeStyle = rgba(p.coatShadow);
   ctx.lineWidth = 2.2;
   ctx.beginPath();
   ctx.moveTo(x, topY);
-  ctx.lineTo(x, baseY - 1.4);
+  ctx.lineTo(x, footY - 1.4);
   ctx.stroke();
   // dark hoof
-  ctx.fillStyle = rgb(p.hoofDark);
+  ctx.fillStyle = rgba(p.hoofDark);
   ctx.beginPath();
-  ctx.ellipse(x, baseY, 1.8, 1.3, 0, 0, Math.PI * 2);
+  ctx.ellipse(x, footY, 1.8, 1.3, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.lineCap = "butt";
 }
@@ -365,50 +483,55 @@ function bodyPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, vol: nu
   ctx.ellipse(cx, cy, rx, ry, -0.06, 0, Math.PI * 2);
 }
 
-// the whole horse, standing front-¾ turned ~15-20° toward lower-left
-function paintHorse(
-  ctx: CanvasRenderingContext2D,
-  p: P,
-  bob: number,
-  maneSway = 0,
-  tailSway = 0,
-  headToss = 0,
-): void {
-  // body centre lifts with the breathing bob
-  const bx = 2;
-  const by = 2 - bob;
+// the whole horse, standing front-¾ turned ~15-20° toward lower-left, posed by `pose`
+function paintHorse(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   const vol = p.coatVolume;
+  // body centre lifts with the stamp's whole-body bob and leans during the toss
+  const bx = 2 + pose.lean;
+  const by = 2 - pose.bob;
 
-  // legs first (behind the body). Two far (dimmer/higher), two near.
+  // legs first (behind the body). Two far (dimmer/higher), two near. The front
+  // near hoof stamps (lifts) with the rare toss.
   ctx.save();
   ctx.globalAlpha = 0.9;
   paintLeg(ctx, p, bx + 8.5, by + 5.5, 18.8);
   paintLeg(ctx, p, bx - 4, by + 5.5, 19.0);
   ctx.restore();
-  // near legs (toward lower-left, slightly forward)
+  // near legs (toward lower-left, slightly forward); front near leg stamps
   paintLeg(ctx, p, bx + 5.5, by + 6, 19.6);
-  paintLeg(ctx, p, bx - 7, by + 6, 19.8);
+  paintLeg(ctx, p, bx - 7, by + 6, 19.8, pose.hop * 5.5);
+
+  // The whole upper body (barrel + neck + head + mane + tail + dressing) is
+  // drawn under a squash/stretch transform centred on the body, so the toss
+  // reads with anticipation squash + airborne stretch.
+  ctx.save();
+  ctx.translate(bx, by);
+  ctx.scale(pose.squashX, pose.squashY);
+  ctx.translate(-bx, -by);
+
+  const maneSway = pose.mane;
+  const tailSway = pose.tail;
 
   // ── TAIL — drawn behind the body, hanging from the upper-right rump.
   //    A long dark flowing tail (locked dark). tailSway swings the tip. ─────────
   {
     const tx0 = bx + 11;
     const ty0 = by - 4;
-    ctx.strokeStyle = rgb(p.maneShade);
+    ctx.strokeStyle = rgba(p.maneShade);
     ctx.lineWidth = 4.4 * (0.9 + vol * 0.25);
     ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(tx0, ty0);
     ctx.quadraticCurveTo(tx0 + 5 + tailSway, by + 4, tx0 + 3.5 + tailSway * 1.6, by + 13);
     ctx.stroke();
-    ctx.strokeStyle = rgb(p.mane);
+    ctx.strokeStyle = rgba(p.mane);
     ctx.lineWidth = 2.6 * (0.9 + vol * 0.25);
     ctx.beginPath();
     ctx.moveTo(tx0, ty0);
     ctx.quadraticCurveTo(tx0 + 5 + tailSway, by + 4, tx0 + 3.5 + tailSway * 1.6, by + 13);
     ctx.stroke();
     // wispy tail strands
-    ctx.strokeStyle = rgb(p.maneShade, 0.8);
+    ctx.strokeStyle = rgba(p.maneShade, 0.8);
     ctx.lineWidth = 1.1;
     for (const off of [-1.6, 0, 1.8]) {
       ctx.beginPath();
@@ -419,9 +542,9 @@ function paintHorse(
     ctx.lineCap = "butt";
   }
 
-  // ── BODY barrel — outline pass then light fill (layered like wheat) ─────────
+  // ── BODY barrel — outline pass then shaded → mid → lit fill (layered) ────────
   // outline halo
-  ctx.fillStyle = rgb(p.outline);
+  ctx.fillStyle = rgba(p.outline);
   ctx.save();
   ctx.translate(bx, by);
   ctx.scale(1.1, 1.14);
@@ -431,11 +554,11 @@ function paintHorse(
   ctx.restore();
 
   // shaded coat
-  ctx.fillStyle = rgb(p.coatShadow);
+  ctx.fillStyle = rgba(p.coatShadow);
   bodyPath(ctx, bx, by, vol);
   ctx.fill();
   // mid coat
-  ctx.fillStyle = rgb(p.coatMid);
+  ctx.fillStyle = rgba(p.coatMid);
   ctx.save();
   ctx.translate(-0.4, -0.4);
   bodyPath(ctx, bx, by, vol);
@@ -443,7 +566,7 @@ function paintHorse(
   ctx.restore();
   // lit coat, offset up-left (light from upper-left)
   ctx.save();
-  ctx.fillStyle = rgb(p.coatLight);
+  ctx.fillStyle = rgba(p.coatLight);
   ctx.translate(-1.6, -1.8);
   bodyPath(ctx, bx, by, vol * 0.7);
   ctx.fill();
@@ -454,7 +577,7 @@ function paintHorse(
     ctx.save();
     bodyPath(ctx, bx, by, vol);
     ctx.clip();
-    ctx.fillStyle = rgb([255, 255, 255], 0.12 + 0.18 * p.gloss);
+    ctx.fillStyle = rgba([255, 255, 255], 0.12 + 0.2 * p.gloss);
     ctx.beginPath();
     ctx.ellipse(bx - 2, by - 4.4, 9, 2.4, -0.12, 0, Math.PI * 2);
     ctx.fill();
@@ -465,7 +588,7 @@ function paintHorse(
   // only when the coat is thick (vol high). Constant silhouette otherwise.
   if (vol > 0.55) {
     const fr = (vol - 0.55) / 0.45;
-    ctx.fillStyle = rgb(p.coatShadow, 0.9);
+    ctx.fillStyle = rgba(p.coatShadow, 0.9);
     const rx = 12.5 * (0.97 + vol * 0.12);
     const ry = 7.8 * (0.97 + vol * 0.14);
     for (let i = 0; i < 9; i++) {
@@ -473,47 +596,47 @@ function paintHorse(
       const lx = bx + Math.cos(a) * rx * 1.02;
       const ly = by + Math.sin(a) * ry * 1.02;
       ctx.beginPath();
-      ctx.arc(lx, ly, (1.2 + 0.9 * fr) * (i % 2 ? 1 : 0.8), 0, Math.PI * 2);
+      ctx.arc(lx, ly, (1.2 + 1.1 * fr) * (i % 2 ? 1 : 0.8), 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
   // snow settled on the back (winter) — a soft white cap on top of the back
   if (p.backSnowAmt > 0.001) {
-    ctx.fillStyle = rgb([248, 252, 255], 0.92 * p.backSnowAmt);
+    ctx.fillStyle = rgba([248, 252, 255], 0.92 * p.backSnowAmt);
     ctx.beginPath();
-    ctx.ellipse(bx, by - 6.6, 9 * (0.9 + vol * 0.2), 3.0, -0.08, 0, Math.PI * 2);
+    ctx.ellipse(bx, by - 6.6, 9 * (0.9 + vol * 0.25), 3.0, -0.08, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb([255, 255, 255], 0.85 * p.backSnowAmt);
+    ctx.fillStyle = rgba([255, 255, 255], 0.85 * p.backSnowAmt);
     for (const [dx, dy] of [[-5, -7.4], [1, -8.0], [6, -7.0]] as const) {
       ctx.beginPath();
-      ctx.arc(bx + dx, by + dy, 1.4 + vol * 0.4, 0, Math.PI * 2);
+      ctx.arc(bx + dx, by + dy, 1.6 + vol * 0.5, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
   // frost sparkle across the coat (winter)
   if (p.frostAmt > 0.001) {
-    ctx.fillStyle = rgb([255, 255, 255], 0.75 * p.frostAmt);
+    ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.frostAmt);
     const pts: Array<[number, number]> = [
       [-7, 0], [-2, 4], [4, -2], [8, 2], [0, -3], [-4, -5], [6, 4],
     ];
     for (const [fx, fy] of pts) {
       ctx.beginPath();
-      ctx.arc(bx + fx, by + fy, 0.7, 0, Math.PI * 2);
+      ctx.arc(bx + fx, by + fy, 0.8, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
   // ── NECK + HEAD (front-¾, lower-left). A long head with perked ears and a
-  //    dark flowing mane down the neck; headToss lifts/lowers the muzzle. ──────
+  //    dark flowing mane down the neck; pose.head dips/lifts the muzzle. ───────
   const neckTopX = bx - 8;
   const neckTopY = by - 6;
   const hx = bx - 16; // head centre
-  const hy = by - 1 - headToss; // head lifts with a toss
+  const hy = by - 1 + pose.head; // head dips (+head) on the bob, lifts (-head) on the toss
 
   // neck — a tapering brown wedge from the shoulder up toward the head
-  ctx.fillStyle = rgb(p.outline);
+  ctx.fillStyle = rgba(p.outline);
   ctx.beginPath();
   ctx.moveTo(bx - 3, by - 6);
   ctx.quadraticCurveTo(neckTopX - 1, neckTopY - 1, hx + 2.5, hy - 3.5);
@@ -521,7 +644,7 @@ function paintHorse(
   ctx.quadraticCurveTo(neckTopX + 3, by + 1, bx - 1, by + 3);
   ctx.closePath();
   ctx.fill();
-  ctx.fillStyle = rgb(p.coatMid);
+  ctx.fillStyle = rgba(p.coatMid);
   ctx.beginPath();
   ctx.moveTo(bx - 3, by - 5.6);
   ctx.quadraticCurveTo(neckTopX - 0.6, neckTopY - 0.4, hx + 2.6, hy - 3);
@@ -530,7 +653,7 @@ function paintHorse(
   ctx.closePath();
   ctx.fill();
   // lit front edge of the neck
-  ctx.strokeStyle = rgb(p.coatLight, 0.8);
+  ctx.strokeStyle = rgba(p.coatLight, 0.8);
   ctx.lineWidth = 1.6;
   ctx.lineCap = "round";
   ctx.beginPath();
@@ -542,7 +665,7 @@ function paintHorse(
   // ── MANE — dark, flowing down the back/top of the neck. maneSway ripples
   //    the strand tips. Locked dark colour. ─────────────────────────────────
   {
-    ctx.strokeStyle = rgb(p.maneShade);
+    ctx.strokeStyle = rgba(p.maneShade);
     ctx.lineWidth = 3.0 * (0.9 + vol * 0.2);
     ctx.lineCap = "round";
     ctx.beginPath();
@@ -560,7 +683,7 @@ function paintHorse(
     for (let i = 0; i < strands.length; i++) {
       const [sx, sy, ph] = strands[i];
       const sway = maneSway * (0.4 + ph);
-      ctx.strokeStyle = rgb(i % 2 ? p.mane : p.maneShade, 0.92);
+      ctx.strokeStyle = rgba(i % 2 ? p.mane : p.maneShade, 0.92);
       ctx.beginPath();
       ctx.moveTo(sx, sy);
       ctx.quadraticCurveTo(sx - 1.4 + sway, sy + 2.4, sx - 0.8 + sway * 1.6, sy + 5.2);
@@ -569,26 +692,28 @@ function paintHorse(
     ctx.lineCap = "butt";
   }
 
-  // perked ears on the crown (brown outer + soft inner), toward lower-left
+  // perked ears on the crown (brown outer + soft inner), toward lower-left.
+  // The near (left) ear flicks with the idle.
   for (const side of [-1, 1] as const) {
     ctx.save();
     ctx.translate(hx + 1.4 + side * 1.6, hy - 5.2);
-    ctx.rotate(-0.15 + side * 0.34);
-    ctx.fillStyle = rgb(p.outline);
+    const flick = side === -1 ? pose.ear * 0.5 : 0;
+    ctx.rotate(-0.15 + side * 0.34 + flick);
+    ctx.fillStyle = rgba(p.outline);
     ctx.beginPath();
     ctx.moveTo(0, 2.2);
     ctx.quadraticCurveTo(-1.0, -2.6, 0.2, -3.4);
     ctx.quadraticCurveTo(1.4, -2.4, 1.2, 2.0);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb(p.coatMid);
+    ctx.fillStyle = rgba(p.coatMid);
     ctx.beginPath();
     ctx.moveTo(0.2, 1.8);
     ctx.quadraticCurveTo(-0.5, -2.0, 0.3, -2.8);
     ctx.quadraticCurveTo(1.0, -2.0, 0.9, 1.6);
     ctx.closePath();
     ctx.fill();
-    ctx.fillStyle = rgb(p.muzzle, 0.8);
+    ctx.fillStyle = rgba(p.muzzle, 0.8);
     ctx.beginPath();
     ctx.ellipse(0.4, -0.2, 0.5, 1.2, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -598,28 +723,28 @@ function paintHorse(
   // head — long brown wedge muzzle, tilted toward lower-left
   ctx.save();
   ctx.translate(hx, hy);
-  ctx.rotate(0.34);
+  ctx.rotate(0.34 - pose.head * 0.01);
   // outline
-  ctx.fillStyle = rgb(p.outline);
+  ctx.fillStyle = rgba(p.outline);
   ctx.beginPath();
   ctx.ellipse(0, 0, 4.2, 6.2, 0, 0, Math.PI * 2);
   ctx.fill();
   // brown face fill (shaded then lit)
-  ctx.fillStyle = rgb(p.coatShadow);
+  ctx.fillStyle = rgba(p.coatShadow);
   ctx.beginPath();
   ctx.ellipse(0, 0, 3.5, 5.5, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = rgb(p.coatMid);
+  ctx.fillStyle = rgba(p.coatMid);
   ctx.beginPath();
   ctx.ellipse(-0.4, -0.4, 3.1, 5.1, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = rgb(p.coatLight);
+  ctx.fillStyle = rgba(p.coatLight);
   ctx.beginPath();
   ctx.ellipse(-0.8, -0.9, 2.3, 3.8, 0, 0, Math.PI * 2);
   ctx.fill();
 
   // forelock — a small dark tuft of mane between the ears, over the forehead
-  ctx.fillStyle = rgb(p.maneShade);
+  ctx.fillStyle = rgba(p.maneShade);
   ctx.beginPath();
   ctx.moveTo(-1.4, -5.0);
   ctx.quadraticCurveTo(0.4, -6.2, 1.4, -4.6);
@@ -628,31 +753,88 @@ function paintHorse(
   ctx.fill();
 
   // eye
-  ctx.fillStyle = rgb(p.hoofDark);
+  ctx.fillStyle = rgba(p.hoofDark);
   ctx.beginPath();
   ctx.ellipse(1.4, -1.6, 1.0, 1.3, 0.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = rgb([255, 255, 255], 0.5);
+  ctx.fillStyle = rgba([255, 255, 255], 0.5);
   ctx.beginPath();
   ctx.arc(1.1, -2.0, 0.4, 0, Math.PI * 2);
   ctx.fill();
 
-  // soft muzzle / nostril at the lower face
-  ctx.fillStyle = rgb(p.muzzle);
+  // soft muzzle / nostril at the lower face — flares slightly as it chews/snorts
+  ctx.fillStyle = rgba(p.muzzle);
   ctx.beginPath();
-  ctx.ellipse(0.4, 4.4, 2.4, 2.0, 0.1, 0, Math.PI * 2);
+  ctx.ellipse(0.4, 4.4, 2.4 + pose.chew * 0.4, 2.0, 0.1, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = rgb(p.hoofDark, 0.85);
+  ctx.fillStyle = rgba(p.hoofDark, 0.85);
   ctx.beginPath();
-  ctx.ellipse(0.9, 4.8, 0.6, 0.9, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(0.9, 4.8, 0.6, 0.9 + pose.chew * 0.5, 0.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore(); // end head transform
 
-  // breath-fog puff at the muzzle (winter) — at rest a faint static puff
-  if (p.breathFogAmt > 0.001) {
-    ctx.fillStyle = rgb([235, 244, 255], 0.4 * p.breathFogAmt);
+  // ── SCARF (winter) — a little knitted band around the neck, below the head ──
+  if (p.scarfAmt > 0.001) {
+    const sx = hx + 5.0;
+    const sy = hy + 2.2;
+    ctx.save();
+    ctx.globalAlpha = clamp01(p.scarfAmt);
+    // wrap band around the neck
+    ctx.fillStyle = rgba(p.scarfColor);
     ctx.beginPath();
-    ctx.ellipse(hx - 4.4, hy + 4.6, 3.0, 2.0, 0.2, 0, Math.PI * 2);
+    ctx.ellipse(sx, sy, 5.2, 3.0, 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    // darker underside for depth
+    ctx.fillStyle = rgba([
+      Math.max(0, p.scarfColor[0] - 50),
+      Math.max(0, p.scarfColor[1] - 30),
+      Math.max(0, p.scarfColor[2] - 30),
+    ]);
+    ctx.beginPath();
+    ctx.ellipse(sx + 0.8, sy + 1.4, 4.8, 1.6, 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    // hanging tail of the scarf, with a knitted notch + fringe
+    ctx.fillStyle = rgba(p.scarfColor);
+    ctx.beginPath();
+    ctx.moveTo(sx - 2.6, sy + 1.6);
+    ctx.lineTo(sx + 1.0, sy + 2.2);
+    ctx.lineTo(sx + 0.2, sy + 8.0);
+    ctx.lineTo(sx - 3.2, sy + 7.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba([
+      Math.max(0, p.scarfColor[0] - 60),
+      Math.max(0, p.scarfColor[1] - 40),
+      Math.max(0, p.scarfColor[2] - 40),
+    ]);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(sx - 1.4, sy + 3.0);
+    ctx.lineTo(sx - 1.8, sy + 7.4);
+    ctx.stroke();
+    // fringe at the bottom
+    ctx.strokeStyle = rgba(p.scarfColor);
+    ctx.lineWidth = 0.9;
+    ctx.lineCap = "round";
+    for (const fx of [-3.0, -1.8, -0.6]) {
+      ctx.beginPath();
+      ctx.moveTo(sx + fx, sy + 7.4);
+      ctx.lineTo(sx + fx - 0.2, sy + 9.0);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    ctx.restore();
+  }
+
+  ctx.restore(); // end squash/stretch transform
+
+  // breath-fog puff at the muzzle (winter) — drawn OUTSIDE the squash transform
+  // so it reads as air, not body. Static base puff + a swell as it chews/snorts.
+  if (p.breathFogAmt > 0.001) {
+    const reach = 4.6 + pose.chew * 3.0;
+    ctx.fillStyle = rgba([235, 244, 255], (0.34 + 0.28 * pose.chew) * p.breathFogAmt);
+    ctx.beginPath();
+    ctx.ellipse(hx - reach, hy + 4.6, 2.8 + pose.chew * 1.8, 1.9 + pose.chew * 1.2, 0.2, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -662,7 +844,7 @@ function paintLightWash(ctx: CanvasRenderingContext2D, p: P): void {
   if (p.lightWashAmt <= 0.001) return;
   ctx.save();
   ctx.globalCompositeOperation = "soft-light";
-  ctx.fillStyle = rgb(p.lightWash, p.lightWashAmt);
+  ctx.fillStyle = rgba(p.lightWash, p.lightWashAmt);
   ctx.beginPath();
   ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
   ctx.fill();
@@ -671,20 +853,13 @@ function paintLightWash(ctx: CanvasRenderingContext2D, p: P): void {
 
 // ── THE single paint ────────────────────────────────────────────────────────
 
-function paint(
-  ctx: CanvasRenderingContext2D,
-  pIn: P,
-  bob: number,
-  maneSway = 0,
-  tailSway = 0,
-  headToss = 0,
-): void {
+function paint(ctx: CanvasRenderingContext2D, pIn: P, pose: Pose): void {
   const p = clampP(pIn);
   ctx.save();
   try {
     ctx.lineJoin = "round";
     paintPad(ctx, p);
-    paintHorse(ctx, p, bob, maneSway, tailSway, headToss);
+    paintHorse(ctx, p, pose);
     paintLightWash(ctx, p);
   } finally {
     ctx.globalAlpha = 1;
@@ -696,136 +871,104 @@ function paint(
 // ── Per-season builders ─────────────────────────────────────────────────────
 
 function draw(season: SeasonName) {
-  return (ctx: CanvasRenderingContext2D): void => paint(ctx, SP[season], 0);
+  return (ctx: CanvasRenderingContext2D): void => paint(ctx, SP[season], REST);
 }
 
 function anim(season: SeasonName) {
   return (ctx: CanvasRenderingContext2D, t: number): void => {
-    const p = clampP(SP[season]);
-    const bob = bobAt(t); // SUBJECT breathing bob, 0 at t=0
+    paint(ctx, SP[season], poseFromClock(t));
+  };
+}
 
-    // gentle continuous mane + tail sway (seamless sine, nonzero is fine — it's
-    // a soft idle, not the silhouette; amplitude small).
-    const maneSway = Math.sin(t * 1.6) * 0.7;
-    const tailSway = Math.sin(t * 1.15 + 0.6) * 1.6;
+// ── Forward transitions (lerp EVERY field through quintic smoothstep) ─────────
 
-    // head toss once per ~6s loop, seamless (0 at the loop edges via 1-cos)
-    const tossLoop = (t % 6) / 6;
-    const headToss = 1.4 * (1 - Math.cos(tossLoop * Math.PI * 2)) * 0.5;
+// A monotone ease that is EXACT at the endpoints but can lead or lag.
+function biasedEase(k: number, bias: number): number {
+  const x = clamp01(k);
+  return Math.pow(smoother(x), bias);
+}
 
-    paint(ctx, SP[season], bob, maneSway, tailSway, headToss);
+// Staged transition. The whole-tile look lerps from SP[from] (p=0) to SP[to]
+// (p=1) — so transition(0) === draw(from) and transition(1) === draw(to)
+// EXACTLY (drawn at REST, matching the idle hand-off). The coat VOLUME leads
+// (coat fluffs early); snow / frost / breath-fog / scarf LAG (settle late).
+function makeTransition(fromIdx: 0 | 1 | 2) {
+  const from = SEASON_NAMES[fromIdx];
+  const to = SEASON_NAMES[fromIdx + 1];
+  return (ctx: CanvasRenderingContext2D, pp: number): void => {
+    const p = clamp01(safeNum(pp, 0));
+    const kBase = smoother(p);
+    const kCoat = biasedEase(p, 0.62); // coat volume LEADS
+    const kSnow = biasedEase(p, 1.7); // snow / frost / fog / scarf LAG
 
-    // ── Additive micro-motion, drawn over the painted tile ──────────────────
+    const a = SP[from];
+    const b = SP[to];
+    const blended: P = lerpP(a, b, kBase);
+    blended.coatVolume = lerp(a.coatVolume, b.coatVolume, kCoat);
+    blended.backSnowAmt = lerp(a.backSnowAmt, b.backSnowAmt, kSnow);
+    blended.padSnowAmt = lerp(a.padSnowAmt, b.padSnowAmt, kSnow);
+    blended.frostAmt = lerp(a.frostAmt, b.frostAmt, kSnow);
+    blended.breathFogAmt = lerp(a.breathFogAmt, b.breathFogAmt, kSnow);
+    blended.scarfAmt = lerp(a.scarfAmt, b.scarfAmt, kSnow);
+
+    paint(ctx, blended, REST);
+
+    // Transient overlays (strength ∝ sin(π·p): exactly 0 at both ends).
+    const trans = Math.sin(Math.PI * p);
+    if (trans <= 0.0008) return;
+
     ctx.save();
     try {
       const bx = 2;
-      const by = 2 - bob;
-      const hx = bx - 16;
-      const hy = by - 1 - headToss;
+      const by = 2;
 
-      // Occasional ear flick once per ~5s loop. Sharp brief bump, seamless.
-      const loop = (t % 5) / 5; // 0..1
-      const flickGate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 6; // brief
-      const flick = Math.sin(t * 9) * flickGate;
+      // Loose coat motes lifting off the thickening coat — reads the coat
+      // visibly fluffing/growing. Present in EVERY morph (deterministic in p).
+      const fluff = trans * (0.4 + 0.6 * Math.max(0, b.coatVolume - a.coatVolume + 0.4));
+      if (fluff > 0.01) {
+        ctx.fillStyle = rgba([210, 180, 150], 0.4 * fluff);
+        const motes: Array<[number, number, number]> = [
+          [-8, -8, 1.1], [3, -10, 1.4], [9, -6, 0.9], [-3, -11, 1.0],
+        ];
+        for (const [mx, my, mr] of motes) {
+          const rise = (1 - Math.cos(Math.PI * p)) * 2.2;
+          ctx.beginPath();
+          ctx.arc(bx + mx, by + my - rise, mr * (0.7 + 0.5 * trans), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
 
-      // ear flick (redraw the near ear flicking over the existing one)
-      ctx.save();
-      ctx.translate(hx + 1.4 - 1.6, hy - 5.2);
-      ctx.rotate(-0.15 - 0.34 + flick * 0.5);
-      ctx.fillStyle = rgb(p.outline);
-      ctx.beginPath();
-      ctx.moveTo(0, 2.2);
-      ctx.quadraticCurveTo(-1.0, -2.6, 0.2, -3.4);
-      ctx.quadraticCurveTo(1.4, -2.4, 1.2, 2.0);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = rgb(p.coatMid);
-      ctx.beginPath();
-      ctx.moveTo(0.2, 1.8);
-      ctx.quadraticCurveTo(-0.5, -2.0, 0.3, -2.8);
-      ctx.quadraticCurveTo(1.0, -2.0, 0.9, 1.6);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+      // Snow settling onto the back during autumn→winter (target gains snow).
+      const snowGain = Math.max(0, b.backSnowAmt - a.backSnowAmt);
+      if (snowGain > 0.01) {
+        ctx.fillStyle = rgba([255, 255, 255], 0.8 * trans * snowGain);
+        const land = smoother(p);
+        const flecks: Array<[number, number]> = [
+          [-6, -10], [-1, -11], [4, -9.5], [7, -8],
+        ];
+        for (const [fxx, fyy] of flecks) {
+          const fall = (1 - land) * 6;
+          ctx.beginPath();
+          ctx.arc(bx + fxx, by + fyy - fall, 1.0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
 
-      if (season === "Spring") {
-        // dew shimmer — a soft glint that pulses on the grass/blossoms
-        const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-        ctx.fillStyle = rgb([255, 255, 255], g);
+      // A breath-fog puff appearing as the cold sets in (target gains fog).
+      const fogGain = Math.max(0, b.breathFogAmt - a.breathFogAmt);
+      if (fogGain > 0.01) {
+        const hx = bx - 16;
+        const hy = by - 1;
+        ctx.fillStyle = rgba([235, 244, 255], 0.4 * trans * fogGain);
         ctx.beginPath();
-        ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
+        ctx.ellipse(hx - (4 + trans * 3), hy + 4.6, 2.6 + trans * 1.8, 1.8 + trans * 1.2, 0.2, 0, Math.PI * 2);
         ctx.fill();
-        ctx.beginPath();
-        ctx.arc(10, 19.6, 0.9 + g * 0.8, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Summer") {
-        // glossy coat sheen sweeping across the hide
-        const s = 0.5 + 0.5 * Math.sin(t * 1.1);
-        const sx = bx - 9 + s * 18;
-        ctx.save();
-        ctx.globalCompositeOperation = "soft-light";
-        ctx.fillStyle = rgb([255, 255, 255], 0.34);
-        ctx.beginPath();
-        ctx.ellipse(sx, by - 2, 2.8, 5.4, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      } else if (season === "Autumn") {
-        // a fallen leaf stirs — gentle rock + tiny drift, seamless
-        const a = Math.sin(t * 1.3) * 0.5;
-        const dx = Math.sin(t * 0.7) * 1.2;
-        ctx.save();
-        ctx.translate(11 + dx, 20.5);
-        ctx.rotate(0.7 + a);
-        ctx.fillStyle = rgb([212, 150, 52], p.fallenLeafAmt);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      } else {
-        // Winter: breath-fog puff pulses outward from the muzzle + a drifting
-        // snowflake + a cold sheen.
-        const breathe = 0.5 + 0.5 * Math.sin(t * 1.35);
-        const reach = 4 + breathe * 3;
-        ctx.fillStyle = rgb([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
-        ctx.beginPath();
-        ctx.ellipse(hx - reach + 0.5, hy + 4.6, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.2, 0, Math.PI * 2);
-        ctx.fill();
-
-        // one drifting snowflake on a seamless 3.4s fall
-        const prog = ((t / 3.4) % 1 + 1) % 1;
-        const fy = -20 + prog * 36;
-        const fxx = 7 + Math.sin(prog * Math.PI * 2) * 4;
-        ctx.fillStyle = rgb([255, 255, 255], 0.85);
-        ctx.beginPath();
-        ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
-        ctx.fill();
-
-        // cold sheen pulse on the coat
-        const sheen = 0.5 + 0.5 * Math.sin(t * 0.8);
-        ctx.save();
-        ctx.globalCompositeOperation = "soft-light";
-        ctx.fillStyle = rgb([206, 224, 255], 0.12 + sheen * 0.12);
-        ctx.beginPath();
-        ctx.ellipse(bx, by, 13, 8, -0.06, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
       }
     } finally {
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
       ctx.restore();
     }
-  };
-}
-
-// ── Forward transitions (lerp EVERY field through quintic smoothstep) ────────
-
-function makeTransition(fromIdx: 0 | 1 | 2) {
-  const from = SEASON_NAMES[fromIdx];
-  const to = SEASON_NAMES[fromIdx + 1];
-  return (ctx: CanvasRenderingContext2D, pp: number): void => {
-    const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(SP[from], SP[to], k), 0);
   };
 }
 

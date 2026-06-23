@@ -1,25 +1,36 @@
-// Seasonal art for the HERD BOAR board tile (`tile_herd_boar`).
+// Production seasonal art for the HERD BOAR board tile (`tile_herd_boar`) — the
+// approved bold direction, mirroring the herd SHEEP reference pattern. A single
+// parameterized `paint(ctx, p, pose)` + four `P` presets + lerped transitions,
+// pushed so the seasons read at a glance and the idle is a real, fun ACTION
+// rather than a subtle breath.
 //
-// A SINGLE parameterized paint renders the whole tile (grass pad + the one
-// wild boar + seasonal dressing) from a tweenable parameter set `P`. The four
-// seasons are just four `P` presets; the three forward transitions lerp EVERY
-// field of `P` through a quintic smoothstep, so transition(0) === the
-// from-season still and transition(1) === the to-season still — no snap.
+// PALETTE LOCK: it is ALWAYS the same dark, bristly WILD BOAR — a muscular dark
+// grey-brown hump-backed body, a stiff ridge of bristles down the spine, a long
+// snout, upright pointed ears, two prominent curved WHITE tusks, small dark
+// eyes, sturdy legs. The colour + silhouette are CONSTANT every season; the
+// signature tusks + bristly mane never change. Seasons change only the coat
+// VOLUME (sleek spring → SHAGGY thick winter), the pad colour, the light wash,
+// and BOLD dressing — snow on the back, a little winter SCARF, a breath-fog
+// puff (snorting steam), blossom, a fallen leaf, frost. The animal's identity
+// colours never change; the silhouette outline is identical for every `P`
+// (only volume scales it). The tusks stay bright all year.
 //
-// PALETTE LOCK: the boar is ALWAYS the same dark, bristly wild boar — a
-// muscular dark grey-brown body with a stiff ridge of bristles down the spine,
-// a long snout, two prominent curved WHITE tusks, small dark eyes, sturdy legs.
-// The silhouette is FIERCE and CONSTANT every season. Seasons change only its
-// coat tone + bristle ridge fullness (a `coatVolume` param), the pad colour,
-// the light wash, and dressing (blossom, fallen leaves, frost, back-snow,
-// breath-fog). The animal's identity colours (dark coat, white tusks) never
-// change — the tusks stay bright all year.
+// IDLE (two-tier occasional action, carried through a `pose` object):
+//   • COMMON ~6s (win ~0.95s): a CHEW + SNORT + EAR-FLICK — the head bobs
+//     ~8–12px, the ear flicks, a breath-snort puffs, the tail wags, the body
+//     squashes. Seamless.
+//   • RARE  ~18s (win ~1.2s, phase +3s): an aggressive HEAD-TOSS / tusk-jab
+//     charge feint — the boar lowers and tosses its head with the tusks
+//     ~14–18px (anticipation → toss → settle) with a front STAMP. The tusks may
+//     swing OUTSIDE the −24..+24 design box at the apex (fine).
+// Both gestures return to REST with zero value AND zero velocity at the window
+// edges (raised-cosine windows), so `anim(…, t)` is seamless and `anim(…, 0)`
+// (and `draw`) sit exactly at rest.
 //
-// Origin-centered in the −24..+24 design box, light from upper-left. Animals
-// stand front-¾ turned ~15–20° toward lower-left. Animations are deterministic
-// (sin/cos/modulo of `t` in seconds), seamless, and subtle. The subject's
-// breathing bob has zero velocity at t=0 (A*(1-cos(w t))*0.5) so anim(…,0)
-// matches the still exactly.
+// Origin-centered in the −24..+24 design box, light from upper-left. The boar
+// stands front-¾ turned ~15–20° toward lower-left. Deterministic in `t`
+// (seconds). Never throws; clamps every scalar; save/restore + globalAlpha
+// reset.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
 import { SEASON_NAMES, type SeasonName } from "../types.js";
@@ -30,6 +41,11 @@ type RGB = [number, number, number];
 
 function clamp01(x: number): number {
   return x < 0 || Number.isNaN(x) ? 0 : x > 1 ? 1 : x;
+}
+
+// guard a single scalar against NaN / ±Infinity (used on `t` and `p` inputs)
+function safeNum(x: number): number {
+  return Number.isFinite(x) ? x : 0;
 }
 
 function lerp(a: number, b: number, t: number): number {
@@ -52,10 +68,132 @@ function smoother(x: number): number {
   return x * x * x * (x * (6 * x - 15) + 10);
 }
 
-// breathing bob: A*(1-cos(w t))*0.5 — value AND velocity are 0 at t=0,
-// seamless over a 2π/w period, peak amplitude A.
-function bobAt(t: number, amp = 1.0, w = 1.4): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+// Two-tier occasional-action clock. Returns a phase in [0,1) WITHIN the action
+// window (the fraction of the way through the gesture), or −1 when at rest. The
+// window opens once per `period` at `phase` seconds in, and is `win` long.
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
+}
+
+// A raised-cosine "bump" 0→1→0 over q∈[0,1], with zero slope at both ends, so a
+// gesture grows in and settles out seamlessly (no velocity at the window edges).
+function bump(q: number): number {
+  if (q < 0 || q > 1) return 0;
+  return 0.5 - 0.5 * Math.cos(q * Math.PI * 2);
+}
+
+// Anticipation→action shape for the HEAD-TOSS: a brief lower/crouch (negative)
+// before the upward toss, then a clean toss-up arc and settle. q∈[0,1]. Returns
+// a TOSS factor in roughly −0.2..+1 (negative = lowered head anticipation,
+// positive = head thrown up/forward with the tusks).
+function tossShape(q: number): number {
+  if (q <= 0 || q >= 1) return 0;
+  const antiEnd = 0.26; // first slice = lower the head (anticipation)
+  if (q < antiEnd) {
+    // dip down (anticipation), zero slope at q=0
+    const a = q / antiEnd;
+    return -0.2 * (0.5 - 0.5 * Math.cos(a * Math.PI));
+  }
+  // the toss arc, zero at the seam to the crouch and at q=1
+  const a = (q - antiEnd) / (1 - antiEnd);
+  return Math.sin(a * Math.PI);
+}
+
+// ── The idle POSE (carries all action state into paint) ──────────────────────
+
+interface Pose {
+  bob: number; // whole-body vertical bob (design px, + = up)
+  lean: number; // signed forward lean (design px, + = toward lower-left)
+  squashX: number; // body horizontal scale multiplier (squash/stretch)
+  squashY: number; // body vertical scale multiplier
+  head: number; // signed head pivot (+ = thrown up/forward on the toss)
+  chew: number; // 0..1 jaw chew amount
+  ear: number; // 0..1 near-ear flick amount
+  tail: number; // signed tail wag (design px)
+  hop: number; // 0..1 front-stamp / lunge amount on the head-toss
+  snort: number; // 0..1 extra breath-snort reach (chew exhale)
+}
+
+const REST: Pose = {
+  bob: 0,
+  lean: 0,
+  squashX: 1,
+  squashY: 1,
+  head: 0,
+  chew: 0,
+  ear: 0,
+  tail: 0,
+  hop: 0,
+  snort: 0,
+};
+
+// Build a pose from the wall clock: a common CHEW+SNORT every ~6s and a rare
+// HEAD-TOSS every ~18s. Returns to REST (all zeros / unit scales) at every
+// window edge.
+function poseFromClock(tIn: number): Pose {
+  const t = safeNum(tIn);
+  const pose: Pose = {
+    bob: 0,
+    lean: 0,
+    squashX: 1,
+    squashY: 1,
+    head: 0,
+    chew: 0,
+    ear: 0,
+    tail: 0,
+    hop: 0,
+    snort: 0,
+  };
+
+  // COMMON ~6s: CHEW + SNORT + EAR-FLICK (win ~0.95s). Head bobs ~8–12px down,
+  // jaw chatters, ear flicks, tail wags, body squashes, a breath-snort puffs.
+  // Built from raised-cosine windows → seamless. Phase 3.0 opens the window at
+  // t≈3.0 (well clear of t=0, so anim(0) sits exactly at REST).
+  const cq = actionQ(t, 6, 0.95, 3.0);
+  if (cq >= 0) {
+    const env = bump(cq); // 0→1→0 over the window
+    const chatter = Math.abs(Math.sin(cq * Math.PI * 2));
+    // two chew bobs within the window: head dips DOWN (−head) ~8–12px
+    pose.head = -env * (8 + 4 * chatter) * 0.06; // head pivot (radians-ish scale)
+    pose.bob = -env * (2.2 + 1.6 * chatter); // body dips a touch as it grazes
+    pose.chew = env * (0.5 + 0.5 * chatter);
+    pose.ear = env;
+    pose.tail = Math.sin(cq * Math.PI * 6) * env * 3.0; // a few wags
+    pose.snort = env; // a breath-snort exhale as it chews
+    // gentle body squash with the grazing dip
+    pose.squashY = 1 - env * 0.05;
+    pose.squashX = 1 + env * 0.04;
+  }
+
+  // RARE ~18s: HEAD-TOSS / tusk-jab charge feint (win ~1.2s, phase +3s). The
+  // boar lowers and tosses its head with the tusks ~14–18px, with a front
+  // stamp/lunge, then settles. May swing the tusks OUTSIDE the design box.
+  const hq = actionQ(t, 18, 1.2, 3.0);
+  if (hq >= 0) {
+    const s = tossShape(hq); // −0.2..+1 (lower then toss-up)
+    // head pivot: lowers on anticipation (negative), throws up on the toss
+    pose.head += s * 0.5; // big swing — tusks sweep up ~14–18px
+    if (s < 0) {
+      // anticipation: lower the head + crouch wide, lean back a touch
+      const c = -s; // 0..0.2
+      pose.bob -= c * 4; // settle down a little
+      pose.squashY = 1 - c * 0.6;
+      pose.squashX = 1 + c * 0.45;
+      pose.lean -= c * 3; // shift weight back
+    } else {
+      // the toss/lunge: surge forward + up, stretch into the jab
+      pose.lean += s * 6; // lunge toward lower-left
+      pose.bob += s * 4; // shoulders rise into the toss
+      pose.squashY = 1 + s * 0.1;
+      pose.squashX = 1 - s * 0.06;
+      pose.hop = s; // front stamp / lunge
+    }
+    pose.ear = Math.max(pose.ear, bump(hq) * 0.6); // ears pin during the feint
+    pose.tail += Math.sin(hq * Math.PI) * 2.0; // tail flags during the feint
+  }
+
+  return pose;
 }
 
 // ── Tweenable parameter set ─────────────────────────────────────────────────
@@ -64,7 +202,7 @@ interface P {
   coatLight: RGB; // lit top of the dark coat
   coatMid: RGB; // body mid tone
   coatShadow: RGB; // shaded underside / haunch
-  bristle: RGB; // the spine ridge of stiff bristles
+  bristle: RGB; // the spine ridge of stiff bristles (the mane)
   snout: RGB; // snout / muzzle tone (warmer dark)
   tusk: RGB; // the white tusks (palette-locked bright)
   hoof: RGB; // dark hooves
@@ -73,19 +211,23 @@ interface P {
   outline: RGB; // soft dark outline tint
   lightWash: RGB; // overall colour-of-light wash
   lightWashAmt: number; // 0..1 strength of the light wash
-  coatVolume: number; // 0..1 fullness of coat + bristle ridge
+  coatVolume: number; // 0..1 BOLD shagginess of coat + bristle ridge
+  glossAmt: number; // 0..1 sheen on the coat (peak in summer)
   frostAmt: number; // 0..1 frost sparkle on the bristles
   backSnowAmt: number; // 0..1 snow settled on its back
   padSnowAmt: number; // 0..1 snow blanket on the pad
-  blossomAmt: number; // 0..1 tiny blossoms on the pad
-  fallenLeafAmt: number; // 0..1 fallen leaves on the pad
-  breathFogAmt: number; // 0..1 breath puff at the snout
+  blossomAmt: number; // 0..1 a blossom on the pad
+  fallenLeafAmt: number; // 0..1 a fallen leaf on the pad
+  breathFogAmt: number; // 0..1 breath puff at the snout (snorting steam)
+  scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
+  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
 }
 
-// Four season presets. The boar stays the SAME dark bristly white-tusked boar;
-// only coat tone, bristle/coat volume, pad, light, and dressing differ.
+// Four BOLD season presets. The boar stays the SAME dark bristly white-tusked
+// boar; only coat tone + VOLUME, gloss, pad, light, and dressing differ —
+// pushed HARD so each season reads at a glance.
 const SP: Record<SeasonName, P> = {
-  // Spring — dark bristly coat (lightly cooler), dewy lime pad + blossom.
+  // Spring — sleeker coat, cool-bright light, dewy lime pad + a blossom.
   Spring: {
     coatLight: [102, 86, 72],
     coatMid: [74, 60, 50],
@@ -94,85 +236,98 @@ const SP: Record<SeasonName, P> = {
     snout: [70, 54, 48],
     tusk: [248, 246, 234],
     hoof: [30, 24, 22],
-    padGrass: [126, 200, 86], // bright lime dewy grass
-    soil: [86, 132, 54],
+    padGrass: [126, 210, 84], // vivid fresh lime
+    soil: [82, 140, 50],
     outline: [30, 24, 20],
-    lightWash: [214, 240, 255], // cool-bright
-    lightWashAmt: 0.16,
-    coatVolume: 0.42, // sleeker spring coat
+    lightWash: [200, 240, 255], // cool-bright
+    lightWashAmt: 0.2,
+    coatVolume: 0.18, // BOLD: clearly sleeker, just-shed spring coat
+    glossAmt: 0.25,
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
-    blossomAmt: 0.62,
+    blossomAmt: 0.9,
     fallenLeafAmt: 0,
     breathFogAmt: 0,
+    scarfAmt: 0,
+    scarfColor: [206, 64, 60],
   },
-  // Summer — full dark coat (PEAK richness), saturated mid-green pad, warm light.
+  // Summer — glossy full dark coat (PEAK), saturated mid-green pad, bright warm.
   Summer: {
-    coatLight: [110, 92, 76],
-    coatMid: [78, 62, 50],
+    coatLight: [112, 94, 76],
+    coatMid: [80, 64, 52],
     coatShadow: [46, 36, 28],
     bristle: [38, 30, 24],
-    snout: [74, 56, 48],
+    snout: [76, 58, 48],
     tusk: [250, 248, 236],
     hoof: [28, 22, 20],
-    padGrass: [86, 168, 64], // saturated mid-green
-    soil: [58, 110, 40],
+    padGrass: [78, 176, 60], // saturated mid-green
+    soil: [50, 116, 38],
     outline: [28, 22, 18],
-    lightWash: [255, 244, 206], // warm
-    lightWashAmt: 0.16,
-    coatVolume: 0.6, // full coat
+    lightWash: [255, 240, 184], // bright warm
+    lightWashAmt: 0.22,
+    coatVolume: 0.5, // full coat
+    glossAmt: 0.95, // BOLD: glossy peak coat
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
     breathFogAmt: 0,
+    scarfAmt: 0,
+    scarfColor: [206, 64, 60],
   },
-  // Autumn — coat warms slightly, fuller bristle ridge; olive-tan pad + leaves.
+  // Autumn — warm-tinted shaggier coat, dulled gloss; olive-tan pad + a leaf.
   Autumn: {
-    coatLight: [114, 88, 66],
-    coatMid: [82, 60, 44],
-    coatShadow: [50, 36, 26],
-    bristle: [44, 32, 24],
-    snout: [80, 56, 44],
+    coatLight: [120, 90, 64],
+    coatMid: [88, 62, 42],
+    coatShadow: [52, 36, 24],
+    bristle: [46, 32, 22],
+    snout: [84, 58, 44],
     tusk: [246, 242, 226],
     hoof: [30, 22, 18],
-    padGrass: [156, 142, 78], // olive-tan browning grass
-    soil: [104, 84, 44],
+    padGrass: [168, 138, 70], // olive-tan browning
+    soil: [110, 84, 42],
     outline: [32, 24, 18],
-    lightWash: [255, 206, 138], // low amber
-    lightWashAmt: 0.2,
-    coatVolume: 0.82, // fuller bristle ridge
+    lightWash: [255, 186, 98], // low amber, BOLD
+    lightWashAmt: 0.32,
+    coatVolume: 0.8, // BOLD: warm shaggy coat
+    glossAmt: 0.25, // dulled gloss
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
-    fallenLeafAmt: 0.7,
+    fallenLeafAmt: 0.95,
     breathFogAmt: 0,
+    scarfAmt: 0,
+    scarfColor: [206, 64, 60],
   },
-  // Winter — cool blue-grey light; frost on bristles + snow on the back; snowy
-  // pad; breath-fog at the snout. Tusks stay bright.
+  // Winter — SHAGGY thick coat + snow on the back + a little winter SCARF +
+  // breath-fog; frost on the bristles; snowy pad; cool blue-grey light. Tusks
+  // stay bright.
   Winter: {
-    coatLight: [98, 88, 84],
-    coatMid: [70, 60, 58],
+    coatLight: [98, 90, 86],
+    coatMid: [70, 62, 60],
     coatShadow: [46, 40, 40],
-    bristle: [42, 38, 40],
-    snout: [70, 58, 56],
+    bristle: [44, 40, 42],
+    snout: [70, 60, 58],
     tusk: [252, 252, 244],
     hoof: [34, 28, 30],
-    padGrass: [222, 232, 244], // snow on the pad
-    soil: [150, 168, 190],
-    outline: [40, 36, 40],
-    lightWash: [206, 222, 248], // cool blue-grey
-    lightWashAmt: 0.26,
-    coatVolume: 1, // thickest winter coat + bristle ridge
-    frostAmt: 0.72,
-    backSnowAmt: 0.7,
-    padSnowAmt: 0.85,
+    padGrass: [224, 236, 248], // snow on the pad
+    soil: [148, 168, 192],
+    outline: [40, 36, 42],
+    lightWash: [192, 214, 250], // cool blue-grey, BOLD
+    lightWashAmt: 0.36,
+    coatVolume: 1, // BOLD: thickest, shaggiest winter coat + mane
+    glossAmt: 0.1, // matte shaggy
+    frostAmt: 0.85,
+    backSnowAmt: 0.9,
+    padSnowAmt: 0.95,
     blossomAmt: 0,
     fallenLeafAmt: 0,
-    breathFogAmt: 0.72,
+    breathFogAmt: 0.85,
+    scarfAmt: 1, // a little scarf appears in winter
+    scarfColor: [206, 64, 60],
   },
 };
 
@@ -191,12 +346,15 @@ function lerpP(a: P, b: P, t: number): P {
     lightWash: lerpRGB(a.lightWash, b.lightWash, t),
     lightWashAmt: lerp(a.lightWashAmt, b.lightWashAmt, t),
     coatVolume: lerp(a.coatVolume, b.coatVolume, t),
+    glossAmt: lerp(a.glossAmt, b.glossAmt, t),
     frostAmt: lerp(a.frostAmt, b.frostAmt, t),
     backSnowAmt: lerp(a.backSnowAmt, b.backSnowAmt, t),
     padSnowAmt: lerp(a.padSnowAmt, b.padSnowAmt, t),
     blossomAmt: lerp(a.blossomAmt, b.blossomAmt, t),
     fallenLeafAmt: lerp(a.fallenLeafAmt, b.fallenLeafAmt, t),
     breathFogAmt: lerp(a.breathFogAmt, b.breathFogAmt, t),
+    scarfAmt: lerp(a.scarfAmt, b.scarfAmt, t),
+    scarfColor: lerpRGB(a.scarfColor, b.scarfColor, t),
   };
 }
 
@@ -206,12 +364,14 @@ function clampP(p: P): P {
     ...p,
     lightWashAmt: clamp01(p.lightWashAmt),
     coatVolume: clamp01(p.coatVolume),
+    glossAmt: clamp01(p.glossAmt),
     frostAmt: clamp01(p.frostAmt),
     backSnowAmt: clamp01(p.backSnowAmt),
     padSnowAmt: clamp01(p.padSnowAmt),
     blossomAmt: clamp01(p.blossomAmt),
     fallenLeafAmt: clamp01(p.fallenLeafAmt),
     breathFogAmt: clamp01(p.breathFogAmt),
+    scarfAmt: clamp01(p.scarfAmt),
   };
 }
 
@@ -257,44 +417,44 @@ function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
   ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // snow blanket over the pad (winter)
+  // snow blanket over the pad (winter) — BOLD coverage
   if (p.padSnowAmt > 0.001) {
-    ctx.fillStyle = rgb([244, 250, 255], 0.85 * p.padSnowAmt);
+    ctx.fillStyle = rgb([246, 251, 255], 0.92 * p.padSnowAmt);
     ctx.beginPath();
-    ctx.ellipse(0, 18.6, 17, 4.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 18.4, 17.4, 4.9, 0, 0, Math.PI * 2);
     ctx.fill();
-    // a couple of frost glints on the snow
-    ctx.fillStyle = rgb([255, 255, 255], 0.7 * p.padSnowAmt);
-    for (const [sx, sy] of [[-9, 19], [6, 20], [12, 18]] as const) {
+    // a few frost glints on the snow
+    ctx.fillStyle = rgb([255, 255, 255], 0.8 * p.padSnowAmt);
+    for (const [sx, sy] of [[-10, 19], [6, 20], [12, 18], [-2, 21]] as const) {
       ctx.beginPath();
-      ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+      ctx.arc(sx, sy, 0.9, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  // tiny blossoms (spring)
+  // a BOLD blossom (spring)
   if (p.blossomAmt > 0.001) {
-    for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19]] as const) {
-      ctx.fillStyle = rgb([255, 250, 252], 0.9 * p.blossomAmt);
+    for (const [bx, by] of [[-12, 18.5], [9, 20], [0, 21], [14, 19], [-5, 20.4]] as const) {
+      ctx.fillStyle = rgb([255, 244, 250], 0.95 * p.blossomAmt);
       for (let k = 0; k < 5; k++) {
         const a = (k / 5) * Math.PI * 2;
         ctx.beginPath();
-        ctx.arc(bx + Math.cos(a) * 1.1, by + Math.sin(a) * 1.1, 0.8, 0, Math.PI * 2);
+        ctx.arc(bx + Math.cos(a) * 1.3, by + Math.sin(a) * 1.3, 1.0, 0, Math.PI * 2);
         ctx.fill();
       }
-      ctx.fillStyle = rgb([252, 214, 110], p.blossomAmt);
+      ctx.fillStyle = rgb([252, 208, 96], p.blossomAmt);
       ctx.beginPath();
-      ctx.arc(bx, by, 0.8, 0, Math.PI * 2);
+      ctx.arc(bx, by, 0.9, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  // a couple of fallen leaves (autumn)
+  // a BOLD fallen leaf (autumn)
   if (p.fallenLeafAmt > 0.001) {
     const leaves: Array<[number, number, number, RGB]> = [
-      [-11, 20, -0.5, [196, 96, 36]],
-      [10, 20.5, 0.7, [212, 150, 52]],
-      [2, 21, 0.2, [168, 80, 40]],
+      [10, 20.4, 0.7, [214, 132, 40]],
+      [-11, 20, -0.5, [192, 88, 34]],
+      [1, 21, 0.2, [170, 76, 38]],
     ];
     for (const [lx, ly, rot, col] of leaves) {
       ctx.save();
@@ -302,13 +462,13 @@ function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
       ctx.rotate(rot);
       ctx.fillStyle = rgb(col, p.fallenLeafAmt);
       ctx.beginPath();
-      ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 3.0, 1.7, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = rgb([110, 60, 26], p.fallenLeafAmt);
-      ctx.lineWidth = 0.6;
+      ctx.strokeStyle = rgb([110, 58, 24], p.fallenLeafAmt);
+      ctx.lineWidth = 0.7;
       ctx.beginPath();
-      ctx.moveTo(-2.4, 0);
-      ctx.lineTo(2.4, 0);
+      ctx.moveTo(-2.8, 0);
+      ctx.lineTo(2.8, 0);
       ctx.stroke();
       ctx.restore();
     }
@@ -316,7 +476,7 @@ function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
 }
 
 // one leg: a short dark sturdy cylinder with a hoof at the base
-function paintLeg(ctx: CanvasRenderingContext2D, p: P, x: number, topY: number, baseY: number, width = 3.4): void {
+function paintLeg(ctx: CanvasRenderingContext2D, p: P, x: number, topY: number, baseY: number, width = 3.6): void {
   ctx.strokeStyle = rgb(p.coatShadow);
   ctx.lineWidth = width;
   ctx.lineCap = "round";
@@ -335,8 +495,8 @@ function paintLeg(ctx: CanvasRenderingContext2D, p: P, x: number, topY: number, 
 // the boar's chunky body silhouette — a constant fierce hump-backed mass.
 // `vol` modestly fattens the haunch/shoulders; the SHAPE stays the same.
 function bodyPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, vol: number): void {
-  const w = 14 + vol * 1.2; // half-length
-  const h = 8.5 + vol * 1.0; // half-height of the trunk
+  const w = 14 + vol * 1.4; // half-length
+  const h = 8.5 + vol * 1.2; // half-height of the trunk
   // a hump-shouldered ovoid: heavier at the front shoulders (toward lower-left)
   ctx.beginPath();
   // rear (upper-right) haunch
@@ -352,23 +512,25 @@ function bodyPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, vol: nu
   ctx.closePath();
 }
 
-// the stiff ridge of bristles running along the back/spine (identity feature)
+// the stiff ridge of bristles (the MANE) running along the back/spine — the
+// signature identity feature. `vol` grows the ridge BOLDLY (shaggy in winter);
+// `twitch` ruffles it during the idle.
 function paintBristleRidge(ctx: CanvasRenderingContext2D, p: P, cx: number, cy: number, vol: number, twitch: number): void {
-  const h = 8.5 + vol * 1.0;
+  const h = 8.5 + vol * 1.2;
   // ridge runs from the rear haunch up over the shoulder hump (right→left)
-  const n = 11;
+  const n = 12;
   ctx.strokeStyle = rgb(p.bristle);
-  ctx.lineWidth = 1.5;
+  ctx.lineWidth = 1.6;
   ctx.lineCap = "round";
   for (let i = 0; i < n; i++) {
     const f = i / (n - 1); // 0 (rear) .. 1 (front hump)
     // x walks from rear haunch (right) toward the front hump (left)
     const bx = cx + lerp(13, -10, f);
     // y follows the back: dips at rear, peaks at the shoulder hump
-    const back = -h - 1.4 - Math.sin(f * Math.PI) * 2.6;
+    const back = -h - 1.4 - Math.sin(f * Math.PI) * 2.8;
     const by = cy + back;
-    // each bristle stands up + slightly back; length grows with coatVolume
-    const len = 3 + vol * 2.2 + Math.sin(f * Math.PI) * 1.4;
+    // each bristle stands up + slightly back; length grows BOLDLY with volume
+    const len = 2.6 + vol * 4.2 + Math.sin(f * Math.PI) * 1.6;
     const sway = twitch * Math.sin(i * 1.7) * 0.9;
     ctx.beginPath();
     ctx.moveTo(bx, by);
@@ -378,24 +540,35 @@ function paintBristleRidge(ctx: CanvasRenderingContext2D, p: P, cx: number, cy: 
   ctx.lineCap = "butt";
 }
 
-// the whole boar, standing front-¾ turned ~15–20° toward lower-left.
-// `bob` lifts the body for breathing; `twitch` ruffles the ridge; `toss`
-// nods the head (all 0 at rest).
-function paintBoar(ctx: CanvasRenderingContext2D, p: P, bob: number, twitch: number, toss: number): void {
-  const cx = 1;
-  const cy = 3 - bob; // body centre; lifts with the breathing bob
+// the whole boar, standing front-¾ turned ~15–20° toward lower-left, posed by
+// `pose`. The body squash/stretch + bob + lean come from the idle; the head
+// pivots for the chew/toss; the ear flicks; the tail wags.
+function paintBoar(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
+  const cx = 1 + pose.lean * 0.5; // lean shifts the mass toward lower-left
+  const cy = 3 - pose.bob; // body centre; bob lifts it
   const vol = p.coatVolume;
+  const twitch = pose.ear * Math.sin(pose.tail * 4) * 0.6 + pose.hop * 0.8; // ridge ruffle
 
-  // ── Legs (behind the body). Sturdy; two back (right), two front (left). ────
+  // ── Legs (behind the body). Sturdy; two back (right), two front (left). The
+  // near-front leg STAMPS forward on the head-toss lunge. ────────────────────
+  const stamp = pose.hop * 2.2;
   ctx.save();
   ctx.globalAlpha = 0.9;
   paintLeg(ctx, p, cx + 8, cy + 6, 18.6, 3.6); // far back
   paintLeg(ctx, p, cx - 3, cy + 6, 19.0, 3.6); // far front
   ctx.restore();
   paintLeg(ctx, p, cx + 10.5, cy + 6, 18.9, 3.8); // near back
-  paintLeg(ctx, p, cx - 6, cy + 6, 19.3, 3.8); // near front
+  paintLeg(ctx, p, cx - 6 - stamp, cy + 6, 19.3, 3.8); // near front (stamps)
 
-  // ── BODY — dark outline pass, then mid, then a lit top (layered like wheat) ─
+  // The whole upper body (coat + ridge + head + dressing) is drawn under a
+  // squash/stretch transform centred on the body, so the toss reads with
+  // anticipation squash + lunge stretch.
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(pose.squashX, pose.squashY);
+  ctx.translate(-cx, -cy);
+
+  // ── BODY — dark outline pass, then mid, then a lit top (layered) ────────────
   // outline halo
   ctx.fillStyle = rgb(p.outline);
   bodyPath(ctx, cx, cy, vol + 0.35);
@@ -405,7 +578,7 @@ function paintBoar(ctx: CanvasRenderingContext2D, p: P, bob: number, twitch: num
   bodyPath(ctx, cx, cy, vol);
   ctx.fill();
 
-  // shaded underbelly + haunch (clip to the body)
+  // shaded underbelly + haunch + lit top (clip to the body)
   ctx.save();
   bodyPath(ctx, cx, cy, vol);
   ctx.clip();
@@ -418,11 +591,21 @@ function paintBoar(ctx: CanvasRenderingContext2D, p: P, bob: number, twitch: num
   ctx.beginPath();
   ctx.ellipse(cx - 3, cy - 5, 10, 4.4, -0.25, 0, Math.PI * 2);
   ctx.fill();
-  // a soft body highlight glint on the lit shoulder
-  ctx.fillStyle = rgb([255, 255, 255], 0.08);
+  // a soft body highlight glint on the lit shoulder — strength tracks gloss
+  ctx.fillStyle = rgb([255, 255, 255], 0.06 + p.glossAmt * 0.22);
   ctx.beginPath();
   ctx.ellipse(cx - 4, cy - 6, 4.5, 2.0, -0.3, 0, Math.PI * 2);
   ctx.fill();
+  // a glossy sheen streak across the back (peaks in summer)
+  if (p.glossAmt > 0.001) {
+    ctx.save();
+    ctx.globalCompositeOperation = "soft-light";
+    ctx.fillStyle = rgb([255, 255, 255], 0.4 * p.glossAmt);
+    ctx.beginPath();
+    ctx.ellipse(cx - 1, cy - 4.5, 9, 2.4, -0.18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
 
   // frost sparkle worked into the coat (winter)
   if (p.frostAmt > 0.001) {
@@ -438,64 +621,118 @@ function paintBoar(ctx: CanvasRenderingContext2D, p: P, bob: number, twitch: num
   }
   ctx.restore();
 
-  // ── Bristle ridge along the spine (identity) ───────────────────────────────
+  // ── Bristle ridge / MANE along the spine (identity) ────────────────────────
   paintBristleRidge(ctx, p, cx, cy, vol, twitch);
   // frost dusting on the bristle tips (winter)
   if (p.frostAmt > 0.001) {
     ctx.fillStyle = rgb([235, 246, 255], 0.7 * p.frostAmt);
-    const h = 8.5 + vol * 1.0;
+    const h = 8.5 + vol * 1.2;
     for (let i = 0; i < 6; i++) {
       const f = i / 5;
       const bx = cx + lerp(11, -8, f);
-      const len = 3 + vol * 2.2 + Math.sin(f * Math.PI) * 1.4;
-      const by = cy - h - 1.4 - Math.sin(f * Math.PI) * 2.6 - len;
+      const len = 2.6 + vol * 4.2 + Math.sin(f * Math.PI) * 1.6;
+      const by = cy - h - 1.4 - Math.sin(f * Math.PI) * 2.8 - len;
       ctx.beginPath();
       ctx.arc(bx - 1.2, by, 0.8, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  // snow settled on the back (winter) — a soft white cap over the shoulder hump
+  // snow settled on the back (winter) — BOLD white cap over the shoulder hump
   if (p.backSnowAmt > 0.001) {
-    const h = 8.5 + vol * 1.0;
-    ctx.fillStyle = rgb([248, 252, 255], 0.9 * p.backSnowAmt);
+    const h = 8.5 + vol * 1.2;
+    ctx.fillStyle = rgb([248, 252, 255], 0.92 * p.backSnowAmt);
     ctx.beginPath();
-    ctx.ellipse(cx - 3, cy - h - 0.5, 8.5, 3.0, -0.18, 0, Math.PI * 2);
+    ctx.ellipse(cx - 3, cy - h - 0.5, 9.5 * (0.9 + vol * 0.3), 3.4, -0.18, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgb([255, 255, 255], 0.85 * p.backSnowAmt);
-    for (const [dx, dy] of [[-6, -1.2], [-1, -1.6], [4, -0.8]] as const) {
+    ctx.fillStyle = rgb([255, 255, 255], 0.9 * p.backSnowAmt);
+    for (const [dx, dy] of [[-6, -1.4], [-1, -1.8], [4, -1.0], [-3, -2.2]] as const) {
       ctx.beginPath();
-      ctx.arc(cx + dx, cy - h - 0.5 + dy, 1.5, 0, Math.PI * 2);
+      ctx.arc(cx + dx, cy - h - 0.5 + dy, 1.7 + vol * 0.4, 0, Math.PI * 2);
       ctx.fill();
     }
   }
 
-  // small curly tail at the rear (upper-right)
+  // small curly tail at the rear (upper-right) — wags via pose
   ctx.strokeStyle = rgb(p.coatShadow);
   ctx.lineWidth = 1.6;
   ctx.lineCap = "round";
   ctx.beginPath();
+  const tw = pose.tail * 0.5;
   ctx.moveTo(cx + 13.5, cy - 1);
-  ctx.quadraticCurveTo(cx + 16.5, cy - 2, cx + 16, cy - 4);
-  ctx.quadraticCurveTo(cx + 15.4, cy - 5.4, cx + 16.6, cy - 5.6);
+  ctx.quadraticCurveTo(cx + 16.5 + tw, cy - 2, cx + 16 + tw, cy - 4);
+  ctx.quadraticCurveTo(cx + 15.4 + tw, cy - 5.4, cx + 16.6 + tw, cy - 5.6);
   ctx.stroke();
   ctx.lineCap = "butt";
 
-  // ── HEAD + long snout (front-¾, lower-left) — locks the fierce identity ─────
-  // head pivots a touch with the head-toss (about a point at the neck)
+  // ── SCARF (winter) — a little knitted band around the neck, below the head ──
+  if (p.scarfAmt > 0.001) {
+    const sx = cx - 8.5;
+    const sy = cy + 3.2 - pose.bob * 0.2;
+    ctx.save();
+    ctx.globalAlpha = clamp01(p.scarfAmt);
+    // wrap band
+    ctx.fillStyle = rgb(p.scarfColor);
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, 5.2, 3.0, 0.28, 0, Math.PI * 2);
+    ctx.fill();
+    // darker underside for depth
+    ctx.fillStyle = rgb([
+      Math.max(0, p.scarfColor[0] - 50),
+      Math.max(0, p.scarfColor[1] - 30),
+      Math.max(0, p.scarfColor[2] - 30),
+    ]);
+    ctx.beginPath();
+    ctx.ellipse(sx + 0.6, sy + 1.4, 4.8, 1.6, 0.28, 0, Math.PI * 2);
+    ctx.fill();
+    // hanging tail of the scarf, with a knitted notch + fringe
+    ctx.fillStyle = rgb(p.scarfColor);
+    ctx.beginPath();
+    ctx.moveTo(sx - 2.6, sy + 1.8);
+    ctx.lineTo(sx + 1.0, sy + 2.4);
+    ctx.lineTo(sx + 0.2, sy + 8.0);
+    ctx.lineTo(sx - 3.2, sy + 7.2);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgb([
+      Math.max(0, p.scarfColor[0] - 60),
+      Math.max(0, p.scarfColor[1] - 40),
+      Math.max(0, p.scarfColor[2] - 40),
+    ]);
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(sx - 1.4, sy + 3.2);
+    ctx.lineTo(sx - 1.8, sy + 7.4);
+    ctx.stroke();
+    // fringe at the bottom
+    ctx.strokeStyle = rgb(p.scarfColor);
+    ctx.lineWidth = 0.9;
+    ctx.lineCap = "round";
+    for (const fx of [-3.0, -1.8, -0.6]) {
+      ctx.beginPath();
+      ctx.moveTo(sx + fx, sy + 7.4);
+      ctx.lineTo(sx + fx - 0.2, sy + 9.0);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    ctx.restore();
+  }
+
+  // ── HEAD + long snout + TUSKS (front-¾, lower-left) — locks the identity ────
+  // head pivots with the chew (down) / head-toss (up) about a point at the neck
   ctx.save();
   ctx.translate(cx - 9, cy + 1);
-  ctx.rotate(-toss * 0.14); // nods up on toss
+  ctx.rotate(-pose.head); // +head throws the snout/tusks up; chew dips it down
   const hx = 0;
   const hy = 0;
 
-  // ear (dark), set back on the head
+  // upright pointed ear (dark), set back on the head — flicks via pose
   ctx.fillStyle = rgb(p.coatShadow);
   ctx.save();
   ctx.translate(hx + 1.5, hy - 5.5);
-  ctx.rotate(-0.5);
+  ctx.rotate(-0.5 - pose.ear * 0.5);
   ctx.beginPath();
-  ctx.ellipse(0, 0, 2.6, 3.6, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, 2.4, 3.8, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
@@ -542,6 +779,18 @@ function paintBoar(ctx: CanvasRenderingContext2D, p: P, bob: number, twitch: num
   }
   ctx.restore(); // end snout
 
+  // open jaw line as it chews
+  if (pose.chew > 0.01) {
+    ctx.strokeStyle = rgb([16, 12, 14]);
+    ctx.lineWidth = 0.9;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(hx - 6.5, hy + 3.6);
+    ctx.lineTo(hx - 10.5, hy + 3.6 + pose.chew * 1.4);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+  }
+
   // ── TUSKS — two prominent curved WHITE tusks (palette-locked bright) ────────
   // they sweep up-and-out from the lower jaw near the snout base
   for (const side of [1, 0.6] as const) {
@@ -580,11 +829,16 @@ function paintBoar(ctx: CanvasRenderingContext2D, p: P, bob: number, twitch: num
 
   ctx.restore(); // end head group
 
-  // breath-fog puff at the snout (winter) — at rest a faint static puff
+  ctx.restore(); // end squash/stretch transform
+
+  // breath-fog / snort puff at the snout (winter) — drawn OUTSIDE the squash
+  // transform so it reads as air, not body. Static base puff + an exhale swell
+  // during the chew-snort. Snout tip sits roughly at (cx − 20, cy + 3.5).
   if (p.breathFogAmt > 0.001) {
-    ctx.fillStyle = rgb([235, 244, 255], 0.4 * p.breathFogAmt);
+    const reach = 5.0 + pose.snort * 3.4;
+    ctx.fillStyle = rgb([235, 244, 255], (0.34 + 0.28 * pose.snort) * p.breathFogAmt);
     ctx.beginPath();
-    ctx.ellipse(cx - 20, cy + 3.5, 3.2, 2.2, 0.1, 0, Math.PI * 2);
+    ctx.ellipse(cx - 20 - reach * 0.4, cy + 3.5, 3.0 + pose.snort * 2.0, 2.0 + pose.snort * 1.4, 0.1, 0, Math.PI * 2);
     ctx.fill();
   }
 }
@@ -603,12 +857,12 @@ function paintLightWash(ctx: CanvasRenderingContext2D, p: P): void {
 
 // ── THE single paint ────────────────────────────────────────────────────────
 
-function paint(ctx: CanvasRenderingContext2D, pIn: P, bob: number, twitch = 0, toss = 0): void {
+function paint(ctx: CanvasRenderingContext2D, pIn: P, pose: Pose): void {
   const p = clampP(pIn);
   ctx.save();
   try {
     paintPad(ctx, p);
-    paintBoar(ctx, p, bob, twitch, toss);
+    paintBoar(ctx, p, pose);
     paintLightWash(ctx, p);
   } finally {
     ctx.globalAlpha = 1;
@@ -620,105 +874,102 @@ function paint(ctx: CanvasRenderingContext2D, pIn: P, bob: number, twitch = 0, t
 // ── Per-season builders ─────────────────────────────────────────────────────
 
 function draw(season: SeasonName) {
-  return (ctx: CanvasRenderingContext2D): void => paint(ctx, SP[season], 0);
+  return (ctx: CanvasRenderingContext2D): void => paint(ctx, SP[season], REST);
 }
 
 function anim(season: SeasonName) {
   return (ctx: CanvasRenderingContext2D, t: number): void => {
-    const p = clampP(SP[season]);
-    const bob = bobAt(t); // SUBJECT breathing bob, 0 at t=0
+    paint(ctx, SP[season], poseFromClock(t));
+  };
+}
 
-    // Once-per-loop bristle twitch + head-toss, gated to a brief seamless bump.
-    const loop = (t % 5.5) / 5.5; // 0..1
-    const gate = Math.max(0, Math.sin(loop * Math.PI * 2)) ** 5; // sharp brief bump
-    const twitch = Math.sin(t * 11) * gate; // ridge ruffle
-    const toss = gate; // head-toss nod (0 at edges → seamless)
+// ── Forward transitions (lerp EVERY field through quintic smoothstep) ─────────
 
-    paint(ctx, SP[season], bob, twitch, toss);
+// A monotone ease that is EXACT at the endpoints but can lead or lag.
+function biasedEase(k: number, bias: number): number {
+  const x = clamp01(k);
+  return Math.pow(smoother(x), bias);
+}
 
-    // ── Additive season micro-motion, drawn over the painted tile ─────────────
+// Staged transition. The whole-tile look lerps from SP[from] (p=0) to SP[to]
+// (p=1) — so transition(0) === draw(from) and transition(1) === draw(to)
+// EXACTLY (drawn at REST, matching the idle hand-off). The coat VOLUME leads
+// (the coat shaggies early); snow / frost / breath-fog / scarf LAG (settle late).
+function makeTransition(fromIdx: 0 | 1 | 2) {
+  const from = SEASON_NAMES[fromIdx];
+  const to = SEASON_NAMES[fromIdx + 1];
+  return (ctx: CanvasRenderingContext2D, pp: number): void => {
+    const p = clamp01(safeNum(pp));
+    const kBase = smoother(p);
+    const kCoat = biasedEase(p, 0.62); // coat volume LEADS
+    const kSnow = biasedEase(p, 1.7); // snow / frost / fog / scarf LAG
+
+    const a = SP[from];
+    const b = SP[to];
+    const blended: P = lerpP(a, b, kBase);
+    blended.coatVolume = lerp(a.coatVolume, b.coatVolume, kCoat);
+    blended.backSnowAmt = lerp(a.backSnowAmt, b.backSnowAmt, kSnow);
+    blended.padSnowAmt = lerp(a.padSnowAmt, b.padSnowAmt, kSnow);
+    blended.frostAmt = lerp(a.frostAmt, b.frostAmt, kSnow);
+    blended.breathFogAmt = lerp(a.breathFogAmt, b.breathFogAmt, kSnow);
+    blended.scarfAmt = lerp(a.scarfAmt, b.scarfAmt, kSnow);
+
+    paint(ctx, blended, REST);
+
+    // Transient overlays (strength ∝ sin(π·p): exactly 0 at both ends).
+    const trans = Math.sin(Math.PI * p);
+    if (trans <= 0.0008) return;
+
     ctx.save();
     try {
       const cx = 1;
-      const cy = 3 - bob;
-      if (season === "Spring") {
-        // dew shimmer — a soft glint that pulses on the grass/blossoms
-        const g = 0.2 + 0.3 * (0.5 + 0.5 * Math.sin(t * 2.4));
-        ctx.fillStyle = rgb([255, 255, 255], g);
-        ctx.beginPath();
-        ctx.arc(-8, 18.4, 1.1 + g, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.arc(10, 19.6, 0.9 + g * 0.8, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Summer") {
-        // soft coat sheen sweeping across the back
-        const s = 0.5 + 0.5 * Math.sin(t * 1.1);
-        const sx = cx - 11 + s * 22;
-        ctx.save();
-        ctx.globalCompositeOperation = "soft-light";
-        ctx.fillStyle = rgb([255, 255, 255], 0.32);
-        ctx.beginPath();
-        ctx.ellipse(sx, cy - 4, 3, 6, 0.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      } else if (season === "Autumn") {
-        // a fallen leaf stirs — gentle rock + tiny drift, seamless
-        const a = Math.sin(t * 1.3) * 0.5;
-        const dx = Math.sin(t * 0.7) * 1.2;
-        ctx.save();
-        ctx.translate(10 + dx, 20.5);
-        ctx.rotate(0.7 + a);
-        ctx.fillStyle = rgb([212, 150, 52], p.fallenLeafAmt);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 2.6, 1.4, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      } else {
-        // Winter: breath-fog puff pulses outward from the snout +
-        // a drifting snowflake + a cold sheen.
-        const breathe = 0.5 + 0.5 * Math.sin(t * 1.5);
-        const reach = 2 + breathe * 3;
-        ctx.fillStyle = rgb([235, 244, 255], (0.18 + 0.32 * breathe) * p.breathFogAmt);
-        ctx.beginPath();
-        ctx.ellipse(cx - 20 - reach, cy + 3.5, 2.6 + breathe * 1.8, 1.8 + breathe * 1.2, 0.1, 0, Math.PI * 2);
-        ctx.fill();
+      const cy = 3;
 
-        // one drifting snowflake on a seamless 3.4s fall
-        const prog = ((t / 3.4) % 1 + 1) % 1;
-        const fy = -20 + prog * 36;
-        const fxx = 6 + Math.sin(prog * Math.PI * 2) * 4;
-        ctx.fillStyle = rgb([255, 255, 255], 0.85);
-        ctx.beginPath();
-        ctx.arc(fxx, fy, 1.1, 0, Math.PI * 2);
-        ctx.fill();
+      // Loose bristle/fur motes lifting off the thickening coat — reads the
+      // coat visibly shaggying/growing. Present in EVERY morph (det. in p).
+      const fluff = trans * (0.4 + 0.6 * Math.max(0, b.coatVolume - a.coatVolume + 0.4));
+      if (fluff > 0.01) {
+        ctx.fillStyle = rgb([210, 196, 180], 0.5 * fluff);
+        const motes: Array<[number, number, number]> = [
+          [-8, -9, 1.0], [3, -11, 1.2], [9, -7, 0.8], [-3, -12, 0.9],
+        ];
+        for (const [mx, my, mr] of motes) {
+          const rise = (1 - Math.cos(Math.PI * p)) * 2.2;
+          ctx.beginPath();
+          ctx.arc(cx + mx, cy + my - rise, mr * (0.7 + 0.5 * trans), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
 
-        // cold sheen pulse on the coat
-        const sheen = 0.5 + 0.5 * Math.sin(t * 0.8);
-        ctx.save();
-        ctx.globalCompositeOperation = "soft-light";
-        ctx.fillStyle = rgb([206, 224, 255], 0.1 + sheen * 0.12);
+      // Snow settling onto the back during autumn→winter (target gains snow).
+      const snowGain = Math.max(0, b.backSnowAmt - a.backSnowAmt);
+      if (snowGain > 0.01) {
+        ctx.fillStyle = rgb([255, 255, 255], 0.8 * trans * snowGain);
+        const land = smoother(p);
+        const flecks: Array<[number, number]> = [
+          [-6, -11], [-1, -12], [4, -10.5], [7, -9],
+        ];
+        for (const [fxx, fyy] of flecks) {
+          const fall = (1 - land) * 6;
+          ctx.beginPath();
+          ctx.arc(cx + fxx, cy + fyy - fall, 1.0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // A breath-fog puff appearing as the cold sets in (target gains fog).
+      const fogGain = Math.max(0, b.breathFogAmt - a.breathFogAmt);
+      if (fogGain > 0.01) {
+        ctx.fillStyle = rgb([235, 244, 255], 0.4 * trans * fogGain);
         ctx.beginPath();
-        ctx.ellipse(cx, cy - 1, 14, 9, 0, 0, Math.PI * 2);
+        ctx.ellipse(cx - 20 - (2 + trans * 2), cy + 3.5, 2.6 + trans * 1.8, 1.8 + trans * 1.2, 0.1, 0, Math.PI * 2);
         ctx.fill();
-        ctx.restore();
       }
     } finally {
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = "source-over";
       ctx.restore();
     }
-  };
-}
-
-// ── Forward transitions (lerp EVERY field through quintic smoothstep) ────────
-
-function makeTransition(fromIdx: 0 | 1 | 2) {
-  const from = SEASON_NAMES[fromIdx];
-  const to = SEASON_NAMES[fromIdx + 1];
-  return (ctx: CanvasRenderingContext2D, pp: number): void => {
-    const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(SP[from], SP[to], k), 0);
   };
 }
 

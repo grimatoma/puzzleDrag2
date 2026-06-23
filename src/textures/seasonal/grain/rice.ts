@@ -1,172 +1,88 @@
-// Seasonal art for the RICE farm tile (`tile_grain_rice`, category grain).
+// Production seasonal art for the RICE grain tile (`tile_grain_rice`).
 //
-// Identity rule: the subject is ALWAYS the same small BUNDLE of rice grain
-// heads — 3–4 slender arching panicles, heavy with little grains and nodding
-// over at the tips, bundled upright on a turf pad. There is no stalk below and
-// no plant, just the iconic harvested grain-head bundle. Every season shares
-// the SAME silhouette/outline; only colour + frost/snow + pad dressing change.
-// Ripeness (green-gold → golden → tan → frosted) is colour only.
+// An upright RICE PLANT growing on a small grassy/paddy pad: slender arching
+// stalks fanning up from the base, each tipped with a drooping grain panicle,
+// with a few thin blade leaves splaying off the lower stalks. The SAME rice-
+// plant silhouette is drawn every season (identity-safe); the seasons swing
+// hard on COLOUR plus a real seasonal prop (blossom / fallen leaf / snow cap +
+// base snow drift), and the idle is a lively WC3-style two-tier sway:
 //
-// Architecture: a single parameterized `paint(ctx, p, bob)` draws the whole
-// tile from a tweenable parameter set `P`. The four seasons are four `P`
-// values in `SP`. `draw` = paint at rest, `anim` = paint at a seamless idle
-// bob plus additive per-season micro-motion, and each `transition` lerps every
-// field of `P` between neighbouring seasons through a smoothstep so the morph
-// starts exactly on the `from` still and ends exactly on the `to` still.
+//   IDLE COMMON  (~6s, win ~0.95s): a RUSTLE traveling-wave — wind passes
+//       through; the arching stalks and drooping panicles bend ~10–14 design-px
+//       with a base squash, the drooping heads swaying most. Pivot near the
+//       base. Zero pose + zero velocity at the window edges (seamless).
+//   IDLE RARE    (~18s, win ~1.2s, phase +3s): a STRONG GUST BEND — the whole
+//       plant leans hard ~16–20 design-px at the tips (anticipation → big bend →
+//       overshoot → settle), may exit the box at apex (no clip needed).
 //
-// Drawn origin-centered in the ~-24..+24 design box; the caller has already
-// translated to the tile centre. Pure Canvas-2D vector art — no images, DOM,
-// or libraries. Reads at ~64px. Light from upper-left, soft shadow lower-right.
+// The architecture is a single parameterized `paint(ctx, p, pose)` where
+// `interface P` holds tweenable season params (colours + 0..1 prop amounts) and
+// `pose` holds the idle gesture (bob / lean / squash / a per-row wave phase).
+// Because every season is the same paint with tweened P, transitions are
+// seamless: transition(0) ≡ draw(from), transition(1) ≡ draw(to). REST pose is
+// all-zeros, so draw(season) = paint(ctx, SP[season], REST) and the idle's pose
+// is 0 at every action-window edge → seamless loop.
+//
+// Origin-centered in the −24..+24 design box (actions may paint outside it),
+// light from upper-left, flat cel-shaded with a soft dark outline. Pure
+// Canvas-2D vector drawing — never throws, clamps everything, save/restore.
 
-import type {
-  SeasonalTileEntry,
-  SeasonalTransitionSet,
-  SeasonName,
-} from "../types.js";
+import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
+import { SEASON_NAMES, type SeasonName } from "../types.js";
 
-// ── Tweenable parameter set ─────────────────────────────────────────────────
-// EVERY value that differs between seasons lives here as a number or a number
-// tuple so it can be interpolated. Colours are [r,g,b]; amounts are 0..1.
+// ── Tweenable season params ──────────────────────────────────────────────────
 
 type RGB = [number, number, number];
 
+/** Every field tweens (number or RGB). NO booleans / season strings — paint is a
+ *  pure function of these so transitions interpolate cleanly. */
 interface P {
-  // light / ground
-  shadowAmt: number; // contact-shadow strength 0..1
-  // pad
-  padGrass: RGB; // turf disc top colour
-  padGrassDark: RGB; // turf underside / shaded colour
-  padSnowAmt: number; // 0..1 white snow cover over the pad
-  blossomAmt: number; // 0..1 pale blossom resting on the pad (spring)
-  fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
-  // tie / sheaf band holding the bundle
-  tie: RGB; // straw tie colour
-  tieDark: RGB; // tie shaded colour
-  // grain (the little rice grains studding each panicle)
-  grainLight: RGB; // lit grain colour
-  grainDark: RGB; // shaded grain colour
-  // panicle stem (the slender arching rachis the grains hang from)
-  stemLight: RGB; // lit stem colour
-  stemDark: RGB; // shaded stem colour
-  // ripeness staging (drives droop + a little shedding/grain size)
-  droop: number; // 0..1 how far the heads nod over (heavier = lower)
-  shedAmt: number; // 0..1 a few grains shedding / sparser tips (autumn)
-  grainPlump: number; // 0..1 how plump/full the grains read
-  // outline
-  outline: RGB; // soft dark outline tint
-  // winter dressing
-  frostAmt: number; // 0..1 frost dusting sparkle on upward surfaces
-  snowCapAmt: number; // 0..1 snow caps sitting on the heads
-  // surface gloss / dew
-  gloss: number; // 0..1 subtle sheen highlight on the grains
+  stalkLight: RGB;       // lit face of the arching stalks
+  stalkMid: RGB;         // body tone of the stalks
+  stalkDark: RGB;        // shaded / back stalks
+  blade: RGB;            // thin blade leaves splaying off the lower stalks
+  grainLight: RGB;       // lit grain on the drooping panicles
+  grainDark: RGB;        // shaded grain
+  padGrass: RGB;         // top of the grassy/paddy pad
+  padDark: RGB;          // shaded pad underside / wet rim
+  water: RGB;            // hint of wet paddy water on the pad
+  soil: RGB;             // contact / base soil under the plant
+  outline: RGB;          // soft dark outline tint
+  light: RGB;            // ambient light tint laid over the whole tile
+  lightAmt: number;      // 0..1 strength of the ambient light wash
+  gloss: number;         // 0..1 specular gloss-streak strength on the grains
+  ripeness: number;      // 0..1 how heavy / drooping the panicles read (golden = heavy)
+  size: number;          // 0..1 fullness of the panicles / plant body
+  wetAmt: number;        // 0..1 dewy / wet paddy pad sheen (spring)
+  frostAmt: number;      // 0..1 cool frost dusting on the stalks (winter)
+  snowCapAmt: number;    // 0..1 snow caps on the panicle heads (winter)
+  padSnowAmt: number;    // 0..1 snow blanket / drift at the base (winter)
+  blossomAmt: number;    // 0..1 blossom on the pad (spring)
+  fallenLeafAmt: number; // 0..1 fallen leaf on the pad (autumn)
 }
 
-// ── Season parameter sets ───────────────────────────────────────────────────
+/** The idle gesture, separate from season identity. All zero = REST.
+ *  `wave` drives a traveling rustle phase that ripples up the stalks. */
+interface Pose {
+  bob: number;     // vertical offset in design px (negative = up)
+  lean: number;    // base lean, radians (whole plant tilts side to side)
+  squashX: number; // additive horizontal scale (+0.18 = 18% wider)
+  squashY: number; // additive vertical scale (+0.18 = 18% taller)
+  wave: number;    // traveling-wave amplitude in design px (rustle through stalks)
+  wavePhase: number; // phase of the traveling wave (radians)
+}
 
-const SP: Record<SeasonName, P> = {
-  // Spring — fresh lightly-desaturated pastel; bright GREEN-gold young heads,
-  // slim grains, a little dew; bright lime dewy pad + a pale blossom.
-  Spring: {
-    shadowAmt: 0.5,
-    padGrass: [142, 214, 96],
-    padGrassDark: [86, 150, 60],
-    padSnowAmt: 0,
-    blossomAmt: 1,
-    fallenLeafAmt: 0,
-    tie: [186, 206, 132],
-    tieDark: [120, 150, 80],
-    grainLight: [196, 220, 120],
-    grainDark: [136, 168, 78],
-    stemLight: [150, 200, 96],
-    stemDark: [86, 140, 56],
-    droop: 0.32,
-    shedAmt: 0,
-    grainPlump: 0.55,
-    outline: [56, 92, 44],
-    frostAmt: 0,
-    snowCapAmt: 0,
-    gloss: 0.5,
-  },
-  // Summer — richest, most-saturated palette (PEAK); GOLDEN plump heavy heads
-  // nodding lower under the weight; saturated green pad, warm light.
-  Summer: {
-    shadowAmt: 0.7,
-    padGrass: [104, 184, 70],
-    padGrassDark: [62, 126, 46],
-    padSnowAmt: 0,
-    blossomAmt: 0,
-    fallenLeafAmt: 0,
-    tie: [214, 184, 96],
-    tieDark: [156, 122, 52],
-    grainLight: [255, 214, 84],
-    grainDark: [206, 150, 36],
-    stemLight: [206, 184, 92],
-    stemDark: [150, 120, 48],
-    droop: 0.85,
-    shedAmt: 0,
-    grainPlump: 1,
-    outline: [104, 76, 28],
-    frostAmt: 0,
-    snowCapAmt: 0,
-    gloss: 0.8,
-  },
-  // Autumn — gold/orange/rust; TAN dried heads, a few grains shedding; olive-tan
-  // pad + a couple of fallen leaves.
-  Autumn: {
-    shadowAmt: 0.55,
-    padGrass: [158, 150, 78],
-    padGrassDark: [112, 96, 50],
-    padSnowAmt: 0,
-    blossomAmt: 0,
-    fallenLeafAmt: 1,
-    tie: [188, 150, 84],
-    tieDark: [130, 96, 48],
-    grainLight: [220, 180, 108],
-    grainDark: [162, 116, 56],
-    stemLight: [186, 156, 96],
-    stemDark: [128, 96, 50],
-    droop: 0.72,
-    shedAmt: 1,
-    grainPlump: 0.8,
-    outline: [86, 60, 30],
-    frostAmt: 0,
-    snowCapAmt: 0,
-    gloss: 0.45,
-  },
-  // Winter — cool blue-grey light; frosted heads with small snow caps, cool
-  // muted tan; snow-covered pad + frost sparkle; heads stay clearly visible.
-  Winter: {
-    shadowAmt: 0.4,
-    padGrass: [120, 138, 122],
-    padGrassDark: [86, 104, 96],
-    padSnowAmt: 1,
-    blossomAmt: 0,
-    fallenLeafAmt: 0,
-    tie: [170, 162, 132],
-    tieDark: [118, 112, 88],
-    grainLight: [206, 196, 158],
-    grainDark: [150, 142, 112],
-    stemLight: [178, 178, 156],
-    stemDark: [120, 124, 104],
-    droop: 0.6,
-    shedAmt: 0.2,
-    grainPlump: 0.75,
-    outline: [70, 74, 64],
-    frostAmt: 1,
-    snowCapAmt: 1,
-    gloss: 0.35,
-  },
-};
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, wave: 0, wavePhase: 0 };
 
-// ── Helpers: colour + interpolation ─────────────────────────────────────────
+// ── Local math helpers ───────────────────────────────────────────────────────
 
 function clamp01(x: number): number {
-  return x < 0 ? 0 : x > 1 ? 1 : x;
+  if (!(x >= 0)) return 0; // also catches NaN
+  if (x > 1) return 1;
+  return x;
 }
 
-function rgb([r, g, b]: RGB, a = 1): string {
-  return `rgba(${Math.round(r)},${Math.round(g)},${Math.round(b)},${a})`;
-}
+const smoother = (x: number): number => x * x * x * (x * (6 * x - 15) + 10);
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
@@ -176,605 +92,735 @@ function lerpRGB(a: RGB, b: RGB, t: number): RGB {
   return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 }
 
-/** Interpolate EVERY field of P (tuples component-wise, scalars linearly). */
+function rgb(c: RGB): string {
+  return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+}
+
+function rgba(c: RGB, a: number): string {
+  return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp01(a)})`;
+}
+
 function lerpP(a: P, b: P, t: number): P {
   return {
-    shadowAmt: lerp(a.shadowAmt, b.shadowAmt, t),
+    stalkLight: lerpRGB(a.stalkLight, b.stalkLight, t),
+    stalkMid: lerpRGB(a.stalkMid, b.stalkMid, t),
+    stalkDark: lerpRGB(a.stalkDark, b.stalkDark, t),
+    blade: lerpRGB(a.blade, b.blade, t),
+    grainLight: lerpRGB(a.grainLight, b.grainLight, t),
+    grainDark: lerpRGB(a.grainDark, b.grainDark, t),
     padGrass: lerpRGB(a.padGrass, b.padGrass, t),
-    padGrassDark: lerpRGB(a.padGrassDark, b.padGrassDark, t),
+    padDark: lerpRGB(a.padDark, b.padDark, t),
+    water: lerpRGB(a.water, b.water, t),
+    soil: lerpRGB(a.soil, b.soil, t),
+    outline: lerpRGB(a.outline, b.outline, t),
+    light: lerpRGB(a.light, b.light, t),
+    lightAmt: lerp(a.lightAmt, b.lightAmt, t),
+    gloss: lerp(a.gloss, b.gloss, t),
+    ripeness: lerp(a.ripeness, b.ripeness, t),
+    size: lerp(a.size, b.size, t),
+    wetAmt: lerp(a.wetAmt, b.wetAmt, t),
+    frostAmt: lerp(a.frostAmt, b.frostAmt, t),
+    snowCapAmt: lerp(a.snowCapAmt, b.snowCapAmt, t),
     padSnowAmt: lerp(a.padSnowAmt, b.padSnowAmt, t),
     blossomAmt: lerp(a.blossomAmt, b.blossomAmt, t),
     fallenLeafAmt: lerp(a.fallenLeafAmt, b.fallenLeafAmt, t),
-    tie: lerpRGB(a.tie, b.tie, t),
-    tieDark: lerpRGB(a.tieDark, b.tieDark, t),
-    grainLight: lerpRGB(a.grainLight, b.grainLight, t),
-    grainDark: lerpRGB(a.grainDark, b.grainDark, t),
-    stemLight: lerpRGB(a.stemLight, b.stemLight, t),
-    stemDark: lerpRGB(a.stemDark, b.stemDark, t),
-    droop: lerp(a.droop, b.droop, t),
-    shedAmt: lerp(a.shedAmt, b.shedAmt, t),
-    grainPlump: lerp(a.grainPlump, b.grainPlump, t),
-    outline: lerpRGB(a.outline, b.outline, t),
-    frostAmt: lerp(a.frostAmt, b.frostAmt, t),
-    snowCapAmt: lerp(a.snowCapAmt, b.snowCapAmt, t),
-    gloss: lerp(a.gloss, b.gloss, t),
   };
 }
 
-/** Clamp every amount field so paint never sees out-of-range values. */
 function clampP(p: P): P {
   return {
     ...p,
-    shadowAmt: clamp01(p.shadowAmt),
+    lightAmt: clamp01(p.lightAmt),
+    gloss: clamp01(p.gloss),
+    ripeness: clamp01(p.ripeness),
+    size: clamp01(p.size),
+    wetAmt: clamp01(p.wetAmt),
+    frostAmt: clamp01(p.frostAmt),
+    snowCapAmt: clamp01(p.snowCapAmt),
     padSnowAmt: clamp01(p.padSnowAmt),
     blossomAmt: clamp01(p.blossomAmt),
     fallenLeafAmt: clamp01(p.fallenLeafAmt),
-    droop: clamp01(p.droop),
-    shedAmt: clamp01(p.shedAmt),
-    grainPlump: clamp01(p.grainPlump),
-    frostAmt: clamp01(p.frostAmt),
-    snowCapAmt: clamp01(p.snowCapAmt),
-    gloss: clamp01(p.gloss),
   };
 }
 
-// Quintic smootherstep, used for transitions (zero velocity at both ends).
-const smoother = (x: number): number => x * x * x * (x * (6 * x - 15) + 10);
-
-// ── Shared bundle geometry (IDENTICAL silhouette every season) ──────────────
-// Four panicles fan up from a tie band near the pad, each arching over and
-// nodding at its tip. Each panicle is defined by a base x at the tie, a fan
-// angle, and a length; the `droop` param only curls the tip lower along the
-// SAME arc, so the bundle footprint/extent stays constant.
-
-const TIE_Y = 12; // the straw tie sits just above the pad
-const TIE_X = 0; // bundle is centred
-
-interface Panicle {
-  baseX: number; // x where it leaves the tie
-  spread: number; // how far the arch leans out (px at the apex)
-  len: number; // arc length up before nodding
-  apexY: number; // height of the apex (negative = up)
-  side: number; // -1 nods left, +1 nods right
-  grains: number; // grains studding this head
+function safeNum(x: number): number {
+  return Number.isFinite(x) ? x : 0;
 }
 
-// Ordered back-to-front so nearer heads overlap farther ones a touch.
-const PANICLES: Panicle[] = [
-  { baseX: -2.5, spread: -9.5, len: 30, apexY: -19, side: -1, grains: 9 }, // back-left
-  { baseX: 2.5, spread: 9.5, len: 30, apexY: -19, side: 1, grains: 9 }, // back-right
-  { baseX: -1, spread: -4.5, len: 34, apexY: -23, side: -1, grains: 10 }, // tall centre-left
-  { baseX: 1.5, spread: 5.5, len: 32, apexY: -22, side: 1, grains: 10 }, // centre-right
+// ── Per-season params — pushed HARD ──────────────────────────────────────────
+
+const SP: Record<SeasonName, P> = {
+  // Spring — young GREEN rice, bright green blades, slim pale-green panicles
+  // not yet heavy, a small blossom on a dewy/wet pad; cool-bright light.
+  Spring: {
+    stalkLight: [168, 224, 96],
+    stalkMid: [104, 188, 64],
+    stalkDark: [54, 132, 48],
+    blade: [126, 206, 78],
+    grainLight: [206, 228, 138],
+    grainDark: [138, 178, 84],
+    padGrass: [126, 214, 84],
+    padDark: [64, 146, 56],
+    water: [150, 214, 196],
+    soil: [120, 84, 48],
+    outline: [34, 78, 30],
+    light: [226, 248, 220],
+    lightAmt: 0.18,
+    gloss: 0.4,
+    ripeness: 0.28,
+    size: 0.7,
+    wetAmt: 0.85,
+    frostAmt: 0,
+    snowCapAmt: 0,
+    padSnowAmt: 0,
+    blossomAmt: 1.0,
+    fallenLeafAmt: 0,
+  },
+  // Summer — peak lush GREEN plant, panicles forming pale & full, high gloss,
+  // warm bright light.
+  Summer: {
+    stalkLight: [150, 216, 84],
+    stalkMid: [86, 176, 56],
+    stalkDark: [44, 120, 44],
+    blade: [104, 196, 66],
+    grainLight: [228, 232, 150],
+    grainDark: [176, 190, 96],
+    padGrass: [80, 184, 70],
+    padDark: [40, 118, 50],
+    water: [120, 196, 178],
+    soil: [128, 88, 48],
+    outline: [28, 92, 36],
+    light: [255, 246, 206],
+    lightAmt: 0.2,
+    gloss: 1.0,
+    ripeness: 0.55,
+    size: 1.0,
+    wetAmt: 0.3,
+    frostAmt: 0,
+    snowCapAmt: 0,
+    padSnowAmt: 0,
+    blossomAmt: 0,
+    fallenLeafAmt: 0,
+  },
+  // Autumn — the harvest peak: GOLDEN heavy ripe panicles drooping hard, blades
+  // tan/dry, a fallen leaf on the pad, dulled gloss, amber light.
+  Autumn: {
+    stalkLight: [222, 186, 98],
+    stalkMid: [186, 146, 62],
+    stalkDark: [132, 98, 44],
+    blade: [186, 162, 86],
+    grainLight: [255, 212, 92],
+    grainDark: [206, 150, 40],
+    padGrass: [164, 152, 80],
+    padDark: [110, 90, 46],
+    water: [150, 138, 96],
+    soil: [120, 78, 42],
+    outline: [78, 52, 22],
+    light: [250, 200, 130],
+    lightAmt: 0.24,
+    gloss: 0.34,
+    ripeness: 1.0,
+    size: 0.95,
+    wetAmt: 0.1,
+    frostAmt: 0,
+    snowCapAmt: 0,
+    padSnowAmt: 0,
+    blossomAmt: 0,
+    fallenLeafAmt: 1.0,
+  },
+  // Winter — frosted rice: dried TAN stalks with a bold SNOW CAP on the
+  // panicles + a snow blanket/drift at the base, iced paddy, cool blue-grey
+  // light. Clearly snowy, still reads as rice.
+  Winter: {
+    stalkLight: [196, 192, 162],
+    stalkMid: [156, 152, 124],
+    stalkDark: [110, 110, 96],
+    blade: [168, 168, 142],
+    grainLight: [214, 208, 176],
+    grainDark: [156, 150, 124],
+    padGrass: [184, 204, 222],
+    padDark: [124, 152, 180],
+    water: [182, 206, 226],
+    soil: [132, 116, 102],
+    outline: [56, 56, 60],
+    light: [200, 224, 255],
+    lightAmt: 0.34,
+    gloss: 0.3,
+    ripeness: 0.62,
+    size: 0.82,
+    wetAmt: 0,
+    frostAmt: 0.82,
+    snowCapAmt: 1.0,
+    padSnowAmt: 1.0,
+    blossomAmt: 0,
+    fallenLeafAmt: 0,
+  },
+};
+
+// ── Rice-plant geometry — the SAME silhouette every season ───────────────────
+// A set of stalks fan up from a tight base near the pad, each arching outward
+// and tipped with a drooping grain panicle. Blade leaves splay off the lower
+// stalks. The pivot is near the base so lean/wave rock the TOPS.
+
+const BASE_Y = 15;        // where the stalks emerge from the pad
+const PIVOT_Y = BASE_Y - 1; // rock/lean/wave about a point near the base
+
+interface Stalk {
+  baseX: number;  // x at the base (tight cluster)
+  apexX: number;  // x at the top of the arch (fans outward)
+  apexY: number;  // y at the top of the arch (negative = up)
+  side: number;   // -1 panicle nods/droops left, +1 right
+  bladeAt: number; // 0..1 height up the stalk where a blade splays (0 = none)
+  rowU: number;   // 0..1 used to phase the traveling rustle wave up the stalks
+}
+
+// Ordered back-to-front so nearer stalks overlap farther ones a touch.
+const STALKS: Stalk[] = [
+  { baseX: -2.5, apexX: -12.5, apexY: -16, side: -1, bladeAt: 0.42, rowU: 0.15 }, // back-left
+  { baseX: 2.5, apexX: 12.5, apexY: -16, side: 1, bladeAt: 0.4, rowU: 0.25 },     // back-right
+  { baseX: -1.4, apexX: -7.0, apexY: -22, side: -1, bladeAt: 0.55, rowU: 0.55 },  // mid-left
+  { baseX: 1.6, apexX: 7.5, apexY: -21, side: 1, bladeAt: 0.5, rowU: 0.65 },      // mid-right
+  { baseX: 0.2, apexX: -1.0, apexY: -26, side: -1, bladeAt: 0, rowU: 1.0 },       // tall centre
 ];
 
-/** Returns the apex point and the nodding tip point of a panicle's arch for a
- *  given droop. The apex stays fixed; the tip curls down/out as droop rises so
- *  the classic nodding rice head forms without changing the overall extent. */
-function panicleGeom(pan: Panicle, droop: number) {
-  const apexX = TIE_X + pan.spread;
-  const apexY = pan.apexY;
-  // The tip nods beyond the apex, curling over and downward with droop.
-  const tipX = apexX + pan.side * (1.5 + droop * 5);
-  const tipY = apexY + 3 + droop * 11;
-  // A control point pulling the upper arc toward the tie at the base.
-  const baseX = TIE_X + pan.baseX;
-  return { apexX, apexY, tipX, tipY, baseX };
+/** Geometry of one arching stalk for a given ripeness (droop) + pose wave.
+ *  Returns base, apex, and the drooping panicle tip. The apex extent is
+ *  constant; ripeness only curls the panicle tip lower; the pose wave bends the
+ *  upper arc horizontally (rustle), most at the tip. */
+function stalkGeom(
+  st: Stalk,
+  ripeness: number,
+  waveAmt: number,
+  wavePhase: number,
+) {
+  const baseX = st.baseX;
+  // Traveling wave: phase advances with how high the row sits → ripple up.
+  const bend = waveAmt * Math.sin(wavePhase + st.rowU * 2.4);
+  const apexX = st.apexX + bend * 0.62;
+  const apexY = st.apexY;
+  // The drooping panicle nods beyond the apex, curling down/out with ripeness.
+  const tipX = apexX + st.side * (2 + ripeness * 6) + bend;
+  const tipY = apexY + 4 + ripeness * 13;
+  return { baseX, apexX, apexY, tipX, tipY, bend };
 }
 
-// ── Sub-part painters (all driven only by p) ────────────────────────────────
-
-/** Soft contact shadow toward the lower-right, on transparency. */
-function contactShadow(ctx: CanvasRenderingContext2D, p: P): void {
-  ctx.save();
-  ctx.fillStyle = `rgba(0,0,0,${0.26 * p.shadowAmt})`;
-  ctx.beginPath();
-  ctx.ellipse(3, 21, 15, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-/** Low flat turf disc pad with tufted edge + shaded underside, plus snow. */
-function pad(ctx: CanvasRenderingContext2D, p: P): void {
-  // shaded underside
-  ctx.fillStyle = rgb(p.padGrassDark);
-  ctx.beginPath();
-  ctx.ellipse(0, 20.5, 18, 5.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // top turf face
-  ctx.fillStyle = rgb(p.padGrass);
-  ctx.beginPath();
-  ctx.ellipse(0, 19, 18, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // soft tufted edge — little blades around the rim
-  ctx.strokeStyle = rgb(p.padGrassDark);
-  ctx.lineWidth = 1.3;
-  ctx.lineCap = "round";
-  for (let i = 0; i < 11; i++) {
-    const a = (i / 11) * Math.PI * 2;
-    const ex = Math.cos(a) * 17.2;
-    const ey = 19 + Math.sin(a) * 4.6;
-    ctx.beginPath();
-    ctx.moveTo(ex, ey);
-    ctx.lineTo(ex + Math.cos(a) * 1.8, ey + Math.sin(a) * 1.4 - 1.4);
-    ctx.stroke();
-  }
-  // lit blades on top
-  ctx.strokeStyle = rgb(lerpRGB(p.padGrass, [255, 255, 255], 0.25));
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * Math.PI * 2 + 0.3;
-    const ex = Math.cos(a) * 12;
-    const ey = 18 + Math.sin(a) * 3.2;
-    ctx.beginPath();
-    ctx.moveTo(ex, ey);
-    ctx.lineTo(ex + 0.6, ey - 2);
-    ctx.stroke();
-  }
-  ctx.lineCap = "butt";
-
-  // snow cover over the pad (winter)
-  if (p.padSnowAmt > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = p.padSnowAmt;
-    const snow = ctx.createLinearGradient(0, 14, 0, 23);
-    snow.addColorStop(0, "#f3f7fd");
-    snow.addColorStop(1, "#cbd8e6");
-    ctx.fillStyle = snow;
-    ctx.beginPath();
-    ctx.ellipse(0, 19, 17, 4.6, 0, 0, Math.PI * 2);
-    ctx.fill();
-    // frost sparkle specks on the pad
-    ctx.fillStyle = "rgba(255,255,255,0.9)";
-    const specks: Array<[number, number]> = [
-      [-10, 18], [-3, 20], [6, 18.5], [12, 19.5], [2, 17.5],
-    ];
-    specks.forEach(([sx, sy]) => {
-      ctx.beginPath();
-      ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-}
-
-/** Pale blossom resting on the pad (spring dressing). */
-function blossom(ctx: CanvasRenderingContext2D, p: P): void {
-  if (p.blossomAmt < 0.02) return;
-  ctx.save();
-  ctx.globalAlpha = p.blossomAmt;
-  ctx.translate(-12, 19);
-  ctx.fillStyle = "rgba(255,240,248,0.96)";
-  for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2;
-    ctx.beginPath();
-    ctx.ellipse(Math.cos(a) * 2.4, Math.sin(a) * 1.4, 1.7, 1.1, a, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.fillStyle = "rgba(248,206,96,0.95)";
-  ctx.beginPath();
-  ctx.arc(0, 0, 1.1, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-/** A couple of fallen leaves on the pad (autumn dressing). */
-function fallenLeaves(ctx: CanvasRenderingContext2D, p: P): void {
-  if (p.fallenLeafAmt < 0.02) return;
-  ctx.save();
-  ctx.globalAlpha = p.fallenLeafAmt;
-  const leaves: Array<[number, number, number, string]> = [
-    [-12, 20, -0.5, "#c8772b"],
-    [11, 20.5, 0.7, "#b8531f"],
-  ];
-  leaves.forEach(([lx, ly, rot, col]) => {
-    ctx.save();
-    ctx.translate(lx, ly);
-    ctx.rotate(rot);
-    ctx.fillStyle = col;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 3.4, 1.7, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(90,48,16,0.7)";
-    ctx.lineWidth = 0.7;
-    ctx.beginPath();
-    ctx.moveTo(-3.2, 0);
-    ctx.lineTo(3.2, 0);
-    ctx.stroke();
-    ctx.restore();
-  });
-  ctx.restore();
-}
-
-/** One arching rice panicle: a slender stem from the tie up to an apex, then
- *  nodding over to its tip, studded with little grains. `sway` bends the upper
- *  arc/tip horizontally (idle motion); `glint` (0..1) lights a travelling band
- *  of grains for summer. The arc EXTENT is constant; droop only curls the tip. */
-function panicle(
+/** Trace one stalk's rachis path (base → apex → drooping tip). */
+function stalkPath(
   ctx: CanvasRenderingContext2D,
-  p: P,
-  pan: Panicle,
-  sway: number,
-  glint: number | undefined,
+  g: { baseX: number; apexX: number; apexY: number; tipX: number; tipY: number },
 ): void {
-  const g = panicleGeom(pan, p.droop);
-  const swayApex = sway * 0.55;
-  const swayTip = sway; // tip swings most
-  const apexX = g.apexX + swayApex;
-  const tipX = g.tipX + swayTip;
+  ctx.beginPath();
+  ctx.moveTo(g.baseX, BASE_Y);
+  ctx.quadraticCurveTo(
+    g.baseX + (g.apexX - g.baseX) * 0.35,
+    -2,
+    g.apexX,
+    g.apexY,
+  );
+  ctx.quadraticCurveTo(
+    g.apexX + (g.tipX - g.apexX) * 0.6,
+    g.apexY + 1,
+    g.tipX,
+    g.tipY,
+  );
+}
 
-  // The rachis (stem) path: tie → apex → nod to tip.
-  const stemPath = (): void => {
-    ctx.beginPath();
-    ctx.moveTo(g.baseX, TIE_Y);
-    ctx.quadraticCurveTo(g.baseX + (apexX - g.baseX) * 0.35, -2, apexX, g.apexY);
-    ctx.quadraticCurveTo(
-      apexX + (tipX - apexX) * 0.6,
-      g.apexY + 1,
-      tipX,
-      g.tipY,
-    );
+// ── The single parameterized paint ───────────────────────────────────────────
+
+/** The whole tile from ONLY `p` (season identity) and `pose` (idle gesture). */
+function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
+  const p = clampP(raw);
+  const pose: Pose = {
+    bob: safeNum(rawPose.bob),
+    lean: safeNum(rawPose.lean),
+    squashX: safeNum(rawPose.squashX),
+    squashY: safeNum(rawPose.squashY),
+    wave: safeNum(rawPose.wave),
+    wavePhase: safeNum(rawPose.wavePhase),
   };
 
-  // dark stem base pass
-  ctx.strokeStyle = rgb(p.stemDark);
-  ctx.lineWidth = 2.1;
-  ctx.lineCap = "round";
-  stemPath();
-  ctx.stroke();
-  // lit stem overlay
-  ctx.strokeStyle = rgb(p.stemLight);
-  ctx.lineWidth = 1.0;
-  stemPath();
-  ctx.stroke();
+  ctx.save();
+  try {
+    ctx.globalAlpha = 1;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
 
-  // Grains studding the upper arc, spaced from just below the apex to the tip,
-  // alternating to each side of the rachis like a real panicle. They get
-  // sparser toward the tip when shedding (autumn).
-  const n = pan.grains;
-  const plump = 0.6 + p.grainPlump * 0.7; // grain radius scale
-  for (let i = 0; i < n; i++) {
-    const u = i / (n - 1); // 0 near apex region, 1 at tip
-    // Sample a point along the apex→tip arc (the nodding head).
-    const ax = apexX + (tipX - apexX) * u;
-    const ay = g.apexY + (g.tipY - g.apexY) * u;
-    // curve bow on the arc so grains hug the nodding head shape
-    const bow = Math.sin(u * Math.PI) * 2.2;
-    const gx = ax + pan.side * bow * 0.3;
-    const gy = ay - bow;
-    // a few tip grains drop out when shedding
-    if (p.shedAmt > 0.5 && u > 0.72 && (i % 2 === 0)) continue;
-    // alternate the grain to a side of the rachis
-    const off = (i % 2 === 0 ? 1 : -1) * (1.3 + u * 0.6);
-    const fx = gx + off;
-    const fy = gy + Math.abs(off) * 0.15;
-    const r = (1.0 + (1 - u) * 0.5) * plump;
+    // ── Pad: low flat grassy/paddy ellipse (does NOT move with the pose) ──────
+    ctx.fillStyle = rgba(p.padDark, 0.4);
+    ctx.beginPath();
+    ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    // grain body (a little teardrop ellipse), shaded then lit
-    ctx.save();
-    ctx.translate(fx, fy);
-    ctx.rotate(pan.side * 0.5 + u * pan.side * 0.4);
-    ctx.fillStyle = rgb(p.grainDark);
+    ctx.fillStyle = rgb(p.padDark);
     ctx.beginPath();
-    ctx.ellipse(0, 0, r * 0.95, r * 1.7, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    let face = p.grainLight;
-    // travelling glint band (summer): brighten grains near the sweep
-    if (glint !== undefined) {
-      const band = Math.abs(u - glint);
-      if (band < 0.16) {
-        face = lerpRGB(p.grainLight, [255, 252, 224], (1 - band / 0.16) * 0.8);
-      }
-    }
-    ctx.fillStyle = rgb(face);
+    ctx.fillStyle = rgb(p.padGrass);
     ctx.beginPath();
-    ctx.ellipse(-0.35, -0.3, r * 0.6, r * 1.2, 0, 0, Math.PI * 2);
+    ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
     ctx.fill();
-    // tiny lit speck (gloss), never a bloom
-    ctx.fillStyle = rgb(lerpRGB(face, [255, 255, 255], 0.5 * p.gloss));
-    ctx.beginPath();
-    ctx.ellipse(-0.4, -0.6, r * 0.3, r * 0.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
 
-    // an awn (tiny bristle) off the topmost couple of grains near the apex
-    if (i < 2) {
-      ctx.strokeStyle = rgb(p.stemDark, 0.7);
-      ctx.lineWidth = 0.6;
+    // wet paddy water hint pooled in the pad centre (spring dewy / summer)
+    if (p.wetAmt > 0.01) {
+      ctx.fillStyle = rgba(p.water, 0.5 * p.wetAmt);
       ctx.beginPath();
-      ctx.moveTo(fx, fy - r);
-      ctx.lineTo(fx + pan.side * 1.4, fy - r - 3.5);
+      ctx.ellipse(0, 19.4, 12, 3.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba([255, 255, 255], 0.3 * p.wetAmt);
+      ctx.beginPath();
+      ctx.ellipse(-4, 18.6, 4.6, 1.0, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // tufted top edge
+    ctx.strokeStyle = rgb(p.padDark);
+    ctx.lineWidth = 1.1;
+    for (let i = -7; i <= 7; i++) {
+      const tx = i * 2.4;
+      const ty = 19 - Math.sqrt(Math.max(0, 1 - (tx / 18) ** 2)) * 5.2;
+      ctx.beginPath();
+      ctx.moveTo(tx, ty + 0.4);
+      ctx.lineTo(tx - 0.8, ty - 2.4);
       ctx.stroke();
     }
-  }
-}
-
-/** The straw tie band gathering the bundle just above the pad. */
-function tieBand(ctx: CanvasRenderingContext2D, p: P): void {
-  ctx.save();
-  // dark backing
-  ctx.fillStyle = rgb(p.tieDark);
-  ctx.beginPath();
-  ctx.ellipse(TIE_X, TIE_Y, 4.6, 3.0, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // lit front band
-  ctx.fillStyle = rgb(p.tie);
-  ctx.beginPath();
-  ctx.moveTo(TIE_X - 4.4, TIE_Y - 1.6);
-  ctx.quadraticCurveTo(TIE_X, TIE_Y - 2.4, TIE_X + 4.4, TIE_Y - 1.6);
-  ctx.quadraticCurveTo(TIE_X + 5.0, TIE_Y, TIE_X + 4.2, TIE_Y + 2.0);
-  ctx.quadraticCurveTo(TIE_X, TIE_Y + 1.2, TIE_X - 4.2, TIE_Y + 2.0);
-  ctx.quadraticCurveTo(TIE_X - 5.0, TIE_Y, TIE_X - 4.4, TIE_Y - 1.6);
-  ctx.closePath();
-  ctx.fill();
-  // a couple of binding lines
-  ctx.strokeStyle = rgb(p.tieDark, 0.85);
-  ctx.lineWidth = 0.8;
-  ctx.beginPath();
-  ctx.moveTo(TIE_X - 4, TIE_Y - 0.4);
-  ctx.quadraticCurveTo(TIE_X, TIE_Y - 1.2, TIE_X + 4, TIE_Y - 0.4);
-  ctx.moveTo(TIE_X - 4, TIE_Y + 1.2);
-  ctx.quadraticCurveTo(TIE_X, TIE_Y + 0.4, TIE_X + 4, TIE_Y + 1.2);
-  ctx.stroke();
-  // a short loose straw end poking down-right
-  ctx.strokeStyle = rgb(p.tie);
-  ctx.lineWidth = 1.4;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(TIE_X + 3, TIE_Y + 1.5);
-  ctx.quadraticCurveTo(TIE_X + 5.5, TIE_Y + 4, TIE_X + 5, TIE_Y + 6.5);
-  ctx.stroke();
-  ctx.lineCap = "butt";
-  // soft outline around the tie
-  ctx.strokeStyle = rgb(p.outline, 0.8);
-  ctx.lineWidth = 1.0;
-  ctx.beginPath();
-  ctx.ellipse(TIE_X, TIE_Y, 4.6, 3.0, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.restore();
-}
-
-/** A couple of shed grains resting on the pad (autumn). */
-function shedGrains(ctx: CanvasRenderingContext2D, p: P): void {
-  if (p.shedAmt < 0.3) return;
-  ctx.save();
-  ctx.globalAlpha = clamp01(p.shedAmt);
-  const drops: Array<[number, number, number]> = [
-    [7, 17, 0.6],
-    [-6, 18.5, -0.4],
-    [12, 16.5, 0.9],
-  ];
-  drops.forEach(([dx, dy, rot]) => {
-    ctx.save();
-    ctx.translate(dx, dy);
-    ctx.rotate(rot);
-    ctx.fillStyle = rgb(p.grainDark);
-    ctx.beginPath();
-    ctx.ellipse(0, 0, 1.0, 1.9, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = rgb(p.grainLight);
-    ctx.beginPath();
-    ctx.ellipse(-0.3, -0.3, 0.6, 1.3, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  });
-  ctx.restore();
-}
-
-/** Frost dusting + small snow caps on the heads' upward surfaces (winter). */
-function frostAndSnow(ctx: CanvasRenderingContext2D, p: P, sway: number): void {
-  // small snow caps cresting each nodding head
-  if (p.snowCapAmt > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = p.snowCapAmt;
-    PANICLES.forEach((pan) => {
-      const g = panicleGeom(pan, p.droop);
-      const swayTip = sway;
-      const capX = (g.apexX + g.tipX) / 2 + swayTip * 0.7;
-      const capY = (g.apexY + g.tipY) / 2 - 2.4;
-      const cap = ctx.createLinearGradient(capX, capY - 3, capX, capY + 2);
-      cap.addColorStop(0, "#ffffff");
-      cap.addColorStop(1, "#dbe6f2");
-      ctx.fillStyle = cap;
+    // grass-top highlight glints
+    ctx.strokeStyle = rgba([255, 255, 255], 0.18);
+    ctx.lineWidth = 1;
+    for (let i = -5; i <= 5; i += 2) {
+      const tx = i * 2.6 - 2;
       ctx.beginPath();
-      ctx.ellipse(capX, capY, 3.2, 1.8, pan.side * 0.4, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    ctx.restore();
-  }
-  // frost dusting — fine pale specks on the upper-left (lit) surfaces
-  if (p.frostAmt > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = 0.7 * p.frostAmt;
-    ctx.fillStyle = "#eaf3ff";
-    const specks: Array<[number, number]> = [
-      [-7, -16], [-3, -12], [-9, -9], [4, -17], [2, -13],
-      [7, -11], [-1, -20], [-5, -6],
-    ];
-    specks.forEach(([sx, sy]) => {
+      ctx.moveTo(tx, 18.4);
+      ctx.lineTo(tx - 0.6, 16.6);
+      ctx.stroke();
+    }
+
+    // pad snow blanket / drift (winter)
+    if (p.padSnowAmt > 0.01) {
+      ctx.fillStyle = rgba([244, 250, 255], 0.92 * p.padSnowAmt);
       ctx.beginPath();
-      ctx.arc(sx, sy, 0.7, 0, Math.PI * 2);
+      ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
       ctx.fill();
-    });
-    ctx.restore();
-  }
-}
-
-// ── The single parameterized paint ──────────────────────────────────────────
-// Draws the WHOLE tile from p + a vertical idle offset `bob` (design px;
-// bob=0 = rest pose). Optional micro-dressing args are additive and tiny.
-
-interface Micro {
-  sway?: number; // gentle head sway (px) applied to the panicle arcs
-  glint?: number; // 0..1 travelling warm glint position along the heads (summer)
-  extraFlakes?: Array<[number, number, number]>; // drifting snowflakes (winter)
-  dew?: number; // 0..1 dew shimmer pulse (spring)
-  coldSheen?: number; // 0..1 faint cold sheen pulse (winter)
-}
-
-function paint(
-  ctx: CanvasRenderingContext2D,
-  pRaw: P,
-  bob: number,
-  micro?: Micro,
-): void {
-  const p = clampP(pRaw);
-  const m = micro ?? {};
-  const sway = m.sway ?? 0;
-
-  // Pad + ground dressing are drawn at rest (do not bob with the subject).
-  contactShadow(ctx, p);
-  pad(ctx, p);
-  blossom(ctx, p);
-  fallenLeaves(ctx, p);
-  shedGrains(ctx, p);
-
-  // Subject bobs as a whole.
-  ctx.save();
-  ctx.translate(0, bob);
-
-  // Panicles back-to-front; nearer panicles sway a touch more for parallax.
-  PANICLES.forEach((pan, i) => {
-    const local = sway * (0.7 + i * 0.16);
-    panicle(ctx, p, pan, local, m.glint);
-  });
-
-  tieBand(ctx, p);
-  frostAndSnow(ctx, p, sway);
-
-  // faint cold sheen pulse (winter), additive, tiny — over the heads
-  if (m.coldSheen !== undefined && m.coldSheen > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = 0.1 * m.coldSheen;
-    ctx.fillStyle = "#cfe6ff";
-    ctx.beginPath();
-    ctx.ellipse(0, -14, 13, 9, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // dew shimmer (spring), additive, a tiny pulsing droplet glint on a grain
-  if (m.dew !== undefined && m.dew > 0.01) {
-    ctx.save();
-    ctx.globalAlpha = m.dew;
-    ctx.fillStyle = "rgba(255,255,255,0.85)";
-    ctx.beginPath();
-    ctx.arc(-4, -15, 0.8 + 0.5 * m.dew, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(4, -13, 0.6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  ctx.restore(); // end subject bob
-
-  // drifting snowflakes (winter), additive, in tile space (not bobbed)
-  if (m.extraFlakes) {
-    ctx.save();
-    ctx.fillStyle = "#ffffff";
-    m.extraFlakes.forEach(([fx, fy, r]) => {
-      ctx.globalAlpha = 0.85;
+      ctx.fillStyle = rgba([210, 226, 244], 0.5 * p.padSnowAmt);
       ctx.beginPath();
-      ctx.arc(fx, fy, r, 0, Math.PI * 2);
+      ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
       ctx.fill();
+      // a mounded drift hugging the plant base
+      ctx.fillStyle = rgba([255, 255, 255], 0.85 * p.padSnowAmt);
+      ctx.beginPath();
+      ctx.ellipse(0, 16.8, 9, 3.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
+      ([[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]] as Array<[number, number]>).forEach(([sx, sy]) => {
+        ctx.beginPath();
+        ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // blossom on the pad (spring)
+    if (p.blossomAmt > 0.01) {
+      const a = p.blossomAmt;
+      const spots: Array<[number, number]> = [[-13, 18.5], [12, 17.8], [-4, 21]];
+      spots.forEach(([bx, by], idx) => {
+        ctx.fillStyle = rgba(idx === 1 ? [255, 232, 246] : [255, 250, 252], 0.95 * a);
+        for (let k = 0; k < 5; k++) {
+          const ang = (k / 5) * Math.PI * 2;
+          ctx.beginPath();
+          ctx.ellipse(bx + Math.cos(ang) * 1.6, by + Math.sin(ang) * 1.1, 1.2, 0.9, ang, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.fillStyle = rgba([255, 214, 90], a);
+        ctx.beginPath();
+        ctx.arc(bx, by, 1.0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    }
+
+    // fallen leaf on the pad (autumn)
+    if (p.fallenLeafAmt > 0.01) {
+      const a = p.fallenLeafAmt;
+      const leaves: Array<[number, number, number, RGB]> = [
+        [-12, 19.6, -0.5, [206, 124, 38]],
+        [12, 18.6, 0.7, [182, 70, 28]],
+      ];
+      leaves.forEach(([lx, ly, rot, col]) => {
+        ctx.save();
+        ctx.translate(lx, ly);
+        ctx.rotate(rot);
+        ctx.fillStyle = rgba(col, a);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 3.6, 2.0, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = rgba([90, 44, 16], a);
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(-3.4, 0);
+        ctx.lineTo(3.4, 0);
+        ctx.stroke();
+        ctx.restore();
+      });
+    }
+
+    // ── Contact shadow under the plant (follows the lean for grounding) ───────
+    const tipShift = pose.lean * (PIVOT_Y - STALKS[STALKS.length - 1].apexY);
+    const shadowSpread = 1 + clamp01(pose.bob < 0 ? -pose.bob / 14 : 0) * 0.4;
+    ctx.fillStyle = rgb(p.soil);
+    ctx.beginPath();
+    ctx.ellipse(0 + tipShift * 0.16, BASE_Y + 5.5, 8 * shadowSpread, 2.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba(p.outline, 0.26 / shadowSpread);
+    ctx.beginPath();
+    ctx.ellipse(2.5 + tipShift * 0.18, BASE_Y + 6, 10 * shadowSpread, 2.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── Subject: the rice plant, under the idle pose transform ───────────────
+    ctx.save();
+    // Pivot near the base so lean rocks the TOPS side-to-side and squash anchors
+    // at the base (it "grows from" the pad). bob raises the whole plant.
+    ctx.translate(0, PIVOT_Y + pose.bob);
+    ctx.rotate(pose.lean);
+    ctx.scale(1 + pose.squashX, 1 + pose.squashY);
+    ctx.translate(0, -PIVOT_Y);
+
+    const ripe = p.ripeness;
+    const waveAmt = pose.wave;
+    const wavePhase = pose.wavePhase;
+
+    // 1) Blade leaves first (behind the stalks), splaying off the lower stalks.
+    STALKS.forEach((st) => {
+      if (st.bladeAt <= 0) return;
+      const g = stalkGeom(st, ripe, waveAmt, wavePhase);
+      // attach point partway up the stalk's lower arc
+      const u = st.bladeAt;
+      const ax = lerp(g.baseX, g.apexX, u);
+      const ay = lerp(BASE_Y, g.apexY, u);
+      const dir = st.side;
+      const bladeBend = waveAmt * 0.5 * Math.sin(wavePhase + st.rowU * 2.4 + 0.6);
+      ctx.strokeStyle = rgb(p.outline);
+      ctx.lineWidth = 3.0;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.quadraticCurveTo(
+        ax + dir * 7 + bladeBend,
+        ay - 1,
+        ax + dir * 12 + bladeBend * 1.6,
+        ay + 5 + ripe * 3,
+      );
+      ctx.stroke();
+      ctx.strokeStyle = rgb(p.blade);
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.quadraticCurveTo(
+        ax + dir * 7 + bladeBend,
+        ay - 1,
+        ax + dir * 12 + bladeBend * 1.6,
+        ay + 5 + ripe * 3,
+      );
+      ctx.stroke();
     });
+
+    // 2) Stalks back-to-front: outline pass, then lit rachis, then panicle.
+    STALKS.forEach((st) => {
+      const g = stalkGeom(st, ripe, waveAmt, wavePhase);
+
+      // outline / dark backing
+      ctx.strokeStyle = rgb(p.outline);
+      ctx.lineWidth = 3.0;
+      stalkPath(ctx, g);
+      ctx.stroke();
+      // mid stalk
+      ctx.strokeStyle = rgb(p.stalkMid);
+      ctx.lineWidth = 2.0;
+      stalkPath(ctx, g);
+      ctx.stroke();
+      // lit stalk highlight on the upper-left face
+      ctx.strokeStyle = rgb(p.stalkLight);
+      ctx.lineWidth = 0.9;
+      ctx.beginPath();
+      ctx.moveTo(g.baseX - 0.5, BASE_Y);
+      ctx.quadraticCurveTo(
+        g.baseX + (g.apexX - g.baseX) * 0.35 - 0.5,
+        -2,
+        g.apexX - 0.5,
+        g.apexY,
+      );
+      ctx.stroke();
+
+      // ── drooping grain panicle from apex → tip ──
+      const n = 9 + Math.round(p.size * 3);
+      const plump = 0.6 + p.size * 0.6;
+      for (let i = 0; i < n; i++) {
+        const u = i / (n - 1); // 0 near apex, 1 at drooping tip
+        const ax = g.apexX + (g.tipX - g.apexX) * u;
+        const ay = g.apexY + (g.tipY - g.apexY) * u;
+        const bow = Math.sin(u * Math.PI) * 2.0;
+        const gx = ax + st.side * bow * 0.3;
+        const gy = ay - bow;
+        // alternate grain to a side of the rachis
+        const off = (i % 2 === 0 ? 1 : -1) * (1.2 + u * 0.6);
+        const fx = gx + off;
+        const fy = gy + Math.abs(off) * 0.15;
+        const r = (1.0 + (1 - u) * 0.5) * plump;
+
+        ctx.save();
+        ctx.translate(fx, fy);
+        ctx.rotate(st.side * 0.5 + u * st.side * 0.4);
+        ctx.fillStyle = rgb(p.grainDark);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, r * 0.95, r * 1.7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgb(p.grainLight);
+        ctx.beginPath();
+        ctx.ellipse(-0.35, -0.3, r * 0.6, r * 1.2, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // tiny gloss speck on the grain
+        if (p.gloss > 0.02) {
+          ctx.fillStyle = rgba([255, 255, 255], 0.4 + 0.5 * p.gloss);
+          ctx.beginPath();
+          ctx.ellipse(-0.4, -0.6, r * 0.3, r * 0.5, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+
+        // an awn (bristle) off the topmost grain near the apex
+        if (i < 2) {
+          ctx.strokeStyle = rgba(p.stalkDark, 0.75);
+          ctx.lineWidth = 0.6;
+          ctx.beginPath();
+          ctx.moveTo(fx, fy - r);
+          ctx.lineTo(fx + st.side * 1.4, fy - r - 3.5);
+          ctx.stroke();
+        }
+      }
+
+      // snow cap cresting this panicle head (winter)
+      if (p.snowCapAmt > 0.02) {
+        const a = p.snowCapAmt;
+        const capX = (g.apexX + g.tipX) / 2 + (g.bend) * 0.7;
+        const capY = (g.apexY + g.tipY) / 2 - 2.4;
+        ctx.fillStyle = rgba([248, 252, 255], 0.95 * a);
+        ctx.beginPath();
+        ctx.ellipse(capX, capY, 3.4, 2.0, st.side * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = rgba([210, 226, 244], 0.5 * a);
+        ctx.beginPath();
+        ctx.ellipse(capX, capY + 0.8, 3.0, 1.2, st.side * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // frost dusting along the stalk (winter)
+      if (p.frostAmt > 0.02) {
+        ctx.fillStyle = rgba([235, 246, 255], 0.7 * p.frostAmt);
+        for (let k = 0; k < 3; k++) {
+          const u = 0.25 + k * 0.28;
+          const fx = lerp(g.baseX, g.apexX, u);
+          const fy = lerp(BASE_Y, g.apexY, u);
+          ctx.beginPath();
+          ctx.arc(fx - 0.6, fy, 0.7, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    });
+
+    // small straw collar where the stalks gather at the base
+    ctx.fillStyle = rgb(p.stalkDark);
+    ctx.beginPath();
+    ctx.ellipse(0, BASE_Y - 1, 4.2, 2.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgb(p.stalkMid);
+    ctx.beginPath();
+    ctx.ellipse(0, BASE_Y - 1.8, 3.4, 1.8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore(); // end pose transform
+
+    // ── Ambient light wash over the whole tile (per-season tint) ─────────────
+    if (p.lightAmt > 0.001) {
+      ctx.globalAlpha = 1;
+      const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
+      lg.addColorStop(0, rgba(p.light, p.lightAmt));
+      lg.addColorStop(1, rgba(p.light, p.lightAmt * 0.25));
+      ctx.fillStyle = lg;
+      ctx.fillRect(-24, -24, 48, 48);
+    }
+  } finally {
+    ctx.globalAlpha = 1;
     ctx.restore();
   }
-
-  ctx.globalAlpha = 1;
 }
 
-// ── Idle bob: seamless, zero at t=0 with zero velocity ──────────────────────
-// A*(1-cos(w t))*0.5 : value 0 and derivative 0 at t=0, seamless loop period 2π/w.
+// ── Idle pose clock — two-tier occasional action ─────────────────────────────
 
-function bobAt(t: number): number {
-  const A = 1.4; // peak rise in design px
-  const w = 1.5; // rad/s
-  return -A * (1 - Math.cos(w * t)) * 0.5; // negative = rises upward
+/** Returns 0..1 progress through an action window of length `win` starting at
+ *  phase offset within `period`, else −1 (at rest). Seamless because the pose
+ *  built from q is zero (with zero velocity) at q=0 and q=1. */
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
 }
 
-// ── Per-season draw + anim ──────────────────────────────────────────────────
-
-function drawRiceSpring(ctx: CanvasRenderingContext2D): void {
-  paint(ctx, SP.Spring, 0);
-}
-function drawRiceSummer(ctx: CanvasRenderingContext2D): void {
-  paint(ctx, SP.Summer, 0);
-}
-function drawRiceAutumn(ctx: CanvasRenderingContext2D): void {
-  paint(ctx, SP.Autumn, 0);
-}
-function drawRiceWinter(ctx: CanvasRenderingContext2D): void {
-  paint(ctx, SP.Winter, 0);
+// A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
+// sin^2(pi q) → smooth in/out, peak at q=0.5.
+function hump(q: number): number {
+  const s = Math.sin(Math.PI * q);
+  return s * s;
 }
 
-function animRiceSpring(ctx: CanvasRenderingContext2D, t: number): void {
-  // soft head sway + faint dew shimmer; subject bob is zero at t=0.
-  const dew = 0.35 + 0.35 * (0.5 + 0.5 * Math.sin(t * 1.8));
-  paint(ctx, SP.Spring, bobAt(t), {
-    sway: Math.sin(t * 1.5) * 1.1,
-    dew,
-  });
+// An asymmetric anticipation→peak→overshoot→settle curve, 0 at q=0 and q=1.
+// (1-cos) envelope keeps velocity zero at the edges.
+function anticipate(q: number): number {
+  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
+  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
+  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
 }
 
-function animRiceSummer(ctx: CanvasRenderingContext2D, t: number): void {
-  // travelling warm glint runs apex→tip along the grains, seamless via frac(t).
-  const glint = (t * 0.4) % 1;
-  paint(ctx, SP.Summer, bobAt(t), {
-    sway: Math.sin(t * 1.3) * 1.3,
-    glint,
-  });
+/** Build the idle pose from the wall clock. Two tiers:
+ *   common RUSTLE traveling-wave every ~6s (win 0.95s), rare GUST BEND every
+ *   ~18s (win 1.2s, phase +3s). */
+function poseFromClock(t: number): Pose {
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, wave: 0, wavePhase: 0 };
+
+  // ── COMMON: RUSTLE traveling-wave sway (~6s, win 0.95s) ──
+  // Wind passes through; stalks bend ~10–14px with a base squash, the drooping
+  // heads (tips) swaying most. wave amplitude in design px; wavePhase advances
+  // through the window so the ripple travels up the stalks.
+  const qC = actionQ(t, 6.0, 0.95, 0.0);
+  if (qC >= 0) {
+    const env = Math.sin(Math.PI * qC); // 0..1..0, zero (and zero-velocity-ish) at edges
+    // wave amplitude ~13px at peak; the per-stalk Math.sin gives the rustle.
+    pose.wave += 13.0 * env;
+    // phase rolls ~1.5 cycles across the window → ripple travels through
+    pose.wavePhase = qC * Math.PI * 3;
+    // a small whole-plant lean rides along, biased to one side (wind direction)
+    pose.lean += 0.05 * env * Math.sin(qC * Math.PI * 2);
+    // base squash as the plant takes the wind
+    pose.squashY += -0.05 * hump(qC);
+    pose.squashX += 0.04 * hump(qC);
+    // a faint windup tilt keeps anticipate() in the seamless-curve toolkit
+    pose.lean += 0.015 * anticipate(qC);
+  }
+
+  // ── RARE: STRONG GUST BEND (~18s, win 1.2s, phase +3s) ──
+  // Anticipation (lean slightly INTO the wind) → big bend ~16–20px at the tips →
+  // overshoot the other way → settle. May exit the box at apex (fine, no clip).
+  const qS = actionQ(t, 18.0, 1.2, 3.0);
+  if (qS >= 0) {
+    // Anticipation lobe: a small reverse lean early (q<0.2).
+    const anti = qS < 0.2 ? Math.sin((qS / 0.2) * Math.PI) : 0; // 0..1..0
+    // Main bend: a strong forward sweep peaking ~q=0.5.
+    const bendWin = qS >= 0.12 && qS < 0.82 ? (qS - 0.12) / 0.7 : -1;
+    const bend = bendWin >= 0 ? Math.sin(bendWin * Math.PI) : 0; // 0..1..0
+    // Overshoot/settle: a smaller spring-back the other way late in the window.
+    const overWin = qS >= 0.66 ? Math.min(1, (qS - 0.66) / 0.34) : -1;
+    const over = overWin >= 0 ? Math.sin(overWin * Math.PI) : 0; // 0..1..0
+
+    // Big traveling-wave bend at the tips (~18–20px) plus whole-plant lean.
+    pose.wave += bend * 19.0 - anti * 5.0;
+    // run more wave cycles for a richer gust ripple up the plant
+    pose.wavePhase = qS * Math.PI * 2.2;
+    // whole-plant lean: anticipate against the wind, then bend hard with it,
+    // then overshoot the opposite way and settle.
+    pose.lean += -anti * 0.06 + bend * 0.20 - over * 0.07;
+    // squash: crouch into the gust, stretch slightly at peak bend
+    pose.squashY += anti * 0.04 + bend * 0.06 - over * 0.03;
+    pose.squashX += -anti * 0.03 - bend * 0.05 + over * 0.03;
+    pose.bob += -bend * 1.4;
+  }
+
+  return pose;
 }
 
-function animRiceAutumn(ctx: CanvasRenderingContext2D, t: number): void {
-  // heavy dried heads sway slowly; seamless via sin.
-  paint(ctx, SP.Autumn, bobAt(t), {
-    sway: Math.sin(t * 1.1) * 1.0,
-  });
+// ── Per-season draw / anim ───────────────────────────────────────────────────
+
+function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
+  return (ctx) => paint(ctx, SP[season], REST);
 }
 
-function animRiceWinter(ctx: CanvasRenderingContext2D, t: number): void {
-  // a couple of drifting snowflakes + faint cold sheen + slow sway.
-  const seeds: Array<[number, number, number]> = [
-    [-6, 1.1, 0.0],
-    [7, 0.9, 0.5],
-  ];
-  const span = 38;
-  const flakes: Array<[number, number, number]> = seeds.map(([fx, r, phase]) => {
-    const prog = (((t / 3.6 + phase) % 1) + 1) % 1;
-    const fy = -22 + prog * span;
-    const driftX = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
-    return [driftX, fy, r];
-  });
-  const coldSheen = 0.5 + 0.5 * Math.sin(t * 0.8);
-  paint(ctx, SP.Winter, bobAt(t), {
-    sway: Math.sin(t * 0.9) * 0.7,
-    extraFlakes: flakes,
-    coldSheen,
-  });
-}
+function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
+  return (ctx, t) => {
+    const tt = Number.isFinite(t) ? t : 0;
+    paint(ctx, SP[season], poseFromClock(tt));
 
-// ── Transitions: lerp every field through a smoothstep ──────────────────────
-// transition(ctx,0) === draw(from); transition(ctx,1) === draw(to). No snap.
-
-function makeTransition(from: SeasonName, to: SeasonName) {
-  return (ctx: CanvasRenderingContext2D, pp: number): void => {
-    const t = smoother(clamp01(pp));
-    paint(ctx, lerpP(SP[from], SP[to], t), 0);
+    // Light additive season micro-sparkle (dressing only — never the subject's
+    // own colour/brightness). Kept tiny so the POSE actions are the star.
+    ctx.save();
+    try {
+      ctx.globalAlpha = 1;
+      if (season === "Winter") {
+        const seeds: Array<[number, number, number]> = [
+          [-9, 0.0, 1.0], [6, 0.4, 0.9], [11, 0.7, 0.8], [-2, 0.25, 0.9],
+        ];
+        ctx.fillStyle = "#ffffff";
+        seeds.forEach(([fx, phase, r]) => {
+          const prog = ((tt / 3.0 + phase) % 1 + 1) % 1;
+          const fy = -22 + prog * 38;
+          const dx = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
+          ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog * Math.PI);
+          ctx.beginPath();
+          ctx.arc(dx, fy, r, 0, Math.PI * 2);
+          ctx.fill();
+        });
+        ctx.globalAlpha = 1;
+      } else if (season === "Spring") {
+        // a couple of drifting petals
+        ctx.fillStyle = "rgba(255,240,248,0.9)";
+        for (let i = 0; i < 2; i++) {
+          const prog = ((tt / 4.0 + i * 0.5) % 1 + 1) % 1;
+          const px = (i === 0 ? -10 : 9) + Math.sin(prog * Math.PI * 2) * 3;
+          const py = -18 + prog * 34;
+          ctx.globalAlpha = 0.35 + 0.4 * Math.sin(prog * Math.PI);
+          ctx.beginPath();
+          ctx.ellipse(px, py, 1.4, 0.9, prog * 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      } else if (season === "Autumn") {
+        // one slow tumbling leaf
+        const prog = ((tt / 5.0) % 1 + 1) % 1;
+        const px = 11 - prog * 6 + Math.sin(prog * Math.PI * 3) * 2;
+        const py = -16 + prog * 32;
+        ctx.globalAlpha = 0.4 + 0.4 * Math.sin(prog * Math.PI);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(prog * Math.PI * 4);
+        ctx.fillStyle = "rgba(196,96,32,1)";
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 2.4, 1.3, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+        ctx.globalAlpha = 1;
+      }
+      // Summer: no extra dressing — the lush green + gloss + rustle is the show.
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
   };
 }
 
-const springToSummer = makeTransition("Spring", "Summer");
-const summerToAutumn = makeTransition("Summer", "Autumn");
-const autumnToWinter = makeTransition("Autumn", "Winter");
+// ── Forward season→season transitions (seamless endpoints) ───────────────────
 
-// ── Exports ─────────────────────────────────────────────────────────────────
+function makeTransition(fromIdx: 0 | 1 | 2): (ctx: CanvasRenderingContext2D, p: number) => void {
+  const from = SP[SEASON_NAMES[fromIdx]];
+  const to = SP[SEASON_NAMES[fromIdx + 1]];
+  return (ctx, pp) => {
+    const k = smoother(clamp01(pp));
+    paint(ctx, lerpP(from, to, k), REST);
+  };
+}
+
+const springToSummer = makeTransition(0);
+const summerToAutumn = makeTransition(1);
+const autumnToWinter = makeTransition(2);
+
+// ── Exports ──────────────────────────────────────────────────────────────────
 
 export const VARIANTS: SeasonalTileEntry = {
-  Spring: { draw: drawRiceSpring, anim: animRiceSpring },
-  Summer: { draw: drawRiceSummer, anim: animRiceSummer },
-  Autumn: { draw: drawRiceAutumn, anim: animRiceAutumn },
-  Winter: { draw: drawRiceWinter, anim: animRiceWinter },
+  Spring: { draw: draw("Spring"), anim: anim("Spring") },
+  Summer: { draw: draw("Summer"), anim: anim("Summer") },
+  Autumn: { draw: draw("Autumn"), anim: anim("Autumn") },
+  Winter: { draw: draw("Winter"), anim: anim("Winter") },
 };
 
 export const TRANSITIONS: SeasonalTransitionSet = {
