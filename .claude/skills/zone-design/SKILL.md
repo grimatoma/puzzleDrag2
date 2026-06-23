@@ -6,7 +6,7 @@ description: >-
   terraces, sheltered hollow, oasis rings, sea-cliff, canopy platforms, crystal caverns, sky islands,
   reclaimed ruin-grid, grand boulevard). Use whenever the user wants to add / propose / redesign / build
   out a game ZONE or biome, invent a new themed settlement with its own expansion tiers + hazards +
-  boss, work on the `docs/zones/` generator (the atlas at docs/zones/index.html or a per-zone
+  boss, work on the `reference/docs/zones/` generator (the atlas at reference/docs/zones/index.html or a per-zone
   build-out page), author a top-down Grow play-through layout on the 40×30 grid for a zone, pick a
   growth topology, or balance a zone's tier ladder / hazards / boss. Covers the data-driven generator
   architecture, the catalog of ten growth topologies and how to render each top-down, the
@@ -22,12 +22,12 @@ description: >-
 Ten settlement zones, each **unique in environment AND in how it grows**, built on the
 [`growing-settlement-layout`](../growing-settlement-layout/SKILL.md) foundation (roads-first, the
 wilderness as the progress bar, a landmark that levels up in place, stable+additive growth) and then
-taken somewhere new. Delivered as a **data-driven generator** under `docs/zones/`, in two passes:
+taken somewhere new. Delivered as a **data-driven generator** under `reference/docs/zones/`, in two passes:
 
-- **Pass 1 — the atlas** (`docs/zones/index.html`): propose & pitch all zones — environment, growth
+- **Pass 1 — the atlas** (`reference/docs/zones/index.html`): propose & pitch all zones — environment, growth
   topology, tier ladder, themed buildings, hazards (reused from the game + new), a boss, a signature
   mechanic, a palette. Each card has a live procedural **establishing-shot** (drag-to-grow).
-- **Pass 2 — per-zone build-out** (`docs/zones/<id>/index.html`): each zone gets a live **top-down Grow
+- **Pass 2 — per-zone build-out** (`reference/docs/zones/<id>/index.html`): each zone gets a live **top-down Grow
   play-through** on the real `40×30 @ 32px` grid (ports 1:1 to `src/ui/town/townMaps.ts`), a tile
   inventory (art backlog), and an art bible — collision-verified, critically reviewed, merged.
 
@@ -37,7 +37,7 @@ Improving the shared engine **regenerates every zone**. That is the cross-pollin
 the engine once, all zones benefit. Never hand-edit a generated `index.html`; edit the source and rebuild.
 
 ```
-docs/zones/
+reference/docs/zones/
   data/
     world.mjs        # PRINCIPLES (the review bar) · TOPOLOGIES (the 10 growth logics) ·
                      #   MECHANIC_SOURCING (reused vs new hazards/bosses) · REGIONS
@@ -59,9 +59,9 @@ docs/zones/
 
 **Build & verify:**
 ```bash
-node docs/zones/build.mjs            # regenerate atlas + every authored per-zone page (data gates run first)
-node docs/zones/layoutVerify.mjs [id]# collision gate — run after EVERY layout edit
-node docs/zones/verify.mjs [path]    # render check + screenshots → docs/zones/_review/ (gitignored)
+node reference/docs/zones/build.mjs            # regenerate atlas + every authored per-zone page (data gates run first)
+node reference/docs/zones/layoutVerify.mjs [id]# collision gate — run after EVERY layout edit
+node reference/docs/zones/verify.mjs [path]    # render check + screenshots → reference/docs/zones/_review/ (gitignored)
 ```
 `preview_screenshot` hangs on this host (see project memory). Use Playwright over `file://` — it's 2D
 canvas, no WebGL taint. `_review/` and `_*.mjs` are gitignored scratch.
@@ -95,8 +95,8 @@ Each zone claims exactly one. How each renders **top-down**:
 2. **Author the top-down layout** in `data/layouts/<id>.mjs` (geometry only; palette+tiers merged in
    from `zones.mjs`). Roads laid first; buildings front them at a setback; the frontier recedes; the
    landmark is a fixed staged hub. Use the render model for its topology (table above).
-3. **Verify collision-free** — `node docs/zones/layoutVerify.mjs <id>` until ✓. Nudge `along`/coords.
-4. **Build + screenshot** — `node docs/zones/build.mjs` then `verify.mjs`/a tier-stepping capture.
+3. **Verify collision-free** — `node reference/docs/zones/layoutVerify.mjs <id>` until ✓. Nudge `along`/coords.
+4. **Build + screenshot** — `node reference/docs/zones/build.mjs` then `verify.mjs`/a tier-stepping capture.
    Confirm it READS as its topology and the growth reads (frontier receding, density rising).
 5. **Critical review** (below), fix, **commit + merge** (merge commits, not squash). The atlas
    auto-links built zones ("Open build-out →").

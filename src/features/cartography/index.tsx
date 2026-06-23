@@ -82,13 +82,13 @@ function useIsPortrait(): boolean {
   return portrait;
 }
 
-function getNodeStatus(node: MapNode, visitedSet: Set<string>, discoveredSet: Set<string>, current: string, playerLevel: number, oldCapitalUnlocked: boolean): NodeStatus {
+function getNodeStatus(node: MapNode, visitedSet: Set<string>, discoveredSet: Set<string>, current: string, locked: boolean, oldCapitalUnlocked: boolean): NodeStatus {
   if (node.requiresHearthTokens) return oldCapitalUnlocked ? "capital-ready" : "capital-locked";
   if (node.id === current) return "current";
   if (visitedSet.has(node.id)) return "visited";
   if (discoveredSet.has(node.id)) {
     if (!isAdjacent(current, node.id)) return "discovered-unreachable";
-    if (node.level > playerLevel) return "discovered-locked";
+    if (locked) return "discovered-locked";
     return "discovered-ready";
   }
   return "hidden";
@@ -199,17 +199,18 @@ interface NodeStatusChipProps {
   status: NodeStatus;
   target: MapNode;
   tokenCount?: number;
+  lockReason?: string | null;
 }
 
 type ChipTone = "default" | "muted" | "success" | "warning" | "danger" | "ember" | "gold" | "slate" | "info";
 
-function NodeStatusChip({ status, target, tokenCount = 0 }: NodeStatusChipProps) {
+function NodeStatusChip({ status, tokenCount = 0, lockReason }: NodeStatusChipProps) {
   let tone: ChipTone, text: string;
   switch (status) {
     case "current":               tone = "gold"; text = "◉ You are here"; break;
     case "visited":               tone = "success"; text = "✓ Visited · fast-travel"; break;
     case "discovered-ready":      tone = "gold"; text = "★ Ready to walk"; break;
-    case "discovered-locked":     tone = "danger"; text = `🔒 Level ${target.level} required`; break;
+    case "discovered-locked":     tone = "danger"; text = lockReason ? `🔒 ${lockReason}` : "🔒 Locked"; break;
     case "discovered-unreachable":tone = "muted"; text = "↯ No road from here"; break;
     case "capital-locked":        tone = "warning"; text = `🏛 Hearth-Tokens ${tokenCount}/3`; break;
     case "capital-ready":         tone = "gold"; text = "🏛 The Ember awaits"; break;
@@ -335,10 +336,11 @@ interface ActionButtonProps {
   isCurrent: boolean;
   canFastTravel: boolean;
   canUnlock: boolean;
+  lockReason?: string | null;
   onTravel: () => void;
 }
 
-function ActionButton({ status, node, isCurrent, canFastTravel, canUnlock, onTravel }: ActionButtonProps) {
+function ActionButton({ status, isCurrent, canFastTravel, canUnlock, lockReason, onTravel }: ActionButtonProps) {
   const base: CSSProperties = {
     ...cardStyle,
     width: "100%",
@@ -392,7 +394,7 @@ function ActionButton({ status, node, isCurrent, canFastTravel, canUnlock, onTra
   if (status === "discovered-locked") {
     return (
       <div style={{ ...base, background: "#d4b585", border: "2px solid #b08040", color: "#9a3a2a" }}>
-        Reach Level {node.level} first
+        {lockReason ?? "Locked"} first
       </div>
     );
   }
@@ -480,17 +482,18 @@ interface NodePanelProps {
   current: string;
   visited: string[];
   discovered: string[];
-  playerLevel: number;
   dispatch: Dispatch;
   state: GameState;
 }
 
-function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, state }: NodePanelProps) {
+function NodePanel({ node, current, visited, discovered, dispatch, state }: NodePanelProps) {
   const visitedSet    = useMemo(() => new Set<string>(visited),    [visited]);
   const discoveredSet = useMemo(() => new Set<string>(discovered), [discovered]);
   const capitalUnlocked = isOldCapitalUnlocked(state);
   const tokenCount = hearthTokenCount(state);
-  const status = getNodeStatus(node, visitedSet, discoveredSet, current, playerLevel, capitalUnlocked);
+  // Travel/found gate now lives on the zone tier ladder, not player level.
+  const lockReason = zoneTierGateReason(state, node.id);
+  const status = getNodeStatus(node, visitedSet, discoveredSet, current, !!lockReason, capitalUnlocked);
   const isCurrent = status === "current";
   const canFastTravel = status === "visited";
   const canUnlock = status === "discovered-ready";
@@ -528,7 +531,7 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
         )}
       </div>
 
-      <NodeStatusChip status={status} target={node} tokenCount={tokenCount} />
+      <NodeStatusChip status={status} target={node} tokenCount={tokenCount} lockReason={lockReason} />
 
       {showLore && lore?.epitaph && (
         <figure
@@ -569,6 +572,7 @@ function NodePanel({ node, current, visited, discovered, playerLevel, dispatch, 
         <ActionButton
           status={status} node={node}
           isCurrent={isCurrent} canFastTravel={canFastTravel} canUnlock={canUnlock}
+          lockReason={lockReason}
           onTravel={handleTravel}
         />
       </div>
@@ -710,7 +714,6 @@ export default function CartographyScreen({ state, dispatch }: CartographyScreen
   const mapCurrent = state.mapCurrent ?? "home";
   const mapVisited = state.mapVisited;
   const mapDiscovered = state.mapDiscovered ?? ["home", "meadow", "orchard"];
-  const level = state.level ?? 1;
 
   // Save migration: older saves don't have mapVisited.
   const visited: string[] = mapVisited || mapDiscovered;
@@ -731,23 +734,26 @@ export default function CartographyScreen({ state, dispatch }: CartographyScreen
   const payload = useMemo(() => {
     const founded: Record<string, boolean> = {};
     const keeperPaths: Record<string, string> = {};
+    const locked: string[] = [];
     for (const node of MAP_NODES as MapNode[]) {
       if (isSettlementFounded(state, node.id)) founded[node.id] = true;
       const p = settlementKeeperPath(state, node.id);
       if (p) keeperPaths[node.id] = p;
+      // A node whose zone-tier prerequisite is unmet paints as locked.
+      if (zoneTierGateReason(state, node.id)) locked.push(node.id);
     }
     return {
       current: mapCurrent,
       visited,
       discovered: mapDiscovered,
-      level,
+      locked,
       founded,
       keeperPaths,
       tokenCount: hearthTokenCount(state),
       oldCapitalUnlocked: isOldCapitalUnlocked(state),
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- state.settlements / heirlooms drive founded/keeperPaths/tokenCount
-  }, [mapCurrent, visited, mapDiscovered, level, state.settlements, state.heirlooms]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- state.settlements / heirlooms drive founded/keeperPaths/tokenCount/locked
+  }, [mapCurrent, visited, mapDiscovered, state.settlements, state.heirlooms]);
 
   function handleNodeTap(nodeId: string) {
     const next = nodeId === tapped ? null : nodeId;
@@ -761,7 +767,6 @@ export default function CartographyScreen({ state, dispatch }: CartographyScreen
       current={mapCurrent}
       visited={visited}
       discovered={mapDiscovered}
-      playerLevel={level}
       dispatch={dispatch}
       state={state}
     />

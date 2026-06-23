@@ -54,9 +54,10 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
   const biomeKey = "farm";
   const level = 1;
   const initialRoster = ["wren"];
-  const o1 = makeOrder(biomeKey, level, [], [], initialRoster);
-  const o2 = makeOrder(biomeKey, level, [o1.npc], [o1.key], initialRoster);
-  const o3 = makeOrder(biomeKey, level, [o1.npc, o2.npc], [o1.key, o2.key], initialRoster);
+  // Fresh state: home settlement is at tier 0, so no crafted orders yet.
+  const o1 = makeOrder(biomeKey, 0, [], [], initialRoster);
+  const o2 = makeOrder(biomeKey, 0, [o1.npc], [o1.key], initialRoster);
+  const o3 = makeOrder(biomeKey, 0, [o1.npc, o2.npc], [o1.key, o2.key], initialRoster);
   const marketSeed = Math.floor(Math.random() * 1e9);
   
   const saveSeed = overrides?.saveSeed ?? generateSaveSeed();

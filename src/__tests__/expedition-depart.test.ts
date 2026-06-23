@@ -96,8 +96,10 @@ describe("EXPEDITION/DEPART — rejections", () => {
     expect(inv(s1).tile_mine_stone).toBe(50);
   });
 
-  it("level-locked (mine needs L2) → no change", () => {
-    const s0 = ready({ level: 1 });
+  it("departing from an unfounded zone → no change", () => {
+    // Access is gated by founding the zone, not by player level: clear the
+    // quarry settlement so the founding guard rejects the expedition.
+    const s0 = ready({ settlements: { home: { founded: true } } });
     const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 5 } } });
     expect(s1.view).not.toBe("board");
     expect(inv(s1).bread).toBe(6);

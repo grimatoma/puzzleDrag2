@@ -1,0 +1,2567 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animated Canvas-Icon Review — puzzleDrag2</title>
+<style>
+  :root { --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --ink:#e6edf3; --sub:#9aa4b2; --line:#2a3038; --accent:#7ee787; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font:15px/1.62 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif; }
+  a { color:#7ee787; text-decoration:none; } a:hover { text-decoration:underline; }
+  code { background:#0a0e14; border:1px solid var(--line); border-radius:4px; padding:.05em .35em; font-size:.86em; }
+  .wrap { max-width:1280px; margin:0 auto; padding:0 22px 80px; }
+  header.hero { padding:46px 22px 30px; background:radial-gradient(120% 120% at 0% 0%, #18202c 0%, #0d1117 60%);
+    border-bottom:1px solid var(--line); }
+  header.hero .wrap { padding-bottom:0; }
+  h1 { font-size:30px; margin:0 0 6px; letter-spacing:-.5px; }
+  .kicker { color:var(--accent); font-weight:600; letter-spacing:.14em; text-transform:uppercase; font-size:12px; }
+  .lead { color:var(--sub); max-width:80ch; }
+  .statbar { display:flex; flex-wrap:wrap; gap:10px; margin:20px 0 4px; }
+  .stat { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:10px 14px; min-width:120px; }
+  .stat b { display:block; font-size:22px; } .stat span { color:var(--sub); font-size:12px; }
+  h2 { font-size:21px; margin:42px 0 14px; padding-bottom:8px; border-bottom:1px solid var(--line); }
+  h2.grouphead { margin-top:54px; font-size:24px; color:#fff; }
+  .panel { background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:20px 24px; margin:16px 0; }
+  .verdict p { font-size:16px; }
+  .findings { display:grid; grid-template-columns:repeat(auto-fill,minmax(330px,1fr)); gap:14px; }
+  .finding { background:var(--panel); border:1px solid var(--line); border-left-width:4px; border-radius:10px; padding:14px 16px; }
+  .finding h3 { margin:0 0 6px; font-size:15px; } .finding p { margin:0; color:var(--sub); font-size:13.5px; }
+  .finding.crit { border-left-color:#f85149; } .finding.warn { border-left-color:#f0a020; } .finding.info { border-left-color:#388bfd; }
+  .roadmap { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:14px; }
+  .phase { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; }
+  .phase h3 { margin:0 0 8px; font-size:15px; color:var(--accent); } .phase ul { margin:0; padding-left:18px; color:var(--sub); font-size:13.5px; }
+  .phase li { margin:5px 0; }
+  nav.toc { position:sticky; top:0; z-index:5; background:rgba(13,17,23,.92); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--line); padding:10px 0; margin-bottom:8px; }
+  nav.toc .wrap { padding-bottom:0; display:flex; flex-wrap:wrap; gap:8px 18px; }
+  .navgroup { font-size:12.5px; } .navg { color:#fff; font-weight:700; margin-right:8px; }
+  nav.toc a { color:var(--sub); margin-right:10px; }
+  .module { margin:26px 0 8px; }
+  .modhead h3 { font-size:18px; margin:0 0 4px; } .modhead .count { color:var(--sub); font-weight:400; font-size:13px; }
+  .boardtag { font-size:10.5px; background:#10341f; color:#7ee787; border:1px solid #1c5733; border-radius:20px; padding:2px 9px; vertical-align:middle; }
+  .summary { color:var(--ink); margin:4px 0; max-width:96ch; }
+  .priorities { color:var(--sub); margin:4px 0 10px; max-width:96ch; font-size:13.5px; }
+  .stripwrap { overflow-x:auto; padding-bottom:6px; margin-bottom:10px; }
+  img.strip { height:150px; border:1px solid var(--line); border-radius:8px; background:#11151c; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(290px,1fr)); gap:14px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; }
+  .card:hover { border-color:#3a4658; }
+  .gifwrap { background:
+      conic-gradient(#1b2230 90deg,#161b22 0 180deg,#1b2230 0 270deg,#161b22 0) 0 0/22px 22px;
+      display:flex; align-items:center; justify-content:center; padding:10px; }
+  .gifwrap img { width:150px; height:150px; image-rendering:auto; }
+  .cardbody { padding:11px 13px 13px; }
+  .key { font-family:ui-monospace,Menlo,Consolas,monospace; font-size:12.5px; color:#cbd5e1; margin-bottom:7px; word-break:break-all; }
+  .badges { display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-bottom:7px; }
+  .badge { font-size:11px; font-weight:700; color:#0d1117; background:var(--c); border-radius:5px; padding:2px 7px; }
+  .qual { font-size:11px; color:var(--sub); border:1px solid var(--line); border-radius:5px; padding:2px 6px; }
+  .reads { font-size:11px; border-radius:5px; padding:2px 6px; border:1px solid var(--line); }
+  .reads-yes { color:#7ee787; } .reads-marginal { color:#f0a020; } .reads-no { color:#f85149; border-color:#5a2024; }
+  .chips { display:flex; flex-wrap:wrap; gap:5px; margin-bottom:7px; }
+  .chip { font-size:10.5px; color:var(--sub); background:#0a0e14; border:1px solid var(--line); border-radius:5px; padding:1px 6px; }
+  .chip.danger { color:#f85149; border-color:#5a2024; } .chip.warn { color:#f0a020; border-color:#5a4420; }
+  .note { margin:0; color:var(--sub); font-size:13px; }
+  footer { color:var(--sub); font-size:12.5px; border-top:1px solid var(--line); padding:20px 0; margin-top:40px; }
+  .legend { display:flex; flex-wrap:wrap; gap:14px; color:var(--sub); font-size:12.5px; margin-top:8px; }
+  .legend b { color:var(--ink); }
+</style></head>
+<body>
+<header class="hero"><div class="wrap">
+  <div class="kicker">puzzleDrag2 · art review</div>
+  <h1>Animated Canvas-Icon Review</h1>
+  <p class="lead">A critical, per-icon evaluation of all 159 animated canvas tiles (the procedurally
+  drawn <code>(ctx,t)</code> icons previewed in the Dev Panel <em>Icons</em> tab), plus a global look at
+  cohesiveness and a roadmap to higher-quality, playful, WC3-style idles. Each was rendered headlessly
+  (Playwright → the real browser canvas), reviewed by a per-module art-director agent at 8–12× zoom
+  against the source, and cross-checked with objective motion/centering metrics.</p>
+  <div class="statbar">
+    <div class="stat"><b>159</b><span>animated icons</span></div>
+    <div class="stat"><b>20</b><span>modules</span></div>
+    <div class="stat"><b>strong</b><span>static craft / cohesion</span></div>
+    <div class="stat"><b>weak</b><span>motion (the fix target)</span></div>
+  </div>
+  <div class="legend">
+    <span><b>Verdict:</b> Ship · Minor · Major · Replace</span>
+    <span><b>Motion:</b> Great · Good · Weak · Rigid · Dead</span>
+    <span><b>⟳</b> objective motion score (&lt;3 ≈ static)</span>
+    <span><b>⊹</b> off-center · <b>∅</b> blank rest frame</span>
+  </div>
+</div></header>
+
+<nav class="toc"><div class="wrap"><div class="navgroup"><span class="navg">Farm &amp; Flora</span><a href="#mod-crops">Crops &amp; Produce</a> <a href="#mod-nature">Nature Bits</a></div><div class="navgroup"><span class="navg">Creatures</span><a href="#mod-critters">Critters (bugs)</a> <a href="#mod-pets">Pets &amp; Baby Animals</a> <a href="#mod-reef">Reef &amp; Sea</a></div><div class="navgroup"><span class="navg">Earth, Gems &amp; Treasure</span><a href="#mod-ores">Ores &amp; Minerals</a> <a href="#mod-gemsDishes">Gems &amp; Dishes</a> <a href="#mod-treasure">Treasure &amp; Loot</a></div><div class="navgroup"><span class="navg">Food &amp; Drink</span><a href="#mod-drinks">Drinks</a></div><div class="navgroup"><span class="navg">Town &amp; Decor</span><a href="#mod-buildings">Buildings</a> <a href="#mod-cozyDecor">Cozy Decor</a> <a href="#mod-furniture">Furniture</a> <a href="#mod-festive">Festive / Holiday</a></div><div class="navgroup"><span class="navg">Sky &amp; Weather</span><a href="#mod-weather">Weather</a> <a href="#mod-celestial">Celestial</a></div><div class="navgroup"><span class="navg">Magic</span><a href="#mod-arcane">Arcane</a> <a href="#mod-spells">Spell FX</a></div><div class="navgroup"><span class="navg">Tools, Music &amp; Arms</span><a href="#mod-instruments">Instruments</a> <a href="#mod-weapons">Weapons &amp; Armor</a> <a href="#mod-workshopTools">Workshop Tools</a></div></div></nav>
+
+<div class="wrap">
+  <h2>The verdict</h2>
+  <div class="panel verdict">
+<p><strong>The static art is the strong part.</strong> All 159 icons share one disciplined
+"glossy sticker" language — a dark outline, a consistent top-/top-left key light, gradient-shaded
+bodies, and a soft elliptical ground-shadow — so at rest the library reads as one cohesive family.
+The first-draft weakness is almost entirely <strong>motion</strong>. The set feels janky and cheap
+not because the drawings are bad but because nearly every icon fakes life the same few ways — a
+sliding glint, a glow pulse, a twinkle, some rising particles — laid over a body that never actually
+moves, and because <em>none of the 12 animation principles</em> (anticipation, squash &amp; stretch,
+overshoot, eased timing, follow-through, secondary motion) are applied. A minority of icons are
+genuinely alive; they should become the benchmarks the rest are rebuilt against.</p>
+</div>
+
+  <h2>Cross-cutting findings</h2>
+  <p class="lead">The patterns that repeat across modules — fix these once and dozens of icons improve.</p>
+  <div class="findings"><div class="finding crit"><h3>1 · &ldquo;Static body + animated overlay&rdquo; — the #1 systemic failure</h3><p>The object's geometry never deforms; life is faked with a glint/sheen sweep, a glow pulse, twinkles, or particles painted over a frozen shape. Pervasive across <b>ores</b> (all eight have a measured 0&nbsp;px body delta), <b>treasure</b>, <b>weapons</b> (glint-only), the <b>gem</b> trio, <b>drinks</b> (rigid vessels), <b>furniture</b> (lamp/table/mirror/bookshelf never move — only their light does), <b>nature</b> (light-cycling), <b>festive</b> (holly/candy-cane), and several <b>instruments</b>. <b>Fix:</b> animate the OBJECT first (breathe / squash / bob / tilt) and demote the overlay to a secondary accent.</p></div><div class="finding crit"><h3>2 · Rigid whole-sprite rotation (the brief's named failure)</h3><p><b>spell_wind</b>, <b>reef_starfish</b>, <b>astral_galaxy</b>, <b>arcane_pentacle</b>, <b>instr_bell</b>, <b>instr_tambourine</b>, the weapon pendulums and <b>bld_windmill</b> (constant-velocity) all rotate the entire drawing about one pivot. It reads as a spinning logo/hubcap, not character — and on symmetric shapes (pentacle, starfish, galaxy) it's barely perceptible despite a high motion score. <b>Fix:</b> articulate (per-part motion, traveling waves, sensible pivots) instead of rotating the whole sprite.</p></div><div class="finding crit"><h3>3 · Dead / near-static icons (motion &lt; ~3)</h3><p>On the board these are indistinguishable from still images: <b>bld_tower</b> (0.1), <b>bld_barn</b> (0.17), <b>drink_milk</b> (0.57), <b>furn_bookshelf</b> (0.61), <b>ore_crystal_vein</b> (0.87), <b>festive_holly</b> (1.21), <b>cozy_mailbox</b> (1.22), <b>treasure_map</b> (1.63), <b>weapon_dagger</b> (1.69), <b>weapon_mace</b> (1.73), <b>arcane_potion_blue</b> (1.75), <b>gem_emerald</b>, <b>arcane_runestone</b>, <b>wtool_nail</b>. Several have animation code that is simply sub-perceptible at size.</p></div><div class="finding crit"><h3>4 · Blank rest frames — unusable as idle tiles</h3><p><b>astral_shooting_star</b> and <b>weather_comet</b> are completely EMPTY at frame 0 — the subject only exists mid-flight as it streaks across and off the canvas. A tile must always show its subject at rest. <b>Fix:</b> park the subject in-frame and make the streak a periodic event.</p></div><div class="finding warn"><h3>5 · None of the 12 animation principles (the root cause of &ldquo;cheap&rdquo;)</h3><p>Almost every animation is a pure linear <code>Math.sin(t&middot;f)</code> with no eased in/out, no anticipation wind-up, no overshoot/settle, no follow-through/overlap, and no squash &amp; stretch. This single gap explains most of the &ldquo;janky&rdquo; feel. It is the highest-leverage thing to fix set-wide.</p></div><div class="finding warn"><h3>6 · Shadows don't react to motion</h3><p>Ground-shadow ellipses stay frozen while subjects bob, hop, and breathe, so contact is broken (pets, crops, drinks, &hellip;). <b>Fix:</b> couple shadow scale/offset inversely to vertical motion — the one cheap change that grounds everything.</p></div><div class="finding warn"><h3>7 · Framing / centering is inconsistent</h3><p>Everything is pinned to a <code>y=22</code> shadow baseline regardless of subject height, so short subjects float with dead air above: <b>treasure_gold_bars</b> (31&nbsp;u empty on top), <b>wtool_drill / saw / wrench</b> (off ~8&ndash;13&nbsp;u), <b>instr_fiddle</b> (off_x 9), <b>arcane_magic_dust</b> (off_x 7.1), <b>crop_peas</b> (off_y 8.4), <b>drink_tea</b> (off_y 9.1). <b>Fix:</b> center each subject's bounding box; don't pin to a shared baseline.</p></div><div class="finding warn"><h3>8 · Scale / visual-weight drifts within and across modules</h3><p><b>bug_dragonfly</b> is a thin stick next to <b>bug_snail</b>'s boulder; <b>weapon_dagger</b> is half the mass of the shield; the coffee/tea saucers read ~50% bulkier than the narrow drink glasses. Establish a target footprint band so a mixed board reads evenly.</p></div><div class="finding info"><h3>9 · Motion-score caveat</h3><p>A high motion number is NOT proof of good motion — a rigid rotation or a bright sliding glint rectangle inflates pixel-change while reading as lifeless. Judge perceived character, not the metric. (The metric is still great for finding the <em>dead</em> end of the scale.)</p></div><div class="finding warn"><h3>10 · Shared-helper bugs cause &ldquo;jank&rdquo; across many icons at once</h3><p><b>treasure</b>'s <code>glintSweep()</code> emits a hard-edged rectangle that leaks past loose clips (a compositing-glitch look on coin_stack &amp; chest); <code>sweepPhase()</code> in <b>ores</b>/<b>treasure</b> is a triangle wave that hard-resets (a teleport, not an eased return); <b>buildings</b>' <code>flicker()</code> only swings alpha 0.82&ndash;1.0 — imperceptible, yet it's the <em>only</em> animation on tower &amp; barn. Fixing these helpers cleans up many icons in one move.</p></div><div class="finding info"><h3>11 · Loop seams</h3><p>Incommensurate sine frequencies or sawtooth resets break seamless looping (arcane_crystal_ball spin, the candle, several glint sweeps). <b>Fix:</b> drive loops off <code>phase = 2&pi;&middot;f/loopLen</code> so they tile exactly.</p></div><div class="finding info"><h3>12 · The overlay tricks are over-used as a crutch</h3><p>Glint-sweep + twinkle + glow-pulse appear in nearly every module, so even though the static art is nicely varied, the <em>approach to motion</em> feels samey across the whole set. Variety of <em>gesture</em> (peck, snip, ring, drip, flutter, jet) is what's missing.</p></div></div>
+
+  <h2>What already works — the benchmarks</h2>
+  <div class="panel"><p>A minority of icons hit the bar and should be the reference for the rebuild:</p>
+  <p style="color:var(--sub)">crop_sunflower, pet_dog, pet_frog, bug_firefly, reef_jellyfish, weapon_staff, instr_drum, drink_water, bld_windmill, bld_watermill, cozy_wind_chime, cozy_birdhouse, furn_fireplace, furn_clock, spell_arcane_missile, spell_shield_bubble, weather_sun_cloud, astral_eclipse, arcane_candle, arcane_crystal_ball, gem_opal, dish_honey_pot</p></div>
+
+  <h2>The bar &amp; direction</h2>
+  <div class="panel">
+<p>The target is <strong>playful, characterful idle motion with Warcraft-3 unit-idle energy</strong>
+— each idle a small <em>gesture</em> appropriate to the subject (a chicken pecks, a tree breezes, a
+gem glints-and-sparkles, a fish bobs &amp; flicks, a bell rings). Idles need not be uniform, but they
+must share one consistent <em>style and energy level</em>. Three rules turn this set from first-draft
+to compelling:</p>
+<ol>
+<li><strong>Animate the body, not the light.</strong> Lead with real deformation (breathe, squash &amp;
+stretch, bob, tilt, articulate); keep the glint/twinkle/glow as a <em>secondary accent</em>, never the
+whole show.</li>
+<li><strong>Apply the 12 principles.</strong> Every idle gets eased timing (not linear sine),
+anticipation before a beat, an overshoot + settle after it, and a touch of secondary/overlapping
+motion so parts trail the lead.</li>
+<li><strong>Prefer event-driven beats over constant motion.</strong> A peck → rest → peck reads as
+alive; a perpetual metronome sine reads as a machine. Give most icons a rest pose and a periodic
+&ldquo;moment.&rdquo;</li>
+</ol>
+<p><strong>Shared standards to adopt set-wide:</strong> a small easing/helper library
+(<code>easeInOut</code>, <code>easeOutBack</code> for overshoot); a &ldquo;shadow couples to vertical
+motion&rdquo; rule; a centering + target-footprint pass; fixes to the shared <code>glintSweep</code> /
+<code>sweepPhase</code> / <code>flicker</code> helpers; a &ldquo;never blank at rest&rdquo; rule; and a
+&ldquo;loop by phase&rdquo; rule for seamless cycles.</p>
+</div>
+
+  <h2>Prioritized roadmap</h2>
+  <div class="roadmap"><div class="phase"><h3>P0 — Correctness (do first)</h3><ul><li>Fix the two <b>blank rest frames</b> (astral_shooting_star, weather_comet).</li><li>Resurrect the <b>truly dead</b> icons (tower, barn, milk, bookshelf, crystal_vein, holly, mailbox, map, dagger, mace, both potions, runestone, nail) — each needs a real, visible idle.</li><li>Fix the <b>shared-helper bugs</b> (glintSweep feather + tight clip + lower intensity; sweepPhase eased return; flicker amplitude) — high leverage, many icons at once.</li><li>Fix the <b>worst framing</b> (gold_bars, drill, saw, wrench, fiddle, magic_dust, tea, peas).</li></ul></div><div class="phase"><h3>P1 — Kill the anti-patterns</h3><ul><li>Replace <b>&ldquo;static body + overlay&rdquo;</b> with object deformation on the big offenders (all ores, most treasure, the drink vessels, furniture, the gem trio, nature's light-cyclers).</li><li>Replace <b>rigid whole-sprite rotation</b> with articulation (wind, starfish, galaxy, pentacle, bell, tambourine, windmill).</li></ul></div><div class="phase"><h3>P2 — 12-principles polish pass</h3><ul><li>Add anticipation + overshoot + eased timing + secondary motion to <em>every</em> idle.</li><li>Convert constant sines into event-driven beats (peck / snip / ring / flash / drip).</li><li>Couple all shadows to motion; normalize scale/visual-weight to a target band.</li></ul></div><div class="phase"><h3>Infra &amp; verification</h3><ul><li>Build the shared easing + helper library and a centering/scale utility.</li><li>Run a loop-seam audit (drive every loop by phase).</li><li>Re-run the capture + montage/GIF review (this same pipeline) to verify the rebuild.</li></ul></div></div>
+
+  <h2>Cohesiveness at a glance</h2>
+  <div class="panel"><p class="lead" style="margin-top:0">Every icon's rest frame, grouped by module —
+  the static set reads as one family (shared outline, gloss, top-left light, ground shadow). Motion
+  energy is what varies and what to unify.</p>
+  <img src="contact-sheet.png" alt="all icons contact sheet" style="width:100%; border:1px solid var(--line); border-radius:10px;"></div>
+
+  <h2>Per-icon evaluation</h2>
+  <p class="lead">Live looping previews. Each card: verdict · motion class · quality/10 · 56px
+  readability · objective chips · the key defect → fix. Two modules (crops, nature) also have full
+  source-line deep-dives saved under <code>reports/</code>.</p>
+  <h2 class="grouphead">Farm &amp; Flora</h2>
+    <section class="module" id="mod-crops">
+      <div class="modhead">
+        <h3>Crops &amp; Produce <span class="count">6 icons</span> <span class="boardtag" title="appears on / maps to a farming-board resource type">board-relevant</span></h3>
+        <p class="summary">Coherent gradient-sticker art; the split is motion energy — sunflower/wheat/peas deform, while watermelon/pumpkin/corn are near-frozen bodies under a sliding glint.</p>
+        <p class="priorities"><b>Top priorities:</b> Kill the frozen-body+glint pattern (melon/pumpkin/corn) · couple every shadow to the subject · fix peas/wheat framing and add eased overshoot.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/crops.png" alt="crops"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="crop_sunflower">
+        <div class="gifwrap"><img loading="lazy" src="gifs/crop_sunflower.gif" alt="crop_sunflower"></div>
+        <div class="cardbody">
+          <div class="key">crop_sunflower</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 14.53</span></div>
+          <p class="note">Head shears off the stem (two sway pivots) and the bee-sparkle reads as a glitch; anchor the head to the stem tip, add eased overshoot + a petal-fan wave.</p>
+        </div>
+      </div>
+      <div class="card" id="crop_wheat">
+        <div class="gifwrap"><img loading="lazy" src="gifs/crop_wheat.gif" alt="crop_wheat"></div>
+        <div class="cardbody">
+          <div class="key">crop_wheat</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 9.39</span></div>
+          <p class="note">Sits low with starburst awns that look like noise and a rigid clump sway; re-center, curve the awns, add a per-stalk traveling-wave bend.</p>
+        </div>
+      </div>
+      <div class="card" id="crop_corn">
+        <div class="gifwrap"><img loading="lazy" src="gifs/crop_corn.gif" alt="crop_corn"></div>
+        <div class="cardbody">
+          <div class="key">crop_corn</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 10.33</span></div>
+          <p class="note">Cob near-frozen; only a hard glint rectangle slides over it. Replace with an eased nod + a fake axial roll of the kernel grid.</p>
+        </div>
+      </div>
+      <div class="card" id="crop_peas">
+        <div class="gifwrap"><img loading="lazy" src="gifs/crop_peas.gif" alt="crop_peas"></div>
+        <div class="cardbody">
+          <div class="key">crop_peas</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 9.79</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off -2.5,+8.4</span></div>
+          <p class="note">Whole pod rigidly bobs/tilts and floats low (off_y 8.4); raise it, animate the pod opening/closing at the hinge with overshoot.</p>
+        </div>
+      </div>
+      <div class="card" id="crop_watermelon">
+        <div class="gifwrap"><img loading="lazy" src="gifs/crop_watermelon.gif" alt="crop_watermelon"></div>
+        <div class="cardbody">
+          <div class="key">crop_watermelon</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.47</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +0,+6.5</span></div>
+          <p class="note">Beautiful art, 100% static except a sliding glint + tiny sparkles; add a springy wobble-and-plop (squash/overshoot) and demote the glint.</p>
+        </div>
+      </div>
+      <div class="card" id="crop_pumpkin">
+        <div class="gifwrap"><img loading="lazy" src="gifs/crop_pumpkin.gif" alt="crop_pumpkin"></div>
+        <div class="cardbody">
+          <div class="key">crop_pumpkin</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 6.77</span></div>
+          <p class="note">2% breathe is invisible and the rib glint slides over a frozen body; add a heavy squash-settle that bulges the ribs and drives the highlights.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-nature">
+      <div class="modhead">
+        <h3>Nature Bits <span class="count">8 icons</span> <span class="boardtag" title="appears on / maps to a farming-board resource type">board-relevant</span></h3>
+        <p class="summary">Calm/sleepy and too samey — 6 of 8 are light-cycling on a static body with no real deformation; leaf &amp; cattail rotate as one welded piece.</p>
+        <p class="priorities"><b>Top priorities:</b> Replace light-sweeps with real deformation · articulate the leaf/cattail (pivot + follow-through) · unify one light direction + a shared sparkle accent.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/nature.png" alt="nature"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="nature_leaf">
+        <div class="gifwrap"><img loading="lazy" src="gifs/nature_leaf.gif" alt="nature_leaf"></div>
+        <div class="cardbody">
+          <div class="key">nature_leaf</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 4.82</span></div>
+          <p class="note">Pivots from its center (wags, doesn&#x27;t flutter) with stuck-on highlights; pivot at the stem base, add a cantilever tip-curl + leaf twist.</p>
+        </div>
+      </div>
+      <div class="card" id="nature_feather">
+        <div class="gifwrap"><img loading="lazy" src="gifs/nature_feather.gif" alt="nature_feather"></div>
+        <div class="cardbody">
+          <div class="key">nature_feather</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 16.75</span></div>
+          <p class="note">A smooth balloon vane that tips/slides as one piece; part the edge into barbs and run a traveling ripple down the vane with an edge-on flip.</p>
+        </div>
+      </div>
+      <div class="card" id="nature_clover">
+        <div class="gifwrap"><img loading="lazy" src="gifs/nature_clover.gif" alt="nature_clover"></div>
+        <div class="cardbody">
+          <div class="key">nature_clover</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 7.24</span></div>
+          <p class="note">Leaflets are frozen; only a wash moves. Make each leaflet pop in sequence as the wash reaches it, ending on the lucky-sparkle.</p>
+        </div>
+      </div>
+      <div class="card" id="nature_dewdrop">
+        <div class="gifwrap"><img loading="lazy" src="gifs/nature_dewdrop.gif" alt="nature_dewdrop"></div>
+        <div class="cardbody">
+          <div class="key">nature_dewdrop</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 6.32</span></div>
+          <p class="note">Good drip cycle, but the body barely jiggles and never necks/pinches; add squash-stretch + a real surface-tension pinch + a ripple.</p>
+        </div>
+      </div>
+      <div class="card" id="nature_spiderweb">
+        <div class="gifwrap"><img loading="lazy" src="gifs/nature_spiderweb.gif" alt="nature_spiderweb"></div>
+        <div class="cardbody">
+          <div class="key">nature_spiderweb</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 12.94</span></div>
+          <p class="note">Rigid octagon that scale-shimmers as one ring; ripple a traveling wobble out from the hub and twang a strand when a dewdrop drops.</p>
+        </div>
+      </div>
+      <div class="card" id="nature_cattail">
+        <div class="gifwrap"><img loading="lazy" src="gifs/nature_cattail.gif" alt="nature_cattail"></div>
+        <div class="cardbody">
+          <div class="key">nature_cattail</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 33.85</span></div>
+          <p class="note">Head/reed/blades sway as one rigid body; lag the heavy head behind the reed (follow-through) and shed fluff at the sway peaks.</p>
+        </div>
+      </div>
+      <div class="card" id="nature_mushroom_cluster">
+        <div class="gifwrap"><img loading="lazy" src="gifs/nature_mushroom_cluster.gif" alt="nature_mushroom_cluster"></div>
+        <div class="cardbody">
+          <div class="key">nature_mushroom_cluster</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 7.66</span></div>
+          <p class="note">2% breathe is invisible and it sits low; give each cap a staggered squash-bob and an occasional spore puff.</p>
+        </div>
+      </div>
+      <div class="card" id="nature_seashell">
+        <div class="gifwrap"><img loading="lazy" src="gifs/nature_seashell.gif" alt="nature_seashell"></div>
+        <div class="cardbody">
+          <div class="key">nature_seashell</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.75</span></div>
+          <p class="note">Body is 100% static under a flat sheen wipe; make it a living clam that opens/closes at the hinge with the rim lobes rippling.</p>
+        </div>
+      </div></div>
+    </section><h2 class="grouphead">Creatures</h2>
+    <section class="module" id="mod-critters">
+      <div class="modhead">
+        <h3>Critters (bugs) <span class="count">8 icons</span> <span class="boardtag" title="appears on / maps to a farming-board resource type">board-relevant</span></h3>
+        <p class="summary">Strong cohesive static, but motion splits into busy (bee/butterfly) vs essentially static (ladybug/caterpillar/ant) — and the &#x27;busy&#x27; ones are width-scale flaps or rigid translation, not articulation. Amplitudes tuned far too small.</p>
+        <p class="priorities"><b>Top priorities:</b> Triple every motion amplitude &amp; stop translating whole sprites · fix the bee fuzz-fence · re-center/re-scale the dragonfly.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/critters.png" alt="critters"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="bug_bee">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bug_bee.gif" alt="bug_bee"></div>
+        <div class="cardbody">
+          <div class="key">bug_bee</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 49.38</span></div>
+          <p class="note">Wing &#x27;flap&#x27; is a width-only squish and the fuzz tufts render as a beige barcode fence; rotate the wings, fix the fuzz, add a hover squash.</p>
+        </div>
+      </div>
+      <div class="card" id="bug_butterfly">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bug_butterfly.gif" alt="bug_butterfly"></div>
+        <div class="cardbody">
+          <div class="key">bug_butterfly</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 73.69</span></div>
+          <p class="note">Wings flatten horizontally like a venetian blind (collapses to a sliver) and the palette is one muddy orange; foreshorten with tip-rotation, lift the wing roots.</p>
+        </div>
+      </div>
+      <div class="card" id="bug_ladybug">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bug_ladybug.gif" alt="bug_ladybug"></div>
+        <div class="cardbody">
+          <div class="key">bug_ladybug</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 9.76</span></div>
+          <p class="note">Gorgeous static, but the shell-open is crushed to invisible and a spot tears at the seam; commit to a real wing-flash + fix the per-half spot/gloss.</p>
+        </div>
+      </div>
+      <div class="card" id="bug_snail">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bug_snail.gif" alt="bug_snail"></div>
+        <div class="cardbody">
+          <div class="key">bug_snail</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 15.84</span></div>
+          <p class="note">Whole snail slides in place and the rigid shell wrongly squashes; confine squash/stretch to the foot, keep the shell rigid, add a traveling shell shimmer.</p>
+        </div>
+      </div>
+      <div class="card" id="bug_dragonfly">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bug_dragonfly.gif" alt="bug_dragonfly"></div>
+        <div class="cardbody">
+          <div class="key">bug_dragonfly</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">5/10</span>
+            <span class="reads reads-no">No @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 17.89</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off -0.1,+9.2</span></div>
+          <p class="note">A 3px-thin body that darts as a rigid stick and sits low (detached shadow); thicken/raise/re-center it, render wings as ghosted blur, dart with anticipation.</p>
+        </div>
+      </div>
+      <div class="card" id="bug_firefly">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bug_firefly.gif" alt="bug_firefly"></div>
+        <div class="cardbody">
+          <div class="key">bug_firefly</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 34.23</span></div>
+          <p class="note">Best motion (breathing glow) but the body just translates, the glow is off-center from the bug, and a missing shadow floats it; pump the abdomen with the glow + a flash spike.</p>
+        </div>
+      </div>
+      <div class="card" id="bug_ant">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bug_ant.gif" alt="bug_ant"></div>
+        <div class="cardbody">
+          <div class="key">bug_ant</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 12.98</span></div>
+          <p class="note">The sophisticated tripod gait is invisible (thin dark legs on a jiggling body); thicken/brighten the legs, exaggerate the swing, bob the body with the gait.</p>
+        </div>
+      </div>
+      <div class="card" id="bug_caterpillar">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bug_caterpillar.gif" alt="bug_caterpillar"></div>
+        <div class="cardbody">
+          <div class="key">bug_caterpillar</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 10.8</span></div>
+          <p class="note">The most charming static, but the hump wave lifts only 1.6/64u (perceptually frozen) and the eyes are asymmetric; add a real bunch-and-stretch inchworm accordion.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-pets">
+      <div class="modhead">
+        <h3>Pets &amp; Baby Animals <span class="count">10 icons</span> <span class="boardtag" title="appears on / maps to a farming-board resource type">board-relevant</span></h3>
+        <p class="summary">Excellent, disciplined chibi craft; motion is the weak, samey part — every mammal is the same recipe: a rigid whole-body vertical bob + one wiggling appendage, with no torso squash, anticipation, or overshoot. Several bodies are fully frozen.</p>
+        <p class="priorities"><b>Top priorities:</b> Kill the rigid whole-body translate — add torso squash &amp; stretch · animate the frozen bodies (lamb/piglet/goat/hedgehog) · make shadows react + add eased beats.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/pets.png" alt="pets"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="pet_cat">
+        <div class="gifwrap"><img loading="lazy" src="gifs/pet_cat.gif" alt="pet_cat"></div>
+        <div class="cardbody">
+          <div class="key">pet_cat</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 6.58</span></div>
+          <p class="note">Sub-pixel breathe + a tiny tail; lead with a slow eased tail-flick (slow lift, snap, settle) + a real breathing torso.</p>
+        </div>
+      </div>
+      <div class="card" id="pet_dog">
+        <div class="gifwrap"><img loading="lazy" src="gifs/pet_dog.gif" alt="pet_dog"></div>
+        <div class="cardbody">
+          <div class="key">pet_dog</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 21.3</span></div>
+          <p class="note">Genuinely alive (fast tail wag) but the body rigidly bobs and the floppy ears read as horns; add a panting torso squash + bursty wag + head-tilt.</p>
+        </div>
+      </div>
+      <div class="card" id="pet_rabbit">
+        <div class="gifwrap"><img loading="lazy" src="gifs/pet_rabbit.gif" alt="pet_rabbit"></div>
+        <div class="cardbody">
+          <div class="key">pet_rabbit</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 31.66</span></div>
+          <p class="note">Textbook rigid bob — the whole rabbit translates ±6px with only 10% squash; rebuild as a real hop (crouch anticipation → stretch launch → overshoot land).</p>
+        </div>
+      </div>
+      <div class="card" id="pet_chick">
+        <div class="gifwrap"><img loading="lazy" src="gifs/pet_chick.gif" alt="pet_chick"></div>
+        <div class="cardbody">
+          <div class="key">pet_chick</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 25.52</span></div>
+          <p class="note">Good fuzz/wing life, but the peck is the whole body dropping with no anticipation; add a peck-and-perk with squash on contact + a wing shimmy.</p>
+        </div>
+      </div>
+      <div class="card" id="pet_duckling">
+        <div class="gifwrap"><img loading="lazy" src="gifs/pet_duckling.gif" alt="pet_duckling"></div>
+        <div class="cardbody">
+          <div class="key">pet_duckling</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 21.85</span></div>
+          <p class="note">Waddle is a rigid rock+slide of the whole body; replace with an alternating-foot weight shift (plant one foot, step the other).</p>
+        </div>
+      </div>
+      <div class="card" id="pet_lamb">
+        <div class="gifwrap"><img loading="lazy" src="gifs/pet_lamb.gif" alt="pet_lamb"></div>
+        <div class="cardbody">
+          <div class="key">pet_lamb</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 10.64</span></div>
+          <p class="note">Dead wool body (1% breathe) with a talking head; add a deforming wool jiggle + a graze dip + a wool-shake.</p>
+        </div>
+      </div>
+      <div class="card" id="pet_piglet">
+        <div class="gifwrap"><img loading="lazy" src="gifs/pet_piglet.gif" alt="pet_piglet"></div>
+        <div class="cardbody">
+          <div class="key">pet_piglet</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 12.97</span></div>
+          <p class="note">Frozen torso with a wiggling head; lead with the curly tail, add a breathing/bouncing body + a snout snuffle.</p>
+        </div>
+      </div>
+      <div class="card" id="pet_goat_kid">
+        <div class="gifwrap"><img loading="lazy" src="gifs/pet_goat_kid.gif" alt="pet_goat_kid"></div>
+        <div class="cardbody">
+          <div class="key">pet_goat_kid</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">5/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 12.42</span></div>
+          <p class="note">Worst composition (head jammed into the body, cross-eyed) on a dead torso with a loose-bobbing head; fix the art first, then a head-butt tease.</p>
+        </div>
+      </div>
+      <div class="card" id="pet_hedgehog">
+        <div class="gifwrap"><img loading="lazy" src="gifs/pet_hedgehog.gif" alt="pet_hedgehog"></div>
+        <div class="cardbody">
+          <div class="key">pet_hedgehog</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 2.17</span></div>
+          <p class="note">Best static craft, near-zero motion (only spike tips lengthen 1.2px); add a breathing dome + a nose sniff + a startled spike-bristle beat.</p>
+        </div>
+      </div>
+      <div class="card" id="pet_frog">
+        <div class="gifwrap"><img loading="lazy" src="gifs/pet_frog.gif" alt="pet_frog"></div>
+        <div class="cardbody">
+          <div class="key">pet_frog</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 6.84</span></div>
+          <p class="note">One of two with real squash/stretch (the crouch); deepen/vary it, add eye swivels + a telegraphed mini-hop with overshoot.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-reef">
+      <div class="modhead">
+        <h3>Reef &amp; Sea <span class="count">6 icons</span> <span class="boardtag" title="appears on / maps to a farming-board resource type">board-relevant</span></h3>
+        <p class="summary">Two sub-families (warm crustaceans + cool jelly/octopus) that mostly move via a global transform of a rigid body; only the jellyfish truly deforms. No easing/anticipation anywhere.</p>
+        <p class="priorities"><b>Top priorities:</b> Kill the rigid transforms (starfish spin, body translates) · add the 12-principles vocabulary · fix the lighthouse beam + give the jellyfish a shadow.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/reef.png" alt="reef"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="reef_jellyfish">
+        <div class="gifwrap"><img loading="lazy" src="gifs/reef_jellyfish.gif" alt="reef_jellyfish"></div>
+        <div class="cardbody">
+          <div class="key">reef_jellyfish</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 46.62</span></div>
+          <p class="note">Best deformation in module (bell squash + tentacle wave) but metronomic + missing a shadow; make it an eased jet-propulsion pulse, add a shadow for cohesion.</p>
+        </div>
+      </div>
+      <div class="card" id="reef_octopus">
+        <div class="gifwrap"><img loading="lazy" src="gifs/reef_octopus.gif" alt="reef_octopus"></div>
+        <div class="cardbody">
+          <div class="key">reef_octopus</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 33.61</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +0.2,+6.8</span></div>
+          <p class="note">Most character, but tentacles barely move (&lt;20% tip deflection), the head-gloss reads as a horn, and it sits low; amplify + curl the arms, fix the gloss, re-center.</p>
+        </div>
+      </div>
+      <div class="card" id="reef_crab">
+        <div class="gifwrap"><img loading="lazy" src="gifs/reef_crab.gif" alt="reef_crab"></div>
+        <div class="cardbody">
+          <div class="key">reef_crab</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 25.52</span></div>
+          <p class="note">Whole crab rigidly slides side-to-side with buzzing flailing legs; replace with a tilt+alternating-leg gait + a staggered single-claw threat display.</p>
+        </div>
+      </div>
+      <div class="card" id="reef_seahorse">
+        <div class="gifwrap"><img loading="lazy" src="gifs/reef_seahorse.gif" alt="reef_seahorse"></div>
+        <div class="cardbody">
+          <div class="key">reef_seahorse</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 12.47</span></div>
+          <p class="note">Dead body that rocks like a center-hinged metronome while the fin buzzes at freq 14 (8× too fast); flex the S-spine, slow the fin to a wave, animate the tail.</p>
+        </div>
+      </div>
+      <div class="card" id="reef_starfish">
+        <div class="gifwrap"><img loading="lazy" src="gifs/reef_starfish.gif" alt="reef_starfish"></div>
+        <div class="cardbody">
+          <div class="key">reef_starfish</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 32.52</span></div>
+          <p class="note">Pure rigid 360° spin (a pinwheel) burying a nice twinkle wave; kill the spin, add per-arm curl + a slow tilt so the twinkle shows.</p>
+        </div>
+      </div>
+      <div class="card" id="reef_lighthouse">
+        <div class="gifwrap"><img loading="lazy" src="gifs/reef_lighthouse.gif" alt="reef_lighthouse"></div>
+        <div class="cardbody">
+          <div class="key">reef_lighthouse</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 27.49</span></div>
+          <p class="note">Beam is two flat triangles flapping like bat-wings (khaki, not light) with a z-order bug over the roof + doubled static beams; rebuild as one front-sweeping beacon flash synced to the lamp.</p>
+        </div>
+      </div></div>
+    </section><h2 class="grouphead">Earth, Gems &amp; Treasure</h2>
+    <section class="module" id="mod-ores">
+      <div class="modhead">
+        <h3>Ores &amp; Minerals <span class="count">8 icons</span> <span class="boardtag" title="appears on / maps to a farming-board resource type">board-relevant</span></h3>
+        <p class="summary">Strong craft but FIVE are recolors of one grey ball, and all eight have a measured 0px body delta — every &#x27;animation&#x27; is a glint wipe + sparkles painted on a statue.</p>
+        <p class="priorities"><b>Top priorities:</b> Animate the body (a breathing scale + settle so the silhouette moves) · fix the floating overlay cracks · differentiate the idle per material.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/ores.png" alt="ores"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="ore_coal">
+        <div class="gifwrap"><img loading="lazy" src="gifs/ore_coal.gif" alt="ore_coal"></div>
+        <div class="cardbody">
+          <div class="key">ore_coal</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 4.75</span></div>
+          <p class="note">Body 0px motion; the ember is a slow bruise-pulse and the cracks float on top as sticks; add a breathing ember + a crackle pop, drop the twinkle-stars.</p>
+        </div>
+      </div>
+      <div class="card" id="ore_iron">
+        <div class="gifwrap"><img loading="lazy" src="gifs/ore_iron.gif" alt="ore_iron"></div>
+        <div class="cardbody">
+          <div class="key">ore_iron</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 5.47</span></div>
+          <p class="note">0px body, only a glint wipe; pulse the rust veins in a traveling wave that flares each specular, add a breathing scale.</p>
+        </div>
+      </div>
+      <div class="card" id="ore_copper">
+        <div class="gifwrap"><img loading="lazy" src="gifs/ore_copper.gif" alt="ore_copper"></div>
+        <div class="cardbody">
+          <div class="key">ore_copper</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 4.34</span></div>
+          <p class="note">0px body; the nice verdigris shimmer is buried; bloom the patina organically + breathe the body + flare veins on the sweep.</p>
+        </div>
+      </div>
+      <div class="card" id="ore_gold_nugget">
+        <div class="gifwrap"><img loading="lazy" src="gifs/ore_gold_nugget.gif" alt="ore_gold_nugget"></div>
+        <div class="cardbody">
+          <div class="key">ore_gold_nugget</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 7.36</span></div>
+          <p class="note">Liveliest ore (dual sweeps + wandering twinkle) but pillow-shaded bumps + 0px body; fix to one light, add a squash-jiggle, make the twinkle a &#x27;ping&#x27;.</p>
+        </div>
+      </div>
+      <div class="card" id="ore_silver">
+        <div class="gifwrap"><img loading="lazy" src="gifs/ore_silver.gif" alt="ore_silver"></div>
+        <div class="cardbody">
+          <div class="key">ore_silver</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 6.43</span></div>
+          <p class="note">0px body, low contrast; flash the streaks as the mirror-bright sweep crosses them + add a breathing scale + a cool rim.</p>
+        </div>
+      </div>
+      <div class="card" id="ore_obsidian">
+        <div class="gifwrap"><img loading="lazy" src="gifs/ore_obsidian.gif" alt="ore_obsidian"></div>
+        <div class="cardbody">
+          <div class="key">ore_obsidian</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 4.66</span></div>
+          <p class="note">0px body; the sheen teleports at the seam; add an eased tilt-sway of the shard + a caustic tip-flare + a refractive second sheen.</p>
+        </div>
+      </div>
+      <div class="card" id="ore_sulfur">
+        <div class="gifwrap"><img loading="lazy" src="gifs/ore_sulfur.gif" alt="ore_sulfur"></div>
+        <div class="cardbody">
+          <div class="key">ore_sulfur</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.69</span></div>
+          <p class="note">Crystals 0px (only a glow throb + tip twinkles); push the per-crystal shimmer into a traveling wave + breathe + a drifting spark; re-render the muddy base.</p>
+        </div>
+      </div>
+      <div class="card" id="ore_crystal_vein">
+        <div class="gifwrap"><img loading="lazy" src="gifs/ore_crystal_vein.gif" alt="ore_crystal_vein"></div>
+        <div class="cardbody">
+          <div class="key">ore_crystal_vein</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 0.87</span></div>
+          <p class="note">Deadest ore (0.87) — only the cavity glow breathes; make the geode &#x27;awaken&#x27; (glow bleed onto the rim + shard shimmer + caustic flare) + a 1.02 body breathe.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-gemsDishes">
+      <div class="modhead">
+        <h3>Gems &amp; Dishes <span class="count">9 icons</span> <span class="boardtag" title="appears on / maps to a farming-board resource type">board-relevant</span></h3>
+        <p class="summary">Really two mini-sets that don&#x27;t share a language. The gem trio (ruby/sapphire/emerald) is near-static glint-only; opal/amethyst &amp; the food dishes are more characterful.</p>
+        <p class="priorities"><b>Top priorities:</b> Give the gem trio a dip→snap→overshoot &#x27;show-off&#x27; with a glint FLASH · fix soup steam (invisible) + stew&#x27;s soap-ring bubbles · unify gem vs dish visual weight.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/gems.png" alt="gems"><img class="strip" loading="lazy" src="category/dishes.png" alt="dishes"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="gem_ruby">
+        <div class="gifwrap"><img loading="lazy" src="gifs/gem_ruby.gif" alt="gem_ruby"></div>
+        <div class="cardbody">
+          <div class="key">gem_ruby</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7.5/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 10.01</span></div>
+          <p class="note">2.5% breathe is invisible; the only motion is a slow crawling sheen + a centerline stripe-facet; add a dip→snap→overshoot &#x27;show-off&#x27; with a hard glint flash.</p>
+        </div>
+      </div>
+      <div class="card" id="gem_sapphire">
+        <div class="gifwrap"><img loading="lazy" src="gifs/gem_sapphire.gif" alt="gem_sapphire"></div>
+        <div class="cardbody">
+          <div class="key">gem_sapphire</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7.5/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 10.0</span></div>
+          <p class="note">Same as ruby, but the dark-bottom gradient swallows the faint sheen; raise the shine intensity + add the show-off rig (out of phase with ruby).</p>
+        </div>
+      </div>
+      <div class="card" id="gem_emerald">
+        <div class="gifwrap"><img loading="lazy" src="gifs/gem_emerald.gif" alt="gem_emerald"></div>
+        <div class="cardbody">
+          <div class="key">gem_emerald</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 11.36</span></div>
+          <p class="note">Deadest gem — a faint sheen sliding over a flat green table; add a ±5° rock + a sequential step-facet flash.</p>
+        </div>
+      </div>
+      <div class="card" id="gem_amethyst">
+        <div class="gifwrap"><img loading="lazy" src="gifs/gem_amethyst.gif" alt="gem_amethyst"></div>
+        <div class="cardbody">
+          <div class="key">gem_amethyst</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 11.58</span></div>
+          <p class="note">Has a glow pulse but never &#x27;does&#x27; anything (and the glow is a circle on a tall cluster); race a pulse up each prism tip + a per-prism sway; clip the glow.</p>
+        </div>
+      </div>
+      <div class="card" id="gem_opal">
+        <div class="gifwrap"><img loading="lazy" src="gifs/gem_opal.gif" alt="gem_opal"></div>
+        <div class="cardbody">
+          <div class="key">gem_opal</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#3fb950">Great motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 4.53</span></div>
+          <p class="note">Best motion (drifting hue-shift flecks) but the flecks read as soap bubbles + rainbow-disco hue; tighten to small angular flecks, constrain hue, add a periodic fire-flash.</p>
+        </div>
+      </div>
+      <div class="card" id="dish_soup">
+        <div class="gifwrap"><img loading="lazy" src="gifs/dish_soup.gif" alt="dish_soup"></div>
+        <div class="cardbody">
+          <div class="key">dish_soup</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">6.5/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 20.32</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +0,+6.8</span></div>
+          <p class="note">Steam is invisible (alpha 0.5, ~9% coverage) and the bits/ripple are sub-pixel; use fat soft steam plumes + a visible surface undulation + a simmer bubble.</p>
+        </div>
+      </div>
+      <div class="card" id="dish_stew">
+        <div class="gifwrap"><img loading="lazy" src="gifs/dish_stew.gif" alt="dish_stew"></div>
+        <div class="cardbody">
+          <div class="key">dish_stew</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 8.79</span></div>
+          <p class="note">Bubbles render as hollow soap-rings (dark-edged) and steam is invisible; fill bubbles bright with a pop-ring, undulate the molten surface, add plumes.</p>
+        </div>
+      </div>
+      <div class="card" id="dish_honey_pot">
+        <div class="gifwrap"><img loading="lazy" src="gifs/dish_honey_pot.gif" alt="dish_honey_pot"></div>
+        <div class="cardbody">
+          <div class="key">dish_honey_pot</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#3fb950">Great motion</span>
+            <span class="qual">8.5/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.24</span></div>
+          <p class="note">Best dish — a great stretch-drip, but the strand snaps back at the loop seam; pinch it off cleanly + a pool ripple on detach; let the dipper participate.</p>
+        </div>
+      </div>
+      <div class="card" id="dish_cake">
+        <div class="gifwrap"><img loading="lazy" src="gifs/dish_cake.gif" alt="dish_cake"></div>
+        <div class="cardbody">
+          <div class="key">dish_cake</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 2.87</span></div>
+          <p class="note">Cake body is 100% static with an orphan candle-glow floating over the cherry; add a fresh-baked jiggle + either draw the candle or drop the glow.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-treasure">
+      <div class="modhead">
+        <h3>Treasure &amp; Loot <span class="count">9 icons</span> </h3>
+        <p class="summary">Lovely gold gloss, but the shared glintSweep is a hard rectangle that leaks past loose clips, everything is pinned to y=22 (short subjects float), and bodies are static.</p>
+        <p class="priorities"><b>Top priorities:</b> Re-anchor vertical framing (don&#x27;t pin to y=22) · fix the glintSweep helper (feather + tight clip + lower intensity) · add real body motion (settle/bob/tilt).</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/treasure.png" alt="treasure"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="treasure_chest_open">
+        <div class="gifwrap"><img loading="lazy" src="gifs/treasure_chest_open.gif" alt="treasure_chest_open"></div>
+        <div class="cardbody">
+          <div class="key">treasure_chest_open</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 21.06</span></div>
+          <p class="note">Most alive (glow + sparkles) but the coins are bubble-wrap and the glint clip shows hard rectangular seams over them; clip per-coin circles + jostle the coins.</p>
+        </div>
+      </div>
+      <div class="card" id="treasure_coin_stack">
+        <div class="gifwrap"><img loading="lazy" src="gifs/treasure_coin_stack.gif" alt="treasure_coin_stack"></div>
+        <div class="cardbody">
+          <div class="key">treasure_coin_stack</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">5/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 12.87</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +3.2,+6.7</span></div>
+          <p class="note">The glint clip is a loose rect that hangs off into empty space (dirty-rect glitch) and the stack is off-center; tighten the clip + recenter + wobble the top/lean coin.</p>
+        </div>
+      </div>
+      <div class="card" id="treasure_gold_key">
+        <div class="gifwrap"><img loading="lazy" src="gifs/treasure_gold_key.gif" alt="treasure_gold_key"></div>
+        <div class="cardbody">
+          <div class="key">treasure_gold_key</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 4.97</span></div>
+          <p class="note">The glint washes the gold to chrome and the bow is a flat disc; lower the glint intensity, model the bow as a torus, dangle/turn the key.</p>
+        </div>
+      </div>
+      <div class="card" id="treasure_crown">
+        <div class="gifwrap"><img loading="lazy" src="gifs/treasure_crown.gif" alt="treasure_crown"></div>
+        <div class="cardbody">
+          <div class="key">treasure_crown</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 5.42</span></div>
+          <p class="note">Static body with blinking gems, floats a bit high; add a majestic bob+tilt with the ruby flaring at the top.</p>
+        </div>
+      </div>
+      <div class="card" id="treasure_ring">
+        <div class="gifwrap"><img loading="lazy" src="gifs/treasure_ring.gif" alt="treasure_ring"></div>
+        <div class="cardbody">
+          <div class="key">treasure_ring</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.39</span></div>
+          <p class="note">Best idea — a glint that traces the band — but the body is static and sits low; rock the ring to show the stone, sync the gem bloom to the band-glint.</p>
+        </div>
+      </div>
+      <div class="card" id="treasure_goblet">
+        <div class="gifwrap"><img loading="lazy" src="gifs/treasure_goblet.gif" alt="treasure_goblet"></div>
+        <div class="cardbody">
+          <div class="key">treasure_goblet</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.06</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +0,+7.4</span></div>
+          <p class="note">Best gloss, but the drink bob is sub-pixel and it floats low/undersized; slosh the liquid surface (tilt + roll) and scale up.</p>
+        </div>
+      </div>
+      <div class="card" id="treasure_gold_bars">
+        <div class="gifwrap"><img loading="lazy" src="gifs/treasure_gold_bars.gif" alt="treasure_gold_bars"></div>
+        <div class="cardbody">
+          <div class="key">treasure_gold_bars</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 6.79</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +1,+12.6</span></div>
+          <p class="note">31u of dead air on top (worst framing) on a glint-only dead pile; recenter, add a top-bar drop-and-settle that nudges the pair.</p>
+        </div>
+      </div>
+      <div class="card" id="treasure_gem_pile">
+        <div class="gifwrap"><img loading="lazy" src="gifs/treasure_gem_pile.gif" alt="treasure_gem_pile"></div>
+        <div class="cardbody">
+          <div class="key">treasure_gem_pile</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 7.21</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +0,+10.6</span></div>
+          <p class="note">Reads as an inverted fan, not a pile, and sits low; re-cluster into a heap, sweep one shared light across firing each gem, add a settle jitter.</p>
+        </div>
+      </div>
+      <div class="card" id="treasure_map">
+        <div class="gifwrap"><img loading="lazy" src="gifs/treasure_map.gif" alt="treasure_map"></div>
+        <div class="cardbody">
+          <div class="key">treasure_map</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f85149">Replace</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">4/10</span>
+            <span class="reads reads-no">No @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.63</span></div>
+          <p class="note">Reads as a lumpy sack/ravioli (only the red X reads) and the flutter puffs it like a balloon; redesign as a flat unfurled sheet that ripples like paper, ping the X.</p>
+        </div>
+      </div></div>
+    </section><h2 class="grouphead">Food &amp; Drink</h2>
+    <section class="module" id="mod-drinks">
+      <div class="modhead">
+        <h3>Drinks <span class="count">8 icons</span> </h3>
+        <p class="summary">Disciplined glass language, but the vessels are 100% rigid — only the contents move, and energy ranges from genuinely alive (water) to dead (milk).</p>
+        <p class="priorities"><b>Top priorities:</b> Give every vessel a subtle bob/tilt so none reads as a statue · make milk actually animate (its shimmer is occluded) · normalize footprint + boost contents-motion size.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/drinks.png" alt="drinks"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="drink_coffee">
+        <div class="gifwrap"><img loading="lazy" src="gifs/drink_coffee.gif" alt="drink_coffee"></div>
+        <div class="cardbody">
+          <div class="key">drink_coffee</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 9.23</span></div>
+          <p class="note">Best steam but parallel ribbons + a comma-handle + a static body; offset/curl the wisps, add a heat-breath bob, close/thicken the handle.</p>
+        </div>
+      </div>
+      <div class="card" id="drink_tea">
+        <div class="gifwrap"><img loading="lazy" src="gifs/drink_tea.gif" alt="drink_tea"></div>
+        <div class="cardbody">
+          <div class="key">drink_tea</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7.5/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 6.56</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +0.7,+9.1</span></div>
+          <p class="note">A single wisp leaves a dead seam (no steam at frame 0) + a barely-swinging tag; add a 2nd wisp + a real pendulum tea-bag with follow-through; sits low.</p>
+        </div>
+      </div>
+      <div class="card" id="drink_beer">
+        <div class="gifwrap"><img loading="lazy" src="gifs/drink_beer.gif" alt="drink_beer"></div>
+        <div class="cardbody">
+          <div class="key">drink_beer</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.38</span></div>
+          <p class="note">Bubbles + foam motion are sub-pixel; enlarge/accelerate the bubbles with foam-puff pops + a creeping head + a mug bob.</p>
+        </div>
+      </div>
+      <div class="card" id="drink_juice">
+        <div class="gifwrap"><img loading="lazy" src="gifs/drink_juice.gif" alt="drink_juice"></div>
+        <div class="cardbody">
+          <div class="key">drink_juice</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.72</span></div>
+          <p class="note">Near-dead (garnish bob 0.5px, glass rigid); make the orange-slice nod like it&#x27;s sliding + a sweeping straw glint + bigger bubbles.</p>
+        </div>
+      </div>
+      <div class="card" id="drink_smoothie">
+        <div class="gifwrap"><img loading="lazy" src="gifs/drink_smoothie.gif" alt="drink_smoothie"></div>
+        <div class="cardbody">
+          <div class="key">drink_smoothie</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8.5/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.14</span></div>
+          <p class="note">Lively (jiggle + orbiting flecks + sparkle) but the flecks swim too fast/wide; re-time to a settle, slow the seeds near the bottom, one sparkle per loop.</p>
+        </div>
+      </div>
+      <div class="card" id="drink_water">
+        <div class="gifwrap"><img loading="lazy" src="gifs/drink_water.gif" alt="drink_water"></div>
+        <div class="cardbody">
+          <div class="key">drink_water</div>
+          <div class="badges">
+            <span class="badge" style="--c:#3fb950">Ship</span>
+            <span class="badge" style="--c:#3fb950">Great motion</span>
+            <span class="qual">8.5/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.61</span></div>
+          <p class="note">Gold standard (independent ice clink + bubbles + sweep); only add an ice→surface ripple cause/effect + a 2nd ice-cube face tone.</p>
+        </div>
+      </div>
+      <div class="card" id="drink_wine">
+        <div class="gifwrap"><img loading="lazy" src="gifs/drink_wine.gif" alt="drink_wine"></div>
+        <div class="cardbody">
+          <div class="key">drink_wine</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 2.08</span></div>
+          <p class="note">Slosh is one rigid disc rotating in place (all on the same sine) + it pokes past the glass walls; phase-lag a wall-climbing slosh, clip to the bowl, tilt the glass.</p>
+        </div>
+      </div>
+      <div class="card" id="drink_milk">
+        <div class="gifwrap"><img loading="lazy" src="gifs/drink_milk.gif" alt="drink_milk"></div>
+        <div class="cardbody">
+          <div class="key">drink_milk</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 0.57</span></div>
+          <p class="note">Deadest drink (0.57) — the milk shimmer is occluded by the opaque fill; add a settling bob + a visible cream meniscus + a real shoulder glint + cap jiggle.</p>
+        </div>
+      </div></div>
+    </section><h2 class="grouphead">Town &amp; Decor</h2>
+    <section class="module" id="mod-buildings">
+      <div class="modhead">
+        <h3>Buildings <span class="count">9 icons</span> </h3>
+        <p class="summary">Cohesive storybook craft, but motion is bimodal — windmill/watermill/stall are lively while tower(0.1)/barn(0.17)/church/castle are effectively frozen with one twitching ornament.</p>
+        <p class="priorities"><b>Top priorities:</b> Resurrect the dead buildings (tower, barn) · make flicker() actually read · add a shared subtle &#x27;building breathing&#x27; under the ornament accents.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/buildings.png" alt="buildings"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="bld_cottage">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bld_cottage.gif" alt="bld_cottage"></div>
+        <div class="cardbody">
+          <div class="key">bld_cottage</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 5.19</span></div>
+          <p class="note">Best-built smoke loop; add a slow cozy-breath squash + a visible warm window flicker.</p>
+        </div>
+      </div>
+      <div class="card" id="bld_windmill">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bld_windmill.gif" alt="bld_windmill"></div>
+        <div class="cardbody">
+          <div class="key">bld_windmill</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#3fb950">Great motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 51.33</span></div>
+          <p class="note">Best motion-read but a constant-velocity rigid spin (strobing cross); ease it into gusts + per-blade motion-smear + a tower lean.</p>
+        </div>
+      </div>
+      <div class="card" id="bld_watermill">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bld_watermill.gif" alt="bld_watermill"></div>
+        <div class="cardbody">
+          <div class="key">bld_watermill</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 7.24</span></div>
+          <p class="note">The wheel lost its crisp rim and the chute is a blue plank; restore the rim, scroll water in the race, make the paddles &#x27;catch&#x27; + splash.</p>
+        </div>
+      </div>
+      <div class="card" id="bld_church">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bld_church.gif" alt="bld_church"></div>
+        <div class="cardbody">
+          <div class="key">bld_church</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.58</span></div>
+          <p class="note">The bell tip moves ~1px (invisible) and the bell/door glows merge into a gold column; ring the bell for real (±25°) with expanding sound rings.</p>
+        </div>
+      </div>
+      <div class="card" id="bld_castle">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bld_castle.gif" alt="bld_castle"></div>
+        <div class="cardbody">
+          <div class="key">bld_castle</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.64</span></div>
+          <p class="note">Only the flag moves; the entire keep is frozen; slow the flag to a grand billow + add living window/torch glows.</p>
+        </div>
+      </div>
+      <div class="card" id="bld_tent">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bld_tent.gif" alt="bld_tent"></div>
+        <div class="cardbody">
+          <div class="key">bld_tent</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 7.17</span></div>
+          <p class="note">Only the hem ripples (apex pinned) and the pennant flutters nervously; make a full-canopy traveling wave easing to the apex + slow the pennant.</p>
+        </div>
+      </div>
+      <div class="card" id="bld_market_stall">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bld_market_stall.gif" alt="bld_market_stall"></div>
+        <div class="cardbody">
+          <div class="key">bld_market_stall</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.1</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +0,+6.1</span></div>
+          <p class="note">Bottom-heavy/undersized and the sparkle teleports at the seam; recenter+upscale, fade the sparkle ends, add a bread/apple settle.</p>
+        </div>
+      </div>
+      <div class="card" id="bld_barn">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bld_barn.gif" alt="bld_barn"></div>
+        <div class="cardbody">
+          <div class="key">bld_barn</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 0.17</span></div>
+          <p class="note">Effectively dead (0.17) — the weathervane is sub-pixel; add hay-dust motes + a breathing loft + a real vane + a door creak.</p>
+        </div>
+      </div>
+      <div class="card" id="bld_tower">
+        <div class="gifwrap"><img loading="lazy" src="gifs/bld_tower.gif" alt="bld_tower"></div>
+        <div class="cardbody">
+          <div class="key">bld_tower</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 0.1</span></div>
+          <p class="note">Deadest icon (0.1) — literally nothing moves; give the candle a real flicker + flame-lean + halo pulse and a readable finial vane.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-cozyDecor">
+      <div class="modhead">
+        <h3>Cozy Decor <span class="count">7 icons</span> </h3>
+        <p class="summary">Strong, cohesive craft; the dominant idle is a single timid pendulum sway reused on four icons (too samey, too small), with two genuine wins (wind chime, the birdhouse bird-peek).</p>
+        <p class="priorities"><b>Top priorities:</b> Make the mailbox actually do something · un-rigidify the street lamp (real moth + head creak) · raise sway amplitude + add anticipation/overshoot across the pendulums.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/cozyDecor.png" alt="cozyDecor"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="cozy_lantern">
+        <div class="gifwrap"><img loading="lazy" src="gifs/cozy_lantern.gif" alt="cozy_lantern"></div>
+        <div class="cardbody">
+          <div class="key">cozy_lantern</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 14.26</span></div>
+          <p class="note">Good flame flicker but a too-timid 4° sway; make it a breeze-gust pendulum (anticipation→overshoot→damped settle) with the flame lagging.</p>
+        </div>
+      </div>
+      <div class="card" id="cozy_street_lamp">
+        <div class="gifwrap"><img loading="lazy" src="gifs/cozy_street_lamp.gif" alt="cozy_street_lamp"></div>
+        <div class="cardbody">
+          <div class="key">cozy_street_lamp</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 9.67</span></div>
+          <p class="note">Post 100% static — motion is glow + a tiny orbiting moth-dot; make the moth a real fluttering character that bumps the glow + a faint head creak.</p>
+        </div>
+      </div>
+      <div class="card" id="cozy_fountain">
+        <div class="gifwrap"><img loading="lazy" src="gifs/cozy_fountain.gif" alt="cozy_fountain"></div>
+        <div class="cardbody">
+          <div class="key">cozy_fountain</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 15.91</span></div>
+          <p class="note">Water &#x27;breathes&#x27; rather than flows + a z-order issue at the spout; sell a pulsing jet with cascading beads + landing ripples; fix the column z-order.</p>
+        </div>
+      </div>
+      <div class="card" id="cozy_wind_chime">
+        <div class="gifwrap"><img loading="lazy" src="gifs/cozy_wind_chime.gif" alt="cozy_wind_chime"></div>
+        <div class="cardbody">
+          <div class="key">cozy_wind_chime</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#3fb950">Great motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 17.32</span></div>
+          <p class="note">Best motion (per-tube phase swing) but same-freq tubes realign + the clapper never strikes; vary freq by tube length + gust-driven + a real ting on contact.</p>
+        </div>
+      </div>
+      <div class="card" id="cozy_mailbox">
+        <div class="gifwrap"><img loading="lazy" src="gifs/cozy_mailbox.gif" alt="cozy_mailbox"></div>
+        <div class="cardbody">
+          <div class="key">cozy_mailbox</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.22</span></div>
+          <p class="note">Best static, deadest motion (1.22) — the nudge fires 10% of the time &amp; is sub-perceptible; make the flag snap up (anticipation→overshoot→flutter) + a box settle + a peeking letter.</p>
+        </div>
+      </div>
+      <div class="card" id="cozy_flower_pot">
+        <div class="gifwrap"><img loading="lazy" src="gifs/cozy_flower_pot.gif" alt="cozy_flower_pot"></div>
+        <div class="cardbody">
+          <div class="key">cozy_flower_pot</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 5.16</span></div>
+          <p class="note">Stiff-rod stem sway, top-heavy; make a traveling-wave bend with lagging blooms + a visiting bee/butterfly; light the leaves.</p>
+        </div>
+      </div>
+      <div class="card" id="cozy_birdhouse">
+        <div class="gifwrap"><img loading="lazy" src="gifs/cozy_birdhouse.gif" alt="cozy_birdhouse"></div>
+        <div class="cardbody">
+          <div class="key">cozy_birdhouse</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 4.12</span></div>
+          <p class="note">Best idea (the emerging bird peek) but a linear pop + a too-timid house sway; spring the bird with anticipation/overshoot + look-arounds + a reactive house sway.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-furniture">
+      <div class="modhead">
+        <h3>Furniture <span class="count">6 icons</span> </h3>
+        <p class="summary">Strong static, but only point-light effects move — the furniture itself never breathes, settles, or deforms. Half the module is effectively dead.</p>
+        <p class="priorities"><b>Top priorities:</b> Give the dead pieces (bookshelf, mirror) a real object idle · add object-level secondary motion to the flame icons · unify into one &#x27;cozy-room breathing&#x27; energy.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/furniture.png" alt="furniture"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="furn_fireplace">
+        <div class="gifwrap"><img loading="lazy" src="gifs/furn_fireplace.gif" alt="furn_fireplace"></div>
+        <div class="cardbody">
+          <div class="key">furn_fireplace</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 9.19</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +0,+7</span></div>
+          <p class="note">Best motion (out-of-phase flames) but blobby flame tips + embers don&#x27;t loop seamlessly; sharpen the tips, base-anchor the flames, add a settle+flare beat.</p>
+        </div>
+      </div>
+      <div class="card" id="furn_lamp">
+        <div class="gifwrap"><img loading="lazy" src="gifs/furn_lamp.gif" alt="furn_lamp"></div>
+        <div class="cardbody">
+          <div class="key">furn_lamp</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 10.45</span></div>
+          <p class="note">Only the glow ring moves (lamp 100% static) + a hard halo edge + a ternary color-snap stutter; add a filament flicker + a shade-tilt sway + feather the halo.</p>
+        </div>
+      </div>
+      <div class="card" id="furn_clock">
+        <div class="gifwrap"><img loading="lazy" src="gifs/furn_clock.gif" alt="furn_clock"></div>
+        <div class="cardbody">
+          <div class="key">furn_clock</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.03</span></div>
+          <p class="note">Real eased pendulum (good) but a dead minute-hand + no bob lag; add bob follow-through + a case counter-rock + a stepped ticking minute-hand.</p>
+        </div>
+      </div>
+      <div class="card" id="furn_table">
+        <div class="gifwrap"><img loading="lazy" src="gifs/furn_table.gif" alt="furn_table"></div>
+        <div class="cardbody">
+          <div class="key">furn_table</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 6.36</span></div>
+          <p class="note">Only the candle flame moves (table+candle frozen) + an ambiguous 2-leg silhouette; add a flame lean + a tabletop glow pool + a wax-drip; add a pedestal.</p>
+        </div>
+      </div>
+      <div class="card" id="furn_mirror">
+        <div class="gifwrap"><img loading="lazy" src="gifs/furn_mirror.gif" alt="furn_mirror"></div>
+        <div class="cardbody">
+          <div class="key">furn_mirror</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.44</span></div>
+          <p class="note">Best static, dead motion (1.44) — a near-invisible sheen wipe; make the glint a real event (calm→fast sweep + star-pop) + an easel rock; restore the two static sheens.</p>
+        </div>
+      </div>
+      <div class="card" id="furn_bookshelf">
+        <div class="gifwrap"><img loading="lazy" src="gifs/furn_bookshelf.gif" alt="furn_bookshelf"></div>
+        <div class="cardbody">
+          <div class="key">furn_bookshelf</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 0.61</span></div>
+          <p class="note">Deadest (0.61) — an 8%-opacity shimmer + a sub-pixel mote; add a book tip-and-right with neighbor jostle OR a swaying plant + a visible firefly + a real spine glint.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-festive">
+      <div class="modhead">
+        <h3>Festive / Holiday <span class="count">8 icons</span> </h3>
+        <p class="summary">Tight palette and clean craft; motion energy is uneven (snowman/bell/gingerbread lively, holly/candy-cane dead) and the twinkle-overlay is carrying icons with no real motion.</p>
+        <p class="priorities"><b>Top priorities:</b> Give holly &amp; candy-cane real deformation · fix the gift&#x27;s dead-time (60% frozen) · add anticipation/overshoot to the pendulum icons.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/festive.png" alt="festive"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="festive_snowman">
+        <div class="gifwrap"><img loading="lazy" src="gifs/festive_snowman.gif" alt="festive_snowman"></div>
+        <div class="cardbody">
+          <div class="key">festive_snowman</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 22.58</span></div>
+          <p class="note">Good breathing bob + snow, but the scarf-tail fringe floats detached like legs + the neck-wrap is rigid; drive the whole scarf from one phase + a weight-shift lean.</p>
+        </div>
+      </div>
+      <div class="card" id="festive_gift">
+        <div class="gifwrap"><img loading="lazy" src="gifs/festive_gift.gif" alt="festive_gift"></div>
+        <div class="cardbody">
+          <div class="key">festive_gift</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 7.66</span></div>
+          <p class="note">Dead ~60% of the loop (a buzz-shake every 2.4s) with no squash; make a continuous can&#x27;t-wait wiggle (squash/hop/overshoot) with no dead frames.</p>
+        </div>
+      </div>
+      <div class="card" id="festive_wreath">
+        <div class="gifwrap"><img loading="lazy" src="gifs/festive_wreath.gif" alt="festive_wreath"></div>
+        <div class="cardbody">
+          <div class="key">festive_wreath</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 4.5</span></div>
+          <p class="note">Ring is fully static (only lights twinkle + bow tails sway); add a hanging-door sway + a plush breathing scale.</p>
+        </div>
+      </div>
+      <div class="card" id="festive_bell">
+        <div class="gifwrap"><img loading="lazy" src="gifs/festive_bell.gif" alt="festive_bell"></div>
+        <div class="cardbody">
+          <div class="key">festive_bell</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 28.41</span></div>
+          <p class="note">Best-realized (swing+clapper+waves) but a linear metronome; add anticipation/overshoot + dome squash + lag the holly/ribbon; ring on alternating swings.</p>
+        </div>
+      </div>
+      <div class="card" id="festive_ornament">
+        <div class="gifwrap"><img loading="lazy" src="gifs/festive_ornament.gif" alt="festive_ornament"></div>
+        <div class="cardbody">
+          <div class="key">festive_ornament</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 14.5</span></div>
+          <p class="note">Good pendulum + specular sweep, but linear + the hook doesn&#x27;t track the swing; add overshoot/settle + fix the hook + sync the sparkle to the sweep.</p>
+        </div>
+      </div>
+      <div class="card" id="festive_candy_cane">
+        <div class="gifwrap"><img loading="lazy" src="gifs/festive_candy_cane.gif" alt="festive_candy_cane"></div>
+        <div class="cardbody">
+          <div class="key">festive_candy_cane</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 2.15</span></div>
+          <p class="note">Effectively static (2.15) — a glint on a frozen cane; add a balance bob-and-lean + a lagging hook wobble; align the glint to the tilted axis.</p>
+        </div>
+      </div>
+      <div class="card" id="festive_gingerbread">
+        <div class="gifwrap"><img loading="lazy" src="gifs/festive_gingerbread.gif" alt="festive_gingerbread"></div>
+        <div class="cardbody">
+          <div class="key">festive_gingerbread</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 36.18</span></div>
+          <p class="note">Good dance idea but a fast double-freq bob that strobes + rigid limbs; slow the bob to match the rock, add squash + counter-swinging arms.</p>
+        </div>
+      </div>
+      <div class="card" id="festive_holly">
+        <div class="gifwrap"><img loading="lazy" src="gifs/festive_holly.gif" alt="festive_holly"></div>
+        <div class="cardbody">
+          <div class="key">festive_holly</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.21</span></div>
+          <p class="note">Dead (1.21) — the leaf rotate is a CONSTANT (no time term); add counter-swaying leaves with tip-curl + a berry-cluster jiggle; nudge up/scale.</p>
+        </div>
+      </div></div>
+    </section><h2 class="grouphead">Sky &amp; Weather</h2>
+    <section class="module" id="mod-weather">
+      <div class="modhead">
+        <h3>Weather <span class="count">8 icons</span> </h3>
+        <p class="summary">Cloud-based icons cohere; particles do all the work while the hero bobs ±1px. Three icons (rainbow/crescent/fog) are pure shimmer with no character, and comet is blank at rest.</p>
+        <p class="priorities"><b>Top priorities:</b> Fix comet&#x27;s blank frame-0 + rebuild its head/tail · add real deformation to the dead icons · unify scale + fix the broken end-clouds.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/weather.png" alt="weather"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="weather_rain_cloud">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weather_rain_cloud.gif" alt="weather_rain_cloud"></div>
+        <div class="cardbody">
+          <div class="key">weather_rain_cloud</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 37.31</span></div>
+          <p class="note">Cloud bob is 1.2px (frozen); only rain moves; add a swell-and-pour cycle (squash/darken → burst) with splashes.</p>
+        </div>
+      </div>
+      <div class="card" id="weather_snow_cloud">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weather_snow_cloud.gif" alt="weather_snow_cloud"></div>
+        <div class="cardbody">
+          <div class="key">weather_snow_cloud</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 27.47</span></div>
+          <p class="note">Flakes are sub-threshold asterisks; make 3-4 bigger hexagonal tumbling flakes + a cloud &#x27;shiver&#x27; puff.</p>
+        </div>
+      </div>
+      <div class="card" id="weather_lightning">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weather_lightning.gif" alt="weather_lightning"></div>
+        <div class="cardbody">
+          <div class="key">weather_lightning</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 65.82</span></div>
+          <p class="note">The bolt never re-strikes (a lit decal that brightness-strobes) + crude geometry; make a real discharge cycle (anticipation→snap→afterglow) with a re-randomized jag.</p>
+        </div>
+      </div>
+      <div class="card" id="weather_comet">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weather_comet.gif" alt="weather_comet"></div>
+        <div class="cardbody">
+          <div class="key">weather_comet</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">4/10</span>
+            <span class="reads reads-no">No @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 62.69</span><span class="chip danger" title="frame 0 is empty">∅ blank rest</span></div>
+          <p class="note">BLANK at frame 0 (flies off-screen) + the head is a magnifying-glass ring + a flat-quad tail; anchor it in-frame, bloom the head (no ring), flicker a tapering tail.</p>
+        </div>
+      </div>
+      <div class="card" id="weather_sun_cloud">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weather_sun_cloud.gif" alt="weather_sun_cloud"></div>
+        <div class="cardbody">
+          <div class="key">weather_sun_cloud</div>
+          <div class="badges">
+            <span class="badge" style="--c:#3fb950">Ship</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 24.16</span></div>
+          <p class="note">Best in module (eased rays + sun breathe + cloud drift); only polish — sync the ray-pulse to the sun breathe + arc the cloud drift.</p>
+        </div>
+      </div>
+      <div class="card" id="weather_rainbow">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weather_rainbow.gif" alt="weather_rainbow"></div>
+        <div class="cardbody">
+          <div class="key">weather_rainbow</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">5/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 16.89</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +0.8,+7.2</span></div>
+          <p class="note">End-clouds are broken (highlight strokes cross the interior as X&#x27;s) + a dead opacity shimmer; rebuild the clouds + a draw-on shimmer-sweep with bouncing end-clouds.</p>
+        </div>
+      </div>
+      <div class="card" id="weather_crescent_moon">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weather_crescent_moon.gif" alt="weather_crescent_moon"></div>
+        <div class="cardbody">
+          <div class="key">weather_crescent_moon</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 16.87</span></div>
+          <p class="note">The highlight is on the wrong (dark) edge + a dead body (only the halo breathes); fix the lit-limb highlight + a sleepy nod + staggered star-bursts.</p>
+        </div>
+      </div>
+      <div class="card" id="weather_fog">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weather_fog.gif" alt="weather_fog"></div>
+        <div class="cardbody">
+          <div class="key">weather_fog</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 19.97</span></div>
+          <p class="note">Solid horizontal parallax but purely a conveyor slide (no billow); add vertical breathing + undulating bands + a faint silhouette behind to sell &#x27;fog&#x27;.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-celestial">
+      <div class="modhead">
+        <h3>Celestial <span class="count">8 icons</span> </h3>
+        <p class="summary">Cohesive top-left-lit bodies; the dominant idle is a glow-pulse + a slow global rotate, so most read as &#x27;rigid&#x27; (galaxy/planet) and the field-disc icons muddy at size. One blank-at-rest.</p>
+        <p class="priorities"><b>Top priorities:</b> Fix shooting_star&#x27;s empty rest frame · make the galaxy actually spiral (differential rotation) · add eased multi-beat motion to the breathe-and-spin idles.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/celestial.png" alt="celestial"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="astral_sun">
+        <div class="gifwrap"><img loading="lazy" src="gifs/astral_sun.gif" alt="astral_sun"></div>
+        <div class="cardbody">
+          <div class="key">astral_sun</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 26.69</span></div>
+          <p class="note">Slow rigid ray-spin with tiny shimmer; make the rays ease-pop in a traveling wave + a unified pulse + a specular wink.</p>
+        </div>
+      </div>
+      <div class="card" id="astral_full_moon">
+        <div class="gifwrap"><img loading="lazy" src="gifs/astral_full_moon.gif" alt="astral_full_moon"></div>
+        <div class="cardbody">
+          <div class="key">astral_full_moon</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 15.26</span></div>
+          <p class="note">Static disc + glow pulse + a flat shimmer wipe; add a libration wobble (drift the gradient) + crater glints.</p>
+        </div>
+      </div>
+      <div class="card" id="astral_ringed_planet">
+        <div class="gifwrap"><img loading="lazy" src="gifs/astral_ringed_planet.gif" alt="astral_ringed_planet"></div>
+        <div class="cardbody">
+          <div class="key">astral_ringed_planet</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 10.5</span></div>
+          <p class="note">The moon orbits on a wire (drawn always-on-top, breaking depth) over a static planet; scroll the planet bands (spin) + a ring-tilt breathe + depth-sort the moon.</p>
+        </div>
+      </div>
+      <div class="card" id="astral_shooting_star">
+        <div class="gifwrap"><img loading="lazy" src="gifs/astral_shooting_star.gif" alt="astral_shooting_star"></div>
+        <div class="cardbody">
+          <div class="key">astral_shooting_star</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">4/10</span>
+            <span class="reads reads-no">No @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 95.08</span><span class="chip danger" title="frame 0 is empty">∅ blank rest</span></div>
+          <p class="note">BLANK at frame 0 (a straight-line fly-by) — unusable at rest; park a twinkling star, then an arced+eased shoot with squash &amp; a trail, settling on the rest twinkle.</p>
+        </div>
+      </div>
+      <div class="card" id="astral_constellation">
+        <div class="gifwrap"><img loading="lazy" src="gifs/astral_constellation.gif" alt="astral_constellation"></div>
+        <div class="cardbody">
+          <div class="key">astral_constellation</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 14.91</span></div>
+          <p class="note">A translucent field-disc muddies the read; only nodes twinkle; drop/darken the field + run a light pulse along the lines igniting each node.</p>
+        </div>
+      </div>
+      <div class="card" id="astral_galaxy">
+        <div class="gifwrap"><img loading="lazy" src="gifs/astral_galaxy.gif" alt="astral_galaxy"></div>
+        <div class="cardbody">
+          <div class="key">astral_galaxy</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">5/10</span>
+            <span class="reads reads-no">No @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 8.84</span></div>
+          <p class="note">Arms read as a beaded oval ring, not a spiral, and a rigid rotate is imperceptible; rebuild as log-spiral arms + differential rotation (inner faster).</p>
+        </div>
+      </div>
+      <div class="card" id="astral_north_star">
+        <div class="gifwrap"><img loading="lazy" src="gifs/astral_north_star.gif" alt="astral_north_star"></div>
+        <div class="cardbody">
+          <div class="key">astral_north_star</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 8.83</span></div>
+          <p class="note">Low-contrast white-on-pale + an in-place pulse; add a beacon bloom (spike overshoot + cross-flare) + streaking lens-flare beads + a deeper-blue rim.</p>
+        </div>
+      </div>
+      <div class="card" id="astral_eclipse">
+        <div class="gifwrap"><img loading="lazy" src="gifs/astral_eclipse.gif" alt="astral_eclipse"></div>
+        <div class="cardbody">
+          <div class="key">astral_eclipse</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 23.6</span></div>
+          <p class="note">Best motion (staggered prominence flares) but a wobbling diamond-bead + 4 uncoordinated sines; lock to one master pulse + one decisive bead flash.</p>
+        </div>
+      </div></div>
+    </section><h2 class="grouphead">Magic</h2>
+    <section class="module" id="mod-arcane">
+      <div class="modhead">
+        <h3>Arcane <span class="count">7 icons</span> </h3>
+        <p class="summary">Strong cohesive jewel-tone craft; motion splits into a lively candle/orb vs three near-static pieces (potions, runestone). The default is &#x27;static body + animated overlay&#x27;.</p>
+        <p class="priorities"><b>Top priorities:</b> Kill the frozen-body pattern (potions/runestone/dust) · re-conceive the pentacle (no rigid spin) · fix magic_dust framing + standardize a stronger glow-pulse.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/arcane.png" alt="arcane"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="arcane_candle">
+        <div class="gifwrap"><img loading="lazy" src="gifs/arcane_candle.gif" alt="arcane_candle"></div>
+        <div class="cardbody">
+          <div class="key">arcane_candle</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#3fb950">Great motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 11.55</span></div>
+          <p class="note">Real flame deformation (benchmark); the layered sines don&#x27;t loop cleanly — retune to integer multiples + add a gust-gutter-recover beat.</p>
+        </div>
+      </div>
+      <div class="card" id="arcane_potion_red">
+        <div class="gifwrap"><img loading="lazy" src="gifs/arcane_potion_red.gif" alt="arcane_potion_red"></div>
+        <div class="cardbody">
+          <div class="key">arcane_potion_red</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 2.84</span></div>
+          <p class="note">Frozen flask; only tiny bubbles + a sub-pixel surface wave; add a bob+rock with a lagging liquid slosh + a bubble-pop sparkle beat.</p>
+        </div>
+      </div>
+      <div class="card" id="arcane_potion_blue">
+        <div class="gifwrap"><img loading="lazy" src="gifs/arcane_potion_blue.gif" alt="arcane_potion_blue"></div>
+        <div class="cardbody">
+          <div class="key">arcane_potion_blue</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.75</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +0,+7.4</span></div>
+          <p class="note">Deadest (1.75) + a bottom-heavy half-empty cone; raise the liquid, stream a fizzing column, add a reaction-surge squash; re-center up.</p>
+        </div>
+      </div>
+      <div class="card" id="arcane_crystal_ball">
+        <div class="gifwrap"><img loading="lazy" src="gifs/arcane_crystal_ball.gif" alt="arcane_crystal_ball"></div>
+        <div class="cardbody">
+          <div class="key">arcane_crystal_ball</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 5.13</span></div>
+          <p class="note">Genuine internal swirl, but the spin (t*0.5) won&#x27;t loop and the claws are faint scratches; phase-lock the spin + a scrying-pulse + thicken the claws.</p>
+        </div>
+      </div>
+      <div class="card" id="arcane_runestone">
+        <div class="gifwrap"><img loading="lazy" src="gifs/arcane_runestone.gif" alt="arcane_runestone"></div>
+        <div class="cardbody">
+          <div class="key">arcane_runestone</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 2.48</span></div>
+          <p class="note">Near-dead (2.48) — the stone is frozen, runes only brightness-pulse; float the tablet + ignite the runes stroke-by-stroke with sparks; make the sweep visible.</p>
+        </div>
+      </div>
+      <div class="card" id="arcane_magic_dust">
+        <div class="gifwrap"><img loading="lazy" src="gifs/arcane_magic_dust.gif" alt="arcane_magic_dust"></div>
+        <div class="cardbody">
+          <div class="key">arcane_magic_dust</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 4.55</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +7.1,+4.6</span></div>
+          <p class="note">Worst framing (off_x 7.1, all action upper-right) on a frozen pouch; re-center, tilt-and-pour a real dust stream with a squash, pop sparkles along it.</p>
+        </div>
+      </div>
+      <div class="card" id="arcane_pentacle">
+        <div class="gifwrap"><img loading="lazy" src="gifs/arcane_pentacle.gif" alt="arcane_pentacle"></div>
+        <div class="cardbody">
+          <div class="key">arcane_pentacle</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 14.66</span></div>
+          <p class="note">Rigid 360° spin of a 5-fold-symmetric sigil (a hubcap); counter-rotate the rings + a ritual draw-on/pulse with sequential point-ignite.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-spells">
+      <div class="modhead">
+        <h3>Spell FX <span class="count">8 icons</span> </h3>
+        <p class="summary">Cohesive single-hue glow-disc FX; only two icons move the subject at all (wind = rigid rotation; arcane_missile = real ring tilt). Five never deform their core shape.</p>
+        <p class="priorities"><b>Top priorities:</b> Kill the rigid rotation on wind (traveling gusts instead) · add real shape life to the five static FX · normalize motion energy to a shared mid-tempo beat.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/spells.png" alt="spells"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="spell_fireball">
+        <div class="gifwrap"><img loading="lazy" src="gifs/spell_fireball.gif" alt="spell_fireball"></div>
+        <div class="cardbody">
+          <div class="key">spell_fireball</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 26.09</span></div>
+          <p class="note">Rigid orb (sub-pixel breathe) + a muddy brown tail + stiff triangular tongues; recolor the fire, breathe/flare the orb asymmetrically, stream the tail as a wave.</p>
+        </div>
+      </div>
+      <div class="card" id="spell_ice_shard">
+        <div class="gifwrap"><img loading="lazy" src="gifs/spell_ice_shard.gif" alt="spell_ice_shard"></div>
+        <div class="cardbody">
+          <div class="key">spell_ice_shard</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 14.12</span></div>
+          <p class="note">100% static crystals + a hard center &#x27;zipper&#x27; line; add a per-facet shimmer-sweep + a recrystallize pop + a frost burst.</p>
+        </div>
+      </div>
+      <div class="card" id="spell_lightning">
+        <div class="gifwrap"><img loading="lazy" src="gifs/spell_lightning.gif" alt="spell_lightning"></div>
+        <div class="cardbody">
+          <div class="key">spell_lightning</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">5/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 40.96</span></div>
+          <p class="note">The bolt never changes path (a lit decal) + a white-core registration bug (scale 0.7 left-shifts it) + a lollipop dot; a periodic discharge with a re-randomized jag.</p>
+        </div>
+      </div>
+      <div class="card" id="spell_heal">
+        <div class="gifwrap"><img loading="lazy" src="gifs/spell_heal.gif" alt="spell_heal"></div>
+        <div class="cardbody">
+          <div class="key">spell_heal</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 27.1</span></div>
+          <p class="note">Static cross with a glow throb (alpha, not scale); make it a heartbeat breath (scale, lub-dub) emitting motes on each beat.</p>
+        </div>
+      </div>
+      <div class="card" id="spell_shield_bubble">
+        <div class="gifwrap"><img loading="lazy" src="gifs/spell_shield_bubble.gif" alt="spell_shield_bubble"></div>
+        <div class="cardbody">
+          <div class="key">spell_shield_bubble</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 22.08</span></div>
+          <p class="note">Cleanest craft + good shimmer, but the dome never deforms; add a breathing membrane + a periodic impact ripple/squash.</p>
+        </div>
+      </div>
+      <div class="card" id="spell_poison">
+        <div class="gifwrap"><img loading="lazy" src="gifs/spell_poison.gif" alt="spell_poison"></div>
+        <div class="cardbody">
+          <div class="key">spell_poison</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 15.68</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +0,+6.5</span></div>
+          <p class="note">Rigid blob (only the glow pulses) + a tiny floats-down drip; jiggle/slosh the blob (surface tension) + a bigger gravity-accelerated drip; re-center up.</p>
+        </div>
+      </div>
+      <div class="card" id="spell_wind">
+        <div class="gifwrap"><img loading="lazy" src="gifs/spell_wind.gif" alt="spell_wind"></div>
+        <div class="cardbody">
+          <div class="key">spell_wind</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">5/10</span>
+            <span class="reads reads-no">No @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 55.82</span></div>
+          <p class="note">The brief&#x27;s #1 failure — the whole glyph rigidly rotates (a spinning logo, doesn&#x27;t read as wind); replace with L→R traveling gust streaks + tumbling leaves.</p>
+        </div>
+      </div>
+      <div class="card" id="spell_arcane_missile">
+        <div class="gifwrap"><img loading="lazy" src="gifs/spell_arcane_missile.gif" alt="spell_arcane_missile"></div>
+        <div class="cardbody">
+          <div class="key">spell_arcane_missile</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 31.02</span></div>
+          <p class="note">Best motion (a real ring tilt) but the orb is a rigid circle + a slight right-lean; add a propulsion squash-stretch + eased ring overshoot + a streaming tail; re-center.</p>
+        </div>
+      </div></div>
+    </section><h2 class="grouphead">Tools, Music &amp; Arms</h2>
+    <section class="module" id="mod-instruments">
+      <div class="modhead">
+        <h3>Instruments <span class="count">8 icons</span> </h3>
+        <p class="summary">The most cohesive-looking set in the library; motion energy is 18× spread (dead fiddle → wildly-swinging bell) and the default is a static body with a cosmetic overlay.</p>
+        <p class="priorities"><b>Top priorities:</b> Kill the static-body+overlay default (give each instrument its own small deformation) · re-center fiddle (off_x 9) + normalize bell/tambourine energy · add follow-through.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/instruments.png" alt="instruments"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="instr_lute">
+        <div class="gifwrap"><img loading="lazy" src="gifs/instr_lute.gif" alt="instr_lute"></div>
+        <div class="cardbody">
+          <div class="key">instr_lute</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 7.09</span></div>
+          <p class="note">Static body + a 22Hz string buzz that reads as noise; add a lazy-strum (anticipation dip → strum → damped string wave + overshoot).</p>
+        </div>
+      </div>
+      <div class="card" id="instr_drum">
+        <div class="gifwrap"><img loading="lazy" src="gifs/instr_drum.gif" alt="instr_drum"></div>
+        <div class="cardbody">
+          <div class="key">instr_drum</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 20.06</span></div>
+          <p class="note">Benchmark (real strike + head squash + ripple) but symmetric/metronomic; add anticipation + an asymmetric snap + a dum-tak rhythm with a settle jiggle.</p>
+        </div>
+      </div>
+      <div class="card" id="instr_flute">
+        <div class="gifwrap"><img loading="lazy" src="gifs/instr_flute.gif" alt="instr_flute"></div>
+        <div class="cardbody">
+          <div class="key">instr_flute</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 6.96</span></div>
+          <p class="note">Static tube + a thin linear glint; add a breath-bob + finger trills with note recoil.</p>
+        </div>
+      </div>
+      <div class="card" id="instr_horn">
+        <div class="gifwrap"><img loading="lazy" src="gifs/instr_horn.gif" alt="instr_horn"></div>
+        <div class="cardbody">
+          <div class="key">instr_horn</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 21.37</span></div>
+          <p class="note">Inert tube — only sound arcs + a glint move; add an inhale/flare squash on the bell synced to the arcs + a lagging cord swing; re-center.</p>
+        </div>
+      </div>
+      <div class="card" id="instr_fiddle">
+        <div class="gifwrap"><img loading="lazy" src="gifs/instr_fiddle.gif" alt="instr_fiddle"></div>
+        <div class="cardbody">
+          <div class="key">instr_fiddle</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 4.07</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +9,+0.1</span></div>
+          <p class="note">Worst centering (off_x 9) + the body never moves while the bow slides on rails; recenter, arc the bow with eased reversals + a body weight-shift.</p>
+        </div>
+      </div>
+      <div class="card" id="instr_bell">
+        <div class="gifwrap"><img loading="lazy" src="gifs/instr_bell.gif" alt="instr_bell"></div>
+        <div class="cardbody">
+          <div class="key">instr_bell</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">8/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 73.1</span></div>
+          <p class="note">The whole assembly rigidly swings (highest score, rigid) + the clapper is invisible; add easing/overshoot + lag the dome (squash) + a visible striking clapper.</p>
+        </div>
+      </div>
+      <div class="card" id="instr_pan_flute">
+        <div class="gifwrap"><img loading="lazy" src="gifs/instr_pan_flute.gif" alt="instr_pan_flute"></div>
+        <div class="cardbody">
+          <div class="key">instr_pan_flute</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 6.81</span></div>
+          <p class="note">Tubes static; the nice L→R note glissando has no matching motion; tilt toward the sounding tube + a breath sweep; thicken the speculars.</p>
+        </div>
+      </div>
+      <div class="card" id="instr_tambourine">
+        <div class="gifwrap"><img loading="lazy" src="gifs/instr_tambourine.gif" alt="instr_tambourine"></div>
+        <div class="cardbody">
+          <div class="key">instr_tambourine</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 29.17</span></div>
+          <p class="note">The whole frame jitters at 30+Hz (a buzz, won&#x27;t loop) over a nice per-disc rattle; convert to a shake-shake-rest rhythm with eased tilts + disc follow-through.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-weapons">
+      <div class="modhead">
+        <h3>Weapons &amp; Armor <span class="count">10 icons</span> </h3>
+        <p class="summary">The most consistent static craft in the project, but the dominant idle is a glint-sweep on a rigid body; only bow/crossbow (string twang) and staff/helmet have real motion.</p>
+        <p class="priorities"><b>Top priorities:</b> Give every weapon a body idle (float/bob + a pommel/base-pivot sway) · keep the glint as a secondary accent · normalize visual weight (dagger/spear are too thin) + recenter bow/axe.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/weapons.png" alt="weapons"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="weapon_sword">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weapon_sword.gif" alt="weapon_sword"></div>
+        <div class="cardbody">
+          <div class="key">weapon_sword</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 4.54</span></div>
+          <p class="note">Glint-only on a static blade + a blown-out fuller; add a pommel-pivot sway with the glint timed to the apex.</p>
+        </div>
+      </div>
+      <div class="card" id="weapon_shield">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weapon_shield.gif" alt="weapon_shield"></div>
+        <div class="cardbody">
+          <div class="key">weapon_shield</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7.5/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 7.48</span></div>
+          <p class="note">Static body + a &#x27;selected&#x27;-style emblem pulse; rock the shield on its point with the star twinkling only as the glint passes.</p>
+        </div>
+      </div>
+      <div class="card" id="weapon_bow">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weapon_bow.gif" alt="weapon_bow"></div>
+        <div class="cardbody">
+          <div class="key">weapon_bow</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">6.5/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.74</span></div>
+          <p class="note">Real string twang (good) but rigid limbs + off-center left; recenter, flex the limbs with the twang.</p>
+        </div>
+      </div>
+      <div class="card" id="weapon_axe">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weapon_axe.gif" alt="weapon_axe"></div>
+        <div class="cardbody">
+          <div class="key">weapon_axe</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.87</span></div>
+          <p class="note">Glint-only + off-center left; pendulum the head with weighted easing (slow rise, fast fall, overshoot).</p>
+        </div>
+      </div>
+      <div class="card" id="weapon_staff">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weapon_staff.gif" alt="weapon_staff"></div>
+        <div class="cardbody">
+          <div class="key">weapon_staff</div>
+          <div class="badges">
+            <span class="badge" style="--c:#3fb950">Ship</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">8.5/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 24.15</span></div>
+          <p class="note">Top-tier caster idle (glow breathe + orbiting sparks); add a slow shaft sway and slow the spark orbit.</p>
+        </div>
+      </div>
+      <div class="card" id="weapon_dagger">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weapon_dagger.gif" alt="weapon_dagger"></div>
+        <div class="cardbody">
+          <div class="key">weapon_dagger</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.69</span></div>
+          <p class="note">Provably 0px motion (a glint on a frozen blade) + the thinnest mass; add a twitchy flip-wobble + scale it up.</p>
+        </div>
+      </div>
+      <div class="card" id="weapon_spear">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weapon_spear.gif" alt="weapon_spear"></div>
+        <div class="cardbody">
+          <div class="key">weapon_spear</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 2.63</span></div>
+          <p class="note">Glint-only on a 70%-empty shaft; sway from the butt like a grounded sentry spear + widen the tip.</p>
+        </div>
+      </div>
+      <div class="card" id="weapon_mace">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weapon_mace.gif" alt="weapon_mace"></div>
+        <div class="cardbody">
+          <div class="key">weapon_mace</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 1.73</span></div>
+          <p class="note">Static head + flat unshaded spikes; pendulum the top-heavy head with weighted easing + shade the spikes.</p>
+        </div>
+      </div>
+      <div class="card" id="weapon_helmet">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weapon_helmet.gif" alt="weapon_helmet"></div>
+        <div class="cardbody">
+          <div class="key">weapon_helmet</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7.5/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.33</span></div>
+          <p class="note">Good plume flutter but a hard sticker-like specular + dead steel; add a slow head-nod with the plume lagging + soften the gloss.</p>
+        </div>
+      </div>
+      <div class="card" id="weapon_crossbow">
+        <div class="gifwrap"><img loading="lazy" src="gifs/weapon_crossbow.gif" alt="weapon_crossbow"></div>
+        <div class="cardbody">
+          <div class="key">weapon_crossbow</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f0a020">Weak motion</span>
+            <span class="qual">5.5/10</span>
+            <span class="reads reads-no">No @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 3.36</span></div>
+          <p class="note">Muddiest silhouette (a doubled black limb + a bolt impaling the bow); rebuild the limb as a filled crescent, route the string behind, recenter, flex the limbs with the twang.</p>
+        </div>
+      </div></div>
+    </section>
+    <section class="module" id="mod-workshopTools">
+      <div class="modhead">
+        <h3>Workshop Tools <span class="count">8 icons</span> </h3>
+        <p class="summary">Best-in-class static craft, but six of eight are a global rotate/slide of the whole tool with zero articulation, and framing is all over the place (drill/saw/wrench float).</p>
+        <p class="priorities"><b>Top priorities:</b> Re-center drill/saw/wrench · replace rigid rotation with articulation (pivot the moving part, add anticipation + a work-moment recoil) · give the nail a real idle + make the drill spin.</p>
+        <div class="stripwrap"><img class="strip" loading="lazy" src="category/workshopTools.png" alt="workshopTools"></div>
+      </div>
+      <div class="grid">
+      <div class="card" id="wtool_hammer">
+        <div class="gifwrap"><img loading="lazy" src="gifs/wtool_hammer.gif" alt="wtool_hammer"></div>
+        <div class="cardbody">
+          <div class="key">wtool_hammer</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 55.61</span></div>
+          <p class="note">Best concept but pivots from the icon center (flailing) with no recoil + a mis-placed spark; pivot at the handle base — anticipation-lift → snap → recoil bounce, spark on the rotated face.</p>
+        </div>
+      </div>
+      <div class="card" id="wtool_saw">
+        <div class="gifwrap"><img loading="lazy" src="gifs/wtool_saw.gif" alt="wtool_saw"></div>
+        <div class="cardbody">
+          <div class="key">wtool_saw</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 48.05</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +3.6,+8.8</span></div>
+          <p class="note">Badly off-center (off_y 8.8), the blade slides off-frame, sawdust floats off the cut; recenter on the kerf + push/draw asymmetry + a catch-judder + dust from the teeth.</p>
+        </div>
+      </div>
+      <div class="card" id="wtool_drill">
+        <div class="gifwrap"><img loading="lazy" src="gifs/wtool_drill.gif" alt="wtool_drill"></div>
+        <div class="cardbody">
+          <div class="key">wtool_drill</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">5/10</span>
+            <span class="reads reads-no">No @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 15.35</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +5.2,+7.9</span></div>
+          <p class="note">Worst framing (lopsided) + a fake spin (flutes only scroll, nothing rotates) + a floating spark; recenter, sell real rotation (rotating blur arcs), jitter the bit not the body.</p>
+        </div>
+      </div>
+      <div class="card" id="wtool_scissors">
+        <div class="gifwrap"><img loading="lazy" src="gifs/wtool_scissors.gif" alt="wtool_scissors"></div>
+        <div class="cardbody">
+          <div class="key">wtool_scissors</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7.5/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 47.18</span></div>
+          <p class="note">Best framing + real articulation, but the snip barely opens + no snap/overshoot; widen the spread, snap shut fast with a recoil + a pivot glint.</p>
+        </div>
+      </div>
+      <div class="card" id="wtool_wrench">
+        <div class="gifwrap"><img loading="lazy" src="gifs/wtool_wrench.gif" alt="wtool_wrench"></div>
+        <div class="cardbody">
+          <div class="key">wtool_wrench</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">6/10</span>
+            <span class="reads reads-marginal">Marginal @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 34.62</span><span class="chip warn" title="subject offset from frame center (design units)">⊹ off +2,+8.9</span></div>
+          <p class="note">Off-center + a rigid whole-tool rotation (swings like a lever) with no bolt-grip; recenter, keep the hex fixed — torque → hard-stop recoil, flex the jaw.</p>
+        </div>
+      </div>
+      <div class="card" id="wtool_screwdriver">
+        <div class="gifwrap"><img loading="lazy" src="gifs/wtool_screwdriver.gif" alt="wtool_screwdriver"></div>
+        <div class="cardbody">
+          <div class="key">wtool_screwdriver</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#fb8c3b">Rigid motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 33.09</span></div>
+          <p class="note">Best gloss but a whole-tool tilt (not an axial twist) + invisible tip-ticks; sell axial rotation via cycling handle ribs + a thick tip-tick ring + press anticipation.</p>
+        </div>
+      </div>
+      <div class="card" id="wtool_paintbrush">
+        <div class="gifwrap"><img loading="lazy" src="gifs/wtool_paintbrush.gif" alt="wtool_paintbrush"></div>
+        <div class="cardbody">
+          <div class="key">wtool_paintbrush</div>
+          <div class="badges">
+            <span class="badge" style="--c:#2dd4bf">Minor</span>
+            <span class="badge" style="--c:#7ee787">Good motion</span>
+            <span class="qual">7.5/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 38.89</span></div>
+          <p class="note">Good bristle splay but a symmetric wiggle + a detached floor smear; commit a directional stroke with the smear anchored under the tip + asymmetric speed.</p>
+        </div>
+      </div>
+      <div class="card" id="wtool_nail">
+        <div class="gifwrap"><img loading="lazy" src="gifs/wtool_nail.gif" alt="wtool_nail"></div>
+        <div class="cardbody">
+          <div class="key">wtool_nail</div>
+          <div class="badges">
+            <span class="badge" style="--c:#f0a020">Major</span>
+            <span class="badge" style="--c:#f85149">Dead motion</span>
+            <span class="qual">7/10</span>
+            <span class="reads reads-yes">Yes @56px</span>
+          </div>
+          <div class="chips"><span class="chip danger" title="objective motion score (pixels changed/frame); &lt;3 ≈ reads static">⟳ 2.55</span></div>
+          <p class="note">Near-dead (2.55) — a glint on a frozen nail + a mis-placed head spark; add a periodic drive-down tap (anticipation→dip→recoil) with the spark on the head + shadow squash.</p>
+        </div>
+      </div></div>
+    </section>
+
+  <footer>
+    Generated by <code>tools/icon-review/build_doc.py</code> from
+    <code>capture.mjs</code> (Playwright render) + <code>build_review.py</code> (montages/GIFs/metrics)
+    + 20 per-module art-director agent reviews. GIFs play at ~9fps sampled over 4s; the real idles run
+    continuously. Keep this file in <code>docs/canvas-tile-review/</code> so the image paths resolve.
+  </footer>
+</div>
+</body></html>

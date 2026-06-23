@@ -66,7 +66,6 @@ export interface MapNode {
   icon: string;
   x: number;
   y: number;
-  level: number;
   region: MapRegionId;
   description: string;
   activities: string[];
@@ -79,8 +78,10 @@ export interface MapNode {
   /** Optional per-zone settlement-tier ladder. Absent → single fixed layout. */
   tiers?: ZoneTier[];
   /**
-   * Gate this zone's founding on another zone reaching a tier. Mirrors
-   * `requiresHearthTokens` but generalised: e.g. quarry requires home at City.
+   * Gate this zone on another zone reaching a tier — applies to BOTH founding
+   * this settlement and travelling to its map node. Mirrors `requiresHearthTokens`
+   * but generalised: e.g. quarry (Town 2) requires home at City, and the
+   * post-Town-2 branch zones (harbor, caves, forge) require the quarry.
    */
   requiresZoneTier?: { zone: string; tier: number };
 }
@@ -229,7 +230,7 @@ const FISH_BOARD_HARBOR: FishBoardInstance = { baseTurns: 12 };
 export const MAP_NODES: MapNode[] = [
   {
     id: "home", name: "Hearthwood Vale", kind: "home", icon: "🏡",
-    x: 10, y: 50, level: 1, region: "hearth",
+    x: 10, y: 50, region: "hearth",
     description: "Your home village. Build, craft, and rest by the hearth.",
     activities: ["Manage town", "Craft & build", "Turn in orders"],
     boards: { farm: cloneFarmBoard(TEMPERATE_FARM_TEMPLATE) },
@@ -246,7 +247,7 @@ export const MAP_NODES: MapNode[] = [
     ],
     plotCount: 20,
     // ── Town 1 ladder · 4 rungs, Outpost→City — ported from
-    // docs/town-layout/index.html (the roads-first growing-outpost mockup) and
+    // reference/docs/town-layout/index.html (the roads-first growing-outpost mockup) and
     // matching the authored maps in src/ui/town/townMaps.ts (test-enforced).
     // Plots grow 3 → 6 → 12 → 20. Each rung absorbs one or two rungs of the old
     // 6-rung PC2 Camp→Manor ladder: its `unlocks` are the union of the absorbed
@@ -284,7 +285,7 @@ export const MAP_NODES: MapNode[] = [
   },
   {
     id: "meadow", name: "Greenmeadow", kind: "farm", icon: "🌾",
-    x: 24, y: 28, level: 1, region: "farm",
+    x: 24, y: 28, region: "farm",
     description: "Sun-drenched fields. Easy harvests for new farmers.",
     activities: ["Harvest farm tiles", "Common resources"],
     boards: { farm: cloneFarmBoard(TEMPERATE_FARM_TEMPLATE) },
@@ -299,7 +300,7 @@ export const MAP_NODES: MapNode[] = [
   },
   {
     id: "orchard", name: "Wild Orchard", kind: "farm", icon: "🍎",
-    x: 24, y: 72, level: 2, region: "farm",
+    x: 24, y: 72, region: "farm",
     description: "Tangled rows of fruit trees. Richer farm yields.",
     activities: ["Harvest farm tiles", "Higher-tier crops"],
     boards: { farm: cloneFarmBoard(ORCHARD_FARM_TEMPLATE) },
@@ -314,7 +315,7 @@ export const MAP_NODES: MapNode[] = [
   },
   {
     id: "crossroads", name: "The Crossroads", kind: "event", icon: "🎲",
-    x: 40, y: 50, level: 2, region: "wilds",
+    x: 40, y: 50, region: "wilds",
     description: "A windswept junction where strangers and rumors meet.",
     activities: ["Random encounters", "Story bits"],
     boards: {},
@@ -325,7 +326,7 @@ export const MAP_NODES: MapNode[] = [
   },
   {
     id: "quarry", name: "Cracked Quarry", kind: "mine", icon: "⛏️",
-    x: 56, y: 26, level: 2, region: "mine",
+    x: 56, y: 26, region: "mine",
     description: "A wide, shattered pit. Stone, ore, and a few coins lost in cracks.",
     activities: ["Harvest mine tiles", "Ore & stone"],
     boards: { mine: cloneMineBoard(MINE_BOARD_STANDARD) },
@@ -375,7 +376,7 @@ export const MAP_NODES: MapNode[] = [
   },
   {
     id: "caves", name: "Lanternlit Caves", kind: "mine", icon: "🪨",
-    x: 56, y: 74, level: 4, region: "mine",
+    x: 56, y: 74, region: "mine",
     description: "Twisting tunnels lit by old miners’ lanterns. Rare gems hide deep within.",
     activities: ["Harvest mine tiles", "Rare gems"],
     boards: { mine: cloneMineBoard(MINE_BOARD_EXTENDED) },
@@ -387,10 +388,12 @@ export const MAP_NODES: MapNode[] = [
       BuildingId.Watchtower, BuildingId.Apothecary, BuildingId.Observatory, BuildingId.Chapel,
     ],
     plotCount: 9,
+    // Post-Town-2 branch: the deep mine opens once the quarry is established.
+    requiresZoneTier: { zone: "quarry", tier: 1 },
   },
   {
     id: "fairground", name: "Drifter's Fairground", kind: "festival", icon: "🎪",
-    x: 72, y: 50, level: 3, region: "wilds",
+    x: 72, y: 50, region: "wilds",
     description: "A rolling fair of music, trinkets, and seasonal contests.",
     activities: ["Festival rewards", "Limited-time offers"],
     boards: {},
@@ -401,7 +404,7 @@ export const MAP_NODES: MapNode[] = [
   },
   {
     id: "forge", name: "Black Forge", kind: "mine", icon: "🔥",
-    x: 86, y: 28, level: 5, region: "mine",
+    x: 86, y: 28, region: "mine",
     description: "A roaring smithy at the foot of the mountain. Where heroes’ tools are born.",
     activities: ["Advanced crafting", "Boss-tier resources"],
     boards: { mine: cloneMineBoard(MINE_BOARD_EXTENDED) },
@@ -412,10 +415,12 @@ export const MAP_NODES: MapNode[] = [
       BuildingId.Portal, BuildingId.CaravanPost, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3,
     ],
     plotCount: 8,
+    // Deeper still — the Black Forge needs a maturing mine behind it.
+    requiresZoneTier: { zone: "quarry", tier: 2 },
   },
   {
     id: "pit", name: "The Pit", kind: "boss", icon: "⚔️",
-    x: 90, y: 72, level: 6, region: "boss",
+    x: 90, y: 72, region: "boss",
     description: "Something stirs in the dark. Bring your best chains.",
     activities: ["Boss battles", "Rare loot"],
     boards: {},
@@ -426,7 +431,7 @@ export const MAP_NODES: MapNode[] = [
   },
   {
     id: "harbor", name: "Saltspray Harbor", kind: "fish", icon: "⚓",
-    x: 16, y: 86, level: 3, region: "coast",
+    x: 16, y: 86, region: "coast",
     description: "A weather-bleached pier with nets full of sardines and clams. Tide and luck do most of the work.",
     activities: ["Harvest fish tiles", "Sardine, mackerel & clams"],
     boards: { fish: cloneFishBoard(FISH_BOARD_HARBOR) },
@@ -437,10 +442,12 @@ export const MAP_NODES: MapNode[] = [
       BuildingId.Inn, BuildingId.CaravanPost, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3, BuildingId.Watchtower,
     ],
     plotCount: 8,
+    // Post-Town-2 branch: the coast/fishing line opens once the quarry is established.
+    requiresZoneTier: { zone: "quarry", tier: 1 },
   },
   {
     id: "mirefen", name: "Mirefen Hollow", kind: "fish", icon: "🪷",
-    x: 34, y: 90, level: 3, region: "coast",
+    x: 34, y: 90, region: "coast",
     description: "A stilt-town strung across black water on golden boardwalks. Fish the misty fen, then grow the boardwalk into a town.",
     activities: ["Harvest fish tiles", "Grow the stilt-town rung by rung"],
     boards: { fish: cloneFishBoard(FISH_BOARD_HARBOR) },
@@ -457,7 +464,7 @@ export const MAP_NODES: MapNode[] = [
     ],
     plotCount: 15,
     // ── Mirefen ladder · 4 rungs (Fishing Stilt → Fen Town), ported from
-    // docs/zones (mirefen design: plots 3/6/10/15). Costs are resource-only
+    // reference/docs/zones (mirefen design: plots 3/6/10/15). Costs are resource-only
     // (matching home/quarry convention) and gate ONLY on fish-board-producible
     // resources — the per-zone inventory is siloed, so a fish settlement can only
     // ever stock fish goods. The design's `plank`/`fenmead` gates were swapped for
@@ -487,7 +494,7 @@ export const MAP_NODES: MapNode[] = [
   },
   {
     id: "oldcapital", name: "The Old Capital", kind: "capital", icon: "🏛️",
-    x: 93, y: 50, level: 1, region: "capital",
+    x: 93, y: 50, region: "capital",
     description: "The first hearth of the old kingdom — dark for an age. They say the Ember still waits there.",
     activities: ["Requires all 3 Hearth-Tokens", "The Long Return ends here"],
     requiresHearthTokens: true,

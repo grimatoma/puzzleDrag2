@@ -2,7 +2,7 @@
 # Branch protection (set in repo settings — adding jobs here does NOT auto-gate merges):
 #   - Require status checks: lint, typecheck, typecheck-tests, typecheck-test-files, test, build, e2e
 #   - `e2e` is now GATING: the rotted specs were de-rotted and its `continue-on-error` removed
-#     (see docs/projects/09-ci-e2e-gate-findings.md). A HUMAN must still add `e2e` to the required
+#     (see reference/docs/projects/09-ci-e2e-gate-findings.md). A HUMAN must still add `e2e` to the required
 #     status checks above in repo settings — flipping continue-on-error here does NOT auto-gate merges.
 #   - `visual-smoke` is still NON-BLOCKING; add it AFTER its goldens are re-baselined on CI and
 #     its `continue-on-error` is removed (see the `visual-rebaseline` job + procedure below).
@@ -124,7 +124,7 @@ jobs:
   #
   # GATING: the previously-rotted specs were de-rotted (stale action fixtures,
   # selectors, balance/unlock assumptions, the zoned-inventory model, and the
-  # dialogs-disabled-by-default flag — see docs/projects/09-ci-e2e-gate-findings.md).
+  # dialogs-disabled-by-default flag — see reference/docs/projects/09-ci-e2e-gate-findings.md).
   # `npm run test:e2e` is green on chromium/Linux. A human must add `e2e` to the
   # branch-protection required checks (see header) for it to actually block merges.
   e2e:

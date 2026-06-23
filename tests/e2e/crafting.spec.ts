@@ -53,7 +53,7 @@ test('Workshop: crafting water_pump credits state.tools, NOT inventory (PR #274 
     coins: 500,
     built: { workshop: true },
     inventory: { home: { plank: 2, block: 2 } },
-    level: 3, // tier-2 recipes require level ≥ 3
+    settlements: { home: { founded: true, tier: 2 } }, // tier-2 recipes unlock at home Village (tier 2)
   });
   await openCraftingTab(page, 'workshop');
 
@@ -74,7 +74,7 @@ test('Workshop: crafting explosives also routes to state.tools', async ({ page }
     coins: 500,
     built: { workshop: true },
     inventory: { home: { hay_bundle: 2, dirt: 2 } },
-    level: 3,
+    settlements: { home: { founded: true, tier: 2 } }, // tier-2 recipes unlock at home Village (tier 2)
   });
   await openCraftingTab(page, 'workshop');
 

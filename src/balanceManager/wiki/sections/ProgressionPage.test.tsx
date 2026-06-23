@@ -3,6 +3,8 @@ import React from "react";
 import { describe, it, expect, afterEach } from "vitest";
 import { render, fireEvent, cleanup } from "@testing-library/react";
 import ProgressionPage from "./ProgressionPage.js";
+import { progressionPoints } from "../../../config/progression/cumulative.js";
+import { PROGRESSION_TRIGGERS } from "../../../config/progression/index.js";
 
 afterEach(cleanup);
 
@@ -15,6 +17,24 @@ describe("ProgressionPage", () => {
     // Spine renders selectable milestone buttons.
     const spineButtons = container.querySelectorAll('[aria-label^="Show state at "]');
     expect(spineButtons.length).toBeGreaterThan(0);
+  });
+
+  it("renders the FULL timeline — a selectable node for every progression point, not just milestones", () => {
+    const { container } = render(<ProgressionPage />);
+    const nodes = container.querySelectorAll('[aria-label^="Show state at "]');
+    // One node per point in the flattened spine (milestones + their build steps).
+    expect(nodes.length).toBe(progressionPoints().length);
+    // And that is strictly more than the milestone count, i.e. the non-milestone
+    // build steps are present (the full vertical timeline, not the collapsed spine).
+    const milestoneCount = PROGRESSION_TRIGGERS.filter((t) => t.milestone).length;
+    expect(progressionPoints().length).toBeGreaterThan(milestoneCount);
+  });
+
+  it("shows each step's own unlocks inline on the timeline", () => {
+    const { container } = render(<ProgressionPage />);
+    // The per-node unlock rows are marked with a ➜ lead-in; the full timeline
+    // surfaces what unlocks at each step (the restored feed detail).
+    expect(container.textContent).toContain("➜");
   });
 
   it("selecting a later milestone updates the cumulative report", () => {

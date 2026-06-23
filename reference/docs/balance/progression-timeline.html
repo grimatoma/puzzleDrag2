@@ -1,0 +1,1095 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>puzzleDrag2 — Progression Timeline · June 2026</title>
+<style>
+:root{
+  --parchment:#f6efe0; --parchment-soft:#fbf7eb; --paper:#f9f2dd; --bg:#efe6cf;
+  --ink:#2b2218; --ink-soft:#7a5e3f; --ink-faint:#a8926f;
+  --rule:#c9b993; --rule-soft:#dccfa9;
+  --ember:#c2531f; --ember-soft:#d6612a; --gold:#c99a2a; --gold-deep:#a9791a; --gold-soft:#e2b24a;
+  --moss:#5f7a30; --moss-soft:#7fa848; --rose:#9c3a4a; --danger:#b13a2a; --slate:#5a5e62;
+  --fish:#4a8aaa;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);line-height:1.55;-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+#grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;mix-blend-mode:multiply}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 26px 120px}
+a{color:var(--ember);text-underline-offset:2px}
+p{max-width:76ch}
+code,.mono{font-family:var(--mono);font-size:.86em;background:rgba(201,185,147,.22);border:1px solid var(--rule-soft);border-radius:4px;padding:1px 5px;color:var(--ink-soft)}
+
+/* Masthead */
+header.mast{padding:56px 0 22px}
+.mast .eyebrow{font-family:var(--sans);font-size:12px;letter-spacing:.32em;text-transform:uppercase;color:var(--ember);font-weight:700;margin:0 0 12px}
+.mast h1{font-size:clamp(36px,6.5vw,66px);line-height:1;margin:0;font-weight:800;letter-spacing:-.01em;text-shadow:0 1px 0 #fff,0 2px 0 rgba(201,185,147,.5)}
+.mast h1 .amp{color:var(--ember)}
+.mast .dek{font-size:18px;color:var(--ink-soft);max-width:66ch;margin:16px 0 0;font-style:italic}
+.mast hr{height:0;border:0;border-top:2px solid var(--ink);margin:26px 0 0;position:relative}
+.mast hr::after{content:"";position:absolute;left:0;right:0;top:3px;border-top:1px solid var(--rule)}
+.statline{display:flex;flex-wrap:wrap;gap:24px;margin-top:20px;font-family:var(--sans)}
+.stat b{font-family:var(--serif);font-size:27px;font-weight:800;line-height:1;display:block}
+.stat span{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-soft)}
+.stat.e b{color:var(--ember)} .stat.m b{color:var(--moss)} .stat.g b{color:var(--gold-deep)} .stat.d b{color:var(--danger)}
+
+/* Tab bar */
+.tabs{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:6px;padding:10px 0;margin:8px 0 18px;background:linear-gradient(180deg,var(--bg) 70%,rgba(239,230,207,0));backdrop-filter:blur(2px);border-bottom:1px solid var(--rule-soft)}
+.tab{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.01em;border:1.5px solid var(--rule);background:var(--parchment-soft);color:var(--ink-soft);border-radius:999px;padding:7px 15px;cursor:pointer}
+.tab:hover{color:var(--ink)}
+.tab.on{background:var(--ink);color:var(--parchment);border-color:var(--ink)}
+body.has-tabs .panel{display:none}
+body.has-tabs .panel.on{display:block;animation:rise .35s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Sections */
+section{padding:30px 0 6px;scroll-margin-top:70px}
+section + section{border-top:1px solid var(--rule-soft)}
+.kick{font-family:var(--sans);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin:0 0 4px}
+h2{font-size:clamp(24px,3.2vw,34px);margin:.1em 0 .3em;font-weight:800;letter-spacing:-.01em}
+h3{font-size:19px;margin:1.3em 0 .3em;font-weight:800}
+h4{font-size:15px;margin:1.1em 0 .25em;font-family:var(--sans);letter-spacing:.02em;text-transform:uppercase;color:var(--ink-soft)}
+.lede{font-size:17.5px;color:var(--ink-soft);max-width:74ch;margin:.2em 0 1em}
+ul,ol{max-width:76ch} li{margin:.28em 0}
+
+/* Chips */
+.chip{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:.04em;color:#fff;border-radius:5px;padding:2px 8px;display:inline-block;vertical-align:middle}
+.c-great{background:var(--moss)} .c-ok{background:var(--gold-deep)} .c-skip{background:var(--rose)}
+.c-ship{background:var(--ember)} .c-defer{background:var(--slate)} .c-done{background:var(--moss)}
+.c-p1{background:var(--ember)} .c-p2{background:var(--gold-deep)}
+.c-block{background:var(--danger)} .c-known{background:var(--slate)} .c-inv{background:var(--gold-deep)}
+.c-lock{background:var(--danger)} .c-yes{background:var(--moss)} .c-prop{background:var(--gold-deep)}
+
+/* Resource-family colour chips (qty x key cost chips) */
+.rc{font-family:var(--mono);font-size:11px;font-weight:700;border-radius:5px;padding:2px 7px;display:inline-flex;align-items:center;gap:0;margin:2px 4px 2px 0;border:1px solid rgba(0,0,0,.12);white-space:nowrap;line-height:1.3}
+.rc .q{opacity:.92;font-weight:800}
+.rc .x{opacity:.55;margin:0 2px}
+.rc.farm{background:rgba(95,122,48,.16);color:#3f5320;border-color:rgba(95,122,48,.45)}
+.rc.mine{background:rgba(90,94,98,.18);color:#3c4044;border-color:rgba(90,94,98,.5)}
+.rc.fish{background:rgba(74,138,170,.16);color:#2f5e74;border-color:rgba(74,138,170,.5)}
+.rc.crafted{background:rgba(169,121,26,.16);color:#7a560f;border-color:rgba(169,121,26,.5)}
+.rc.other{background:rgba(168,146,111,.18);color:#6a5840;border-color:rgba(168,146,111,.5)}
+.bld{font-family:var(--sans);font-size:10px;font-weight:700;border-radius:4px;padding:2px 7px;margin:2px 4px 2px 0;display:inline-block;background:var(--parchment);border:1px solid var(--rule);color:var(--ink-soft);white-space:nowrap}
+.freecost{font-family:var(--sans);font-size:11px;font-style:italic;color:var(--ink-faint)}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;font-family:var(--sans);font-size:12px;color:var(--ink-soft);margin:10px 0 4px;padding:9px 13px;background:var(--parchment-soft);border:1px solid var(--rule-soft);border-radius:7px}
+.legend .li{display:inline-flex;align-items:center;gap:6px}
+.legend .sw{width:13px;height:13px;border-radius:3px;border:1px solid rgba(0,0,0,.15);display:inline-block}
+.legend .sw.farm{background:var(--moss)} .legend .sw.mine{background:var(--slate)} .legend .sw.fish{background:var(--fish)}
+.legend .sw.crafted{background:var(--gold-deep)} .legend .sw.other{background:var(--ink-faint)}
+
+/* Callouts */
+.call{border:1px solid var(--rule);border-left:5px solid var(--moss);border-radius:4px;background:var(--parchment);padding:16px 20px;margin:16px 0;box-shadow:0 1px 0 rgba(201,185,147,.5)}
+.call.warn{border-left-color:var(--ember)} .call.tip{border-left-color:var(--gold-deep)} .call.bad{border-left-color:var(--danger)}
+.call h4{margin:0 0 5px;color:var(--ink);font-family:var(--serif);text-transform:none;font-size:16px;letter-spacing:0}
+.call p{margin:.3em 0;color:var(--ink-soft)}
+.call.bad h4{color:var(--danger)}
+
+/* big softlock banner */
+.softbanner{border:2px solid var(--danger);border-radius:8px;background:linear-gradient(180deg,#f6e0d8,#f3ddd2);padding:18px 22px;margin:18px 0;box-shadow:0 2px 0 rgba(177,58,42,.25)}
+.softbanner .hd{display:flex;align-items:center;gap:10px;font-family:var(--sans);font-weight:800;font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--danger);margin:0 0 6px}
+.softbanner .hd .ic{font-size:22px;line-height:1}
+.softbanner p{margin:.2em 0;color:#5b3a30;max-width:none;font-size:15.5px;line-height:1.5}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th{font-family:var(--sans);font-size:11px;letter-spacing:.08em;text-transform:uppercase;text-align:left;color:var(--ink-soft);border-bottom:2px solid var(--ink);padding:9px 10px}
+td{border-bottom:1px solid var(--rule-soft);padding:9px 10px;vertical-align:top}
+tr:hover td{background:rgba(201,185,147,.12)}
+.num{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+caption{caption-side:bottom;font-family:var(--sans);font-size:12px;color:var(--ink-faint);text-align:left;padding:8px 2px 0;font-style:italic}
+
+/* Cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:16px 0}
+.card{background:var(--parchment-soft);border:1px solid var(--rule);border-radius:8px;padding:16px 18px;box-shadow:0 2px 0 rgba(201,185,147,.45)}
+.card h4{margin-top:0}
+.card.accent{border-left:4px solid var(--ember)}
+.card.warnL{border-left:4px solid var(--danger)}
+.card.mossL{border-left:4px solid var(--moss)}
+.card.goldL{border-left:4px solid var(--gold-deep)}
+.card .src{display:block;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+
+details{background:var(--parchment-soft);border:1px solid var(--rule);border-radius:6px;padding:10px 16px;margin:12px 0}
+summary{cursor:pointer;font-weight:700;font-family:var(--sans);font-size:14px}
+details[open]{padding-bottom:16px}
+
+.svgwrap{background:var(--parchment-soft);border:1px solid var(--rule);border-radius:8px;padding:18px;margin:18px 0;box-shadow:0 2px 0 rgba(201,185,147,.45)}
+.svgwrap figcaption{font-size:13px;color:var(--ink-soft);font-style:italic;margin-top:8px;text-align:center}
+
+/* ───────── Journey: vertical timeline / ladder ───────── */
+.ladder{position:relative;margin:18px 0 6px;padding-left:8px}
+.rung{position:relative;display:grid;grid-template-columns:64px 1fr;gap:14px;align-items:stretch;margin:0 0 8px}
+.rung .spine{position:relative;display:flex;flex-direction:column;align-items:center}
+.rung .dot{width:46px;height:46px;border-radius:50%;background:var(--parchment-soft);border:3px solid var(--rule);display:flex;align-items:center;justify-content:center;font-family:var(--sans);font-weight:800;font-size:13px;color:var(--ink-soft);z-index:2;box-shadow:0 2px 0 rgba(201,185,147,.45);flex:0 0 auto}
+.rung .conn{flex:1 1 auto;width:4px;background:var(--rule);min-height:14px;margin:2px 0}
+.rung:last-child .conn{display:none}
+.rung.reach .dot{border-color:var(--moss);color:var(--moss);background:#eef3df}
+.rung.reach .conn{background:var(--moss-soft)}
+.rung.blocked .dot{border-color:var(--danger);color:var(--danger);background:#f6e0d8}
+.rung.blocked .conn{background:repeating-linear-gradient(180deg,var(--danger) 0 6px,transparent 6px 12px)}
+.rcard{background:var(--parchment-soft);border:1px solid var(--rule);border-radius:8px;padding:12px 15px;box-shadow:0 2px 0 rgba(201,185,147,.4);cursor:pointer;transition:box-shadow .15s,border-color .15s}
+.rcard:hover{border-color:var(--ink-faint)}
+.rcard.sel{border-color:var(--ember);box-shadow:0 0 0 2px rgba(194,83,31,.25),0 2px 0 rgba(201,185,147,.4)}
+.rung.reach .rcard{border-left:4px solid var(--moss)}
+.rung.blocked .rcard{border-left:4px solid var(--danger)}
+.rcard .rhd{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.rcard .rname{font-weight:800;font-size:17px;font-family:var(--serif)}
+.rcard .rplots{font-family:var(--sans);font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.04em;text-transform:uppercase}
+.rcard .rlabel{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;border-radius:4px;padding:1px 7px}
+.rcard .rlabel.reach{background:var(--moss);color:#fff}
+.rcard .rlabel.start{background:var(--gold-deep);color:#fff}
+.rcard .rlabel.blocked{background:var(--danger);color:#fff}
+.rcard .rsub{font-family:var(--sans);font-size:11.5px;color:var(--ink-soft);margin:6px 0 2px;letter-spacing:.03em;text-transform:uppercase;font-weight:700}
+.rcard .costline,.rcard .unlockline{margin:3px 0 2px}
+.blockmark{margin-top:8px;border-top:1px dashed var(--danger);padding-top:8px;font-size:13px;color:#7a3526}
+.blockmark b{color:var(--danger)}
+
+/* branch zones hanging off a rung (sibling of .rung, indented under the card) */
+.branchwrap{margin:-2px 0 10px 78px;padding:10px 12px;border:1px dashed var(--rule);border-radius:8px;background:rgba(201,185,147,.10)}
+.branchwrap .bttl{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);margin:0 0 7px}
+.branches{display:flex;flex-wrap:wrap;gap:10px}
+.branch{flex:1 1 210px;min-width:200px;background:var(--parchment-soft);border:1px solid var(--rule);border-radius:7px;padding:9px 11px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.branch:hover{border-color:var(--ink-faint)}
+.branch.sel{border-color:var(--ember);box-shadow:0 0 0 2px rgba(194,83,31,.22)}
+.branch.locked{opacity:.96;border-style:dashed}
+.branch .bhd{display:flex;align-items:center;gap:7px}
+.branch .bic{font-size:18px;line-height:1}
+.branch .bnm{font-weight:800;font-size:14px}
+.branch .bmeta{font-family:var(--sans);font-size:11px;color:var(--ink-soft);margin-top:4px;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center}
+.branch .lk{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--danger);border-radius:4px;padding:1px 6px}
+.branch .ok{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:var(--moss);border-radius:4px;padding:1px 6px}
+.branch .subbranch{margin-top:8px;padding-top:7px;border-top:1px dashed var(--rule)}
+.branch .subbranch .sbttl{font-family:var(--sans);font-size:9.5px;font-weight:800;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:5px}
+.subchip{display:inline-flex;align-items:center;gap:5px;font-family:var(--sans);font-size:11px;background:var(--paper);border:1px solid var(--rule);border-radius:6px;padding:3px 7px;margin:0 5px 5px 0;cursor:pointer}
+.subchip:hover{border-color:var(--ink-faint)}
+.subchip.sel{border-color:var(--ember);box-shadow:0 0 0 2px rgba(194,83,31,.2)}
+
+/* detail rail for the journey */
+.jdetail{position:sticky;top:64px;background:var(--parchment-soft);border:1px solid var(--rule);border-left:4px solid var(--ember);border-radius:8px;padding:14px 16px;box-shadow:0 2px 0 rgba(201,185,147,.45);font-size:14px}
+.jdetail h4{margin:0 0 4px;font-family:var(--serif);text-transform:none;font-size:18px;color:var(--ink);letter-spacing:0}
+.jdetail .meta{font-family:var(--sans);font-size:11px;color:var(--ink-soft);margin:0 0 9px;letter-spacing:.03em}
+.jdetail .dlbl{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);margin:11px 0 4px}
+.jlayout{display:grid;grid-template-columns:1fr 320px;gap:20px;align-items:start}
+@media(max-width:820px){.jlayout{grid-template-columns:1fr}.jdetail{position:static;margin-top:14px}}
+
+/* secondary ladder (quarry/mirefen compact) */
+.miniladder{display:flex;flex-direction:column;gap:6px;margin:10px 0}
+.minirung{display:grid;grid-template-columns:auto 1fr;gap:11px;align-items:start;padding:8px 11px;background:var(--parchment-soft);border:1px solid var(--rule);border-radius:7px;box-shadow:0 1px 0 rgba(201,185,147,.4)}
+.minirung.reach{border-left:4px solid var(--moss)}
+.minirung.blocked{border-left:4px solid var(--danger)}
+.minirung .mdot{font-family:var(--sans);font-weight:800;font-size:12px;color:var(--ink-soft);min-width:18px;text-align:center;padding-top:2px}
+.minirung.reach .mdot{color:var(--moss)} .minirung.blocked .mdot{color:var(--danger)}
+.minirung .mnm{font-weight:800;font-size:14px;font-family:var(--serif)}
+.minirung .mplots{font-family:var(--sans);font-size:10.5px;color:var(--ink-faint);font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-left:6px}
+
+/* world map */
+.mapwrap{background:var(--parchment-soft);border:1px solid var(--rule);border-radius:8px;padding:10px 10px 4px;box-shadow:0 2px 0 rgba(201,185,147,.45)}
+#worldmap{width:100%;height:auto;display:block;touch-action:manipulation}
+#worldmap .znode{cursor:pointer}
+#worldmap .zlabel{font-family:var(--sans);font-weight:700;font-size:2.6px;fill:var(--ink);pointer-events:none}
+#worldmap .zlock{font-size:3px;pointer-events:none}
+#worldmap .gateLabel{font-family:var(--sans);font-size:2.1px;fill:var(--danger);pointer-events:none;font-weight:700}
+.zonedetail{background:var(--parchment-soft);border:1px solid var(--rule);border-left:4px solid var(--ember);border-radius:8px;padding:15px 18px;margin:14px 0;box-shadow:0 2px 0 rgba(201,185,147,.45)}
+.zonedetail h3{margin:.1em 0 .2em}
+.zonedetail .meta{font-family:var(--sans);font-size:12px;color:var(--ink-soft);margin:0 0 8px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.zonedetail .dlbl{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint);margin:12px 0 4px}
+.kindtag{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#fff;border-radius:4px;padding:2px 8px}
+
+/* lock ring diagram */
+#lockring{width:100%;height:auto;max-width:560px;display:block;margin:0 auto}
+.locklist{counter-reset:lk;margin:18px 0}
+.lockitem{display:grid;grid-template-columns:42px 1fr;gap:14px;align-items:start;background:var(--parchment-soft);border:1px solid var(--rule);border-left:4px solid var(--danger);border-radius:8px;padding:13px 16px;margin:12px 0;box-shadow:0 2px 0 rgba(201,185,147,.4)}
+.lockitem .lknum{counter-increment:lk;font-family:var(--serif);font-weight:800;font-size:26px;color:var(--danger);line-height:1;text-align:center}
+.lockitem .lknum::before{content:counter(lk,upper-alpha)}
+.lockitem h4{margin:0 0 4px;font-family:var(--serif);text-transform:none;font-size:16px;color:var(--ink);letter-spacing:0}
+.lockitem p{margin:.2em 0;color:var(--ink-soft);font-size:14px}
+.lockitem .src{font-family:var(--mono);font-size:11px;color:var(--ink-faint);display:block;margin-top:5px}
+
+footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-family:var(--sans);font-size:12.5px;color:var(--ink-soft);display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+
+@media(max-width:680px){.wrap{padding:0 15px 80px}.mast{padding-top:34px}.tabs{top:0}.rung{grid-template-columns:50px 1fr;gap:9px}.rung .dot{width:40px;height:40px;font-size:11px}.branchwrap{margin-left:0}.branch{min-width:100%}}
+@media print{
+  #grain,.tabs{display:none!important}
+  body.has-tabs .panel{display:block!important;animation:none}
+  body{background:#fff}
+  section{break-inside:avoid}
+  .jdetail,.zonedetail{position:static}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+/* cross-run diff surface */
+.diffbar{font-family:var(--sans);font-size:13.5px;font-weight:600;border:1px solid var(--rule);border-left-width:5px;border-radius:6px;padding:11px 16px;margin:0 0 22px;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.diffbar.ok{border-left-color:var(--moss);background:rgba(95,122,48,.07);color:var(--moss)}
+.diffbar.changed{border-left-color:var(--danger);background:rgba(177,58,42,.07);color:var(--danger)}
+.diffbar a{font-weight:700;margin-left:auto}
+.sev{font-family:var(--sans);font-size:10px;font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:#fff;border-radius:4px;padding:2px 7px;display:inline-block;white-space:nowrap}
+.sev-critical{background:var(--danger)} .sev-major{background:var(--ember)} .sev-minor{background:var(--gold-deep)} .sev-structural{background:var(--slate)}
+td.was{color:var(--ink-faint);text-decoration:line-through} td.now{color:var(--ink);font-weight:700}
+.chgcount{display:inline-flex;gap:6px;flex-wrap:wrap}
+</style>
+</head>
+<body>
+<canvas id="grain"></canvas>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Balance Profile · Hearthwood Vale · June 2026</p>
+  <h1>the progression<br><span class="amp">timeline</span></h1>
+  <p class="dek">A code-derived picture of the intended journey — every zone, every settlement rung, the world-map map, and the one circular gate that softlocks the climb at its first step. The doc a designer and the balance skill read together to confirm they share the same map before tuning a single number.</p>
+  <hr>
+  <div class="statline" id="statline"><!-- built from SPINE --></div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab on" data-tab="overview">Overview</button>
+  <button class="tab" data-tab="journey">The Journey</button>
+  <button class="tab" data-tab="map">World Map</button>
+  <button class="tab" data-tab="lock">⛔ The Lock</button>
+  <button class="tab" data-tab="changes" id="tab-changes">Changes</button>
+  <button class="tab" data-tab="sources">Sources</button>
+</nav>
+
+<!-- ───────────────────────── OVERVIEW ───────────────────────── -->
+<div class="panel on" id="overview">
+<section>
+  <div id="ov-diff"><!-- changes-since-last-review banner --></div>
+  <p class="kick">What this artifact is</p>
+  <h2 id="ov-title">The intended journey, drawn from the code</h2>
+  <p class="lede" id="ov-lede"></p>
+  <div id="ov-softlock"><!-- softlock banner --></div>
+  <div id="ov-reach"><!-- reachable list --></div>
+  <div class="call tip">
+    <h4>Read it as a shared map, not a verdict</h4>
+    <p>This page renders the progression spine straight from <code>SPINE</code> — the same object the playtest oracle builds from <code>MAP_NODES</code>, <code>MAP_EDGES</code>, <code>BUILDINGS</code> and <code>RECIPES</code>. Nothing here is hand-typed game data; if the code moves, regenerate and the page moves with it. The <a href="#lock">levers</a> at the end are options to weigh, not changes already made.</p>
+  </div>
+</section>
+</div>
+
+<!-- ───────────────────────── THE JOURNEY ───────────────────────── -->
+<div class="panel" id="journey">
+<section>
+  <p class="kick">The centrepiece</p>
+  <h2>The journey ladder</h2>
+  <p class="lede">The home settlement is the progression spine: Outpost → Hamlet → Village → City. Each rung shows its plot count, its tier-up cost as family-coloured resource chips, and the buildings it unlocks. Branch zones hang off the rung that gates them. Tap any rung or branch to inspect it in the rail.</p>
+  <div class="legend" id="famlegend"></div>
+  <div class="jlayout">
+    <div>
+      <h3 style="margin-top:.4em">Home spine — <span id="homeName">Hearthwood Vale</span></h3>
+      <div class="ladder" id="homeLadder"><!-- built --></div>
+
+      <h3>Secondary ladders</h3>
+      <p style="font-size:14px;color:var(--ink-soft);max-width:74ch">The quarry and Mirefen Hollow climb their own rungs once reached. The quarry self-climbs to Smeltworks then sub-walls; Mirefen climbs its full ladder on fish goods.</p>
+      <div id="secondaryLadders"><!-- built --></div>
+    </div>
+    <aside>
+      <div class="jdetail" id="jdetail">
+        <h4>Select a rung</h4>
+        <p class="meta">Tap any station node, branch zone, or sub-branch to read its full costs and unlocks here.</p>
+      </div>
+    </aside>
+  </div>
+</section>
+</div>
+
+<!-- ───────────────────────── WORLD MAP ───────────────────────── -->
+<div class="panel" id="map">
+<section>
+  <p class="kick">The world, as the player sees it</p>
+  <h2>Zone-unlock map</h2>
+  <p class="lede">Every zone placed at its in-game world coordinate, travel routes drawn beneath. Fully-coloured discs are reachable from a fresh save; faded discs with a 🔒 are locked behind a gate (shown in red). Tap a zone to fill the panel below.</p>
+  <div class="legend" id="mapkinds"></div>
+  <figure class="mapwrap">
+    <svg id="worldmap" viewBox="0 0 100 72" role="img" aria-label="World map node-graph of all zones and their travel connections."></svg>
+  </figure>
+  <div class="zonedetail" id="zonedetail">
+    <h3>Tap a zone on the map</h3>
+    <p class="meta">Its kind, entry cost, board type, gate, reachability, tier ladder, and any progression wall will appear here.</p>
+  </div>
+</section>
+</div>
+
+<!-- ───────────────────────── THE LOCK ───────────────────────── -->
+<div class="panel" id="lock">
+<section>
+  <p class="kick">The headline finding · severity: blocker</p>
+  <h2 id="lock-title">The progression softlock</h2>
+  <div id="lock-summary"><!-- summary callout --></div>
+
+  <h3>The circular dependency</h3>
+  <p>Read it as a ring with no entry point. Each arrow is "needs" — follow them around and they close on themselves.</p>
+  <figure class="svgwrap">
+    <svg id="lockring" viewBox="0 0 460 360" role="img" aria-label="Circular-dependency diagram: the Hamlet rung needs bread, which needs a Bakery, whose cost needs block, a mine good, gated behind the quarry, gated behind home tier 3, which routes back to the Hamlet rung."></svg>
+    <figcaption>The home climb depends on mine goods that are themselves gated on the home climb. The loop eats its own tail.</figcaption>
+  </figure>
+
+  <h3>Three stacked locks</h3>
+  <p class="lede">It is not one gate but three, layered — any single one would be awkward, together they are a hard wall. Each is read from the data and confirmed in the source.</p>
+  <div class="locklist">
+    <div class="lockitem">
+      <div class="lknum"></div>
+      <div>
+        <h4>The Bakery's own build cost needs a mine good</h4>
+        <p>The Bakery — the only station that crafts <code>bread</code> — costs <span class="rc farm"><span class="q">8</span><span class="x">×</span>plank</span> <span class="rc mine"><span class="q">6</span><span class="x">×</span>block</span> <span class="rc farm"><span class="q">4</span><span class="x">×</span>eggs</span>. That <code>block</code> is a mine good a farm board never spawns, so you cannot even build the Bakery at home, let alone bake the bread the next rung wants.</p>
+        <span class="src">src/constants.ts → BUILDINGS bakery <code>{plank:8, block:6, eggs:4}</code></span>
+      </div>
+    </div>
+    <div class="lockitem">
+      <div class="lknum"></div>
+      <div>
+        <h4>The Bakery only unlocks at Hamlet — whose gate is bread</h4>
+        <p>Even with the goods, the Bakery is a Hamlet-tier unlock, and the Hamlet rung's tier-up cost itself demands <span class="rc crafted"><span class="q">10</span><span class="x">×</span>bread</span>. So the building that makes bread is locked behind the rung that needs bread — a chicken-and-egg knot nested inside lock A.</p>
+        <span class="src">src/features/cartography/data.ts → home tiers (Hamlet upgradeCost + unlocks)</span>
+      </div>
+    </div>
+    <div class="lockitem">
+      <div class="lknum"></div>
+      <div>
+        <h4>The upper rungs demand mine &amp; sea goods directly</h4>
+        <p>Past Hamlet the home ladder asks for <span class="rc mine"><span class="q">20</span><span class="x">×</span>block</span> <span class="rc mine"><span class="q">14</span><span class="x">×</span>coke</span> <span class="rc mine"><span class="q">14</span><span class="x">×</span>silver_bar</span> (Village) and <span class="rc mine"><span class="q">30</span><span class="x">×</span>iron_bar</span> <span class="rc mine"><span class="q">13</span><span class="x">×</span>gold_bar</span> <span class="rc fish"><span class="q">1</span><span class="x">×</span>jade</span> (City). And every mine/fish zone that could supply them carries a <code>requiresZoneTier</code> gate routing back through the quarry — which itself needs home at City.</p>
+        <span class="src">src/features/cartography/data.ts → home Village/City upgradeCost · quarry requiresZoneTier {home, tier 3}</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="lock-market"><!-- market escape callout --></div>
+
+  <h3>Levers — for the designer, not applied here</h3>
+  <div class="call warn">
+    <h4>Nothing below has been changed.</h4>
+    <p>These are options to evaluate. Any one of them breaks the cycle; the cleanest fix is the smallest edit that opens a farm-only path to the first real rung.</p>
+  </div>
+  <div class="grid">
+    <div class="card accent"><h4>1 · Re-cost the Bakery off <code>block</code></h4><p>Swap the Bakery's <code>block</code> for a farm good (e.g. <code>hay_bundle</code>) so <code>bread</code> becomes farm-craftable. The keystone edit — it unties locks A and B at once.</p><span class="src">BUILDINGS bakery · constants.ts</span></div>
+    <div class="card accent"><h4>2 · Unlock the Bakery at Outpost</h4><p>Move the Bakery from a Hamlet unlock to an Outpost (tier 0) unlock, so the player can bake before the rung that needs bread.</p><span class="src">home tiers[].unlocks · cartography/data.ts</span></div>
+    <div class="card accent"><h4>3 · Re-gate the quarry earlier</h4><p>Lower the quarry's <code>requiresZoneTier</code> from <code>{home, tier 3}</code> toward tier 0–1 so mine goods are reachable before the home ladder demands them.</p><span class="src">quarry requiresZoneTier · cartography/data.ts:344</span></div>
+    <div class="card accent"><h4>4 · Seed an early mine good</h4><p>Grant or sell a small starter stock of <code>block</code>/<code>iron_bar</code> — open the latent market escape, or a quest/daily grant — so the first rungs have a first step.</p><span class="src">market escape · see note above</span></div>
+  </div>
+</section>
+</div>
+
+<!-- ───────────────────────── CHANGES ───────────────────────── -->
+<div class="panel" id="changes">
+<section>
+  <p class="kick">Cross-run diff</p>
+  <h2>Changes since last review</h2>
+  <p class="lede">Every run re-derives the spine and diffs it against the committed <strong>baseline</strong> (<code>progression.baseline.json</code> — the last state signed off on). Anything below moved since then, so the matching claims elsewhere on this page are <strong>outdated</strong> until reviewed. When the changes are accepted, run <code>npm run playtest -- --progression --accept</code> to make this the new baseline.</p>
+  <div id="changesBody"></div>
+</section>
+</div>
+
+<!-- ───────────────────────── SOURCES ───────────────────────── -->
+<div class="panel" id="sources">
+<section>
+  <p class="kick">Provenance</p>
+  <h2>Sources &amp; derivation</h2>
+  <div class="call">
+    <h4>Generated from</h4>
+    <p id="genfrom"></p>
+  </div>
+  <p style="font-size:14px;color:var(--ink-soft)">Regenerate with <code>npm run playtest -- --progression</code> — it rewrites the embedded <code>SPINE</code> object (the bytes between the <code>SPINE:START</code> / <code>SPINE:END</code> marker comments in the page source), so this page cannot drift from the code. Companions: the machine profile <a href="profile.json">profile.json</a> and the design doc <a href="index.html">the balance ledger</a>.</p>
+
+  <h3>Resource families</h3>
+  <p style="font-size:14px;color:var(--ink-soft);max-width:74ch">The colour key used throughout. <code>familyOf()</code> classifies a resource: farm / mine / fish from these arrays, crafted if it is the output of a recipe, else other.</p>
+  <div id="famtable"></div>
+
+  <details id="recipesDetails">
+    <summary>Recipes — <span id="recipeCount"></span> entries (item · station · tier · inputs)</summary>
+    <div id="recipesTable"></div>
+  </details>
+
+  <h3>Per-zone self-tier table</h3>
+  <p style="font-size:14px;color:var(--ink-soft);max-width:74ch">How far each settlement climbs on its own, where it reaches a fresh save, and where it walls.</p>
+  <div id="zonetable"></div>
+</section>
+</div>
+
+<footer>
+  <span>puzzleDrag2 progression timeline · June 2026 · derived from MAP_NODES + BUILDINGS + RECIPES</span>
+  <span>warm · authored · code is truth</span>
+</footer>
+
+</div>
+
+<script>
+/* SPINE:START */
+const SPINE = {"game":"puzzleDrag2","generatedFrom":"MAP_NODES + MAP_EDGES (src/features/cartography/data.ts), BUILDINGS + RECIPES + tile pools (src/constants.ts). Derived by src/playtest/progression.ts; no hand-authored numbers.","resourceFamilies":{"farm":["eggs","flour","hay_bundle","honey","horseshoe","meat","milk","pie","plank","soup"],"mine":["block","coke","copper_bar","cut_gem","dirt","iron_bar","silver_bar"],"fish":["cocoa","fish_fillet","fish_oil","ink","jade","pearls","sea_shells"]},"recipes":[{"item":"rake","station":"workshop","tier":0,"inputs":["plank"]},{"item":"axe","station":"workshop","tier":0,"inputs":["block"]},{"item":"sickle","station":"workshop","tier":0,"inputs":["plank","iron_bar"]},{"item":"fertilizer","station":"workshop","tier":0,"inputs":["hay_bundle","dirt"]},{"item":"cat","station":"workshop","tier":0,"inputs":["block","dirt"]},{"item":"bird_cage","station":"workshop","tier":0,"inputs":["hay_bundle"]},{"item":"scythe_full","station":"workshop","tier":0,"inputs":["block"]},{"item":"rifle","station":"workshop","tier":0,"inputs":["plank","block","iron_bar"]},{"item":"hound","station":"workshop","tier":0,"inputs":["bread","block"]},{"item":"hoe","station":"workshop","tier":0,"inputs":["plank","block"]},{"item":"stone_hammer","station":"workshop","tier":0,"inputs":["block","plank"]},{"item":"iron_pick","station":"workshop","tier":0,"inputs":["iron_bar","plank"]},{"item":"auger","station":"workshop","tier":0,"inputs":["iron_bar","plank"]},{"item":"blast_charge","station":"workshop","tier":0,"inputs":["iron_bar","coke"]},{"item":"bird_feed","station":"workshop","tier":0,"inputs":["flour","hay_bundle"]},{"item":"sapling","station":"workshop","tier":0,"inputs":["plank","hay_bundle"]},{"item":"water_pump","station":"workshop","tier":2,"inputs":["plank","block"]},{"item":"explosives","station":"workshop","tier":2,"inputs":["hay_bundle","dirt"]},{"item":"trimmer","station":"workshop","tier":1,"inputs":["iron_bar","plank"]},{"item":"plough","station":"workshop","tier":2,"inputs":["iron_bar","plank"]},{"item":"fruit_picker","station":"workshop","tier":1,"inputs":["plank"]},{"item":"herders_crook","station":"workshop","tier":1,"inputs":["plank","hay_bundle"]},{"item":"milk_churn","station":"workshop","tier":2,"inputs":["plank","iron_bar"]},{"item":"saddle","station":"workshop","tier":2,"inputs":["plank","iron_bar","hay_bundle"]},{"item":"bee","station":"workshop","tier":1,"inputs":["honey","hay_bundle"]},{"item":"terrier","station":"workshop","tier":1,"inputs":["bread","block"]},{"item":"drill","station":"workshop","tier":3,"inputs":["iron_bar","coke","plank"]},{"item":"coal_hammer","station":"workshop","tier":2,"inputs":["iron_bar","plank"]},{"item":"gold_pick","station":"workshop","tier":3,"inputs":["iron_bar","gold_bar","plank"]},{"item":"magnet","station":"workshop","tier":3,"inputs":["iron_bar","coke"]},{"item":"coal_transmuter","station":"workshop","tier":3,"inputs":["iron_bar","coke","block"]},{"item":"bread","station":"bakery","tier":1,"inputs":["flour","eggs"]},{"item":"honeyroll","station":"bakery","tier":2,"inputs":["flour","eggs","jam"]},{"item":"harvestpie","station":"bakery","tier":2,"inputs":["flour","jam","eggs"]},{"item":"preserve","station":"larder","tier":1,"inputs":["jam","eggs"]},{"item":"tincture","station":"larder","tier":1,"inputs":["jam"]},{"item":"iron_hinge","station":"forge","tier":2,"inputs":["iron_bar","coke"]},{"item":"cobblepath","station":"forge","tier":1,"inputs":["block","plank"]},{"item":"lantern","station":"forge","tier":2,"inputs":["iron_bar","coke","plank"]},{"item":"goldring","station":"forge","tier":2,"inputs":["gold_bar","iron_bar"]},{"item":"gemcrown","station":"forge","tier":2,"inputs":["cut_gem","gold_bar"]},{"item":"ironframe","station":"forge","tier":3,"inputs":["plank","iron_bar"]},{"item":"stonework","station":"forge","tier":3,"inputs":["block","coke"]},{"item":"chowder","station":"larder","tier":2,"inputs":["fish_fillet","milk","soup"]},{"item":"fish_oil_bottled","station":"workshop","tier":1,"inputs":["fish_oil","plank"]},{"item":"cured_meat","station":"smokehouse","tier":1,"inputs":["meat","coke"]},{"item":"festival_loaf","station":"bakery","tier":2,"inputs":["flour","jam","eggs"]},{"item":"wedding_pie","station":"bakery","tier":3,"inputs":["pie","honey","jam"]},{"item":"iron_ration","station":"kitchen","tier":2,"inputs":["flour","meat","iron_bar"]},{"item":"supplies","station":"kitchen","tier":1,"inputs":["flour"]}],"zones":[{"id":"home","name":"Hearthwood Vale","kind":"home","icon":"🏡","x":10,"y":50,"region":"hearth","entryCoins":50,"boardKinds":["farm"],"gate":null,"requiresHearthTokens":false,"tiers":[{"id":"outpost","name":"Outpost","plots":3,"upgradeCost":{},"unlocks":["hearth","mill","granary","inn"]},{"id":"hamlet","name":"Hamlet","plots":6,"upgradeCost":{"hay_bundle":3,"plank":5,"bread":10,"eggs":4,"soup":2},"unlocks":["larder","bakery","housing","silo"]},{"id":"village","name":"Village","plots":12,"upgradeCost":{"eggs":10,"soup":12,"meat":2,"block":20,"coke":14,"silver_bar":14,"milk":1,"cocoa":2,"ink":2},"unlocks":["stable","apiary","sawmill","watchtower","brewery","chapel","housing2","apothecary","kitchen"]},{"id":"city","name":"City","plots":20,"upgradeCost":{"honey":3,"horseshoe":3,"block":20,"coke":10,"cut_gem":4,"gold_bar":13,"ink":2,"iron_bar":30,"jade":1,"pearls":1},"unlocks":["workshop","forge","caravan_post","housing3","clock_tower","powder_store","portal","observatory","lighthouse","barn","harbor_dock","fishmonger","smokehouse"]}],"reachableFromFreshSave":true,"maxSelfTier":0,"wall":{"reachedTier":0,"reachedName":"Outpost","toTier":1,"toName":"Hamlet","missing":[{"key":"bread","reason":"crafted at the Bakery, whose own build cost needs block (also unobtainable here)"}]}},{"id":"meadow","name":"Greenmeadow","kind":"farm","icon":"🌾","x":24,"y":28,"region":"farm","entryCoins":50,"boardKinds":["farm"],"gate":null,"requiresHearthTokens":false,"tiers":[],"reachableFromFreshSave":true,"maxSelfTier":0,"wall":null},{"id":"orchard","name":"Wild Orchard","kind":"farm","icon":"🍎","x":24,"y":72,"region":"farm","entryCoins":50,"boardKinds":["farm"],"gate":null,"requiresHearthTokens":false,"tiers":[],"reachableFromFreshSave":true,"maxSelfTier":0,"wall":null},{"id":"crossroads","name":"The Crossroads","kind":"event","icon":"🎲","x":40,"y":50,"region":"wilds","entryCoins":0,"boardKinds":[],"gate":null,"requiresHearthTokens":false,"tiers":[],"reachableFromFreshSave":true,"maxSelfTier":0,"wall":null},{"id":"quarry","name":"Cracked Quarry","kind":"mine","icon":"⛏️","x":56,"y":26,"region":"mine","entryCoins":100,"boardKinds":["mine"],"gate":{"zone":"home","tier":3},"requiresHearthTokens":false,"tiers":[{"id":"dig_site","name":"Dig Site","plots":2,"upgradeCost":{},"unlocks":["hearth","kitchen"]},{"id":"prospect","name":"Prospect Camp","plots":4,"upgradeCost":{"block":12,"dirt":8},"unlocks":["workshop","inn"]},{"id":"mining_camp","name":"Mining Camp","plots":6,"upgradeCost":{"block":16,"iron_bar":8,"coke":2},"unlocks":["forge","housing"]},{"id":"boomtown","name":"Boomtown","plots":8,"upgradeCost":{"iron_bar":12,"coke":6,"silver_bar":2},"unlocks":["barn","watchtower"]},{"id":"smeltworks","name":"Smeltworks","plots":10,"upgradeCost":{"iron_bar":16,"coke":10,"silver_bar":6,"cut_gem":1},"unlocks":["powder_store","apothecary","housing2"]},{"id":"foundry_city","name":"Foundry City","plots":12,"upgradeCost":{"iron_bar":20,"gold_bar":4,"cut_gem":3,"silver_bar":8},"unlocks":["observatory","caravan_post","housing3"]}],"reachableFromFreshSave":false,"maxSelfTier":4,"wall":{"reachedTier":4,"reachedName":"Smeltworks","toTier":5,"toName":"Foundry City","missing":[{"key":"gold_bar","reason":"no source reachable from this settlement's board or stations"}]}},{"id":"caves","name":"Lanternlit Caves","kind":"mine","icon":"🪨","x":56,"y":74,"region":"mine","entryCoins":100,"boardKinds":["mine"],"gate":{"zone":"quarry","tier":1},"requiresHearthTokens":false,"tiers":[],"reachableFromFreshSave":false,"maxSelfTier":0,"wall":null},{"id":"fairground","name":"Drifter's Fairground","kind":"festival","icon":"🎪","x":72,"y":50,"region":"wilds","entryCoins":0,"boardKinds":[],"gate":null,"requiresHearthTokens":false,"tiers":[],"reachableFromFreshSave":false,"maxSelfTier":0,"wall":null},{"id":"forge","name":"Black Forge","kind":"mine","icon":"🔥","x":86,"y":28,"region":"mine","entryCoins":200,"boardKinds":["mine"],"gate":{"zone":"quarry","tier":2},"requiresHearthTokens":false,"tiers":[],"reachableFromFreshSave":false,"maxSelfTier":0,"wall":null},{"id":"pit","name":"The Pit","kind":"boss","icon":"⚔️","x":90,"y":72,"region":"boss","entryCoins":0,"boardKinds":[],"gate":null,"requiresHearthTokens":false,"tiers":[],"reachableFromFreshSave":false,"maxSelfTier":0,"wall":null},{"id":"harbor","name":"Saltspray Harbor","kind":"fish","icon":"⚓","x":16,"y":86,"region":"coast","entryCoins":50,"boardKinds":["fish"],"gate":{"zone":"quarry","tier":1},"requiresHearthTokens":false,"tiers":[],"reachableFromFreshSave":false,"maxSelfTier":0,"wall":null},{"id":"mirefen","name":"Mirefen Hollow","kind":"fish","icon":"🪷","x":34,"y":90,"region":"coast","entryCoins":100,"boardKinds":["fish"],"gate":null,"requiresHearthTokens":false,"tiers":[{"id":"stilt","name":"Fishing Stilt","plots":3,"upgradeCost":{},"unlocks":["hearth","housing","fishmonger"]},{"id":"bogwalk","name":"Bogwalk Hamlet","plots":6,"upgradeCost":{"fish_fillet":8,"fish_oil":6},"unlocks":["larder","harbor_dock","watchtower"]},{"id":"village","name":"Mire Village","plots":10,"upgradeCost":{"fish_fillet":14,"fish_oil":10},"unlocks":["apiary","brewery","apothecary","smokehouse"]},{"id":"town","name":"Fen Town","plots":15,"upgradeCost":{"fish_fillet":22,"pearls":1},"unlocks":["inn","chapel","caravan_post","granary","observatory"]}],"reachableFromFreshSave":false,"maxSelfTier":3,"wall":null},{"id":"oldcapital","name":"The Old Capital","kind":"capital","icon":"🏛️","x":93,"y":50,"region":"capital","entryCoins":0,"boardKinds":[],"gate":null,"requiresHearthTokens":true,"tiers":[],"reachableFromFreshSave":false,"maxSelfTier":0,"wall":null}],"edges":[["home","meadow"],["home","orchard"],["home","harbor"],["harbor","mirefen"],["meadow","crossroads"],["orchard","crossroads"],["crossroads","quarry"],["crossroads","caves"],["quarry","fairground"],["caves","fairground"],["fairground","forge"],["fairground","pit"],["forge","pit"],["forge","oldcapital"],["pit","oldcapital"]],"oracle":{"freshSaveReachable":["crossroads","home","meadow","orchard"],"freshSavePlayableBoards":["home","meadow","orchard"],"homeProducible":["eggs","flour","hay_bundle","honey","horseshoe","meat","milk","pie","plank","soup"],"walls":[{"zone":"home","wall":{"reachedTier":0,"reachedName":"Outpost","toTier":1,"toName":"Hamlet","missing":[{"key":"bread","reason":"crafted at the Bakery, whose own build cost needs block (also unobtainable here)"}]}}],"softlock":{"isLocked":true,"stuckZone":"home","stuckTier":0,"stuckTierName":"Outpost","blockedRung":"Hamlet","primaryMissing":["bread"],"summary":"A fresh save can reach only 3 playable board(s) (home, meadow, orchard) — all farm. Home, the progression spine, cannot climb past Outpost (tier 0): the Hamlet rung needs bread, which home can neither produce nor craft. Every mine/fish zone that could supply those goods is gated behind the quarry (home tier 3), and the home ladder itself demands mine goods from tier 2 on — a circular lock with no first step."},"marketEscape":{"exists":false,"note":"MARKET_PRICES lists block/iron_bar/coke/bread as buyable and BUY_RESOURCE does not itself check the caravan post, but the buy UI is shown only once caravan_post is built (Inventory.tsx) — and caravan_post costs block+iron_bar. So the market is a latent escape valve that is itself mine-gated. Opening it (an early buyable starter good, or ungating the buy UI) is the cheapest lever."}}};
+/* SPINE:END */
+
+/* DIFF:START */
+const DIFF = {"hasBaseline":true,"unchanged":true,"counts":{"critical":0,"major":0,"minor":0,"structural":0},"changes":[],"headline":"Spine unchanged since the last reviewed baseline."};
+/* DIFF:END */
+
+(function(){
+  "use strict";
+  var S = SPINE;
+  var D = DIFF;
+  var ZBY = {};
+  S.zones.forEach(function(z){ ZBY[z.id] = z; });
+
+  // ---- helpers ----
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[c];}); }
+  function el(id){ return document.getElementById(id); }
+  function titleCase(k){ return String(k).replace(/_/g," ").replace(/\b\w/g,function(m){return m.toUpperCase();}); }
+
+  // recipe-output set (for "crafted" classification)
+  var RECIPE_ITEMS = {};
+  S.recipes.forEach(function(r){ RECIPE_ITEMS[r.item] = r; });
+
+  function familyOf(key){
+    if (S.resourceFamilies.farm.indexOf(key) >= 0) return "farm";
+    if (S.resourceFamilies.mine.indexOf(key) >= 0) return "mine";
+    if (S.resourceFamilies.fish.indexOf(key) >= 0) return "fish";
+    if (RECIPE_ITEMS[key]) return "crafted";
+    return "other";
+  }
+  var FAM_LABEL = { farm:"Farm", mine:"Mine", fish:"Fish", crafted:"Crafted", other:"Other / coins" };
+
+  // cost chip: qty x key, family-coloured
+  function costChip(key, qty){
+    var fam = familyOf(key);
+    return '<span class="rc '+fam+'" title="'+esc(titleCase(key))+' — '+FAM_LABEL[fam]+'">'+
+      '<span class="q">'+qty+'</span><span class="x">×</span>'+esc(key)+'</span>';
+  }
+  function costChips(obj){
+    var keys = Object.keys(obj||{});
+    if (!keys.length) return '<span class="freecost">free · no cost</span>';
+    return keys.map(function(k){ return costChip(k, obj[k]); }).join('');
+  }
+  function bldChips(arr){
+    if (!arr || !arr.length) return '<span class="freecost">—</span>';
+    return arr.map(function(b){ return '<span class="bld">'+esc(titleCase(b))+'</span>'; }).join('');
+  }
+
+  var KIND_COLOR = {
+    home:"#c2531f", farm:"#5f7a30", mine:"#5a5e62", fish:"#4a8aaa",
+    event:"#a9791a", festival:"#9c3a4a", boss:"#b13a2a", capital:"#7a5e3f"
+  };
+  var KIND_LABEL = {
+    home:"Home", farm:"Farm", mine:"Mine", fish:"Fish",
+    event:"Event", festival:"Festival", boss:"Boss", capital:"Capital"
+  };
+
+  var home = ZBY["home"];
+  var quarry = ZBY["quarry"];
+  var mirefen = ZBY["mirefen"];
+
+  // ============ OVERVIEW ============
+  (function(){
+    var blockerCount = S.oracle.softlock ? 1 : 0;
+    var homeRungs = (home.tiers.length - 1);
+    var stat = [
+      {cls:"", v:S.zones.length, l:"zones mapped"},
+      {cls:"m", v:S.oracle.freshSavePlayableBoards.length, l:"playable boards · fresh save"},
+      {cls:"g", v:home.maxSelfTier+"/"+homeRungs, l:"home rungs reachable"},
+      {cls:"d", v:blockerCount, l:"progression blocker"}
+    ];
+    el("statline").innerHTML = stat.map(function(s){
+      return '<div class="stat '+s.cls+'"><b>'+s.v+'</b><span>'+s.l+'</span></div>';
+    }).join('');
+
+    el("ov-lede").innerHTML = 'puzzleDrag2 is a tile-drag farming game whose backbone is a <strong>zone-tier progression spine</strong>: you grow the home settlement through its rungs, which open new zones, which feed the next rungs. This artifact draws that whole spine from the code — '+
+      '<strong>'+S.zones.length+' zones</strong>, the home tier ladder, every recipe and gate — so a designer and the balance skill can confirm they share one picture before tuning. It is generated, not authored: <em>“'+esc(S.generatedFrom)+'”</em>';
+
+    if (S.oracle.softlock && S.oracle.softlock.isLocked){
+      el("ov-softlock").innerHTML =
+        '<div class="softbanner">'+
+          '<div class="hd"><span class="ic">⛔</span> Progression softlock · confirmed</div>'+
+          '<p>'+esc(S.oracle.softlock.summary)+'</p>'+
+          '<p style="margin-top:9px;font-size:13.5px"><a href="#lock">See the full lock analysis &amp; the levers →</a></p>'+
+        '</div>';
+    }
+
+    var reach = S.oracle.freshSaveReachable.map(function(id){
+      var z = ZBY[id];
+      var playable = S.oracle.freshSavePlayableBoards.indexOf(id) >= 0;
+      return '<span class="bld" style="border-color:'+KIND_COLOR[z.kind]+';color:'+KIND_COLOR[z.kind]+'">'+
+        z.icon+' '+esc(z.name)+(playable?'':' · no board')+'</span>';
+    }).join(' ');
+    el("ov-reach").innerHTML =
+      '<p style="margin-top:14px"><span class="kick" style="display:inline;margin-right:8px">Reachable from a fresh save</span>'+reach+'</p>'+
+      '<p style="font-size:13px;color:var(--ink-faint)">Of the '+S.zones.length+' zones, only these '+S.oracle.freshSaveReachable.length+' are reachable at game start; '+S.oracle.freshSavePlayableBoards.length+' have a playable board. The Crossroads is reachable but is an event node with no board. Everything past the Crossroads waits behind the quarry gate.</p>';
+  })();
+
+  // ============ CROSS-RUN DIFF (changes since the last reviewed baseline) ============
+  (function(){
+    var changed = D && D.hasBaseline && !D.unchanged;
+    var bannerEl = el("ov-diff");
+    if (bannerEl){
+      if (changed){
+        var c = D.counts, bits = [];
+        if (c.critical) bits.push(c.critical+' critical');
+        if (c.major) bits.push(c.major+' major');
+        if (c.minor) bits.push(c.minor+' minor');
+        if (c.structural) bits.push(c.structural+' structural');
+        bannerEl.innerHTML = '<div class="diffbar changed"><span>⚠ '+D.changes.length+' change'+(D.changes.length===1?'':'s')+' since last review — '+bits.join(', ')+'. Some claims below are now <strong>outdated</strong>.</span><a href="#changes">Review changes →</a></div>';
+      } else {
+        var msg = (D && !D.hasBaseline) ? 'Baseline established — future runs will flag what changed here.' : 'Spine unchanged since the last reviewed baseline.';
+        bannerEl.innerHTML = '<div class="diffbar ok"><span>✓ '+esc(msg)+'</span></div>';
+      }
+    }
+    var tab = el("tab-changes");
+    if (tab && changed) tab.innerHTML = 'Changes <span class="sev sev-critical" style="margin-left:4px">'+D.changes.length+'</span>';
+    var body = el("changesBody");
+    if (body){
+      if (!D || !D.hasBaseline){
+        body.innerHTML = '<div class="call"><p>No baseline recorded yet. The next <code>--progression</code> run establishes one; subsequent runs diff against it and list what moved here.</p></div>';
+      } else if (D.unchanged){
+        body.innerHTML = '<div class="call"><p>✓ The spine is identical to the committed baseline — nothing has changed since the last review.</p></div>';
+      } else {
+        var rows = D.changes.map(function(ch){
+          var what = ch.kind==='added' ? 'NEW · '+esc(ch.name) : ch.kind==='removed' ? 'REMOVED · '+esc(ch.name) : esc(ch.name);
+          return '<tr><td><span class="sev sev-'+ch.severity+'">'+esc(ch.severity)+'</span></td>'+
+            '<td>'+what+'</td>'+
+            '<td class="was">'+(ch.before!=null?esc(ch.before):'—')+'</td>'+
+            '<td class="now">'+(ch.after!=null?esc(ch.after):'—')+'</td></tr>';
+        }).join('');
+        body.innerHTML = '<table><thead><tr><th>Severity</th><th>What moved</th><th>Was (baseline)</th><th>Now</th></tr></thead><tbody>'+rows+'</tbody></table>';
+      }
+    }
+  })();
+
+  // ============ FAMILY LEGEND (shared) ============
+  function legendHTML(){
+    return ["farm","mine","fish","crafted","other"].map(function(f){
+      return '<span class="li"><span class="sw '+f+'"></span>'+FAM_LABEL[f]+'</span>';
+    }).join('');
+  }
+  el("famlegend").innerHTML = '<span style="font-weight:700;color:var(--ink)">Resource families:</span> '+legendHTML();
+
+  // ============ JOURNEY: HOME LADDER ============
+  (function(){
+    el("homeName").textContent = home.name;
+
+    // branch zones gated on home tier N
+    function branchesForHomeTier(n){
+      return S.zones.filter(function(z){
+        return z.gate && z.gate.zone === "home" && z.gate.tier === n;
+      });
+    }
+    // sub-branches: zones gated on a given zone id
+    function subBranchesFor(zid){
+      return S.zones.filter(function(z){
+        return z.gate && z.gate.zone === zid;
+      });
+    }
+
+    var html = "";
+    home.tiers.forEach(function(t, i){
+      var reachable = i <= home.maxSelfTier;
+      var isWallFrom = home.wall && home.wall.reachedTier === i; // wall bites AFTER this rung
+      var cls = "rung " + (reachable ? "reach" : "blocked");
+      var labelHTML = "";
+      if (i === 0) labelHTML = '<span class="rlabel start">START</span>';
+      else if (reachable) labelHTML = '<span class="rlabel reach">REACHABLE</span>';
+      else labelHTML = '<span class="rlabel blocked">BLOCKED</span>';
+
+      var blockHTML = "";
+      if (isWallFrom){
+        var miss = home.wall.missing.map(function(m){
+          return '<b>'+esc(m.key)+'</b> — '+esc(m.reason);
+        }).join('<br>');
+        blockHTML = '<div class="blockmark">⛔ <b>BLOCKED here</b> → '+esc(home.wall.toName)+': needs '+miss+'</div>';
+      }
+
+      html += '<div class="'+cls+'">'+
+        '<div class="spine"><div class="dot">'+(i)+'</div><div class="conn"></div></div>'+
+        '<div class="rcard" data-jrung="'+i+'" tabindex="0" role="button" aria-label="Home rung '+esc(t.name)+'">'+
+          '<div class="rhd"><span class="rname">'+esc(t.name)+'</span>'+
+            '<span class="rplots">'+t.plots+' plots</span>'+labelHTML+'</div>'+
+          '<div class="rsub">Tier-up cost</div><div class="costline">'+costChips(t.upgradeCost)+'</div>'+
+          '<div class="rsub">Unlocks</div><div class="unlockline">'+bldChips(t.unlocks)+'</div>'+
+          blockHTML+
+        '</div>'+
+      '</div>';
+
+      // branch zones at this rung (sibling of the rung, indented under the card)
+      var branches = branchesForHomeTier(i);
+      if (branches.length){
+        var bhtml = branches.map(function(z){
+          var subs = subBranchesFor(z.id);
+          var subHTML = "";
+          if (subs.length){
+            subHTML = '<div class="subbranch"><div class="sbttl">further gated on '+esc(z.name)+'</div>'+
+              subs.map(function(sz){
+                return '<span class="subchip" data-jzone="'+sz.id+'" tabindex="0" role="button">'+sz.icon+' '+esc(sz.name)+
+                  ' <span style="color:var(--ink-faint)">· tier '+sz.gate.tier+'</span></span>';
+              }).join('')+'</div>';
+          }
+          return '<div class="branch locked" data-jzone="'+z.id+'" tabindex="0" role="button" aria-label="Branch zone '+esc(z.name)+'">'+
+            '<div class="bhd"><span class="bic">'+z.icon+'</span><span class="bnm">'+esc(z.name)+'</span></div>'+
+            '<div class="bmeta">'+
+              '<span class="kindtag" style="background:'+KIND_COLOR[z.kind]+'">'+KIND_LABEL[z.kind]+'</span>'+
+              '<span>entry '+z.entryCoins+'c</span>'+
+              (z.reachableFromFreshSave ? '<span class="ok">reachable</span>' : '<span class="lk">🔒 locked</span>')+
+            '</div>'+subHTML+
+          '</div>';
+        }).join('');
+        html += '<div class="branchwrap"><div class="bttl">⤷ Branch zones — open at home '+esc(t.name)+' (tier '+i+')</div><div class="branches">'+bhtml+'</div></div>';
+      }
+    });
+    el("homeLadder").innerHTML = html;
+  })();
+
+  // ============ JOURNEY: SECONDARY LADDERS ============
+  (function(){
+    function miniLadder(z){
+      var rows = z.tiers.map(function(t, i){
+        var reachable = i <= z.maxSelfTier;
+        var isWallFrom = z.wall && z.wall.reachedTier === i;
+        var cls = "minirung " + (reachable ? "reach" : "blocked");
+        var wallHTML = "";
+        if (isWallFrom){
+          var miss = z.wall.missing.map(function(m){ return '<b>'+esc(m.key)+'</b> — '+esc(m.reason); }).join('<br>');
+          wallHTML = '<div class="blockmark" style="margin-top:6px">⛔ walls here → '+esc(z.wall.toName)+': needs '+miss+'</div>';
+        }
+        return '<div class="'+cls+'">'+
+          '<div class="mdot">'+i+'</div>'+
+          '<div><span class="mnm">'+esc(t.name)+'</span><span class="mplots">'+t.plots+' plots</span>'+
+            '<div class="rsub" style="margin-top:5px">Tier-up cost</div><div>'+costChips(t.upgradeCost)+'</div>'+
+            '<div class="rsub">Unlocks</div><div>'+bldChips(t.unlocks)+'</div>'+wallHTML+
+          '</div></div>';
+      }).join('');
+      var summary = "Climbs to tier " + z.maxSelfTier + " (" + (z.tiers[z.maxSelfTier]? z.tiers[z.maxSelfTier].name : "?") + ") on its own";
+      if (z.wall) summary += ", then walls on " + z.wall.missing.map(function(m){return m.key;}).join(", ");
+      else summary += " — full ladder, no self-wall";
+      return '<details><summary>'+z.icon+'  '+esc(z.name)+' — '+esc(summary)+'</summary>'+
+        '<p style="font-size:13px;color:var(--ink-soft);margin:.4em 0">Gate to reach: '+
+          (z.gate ? esc(ZBY[z.gate.zone].name)+' ≥ tier '+z.gate.tier : 'none (open on the map)')+
+          ' · entry '+z.entryCoins+'c · board: '+(z.boardKinds.join(", ")||"—")+'</p>'+
+        '<div class="miniladder">'+rows+'</div></details>';
+    }
+    el("secondaryLadders").innerHTML = miniLadder(quarry) + miniLadder(mirefen);
+  })();
+
+  // ============ JOURNEY: DETAIL RAIL ============
+  (function(){
+    var rail = el("jdetail");
+    function showRung(i){
+      var t = home.tiers[i];
+      var reachable = i <= home.maxSelfTier;
+      var wallHTML = "";
+      if (home.wall && home.wall.reachedTier === i){
+        var miss = home.wall.missing.map(function(m){ return '<b>'+esc(m.key)+'</b> — '+esc(m.reason); }).join('<br>');
+        wallHTML = '<div class="blockmark">⛔ <b>BLOCKED</b> climbing to '+esc(home.wall.toName)+': needs '+miss+'</div>';
+      }
+      rail.innerHTML =
+        '<h4>'+home.icon+' '+esc(home.name)+' · '+esc(t.name)+'</h4>'+
+        '<p class="meta">Home spine · rung '+i+' of '+(home.tiers.length-1)+' · '+t.plots+' plots · '+
+          (i===0?'starting tier':(reachable?'reachable fresh save':'unreachable — blocked'))+'</p>'+
+        '<div class="dlbl">Tier-up cost</div><div>'+costChips(t.upgradeCost)+'</div>'+
+        '<div class="dlbl">Buildings unlocked</div><div>'+bldChips(t.unlocks)+'</div>'+
+        wallHTML;
+      markSel('[data-jrung]', '[data-jrung="'+i+'"]');
+    }
+    function showZone(zid){
+      var z = ZBY[zid];
+      var tierHTML = "";
+      if (z.tiers.length){
+        tierHTML = '<div class="dlbl">Tier ladder</div>'+ z.tiers.map(function(t,i){
+          var rr = i <= z.maxSelfTier;
+          return '<div style="margin:5px 0;padding-left:8px;border-left:2px solid '+(rr?'var(--moss)':'var(--danger)')+'">'+
+            '<b>'+i+' · '+esc(t.name)+'</b> <span style="color:var(--ink-faint);font-size:12px">'+t.plots+' plots</span><br>'+
+            costChips(t.upgradeCost)+'</div>';
+        }).join('');
+      }
+      var wallHTML = "";
+      if (z.wall){
+        var miss = z.wall.missing.map(function(m){ return '<b>'+esc(m.key)+'</b> — '+esc(m.reason); }).join('<br>');
+        wallHTML = '<div class="blockmark">⛔ walls at '+esc(z.wall.reachedName)+' → '+esc(z.wall.toName)+': needs '+miss+'</div>';
+      }
+      rail.innerHTML =
+        '<h4>'+z.icon+' '+esc(z.name)+'</h4>'+
+        '<p class="meta"><span class="kindtag" style="background:'+KIND_COLOR[z.kind]+'">'+KIND_LABEL[z.kind]+'</span> '+
+          '· entry '+z.entryCoins+'c · board '+(z.boardKinds.join(", ")||"none")+'</p>'+
+        '<div class="dlbl">Gate to reach</div><div style="font-size:13.5px">'+
+          (z.gate ? esc(ZBY[z.gate.zone].name)+' ≥ tier '+z.gate.tier+' ('+esc(ZBY[z.gate.zone].tiers[z.gate.tier]?ZBY[z.gate.zone].tiers[z.gate.tier].name:('tier '+z.gate.tier))+')' : 'open — reached by travel')+
+          ' · '+(z.reachableFromFreshSave?'<b style="color:var(--moss)">reachable now</b>':'<b style="color:var(--danger)">locked</b>')+'</div>'+
+        tierHTML + wallHTML;
+      markSel('[data-jzone]', '[data-jzone="'+zid+'"]');
+    }
+    function markSel(group, sel){
+      document.querySelectorAll('#journey .rcard, #journey .branch, #journey .subchip').forEach(function(n){ n.classList.remove('sel'); });
+      document.querySelectorAll('#journey '+sel).forEach(function(n){ n.classList.add('sel'); });
+    }
+    function bind(){
+      document.querySelectorAll('#journey [data-jrung]').forEach(function(n){
+        function go(){ showRung(parseInt(n.getAttribute('data-jrung'),10)); }
+        n.addEventListener('click', go);
+        n.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+      });
+      document.querySelectorAll('#journey [data-jzone]').forEach(function(n){
+        function go(e){ e.stopPropagation(); showZone(n.getAttribute('data-jzone')); }
+        n.addEventListener('click', go);
+        n.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(e); } });
+      });
+    }
+    bind();
+    // default selection = the blocked rung
+    showRung(home.wall ? home.wall.reachedTier : 0);
+  })();
+
+  // ============ WORLD MAP ============
+  (function(){
+    var svg = el("worldmap");
+    var SVGNS = "http://www.w3.org/2000/svg";
+    function mk(tag, attrs){
+      var n = document.createElementNS(SVGNS, tag);
+      for (var k in attrs){ n.setAttribute(k, attrs[k]); }
+      return n;
+    }
+    // scale 0-100 x and 0-100 y into the 100x72 viewBox (y compressed a touch + margin)
+    function MX(x){ return 5 + (x/100)*90; }
+    function MY(y){ return 6 + (y/100)*60; }
+
+    // edges first (under nodes)
+    var eg = mk("g", {});
+    S.edges.forEach(function(pair){
+      var a = ZBY[pair[0]], b = ZBY[pair[1]];
+      if(!a||!b) return;
+      var bothReach = a.reachableFromFreshSave && b.reachableFromFreshSave;
+      eg.appendChild(mk("line", {
+        x1:MX(a.x), y1:MY(a.y), x2:MX(b.x), y2:MY(b.y),
+        stroke: bothReach ? "#9c8a5e" : "#cdbf9b",
+        "stroke-width": bothReach ? 0.6 : 0.45,
+        "stroke-dasharray": bothReach ? "none" : "1.2 1.2"
+      }));
+    });
+    svg.appendChild(eg);
+
+    // nodes
+    S.zones.forEach(function(z){
+      var g = mk("g", { class:"znode", "data-zone":z.id, tabindex:"0", role:"button" });
+      g.setAttribute("aria-label", z.name + (z.reachableFromFreshSave?" (reachable)":" (locked)"));
+      var col = KIND_COLOR[z.kind] || "#7a5e3f";
+      var reach = z.reachableFromFreshSave;
+      var cx = MX(z.x), cy = MY(z.y);
+      // disc
+      var disc = mk("circle", {
+        cx:cx, cy:cy, r:3.4,
+        fill: reach ? col : "#e7dcc2",
+        stroke: reach ? "#2b2218" : col,
+        "stroke-width": reach ? 0.5 : 0.5,
+        "stroke-dasharray": reach ? "none" : "0.9 0.7",
+        "fill-opacity": reach ? 1 : 0.55
+      });
+      g.appendChild(disc);
+      // icon (emoji)
+      var ic = mk("text", { x:cx, y:cy+1.4, "text-anchor":"middle", "font-size":"3.6", "fill-opacity": reach?1:0.6 });
+      ic.textContent = z.icon;
+      g.appendChild(ic);
+      // lock glyph
+      if (!reach){
+        var lk = mk("text", { x:cx+3.0, y:cy-2.2, "text-anchor":"middle", class:"zlock" });
+        lk.textContent = "🔒";
+        g.appendChild(lk);
+      }
+      // name label — small per-zone offset table avoids collisions for crowded nodes
+      var LBL_DY = { harbor:1.8, mirefen:0, fairground:0, oldcapital:-2.0, forge:0, caves:0 };
+      var dy = LBL_DY[z.id] || 0;
+      // halo behind label so any overlap stays legible
+      var lblHalo = mk("text", { x:cx, y:cy+6.2+dy, "text-anchor":"middle", class:"zlabel", stroke:"#fbf7eb", "stroke-width":"0.9", "stroke-linejoin":"round", "fill-opacity":"0" });
+      lblHalo.textContent = z.name;
+      g.appendChild(lblHalo);
+      var lbl = mk("text", { x:cx, y:cy+6.2+dy, "text-anchor":"middle", class:"zlabel", "fill-opacity": reach?1:0.7 });
+      lbl.textContent = z.name;
+      g.appendChild(lbl);
+      // gate label (for locked-with-gate)
+      if (z.gate){
+        var gz = ZBY[z.gate.zone];
+        var gtName = gz.tiers[z.gate.tier] ? gz.tiers[z.gate.tier].name : ("tier "+z.gate.tier);
+        var glHalo = mk("text", { x:cx, y:cy+8.6+dy, "text-anchor":"middle", class:"gateLabel", stroke:"#fbf7eb", "stroke-width":"0.8", "stroke-linejoin":"round", "fill-opacity":"0" });
+        glHalo.textContent = (z.gate.zone==="home"?"home":gz.name.split(" ")[0]) + " ≥ " + gtName;
+        g.appendChild(glHalo);
+        var gl = mk("text", { x:cx, y:cy+8.6+dy, "text-anchor":"middle", class:"gateLabel" });
+        gl.textContent = (z.gate.zone==="home"?"home":gz.name.split(" ")[0]) + " ≥ " + gtName;
+        g.appendChild(gl);
+      }
+      svg.appendChild(g);
+    });
+
+    // detail panel
+    var dp = el("zonedetail");
+    function showZone(zid){
+      var z = ZBY[zid];
+      var tierHTML = "";
+      if (z.tiers.length){
+        tierHTML = '<div class="dlbl">Tier ladder &amp; costs</div>'+ z.tiers.map(function(t,i){
+          var rr = i <= z.maxSelfTier;
+          return '<div style="margin:6px 0;padding-left:9px;border-left:3px solid '+(rr?'var(--moss)':'var(--danger)')+'">'+
+            '<b>'+i+' · '+esc(t.name)+'</b> <span style="color:var(--ink-faint);font-size:12px">'+t.plots+' plots</span> '+
+            (rr?'':'<span class="lk" style="background:var(--danger)">unreached</span>')+'<br>'+
+            '<span style="font-size:11px;color:var(--ink-faint)">cost:</span> '+costChips(t.upgradeCost)+
+            ' <span style="font-size:11px;color:var(--ink-faint)">→ unlocks</span> '+bldChips(t.unlocks)+'</div>';
+        }).join('');
+      } else {
+        tierHTML = '<div class="dlbl">Tier ladder</div><p style="font-size:13px;color:var(--ink-faint);margin:.2em 0">No settlement tiers — this is a '+KIND_LABEL[z.kind].toLowerCase()+' node, not a foundable settlement.</p>';
+      }
+      var wallHTML = "";
+      if (z.wall){
+        var miss = z.wall.missing.map(function(m){ return '<b>'+esc(m.key)+'</b> — '+esc(m.reason); }).join('<br>');
+        wallHTML = '<div class="blockmark" style="margin-top:10px">⛔ <b>self-wall</b> at '+esc(z.wall.reachedName)+' → '+esc(z.wall.toName)+': needs '+miss+'</div>';
+      }
+      var gateHTML;
+      if (z.gate){
+        var gz = ZBY[z.gate.zone];
+        var gtName = gz.tiers[z.gate.tier] ? gz.tiers[z.gate.tier].name : ("tier "+z.gate.tier);
+        gateHTML = esc(gz.name)+' ≥ '+esc(gtName)+' (tier '+z.gate.tier+')';
+      } else {
+        gateHTML = z.requiresHearthTokens ? 'requires Hearth tokens' : 'open — reached by travel along the map';
+      }
+      dp.innerHTML =
+        '<h3>'+z.icon+' '+esc(z.name)+'</h3>'+
+        '<p class="meta">'+
+          '<span><span class="kindtag" style="background:'+KIND_COLOR[z.kind]+'">'+KIND_LABEL[z.kind]+'</span></span>'+
+          '<span>region: '+esc(z.region)+'</span>'+
+          '<span>entry: '+z.entryCoins+' coins</span>'+
+          '<span>board: '+(z.boardKinds.join(", ")||"none")+'</span>'+
+          '<span>'+(z.reachableFromFreshSave?'<b style="color:var(--moss)">reachable now</b>':'<b style="color:var(--danger)">🔒 locked</b>')+'</span>'+
+        '</p>'+
+        '<div class="dlbl">Gate</div><div style="font-size:14px">'+gateHTML+'</div>'+
+        tierHTML + wallHTML;
+      document.querySelectorAll('#worldmap .znode circle').forEach(function(c){ c.setAttribute("stroke-width", (c===null)?0.5:0.5); });
+      document.querySelectorAll('#worldmap .znode').forEach(function(n){
+        var sel = n.getAttribute("data-zone")===zid;
+        var circ = n.querySelector("circle");
+        if (circ){
+          circ.setAttribute("stroke", sel ? "#c2531f" : (n.getAttribute("data-zone")&&ZBY[n.getAttribute("data-zone")].reachableFromFreshSave ? "#2b2218" : (KIND_COLOR[ZBY[n.getAttribute("data-zone")].kind]||"#7a5e3f")));
+          circ.setAttribute("stroke-width", sel ? 1.1 : 0.5);
+        }
+      });
+    }
+    svg.querySelectorAll(".znode").forEach(function(n){
+      function go(){ showZone(n.getAttribute("data-zone")); }
+      n.addEventListener("click", go);
+      n.addEventListener("keydown", function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+    });
+    // map legend
+    var kinds = [];
+    S.zones.forEach(function(z){ if (kinds.indexOf(z.kind)<0) kinds.push(z.kind); });
+    el("mapkinds").innerHTML =
+      '<span style="font-weight:700;color:var(--ink)">Node kinds:</span> '+
+      kinds.map(function(k){ return '<span class="li"><span class="sw" style="background:'+KIND_COLOR[k]+'"></span>'+KIND_LABEL[k]+'</span>'; }).join('')+
+      '<span class="li" style="margin-left:6px;border-left:1px solid var(--rule-soft);padding-left:14px"><span class="sw" style="background:var(--moss)"></span>reachable (solid)</span>'+
+      '<span class="li"><span class="sw" style="background:#e7dcc2;border:1px dashed var(--ink-faint)"></span>🔒 locked (faded)</span>';
+    // default selection = home
+    showZone("home");
+  })();
+
+  // ============ THE LOCK ============
+  (function(){
+    el("lock-title").innerHTML = 'The progression softlock';
+    var sl = S.oracle.softlock;
+    if (sl){
+      el("lock-summary").innerHTML =
+        '<div class="call bad">'+
+          '<h4>⛔ '+esc(home.name)+' cannot climb past '+esc(sl.stuckTierName)+' (tier '+sl.stuckTier+') — a circular hard lock.</h4>'+
+          '<p>'+esc(sl.summary)+'</p>'+
+          '<p style="margin-top:6px"><b>Stuck at:</b> '+esc(sl.stuckZone)+' / '+esc(sl.stuckTierName)+' · <b>blocked rung:</b> '+esc(sl.blockedRung)+' · <b>primary missing:</b> '+
+            sl.primaryMissing.map(function(k){return '<code>'+esc(k)+'</code>';}).join(", ")+'</p>'+
+        '</div>';
+    }
+
+    // number the lock items (A/B/C done via CSS counter)
+
+    // market escape callout
+    var me = S.oracle.marketEscape;
+    el("lock-market").innerHTML =
+      '<div class="call tip">'+
+        '<h4>'+(me.exists?'A market escape exists':'A latent market escape — itself mine-gated')+'</h4>'+
+        '<p>'+esc(me.note)+'</p>'+
+      '</div>';
+
+    // ---- circular ring SVG ----
+    var svg = el("lockring");
+    var SVGNS = "http://www.w3.org/2000/svg";
+    function mk(tag, attrs, text){
+      var n = document.createElementNS(SVGNS, tag);
+      for (var k in attrs){ n.setAttribute(k, attrs[k]); }
+      if (text != null) n.textContent = text;
+      return n;
+    }
+    var cx=230, cy=180, R=128;
+    var steps = [
+      {t:"Home · Outpost", s:"climb the spine"},
+      {t:"Hamlet rung", s:"needs bread"},
+      {t:"Bakery", s:"to craft bread"},
+      {t:"Bakery cost", s:"needs block"},
+      {t:"block", s:"mine good only"},
+      {t:"Quarry", s:"the only source"},
+      {t:"home ≥ City", s:"quarry's gate"}
+    ];
+    var N = steps.length;
+    // defs marker
+    var defs = mk("defs",{});
+    var mkr = mk("marker",{id:"lr",markerWidth:"9",markerHeight:"9",refX:"6",refY:"3",orient:"auto"});
+    mkr.appendChild(mk("path",{d:"M0,0 L6,3 L0,6 Z",fill:"#b13a2a"}));
+    defs.appendChild(mkr);
+    svg.appendChild(defs);
+
+    function ang(i){ return (-90 + i*(360/N)) * Math.PI/180; }
+    function pt(i, rad){ return { x: cx + Math.cos(ang(i))*rad, y: cy + Math.sin(ang(i))*rad }; }
+
+    // arcs between consecutive nodes (i -> i+1), curving along the ring
+    var ge = mk("g",{});
+    for (var i=0;i<N;i++){
+      var a = pt(i, R), b = pt((i+1)%N, R);
+      // shorten endpoints toward node centers so arrowheads sit outside the chips
+      var dx=b.x-a.x, dy=b.y-a.y, len=Math.sqrt(dx*dx+dy*dy);
+      var ux=dx/len, uy=dy/len;
+      var pad=30;
+      var ax=a.x+ux*pad, ay=a.y+uy*pad, bx=b.x-ux*pad, by=b.y-uy*pad;
+      // control point bulging outward from center
+      var mx=(ax+bx)/2, my=(ay+by)/2;
+      var ocx=cx+(mx-cx)*1.28, ocy=cy+(my-cy)*1.28;
+      ge.appendChild(mk("path",{ d:"M"+ax+","+ay+" Q"+ocx+","+ocy+" "+bx+","+by, fill:"none", stroke:"#b13a2a", "stroke-width":"1.6", "marker-end":"url(#lr)", opacity:"0.78" }));
+    }
+    svg.appendChild(ge);
+
+    // center label
+    svg.appendChild(mk("text",{x:cx,y:cy-6,"text-anchor":"middle","font-family":"var(--sans)","font-size":"13","font-weight":"800","fill":"#b13a2a","letter-spacing":"1"},"CIRCULAR"));
+    svg.appendChild(mk("text",{x:cx,y:cy+12,"text-anchor":"middle","font-family":"var(--sans)","font-size":"13","font-weight":"800","fill":"#b13a2a","letter-spacing":"1"},"LOCK"));
+    svg.appendChild(mk("text",{x:cx,y:cy+30,"text-anchor":"middle","font-family":"Georgia,serif","font-size":"10.5","font-style":"italic","fill":"#7a5e3f"},"no entry point"));
+
+    // nodes
+    steps.forEach(function(st, idx){
+      var p = pt(idx, R);
+      var g = mk("g",{});
+      // pill
+      var w = 92, h = 34;
+      g.appendChild(mk("rect",{ x:p.x-w/2, y:p.y-h/2, width:w, height:h, rx:7, fill:"#fbf7eb", stroke:"#b13a2a", "stroke-width":"1.3" }));
+      g.appendChild(mk("text",{ x:p.x, y:p.y-2, "text-anchor":"middle", "font-family":"var(--serif)", "font-size":"11.5", "font-weight":"800", fill:"#2b2218" }, st.t));
+      g.appendChild(mk("text",{ x:p.x, y:p.y+11, "text-anchor":"middle", "font-family":"var(--sans)", "font-size":"8.5", fill:"#7a5e3f" }, st.s));
+      svg.appendChild(g);
+    });
+  })();
+
+  // ============ SOURCES ============
+  (function(){
+    el("genfrom").textContent = S.generatedFrom;
+
+    // families table
+    var fams = ["farm","mine","fish"];
+    var maxLen = Math.max.apply(null, fams.map(function(f){ return S.resourceFamilies[f].length; }));
+    var rows = "";
+    for (var r=0;r<maxLen;r++){
+      rows += "<tr>";
+      fams.forEach(function(f){
+        var k = S.resourceFamilies[f][r];
+        rows += "<td>"+(k ? costChipKeyOnly(k, f) : "")+"</td>";
+      });
+      rows += "</tr>";
+    }
+    function costChipKeyOnly(key, fam){
+      return '<span class="rc '+fam+'">'+esc(key)+'</span>';
+    }
+    el("famtable").innerHTML =
+      '<table><thead><tr>'+
+        '<th>Farm <span style="color:var(--ink-faint)">('+S.resourceFamilies.farm.length+')</span></th>'+
+        '<th>Mine <span style="color:var(--ink-faint)">('+S.resourceFamilies.mine.length+')</span></th>'+
+        '<th>Fish <span style="color:var(--ink-faint)">('+S.resourceFamilies.fish.length+')</span></th>'+
+      '</tr></thead><tbody>'+rows+'</tbody>'+
+      '<caption>SPINE.resourceFamilies · the farm / mine / fish resource keys. “Crafted” = any recipe output; “other” = everything else (e.g. coins).</caption></table>';
+
+    // recipes table
+    el("recipeCount").textContent = S.recipes.length;
+    var STN_COLOR = { bakery:"#a9791a", forge:"#5a5e62", kitchen:"#c2531f", larder:"#5f7a30", smokehouse:"#9c3a4a", workshop:"#7a5e3f" };
+    var rrows = S.recipes.slice().sort(function(a,b){
+      if (a.station!==b.station) return a.station<b.station?-1:1;
+      if (a.tier!==b.tier) return a.tier-b.tier;
+      return a.item<b.item?-1:1;
+    }).map(function(rc){
+      var stc = STN_COLOR[rc.station] || "#7a5e3f";
+      var ins = rc.inputs.map(function(k){ var f=familyOf(k); return '<span class="rc '+f+'">'+esc(k)+'</span>'; }).join('');
+      var outFam = familyOf(rc.item);
+      return '<tr>'+
+        '<td><span class="rc '+outFam+'" style="font-weight:800">'+esc(rc.item)+'</span></td>'+
+        '<td><span class="kindtag" style="background:'+stc+'">'+esc(rc.station)+'</span></td>'+
+        '<td class="num">'+rc.tier+'</td>'+
+        '<td>'+ins+'</td>'+
+      '</tr>';
+    }).join('');
+    el("recipesTable").innerHTML =
+      '<table><thead><tr><th>Output</th><th>Station</th><th class="num">Tier</th><th>Inputs</th></tr></thead><tbody>'+rrows+'</tbody>'+
+      '<caption>SPINE.recipes · sorted by station then tier. Output and inputs coloured by resource family; station tinted.</caption></table>';
+
+    // per-zone self-tier table
+    var zrows = S.zones.map(function(z){
+      var maxRung = z.tiers.length ? (z.tiers.length-1) : 0;
+      var reachTxt = z.reachableFromFreshSave
+        ? '<span class="chip c-yes">FRESH</span>'
+        : '<span class="chip c-lock">LOCKED</span>';
+      var gateTxt = z.gate ? esc(ZBY[z.gate.zone].name.split(" ")[0])+' ≥ t'+z.gate.tier
+        : (z.requiresHearthTokens ? 'hearth tokens' : '—');
+      var wallTxt = z.wall
+        ? '<span style="color:var(--danger)">'+esc(z.wall.reachedName)+' ✕ '+z.wall.missing.map(function(m){return esc(m.key);}).join("/")+'</span>'
+        : (z.tiers.length ? '<span style="color:var(--moss)">full ladder</span>' : '<span style="color:var(--ink-faint)">n/a</span>');
+      var selfTier = z.tiers.length ? (z.maxSelfTier+'/'+maxRung) : '—';
+      return '<tr>'+
+        '<td>'+z.icon+' <b>'+esc(z.name)+'</b><br><span style="font-size:11px;color:var(--ink-faint)">'+esc(z.id)+'</span></td>'+
+        '<td><span class="kindtag" style="background:'+KIND_COLOR[z.kind]+'">'+KIND_LABEL[z.kind]+'</span></td>'+
+        '<td>'+(z.boardKinds.join(", ")||'<span style="color:var(--ink-faint)">none</span>')+'</td>'+
+        '<td class="num">'+gateTxt+'</td>'+
+        '<td>'+reachTxt+'</td>'+
+        '<td class="num">'+selfTier+'</td>'+
+        '<td>'+wallTxt+'</td>'+
+      '</tr>';
+    }).join('');
+    el("zonetable").innerHTML =
+      '<table><thead><tr><th>Zone</th><th>Kind</th><th>Board</th><th>Gate</th><th>Fresh save</th><th class="num">Self-tier</th><th>Wall</th></tr></thead><tbody>'+zrows+'</tbody>'+
+      '<caption>One row per zone. Self-tier = how far it climbs on its own (maxSelfTier / max rung). “Wall” names the rung it self-walls on and the missing good.</caption></table>';
+  })();
+
+  // ============ GRAIN ============
+  (function(){
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    var c=document.getElementById('grain'),x=c&&c.getContext('2d');if(!x)return;
+    function seed(s){return function(){s=(1103515245*s+12345)&0x7fffffff;return s/0x7fffffff;};}
+    function draw(){
+      var w=c.width=innerWidth,h=c.height=innerHeight,r=seed(11);x.clearRect(0,0,w,h);
+      for(var i=0;i<Math.floor(w*h/950);i++){var t=r();x.fillStyle='rgba('+(t<.5?'120,94,63':'255,247,230')+','+(0.04+r()*0.06)+')';x.fillRect(r()*w,r()*h,1,1);}
+      x.strokeStyle='rgba(120,94,63,0.05)';for(i=0;i<55;i++){var px=r()*w,py=r()*h,a=r()*Math.PI,l=8+r()*24;x.beginPath();x.moveTo(px,py);x.lineTo(px+Math.cos(a)*l,py+Math.sin(a)*l);x.stroke();}
+      for(i=0;i<6;i++){var gx=r()*w,gy=r()*h,rad=120+r()*240,g=x.createRadialGradient(gx,gy,0,gx,gy,rad);g.addColorStop(0,'rgba(201,185,147,0.05)');g.addColorStop(1,'rgba(201,185,147,0)');x.fillStyle=g;x.fillRect(gx-rad,gy-rad,rad*2,rad*2);}
+    }
+    draw();var t;addEventListener('resize',function(){clearTimeout(t);t=setTimeout(draw,200);});
+  })();
+
+  // ============ TABS (grouped, deep-linking) ============
+  (function(){
+    var tabs=document.getElementById('tabs');if(!tabs)return;
+    document.body.classList.add('has-tabs');
+    var btns=[].slice.call(tabs.querySelectorAll('.tab'));
+    var panels=[].slice.call(document.querySelectorAll('.panel'));
+    function show(id,scrollSel){
+      var found=false;
+      panels.forEach(function(p){var on=p.id===id;p.classList.toggle('on',on);if(on)found=true;});
+      btns.forEach(function(b){b.classList.toggle('on',b.dataset.tab===id);});
+      if(found&&scrollSel){var elx=document.querySelector(scrollSel);if(elx)elx.scrollIntoView();}
+      return found;
+    }
+    function fromHash(){
+      var hash=location.hash.replace('#','');if(!hash){show('overview');return;}
+      if(document.getElementById(hash)&&document.getElementById(hash).classList.contains('panel')){show(hash);return;}
+      var sec=document.getElementById(hash);
+      if(sec){var panel=sec.closest('.panel');if(panel){show(panel.id,'#'+hash);return;}}
+      show('overview');
+    }
+    btns.forEach(function(b){b.addEventListener('click',function(){history.pushState(null,'','#'+b.dataset.tab);show(b.dataset.tab);window.scrollTo({top:0});});});
+    document.querySelectorAll('a[href^="#"]').forEach(function(a){
+      a.addEventListener('click',function(e){
+        var id=a.getAttribute('href').slice(1),elx=document.getElementById(id);if(!elx)return;
+        var panel=elx.classList.contains('panel')?elx:elx.closest('.panel');
+        if(panel){e.preventDefault();history.pushState(null,'','#'+id);show(panel.id,elx.classList.contains('panel')?null:'#'+id);if(panel.id===id)window.scrollTo({top:0});}
+      });
+    });
+    addEventListener('popstate',fromHash);fromHash();
+  })();
+
+})();
+</script>
+</body>
+</html>

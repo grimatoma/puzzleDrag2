@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && npm run build:docs",
-    "build:docs": "node tools/build-docs.mjs",
+    "build:docs": "node reference/tools/build-docs.mjs",
     "lint": "eslint src/ prototype.tsx --ext .js,.jsx,.ts,.tsx",
     "typecheck": "tsc --noEmit",
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",

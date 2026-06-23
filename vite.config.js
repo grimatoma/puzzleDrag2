@@ -54,9 +54,18 @@ export default defineConfig(({ command }) => ({
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         cleanupOutdatedCaches: true,
         // Offline SPA navigations fall back to the game shell, except the
-        // standalone Dev Panel (/b/) and Story Editor (/story/) routes.
+        // standalone Dev Panel (/b/), Story Editor (/story/) and Docs (/docs/)
+        // routes. Those are independent static apps, not game routes: without
+        // the denylist a navigation that misses the precache (e.g. a stale
+        // refresh) would be served the game shell, which then boots the game
+        // *under* the docs path (e.g. /docs/#/town?modal=menu) instead of the
+        // docs page.
         navigateFallback: `${BASE}index.html`,
-        navigateFallbackDenylist: [new RegExp(`^${BASE}b/`), new RegExp(`^${BASE}story/`)],
+        navigateFallbackDenylist: [
+          new RegExp(`^${BASE}b/`),
+          new RegExp(`^${BASE}story/`),
+          new RegExp(`^${BASE}docs/`),
+        ],
       },
       // Keep the service worker out of the dev server to avoid stale-cache
       // surprises while developing; it only activates in production builds.

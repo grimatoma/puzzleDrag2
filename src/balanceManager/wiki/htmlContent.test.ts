@@ -147,8 +147,9 @@ describe("Phase 4c entity body files", () => {
 });
 
 // ── Authored narrative pages (locked direction + parked) ──────────────────────
-// `timeline` is generated (ProgressionFeed), not an authored fragment, so it is
-// intentionally excluded here. `overview` and `zones` have their own blocks.
+// `timeline`/`progression` render via the ProgressionPage React component, not
+// authored HTML fragments, so they are intentionally excluded here. `overview`
+// and `zones` have their own blocks.
 
 describe("Authored narrative pages", () => {
   const authoredSlugs = ["direction", "balance", "future", "story"];

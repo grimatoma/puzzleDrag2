@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>puzzleDrag2 — the balance ledger · June 2026</title>
+<style>
+:root{
+  --parchment:#f6efe0; --parchment-soft:#fbf7eb; --paper:#f9f2dd; --bg:#efe6cf;
+  --ink:#2b2218; --ink-soft:#7a5e3f; --ink-faint:#a8926f;
+  --rule:#c9b993; --rule-soft:#dccfa9;
+  --ember:#c2531f; --ember-soft:#d6612a; --gold:#c99a2a; --gold-deep:#a9791a; --gold-soft:#e2b24a;
+  --moss:#5f7a30; --moss-soft:#7fa848; --rose:#9c3a4a; --danger:#b13a2a; --slate:#5a5e62;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:ui-sans-serif,system-ui,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"SFMono-Regular",ui-monospace,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--serif);line-height:1.55;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility}
+#grain{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.5;mix-blend-mode:multiply}
+.wrap{position:relative;z-index:1;max-width:1080px;margin:0 auto;padding:0 26px 120px}
+a{color:var(--ember);text-underline-offset:2px}
+p{max-width:76ch}
+code,.mono{font-family:var(--mono);font-size:.86em;background:rgba(201,185,147,.22);
+  border:1px solid var(--rule-soft);border-radius:4px;padding:1px 5px;color:var(--ink-soft)}
+
+/* Masthead */
+header.mast{padding:56px 0 22px}
+.mast .eyebrow{font-family:var(--sans);font-size:12px;letter-spacing:.32em;text-transform:uppercase;
+  color:var(--ember);font-weight:700;margin:0 0 12px}
+.mast h1{font-size:clamp(36px,6.5vw,66px);line-height:1;margin:0;font-weight:800;letter-spacing:-.01em;
+  text-shadow:0 1px 0 #fff,0 2px 0 rgba(201,185,147,.5)}
+.mast h1 .amp{color:var(--ember)}
+.mast .dek{font-size:18px;color:var(--ink-soft);max-width:66ch;margin:16px 0 0;font-style:italic}
+.mast hr{height:0;border:0;border-top:2px solid var(--ink);margin:26px 0 0;position:relative}
+.mast hr::after{content:"";position:absolute;left:0;right:0;top:3px;border-top:1px solid var(--rule)}
+.statline{display:flex;flex-wrap:wrap;gap:24px;margin-top:20px;font-family:var(--sans)}
+.stat b{font-family:var(--serif);font-size:27px;font-weight:800;line-height:1;display:block}
+.stat span{font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-soft)}
+.stat.e b{color:var(--ember)} .stat.m b{color:var(--moss)} .stat.g b{color:var(--gold-deep)}
+
+/* Tab bar */
+.tabs{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:6px;padding:10px 0;margin:8px 0 18px;
+  background:linear-gradient(180deg,var(--bg) 70%,rgba(239,230,207,0));backdrop-filter:blur(2px);
+  border-bottom:1px solid var(--rule-soft)}
+.tab{font-family:var(--sans);font-size:13px;font-weight:700;letter-spacing:.01em;border:1.5px solid var(--rule);
+  background:var(--parchment-soft);color:var(--ink-soft);border-radius:999px;padding:7px 15px;cursor:pointer}
+.tab:hover{color:var(--ink)}
+.tab.on{background:var(--ink);color:var(--parchment);border-color:var(--ink)}
+body.has-tabs .panel{display:none}
+body.has-tabs .panel.on{display:block;animation:rise .35s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* Sections */
+section{padding:30px 0 6px;scroll-margin-top:70px}
+section + section{border-top:1px solid var(--rule-soft)}
+.kick{font-family:var(--sans);font-size:11.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint);font-weight:700;margin:0 0 4px}
+h2{font-size:clamp(24px,3.2vw,34px);margin:.1em 0 .3em;font-weight:800;letter-spacing:-.01em}
+h3{font-size:19px;margin:1.3em 0 .3em;font-weight:800}
+h4{font-size:15px;margin:1.1em 0 .25em;font-family:var(--sans);letter-spacing:.02em;text-transform:uppercase;color:var(--ink-soft)}
+.lede{font-size:17.5px;color:var(--ink-soft);max-width:74ch;margin:.2em 0 1em}
+ul,ol{max-width:76ch} li{margin:.28em 0}
+
+/* Chips */
+.chip{font-family:var(--sans);font-size:10.5px;font-weight:800;letter-spacing:.04em;color:#fff;
+  border-radius:5px;padding:2px 8px;display:inline-block;vertical-align:middle}
+.c-great{background:var(--moss)} .c-ok{background:var(--gold-deep)} .c-skip{background:var(--rose)}
+.c-ship{background:var(--ember)} .c-defer{background:var(--slate)} .c-done{background:var(--moss)}
+.c-p1{background:var(--ember)} .c-p2{background:var(--gold-deep)}
+.c-block{background:var(--danger)} .c-known{background:var(--slate)} .c-inv{background:var(--gold-deep)}
+.c-lock{background:var(--danger)} .c-yes{background:var(--moss)} .c-prop{background:var(--gold-deep)}
+
+/* Callouts */
+.call{border:1px solid var(--rule);border-left:5px solid var(--moss);border-radius:4px;background:var(--parchment);
+  padding:16px 20px;margin:16px 0;box-shadow:0 1px 0 rgba(201,185,147,.5)}
+.call.warn{border-left-color:var(--ember)} .call.tip{border-left-color:var(--gold-deep)}
+.call h4{margin:0 0 5px;color:var(--ink);font-family:var(--serif);text-transform:none;font-size:16px;letter-spacing:0}
+.call p{margin:.3em 0;color:var(--ink-soft)}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:14px}
+th{font-family:var(--sans);font-size:11px;letter-spacing:.08em;text-transform:uppercase;text-align:left;
+  color:var(--ink-soft);border-bottom:2px solid var(--ink);padding:9px 10px}
+td{border-bottom:1px solid var(--rule-soft);padding:9px 10px;vertical-align:top}
+tr:hover td{background:rgba(201,185,147,.12)}
+.num{font-family:var(--mono);font-size:12.5px;white-space:nowrap}
+caption{caption-side:bottom;font-family:var(--sans);font-size:12px;color:var(--ink-faint);text-align:left;padding:8px 2px 0;font-style:italic}
+
+/* Cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin:16px 0}
+.card{background:var(--parchment-soft);border:1px solid var(--rule);border-radius:8px;padding:16px 18px;
+  box-shadow:0 2px 0 rgba(201,185,147,.45)}
+.card h4{margin-top:0}
+.card.accent{border-left:4px solid var(--ember)}
+.card.warnL{border-left:4px solid var(--danger)}
+.card.mossL{border-left:4px solid var(--moss)}
+.card.goldL{border-left:4px solid var(--gold-deep)}
+.card .src{display:block;margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--ink-faint)}
+
+details{background:var(--parchment-soft);border:1px solid var(--rule);border-radius:6px;padding:10px 16px;margin:12px 0}
+summary{cursor:pointer;font-weight:700;font-family:var(--sans);font-size:14px}
+details[open]{padding-bottom:16px}
+
+.svgwrap{background:var(--parchment-soft);border:1px solid var(--rule);border-radius:8px;padding:18px;margin:18px 0;box-shadow:0 2px 0 rgba(201,185,147,.45)}
+.svgwrap figcaption{font-size:13px;color:var(--ink-soft);font-style:italic;margin-top:8px;text-align:center}
+
+/* Formula block */
+.formula{background:var(--parchment-soft);border:1px solid var(--rule);border-left:4px solid var(--gold-deep);
+  border-radius:6px;padding:12px 16px 14px;margin:14px 0;box-shadow:0 2px 0 rgba(201,185,147,.45)}
+.formula .fname{font-family:var(--sans);font-size:12px;font-weight:800;letter-spacing:.03em;color:var(--gold-deep);
+  text-transform:uppercase;margin:0 0 6px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:baseline}
+.formula .fname .where{font-family:var(--mono);font-size:11px;font-weight:600;text-transform:none;letter-spacing:0;color:var(--ink-faint)}
+.formula .feq{font-family:var(--mono);font-size:14px;line-height:1.5;color:var(--ink);display:block;white-space:pre-wrap;word-break:break-word}
+.formula .feq .op{color:var(--ember)} .formula .feq .fn{color:var(--moss)} .formula .feq .lit{color:var(--gold-deep)} .formula .feq .gl{color:var(--ink-faint)}
+.formula .gloss{margin:.5em 0 0;font-size:14px;color:var(--ink-soft);max-width:none}
+.formula .gloss b{color:var(--ink)}
+.formula.danger{border-left-color:var(--danger)} .formula.danger .fname{color:var(--danger)}
+
+/* spread bars */
+.bars{display:grid;gap:8px;margin:10px 0 4px}
+.bar{display:grid;grid-template-columns:120px 1fr auto;align-items:center;gap:10px;font-size:13px}
+.bar .bl{color:var(--ink);font-weight:700;font-family:var(--sans);font-size:12.5px}
+.bar .bl.muted{color:var(--ink-faint);font-weight:600}
+.bar .bt{height:18px;border-radius:4px;background:linear-gradient(90deg,var(--ember-soft),var(--ember));min-width:4px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.1)}
+.bar .bt.g{background:linear-gradient(90deg,var(--moss-soft),var(--moss))}
+.bar .bt.t{background:linear-gradient(90deg,var(--gold-soft),var(--gold-deep))}
+.bar .bv{font-family:var(--mono);font-size:12px;color:var(--ink-soft);text-align:right}
+
+/* chain diagram */
+.chainflow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:14px 0;font-family:var(--sans)}
+.chainflow .node{flex:1 1 140px;min-width:140px;background:var(--parchment-soft);border:1px solid var(--rule);
+  border-top:3px solid var(--ember);border-radius:6px;padding:11px 13px;box-shadow:0 2px 0 rgba(201,185,147,.45);position:relative}
+.chainflow .node .n{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--ember)}
+.chainflow .node .t{font-weight:800;font-size:14px;margin:3px 0 2px;color:var(--ink);font-family:var(--serif)}
+.chainflow .node .d{font-size:12px;color:var(--ink-soft);line-height:1.4}
+.chainflow .arr{flex:0 0 26px;display:flex;align-items:center;justify-content:center;color:var(--ember);font-weight:800;font-size:20px}
+.chainflow .node.lock{border-top-color:var(--danger)}
+.chainflow .node.lock .n{color:var(--danger)}
+
+footer{margin-top:54px;padding-top:22px;border-top:2px solid var(--ink);font-family:var(--sans);
+  font-size:12.5px;color:var(--ink-soft);display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}
+
+@media(max-width:680px){.wrap{padding:0 15px 80px}.mast{padding-top:34px}.tabs{top:0}.bar{grid-template-columns:92px 1fr auto}}
+@media print{
+  #grain,.tabs{display:none!important}
+  body.has-tabs .panel{display:block!important;animation:none}
+  body{background:#fff}
+  section{break-inside:avoid}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<canvas id="grain"></canvas>
+<div class="wrap">
+
+<header class="mast">
+  <p class="eyebrow">Balance Profile · Hearthwood Vale · June 2026</p>
+  <h1>puzzleDrag2 — the<br>balance <span class="amp">ledger</span></h1>
+  <p class="dek">The readable companion to <code>profile.json</code> — the goals, the formulas, the knobs, and the one finding that matters: a circular gate has softlocked progression at the first rung. Every number below is drawn from the profile and the playtest harness. For the journey itself — the unlock map, tier ladders, and where the spine walls off — see the interactive <a href="progression-timeline.html">progression timeline</a>.</p>
+  <hr>
+  <div class="statline">
+    <div class="stat e"><b>1</b><span>blocker found</span></div>
+    <div class="stat"><b>~10×</b><span>value-per-tile spread</span></div>
+    <div class="stat m"><b>20–35</b><span>runs target to mid-game</span></div>
+    <div class="stat g"><b>13</b><span>tunable knobs</span></div>
+  </div>
+</header>
+
+<nav class="tabs" id="tabs">
+  <button class="tab on" data-tab="goals">Goals &amp; KPIs</button>
+  <button class="tab" data-tab="softlock">⚠ The softlock</button>
+  <button class="tab" data-tab="economy">Economy &amp; formulas</button>
+  <button class="tab" data-tab="knobs">Knob registry</button>
+  <button class="tab" data-tab="findings">Findings &amp; questions</button>
+  <button class="tab" data-tab="pass">Proposed pass</button>
+  <button class="tab" data-tab="log">Decision log</button>
+</nav>
+
+<!-- ───────────────────────── GOALS & KPIs ───────────────────────── -->
+<div class="panel on" id="goals">
+
+<section>
+  <p class="kick">What this doc is</p>
+  <h2>The balance ledger for a farming economy</h2>
+  <p class="lede">puzzleDrag2 is a single-player, turn-based, transitive-economy game: a tile-drag match/merge farm loop with a <strong>zone-tier progression spine</strong>. You chain tiles for coins and resources, convert them through recipes and board upgrades, and spend them down through zone entry, settlement founding, building, and tier-up sinks. This page is the human-readable mirror of <code>profile.json</code> — the source of truth for the knobs, formulas, economy map, findings, and open questions. When the two disagree, the JSON wins and this page is brought back in sync.</p>
+  <div class="call tip">
+    <h4>How a balance pass runs</h4>
+    <p>The <code>/game-balance</code> skill <strong>(1)</strong> interviews the design goals, <strong>(2)</strong> models the economy as faucets &amp; sinks with explicit formulas, <strong>(3)</strong> tests against the deterministic harness (<code>npm run playtest</code>), <strong>(4)</strong> proposes targeted changes tied to the goals and applies them on confirmation, then <strong>(5)</strong> records the result in the <a href="#log">decision log</a> and re-syncs the profile.</p>
+  </div>
+</section>
+
+<section>
+  <p class="kick">Goals — captured 2026-06-22</p>
+  <h2>Four objectives, one target player</h2>
+  <p class="lede">The goals interview is done; the answers below now drive every proposed change. The headline objective is fixing the progression stall — the other three follow once the lock is broken.</p>
+  <div class="grid">
+    <div class="card accent"><h4>1 · Fix the progression stall</h4><p>The single highest-leverage change. Home cannot climb past Outpost today (see <a href="#softlock">the softlock</a>). Unblock the ladder so the campaign can reach mid-game.</p></div>
+    <div class="card accent"><h4>2 · Compress the value spread</h4><p>Realized value-per-tile spans ~10×. Pull marquee resources toward a <strong>3–4× ceiling</strong> over the median so no single tile family is the obvious dominant strategy.</p></div>
+    <div class="card accent"><h4>3 · Tune pacing / time-to-content</h4><p>Land the milestone bands: a <strong>steady ~1–2 weeks</strong> (≈ 20–35 mid-core sessions) to mid-game, with coins a softer secondary gate rather than the wall.</p></div>
+    <div class="card accent"><h4>4 · Reduce grind / friction</h4><p>Smooth the early loop so the first rungs feel earned, not punishing — "balanced middle": cozy surface, light strategy, few hard walls.</p></div>
+  </div>
+
+  <h3>The shape of play</h3>
+  <ul>
+    <li><strong>Target player</strong> — <em>mid-core</em> (multiple sessions/day) is the baseline segment; casual and power players sit on either side of it.</li>
+    <li><strong>Session shape</strong> — roughly <strong>2–3 sessions/day</strong>; a session is about one farm run (~10 turns).</li>
+    <li><strong>Time to mid-game</strong> — <em>steady ~1–2 weeks</em> to found a 2nd settlement and grow home to City (tier 3) → about <strong>20–35 mid-core sessions</strong>.</li>
+    <li><strong>Feel</strong> — a <em>balanced middle</em>: enough economic tension that choices matter, but few hard walls.</li>
+  </ul>
+
+  <h3>Constraints the pass must respect</h3>
+  <ul>
+    <li><strong>No real-money mechanics</strong> (assumed; to confirm in the interview).</li>
+    <li><strong>Save-compatibility</strong> — value tweaks are safe, but structural/persisted-shape changes need a <code>SAVE_SCHEMA</code> bump + migration.</li>
+    <li><strong>Don't silently break</strong> the family-value or campaign snapshot tests — update them intentionally when a change is meant to move them.</li>
+  </ul>
+</section>
+
+<section>
+  <p class="kick">KPI targets — derived from the goals</p>
+  <h2>The milestone ladder, vs the lock</h2>
+  <p class="lede">Working backward from "mid-core, ~2.5 sessions/day, steady ~1–2 weeks" gives the run-count bands below. They are deliberately rough — refine them once the campaign sim models buildings, crafting, and the mine. The "current" column is what the harness/trace measures <strong>today</strong>, and the contrast is the whole story: three of four milestones are <strong>unreachable</strong>.</p>
+  <table>
+    <thead><tr><th>Milestone</th><th class="num">Target runs</th><th>Current status</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>home_found_2</strong> — coins to afford founding #2</td>
+        <td class="num">6 – 15</td>
+        <td><span class="chip c-inv">~2 RUNS</span> coins arrive too fast to be a real gate; the true gate is <em>completing</em> home.</td>
+      </tr>
+      <tr>
+        <td><strong>home_tier1</strong> — Hamlet</td>
+        <td class="num">3 – 8</td>
+        <td><span class="chip c-lock">UNREACHABLE</span> needs crafted <code>bread</code> → Bakery → <code>block</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>home_tier2</strong> — Village</td>
+        <td class="num">10 – 20</td>
+        <td><span class="chip c-lock">UNREACHABLE</span> needs <code>block</code> / <code>coke</code> / <code>silver_bar</code>.</td>
+      </tr>
+      <tr>
+        <td><strong>home_tier3</strong> — City <span class="chip c-known" style="vertical-align:1px">MID-GAME</span></td>
+        <td class="num">20 – 35</td>
+        <td><span class="chip c-lock">UNREACHABLE</span> circular gate — see the finding.</td>
+      </tr>
+    </tbody>
+    <caption>profile.kpiTargets.milestones — target bands derived from the goals; "current" measured by the harness/trace. Mid-game = home at City (tier 3) + a 2nd settlement founded.</caption>
+  </table>
+  <div class="grid">
+    <div class="card mossL"><h4>Time to mid-game</h4><p>Target <strong>20–35 runs</strong>. The coin curve already clears its part of this — but the resource/tier spine is locked, so the campaign cannot actually arrive.</p></div>
+    <div class="card mossL"><h4>Coins per run</h4><p>Target band <strong>40–140</strong> coins/run at home. Coins are <em>not</em> the binding constraint today.</p></div>
+    <div class="card mossL"><h4>Family-value spread (max)</h4><p>Target ceiling <strong>≤ 4×</strong> the median realized value-per-tile. Currently ~10×.</p></div>
+  </div>
+</section>
+
+</div>
+
+<!-- ───────────────────────── THE SOFTLOCK ───────────────────────── -->
+<div class="panel" id="softlock">
+
+<section>
+  <p class="kick">Headline finding · severity: blocker</p>
+  <h2>The progression softlock</h2>
+  <div class="call warn">
+    <h4>⚠ Home cannot progress past Outpost (tier 0) — a circular hard lock.</h4>
+    <p>Home's tier ladder needs mine goods (<code>block</code> / <code>iron_bar</code>) from the first real rung. Mine goods come <strong>only</strong> from the quarry. But the quarry carries <code>requiresZoneTier&nbsp;{zone: home, tier: 3 (City)}</code> — and reaching home→City itself needs mine goods. The dependency eats its own tail. A fresh save has no mine goods in its starting inventory, and the market cannot buy them, so the player is stuck at home Outpost with no path forward.</p>
+  </div>
+
+  <h3>The dependency chain</h3>
+  <div class="chainflow">
+    <div class="node"><div class="n">tier 0</div><div class="t">Home · Outpost</div><div class="d">Only the free <strong>Hearth</strong> is farm-buildable here.</div></div>
+    <div class="arr">→</div>
+    <div class="node"><div class="n">tier 1 gate</div><div class="t">Hamlet wants bread</div><div class="d">Crafting <code>bread</code> needs the <strong>Bakery</strong>.</div></div>
+    <div class="arr">→</div>
+    <div class="node lock"><div class="n">cost</div><div class="t">Bakery costs block</div><div class="d">Mill / Granary also need <code>block</code> + <code>iron_bar</code>.</div></div>
+    <div class="arr">→</div>
+    <div class="node lock"><div class="n">source</div><div class="t">block ⇐ quarry only</div><div class="d">No farm tile spawns it; the market can't sell it.</div></div>
+    <div class="arr">→</div>
+    <div class="node lock"><div class="n">gate</div><div class="t">quarry needs home City</div><div class="d"><code>requiresZoneTier {home, tier 3}</code> — back to the start.</div></div>
+  </div>
+  <p>Read it as a loop: <strong>climb home → need <code>block</code> → need the quarry → need home at City → climb home.</strong> There is no entry point. Even completing home to <em>found the next settlement</em> needs ~4 buildings that each demand <code>block</code>.</p>
+
+  <h3>Confirmed: it is a hard lock, not just awkward ordering</h3>
+  <p>The lock is now <strong>code-derived</strong>, not just traced. The progression oracle (<code>src/playtest/progression.ts</code>, run via <code>npm run playtest -- --progression</code>) computes fresh-save reachability — <code>{home, meadow, orchard, crossroads}</code>, all farm/no-board — and pins the very first wall at <strong>home Outpost → Hamlet</strong>: the rung needs <code>bread</code>, and the Bakery that bakes it both costs <code>block</code> and only unlocks <em>at</em> Hamlet. <code>CARTO/TRAVEL</code> separately enforces the quarry travel gate (<code>slice.ts:78</code>). See the interactive <a href="progression-timeline.html">progression timeline →</a>.</p>
+  <div class="call">
+    <h4>Escape-valve audit — no way out</h4>
+    <p>Every candidate bypass was checked and closed: orders/quests and daily rewards grant only coins; no story beat or starting inventory seeds <code>block</code> or <code>bread</code>; inventory is siloed per zone, so another zone's output can't pay home's tier-up. The one near-miss is the market — it <em>lists</em> <code>block</code>/<code>bread</code> as buyable, but the buy UI only appears once <code>caravan_post</code> is built, and that costs <code>block</code>+<code>iron_bar</code>. So even the escape is mine-gated.</p>
+  </div>
+
+  <h3>Likely cause &amp; the lever</h3>
+  <p>This is almost certainly a side-effect of <strong>PR #1299 (zones-as-spine)</strong> not reconciling the authored home tier/building costs against the new gate. It reads as a regression, not an intended wall.</p>
+  <div class="call tip">
+    <h4>The lever — <code>src/features/cartography/data.ts:344</code></h4>
+    <p>The quarry's <code>requiresZoneTier&nbsp;{zone: home, tier: 3}</code>. <strong>Lower / re-gate it</strong> so the mine opens early, <em>and/or</em> <strong>re-cost the early home tiers + tier-0 buildings</strong> so the first rungs don't demand mine goods before the mine is reachable. Either edit breaks the cycle.</p>
+  </div>
+</section>
+
+</div>
+
+<!-- ───────────────────────── ECONOMY & FORMULAS ───────────────────────── -->
+<div class="panel" id="economy">
+
+<section>
+  <p class="kick">The map</p>
+  <h2>Faucets → converters → sinks</h2>
+  <p class="lede">The whole economy reduces to three columns. <strong>Faucets</strong> mint coins and resources, <strong>converters</strong> trade one resource up in value, and <strong>sinks</strong> drain supply to pace progression. Balance lives in the ratios between them — and crucially, coins and resources are <em>two parallel currencies</em>, gated on different axes.</p>
+
+  <figure class="svgwrap">
+    <svg viewBox="0 0 980 430" width="100%" role="img" aria-label="Economy map: faucets flow through converters into sinks; coins bypass converters straight to coin-gated sinks.">
+      <defs>
+        <marker id="arr" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto">
+          <path d="M0,0 L7.5,3 L0,6 Z" fill="#a8926f"/>
+        </marker>
+        <marker id="arrG" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto">
+          <path d="M0,0 L7.5,3 L0,6 Z" fill="#5f7a30"/>
+        </marker>
+      </defs>
+      <g font-family="ui-sans-serif, system-ui, sans-serif">
+        <!-- column headers -->
+        <text x="150" y="30" text-anchor="middle" font-size="15" font-weight="700" fill="#c2531f" letter-spacing="2">FAUCETS</text>
+        <text x="490" y="30" text-anchor="middle" font-size="15" font-weight="700" fill="#5f7a30" letter-spacing="2">CONVERTERS</text>
+        <text x="830" y="30" text-anchor="middle" font-size="15" font-weight="700" fill="#b13a2a" letter-spacing="2">SINKS</text>
+        <text x="150" y="48" text-anchor="middle" font-size="11" fill="#7a5e3f">mint coins &amp; resources</text>
+        <text x="490" y="48" text-anchor="middle" font-size="11" fill="#7a5e3f">trade up in value</text>
+        <text x="830" y="48" text-anchor="middle" font-size="11" fill="#7a5e3f">drain to pace progress</text>
+
+        <!-- faucet boxes -->
+        <g font-size="12.5" font-weight="600" fill="#2b2218">
+          <rect x="30" y="66"  width="240" height="40" rx="9" fill="#f3e6c8" stroke="#c2531f"/><text x="150" y="91" text-anchor="middle">Chain collection coins</text>
+          <rect x="30" y="116" width="240" height="40" rx="9" fill="#f3e6c8" stroke="#c2531f"/><text x="150" y="141" text-anchor="middle">Resource accrual → inventory</text>
+          <rect x="30" y="166" width="240" height="40" rx="9" fill="#f3e6c8" stroke="#c2531f"/><text x="150" y="191" text-anchor="middle">Season-end bonus (+25)</text>
+          <rect x="30" y="216" width="240" height="40" rx="9" fill="#f3e6c8" stroke="#c2531f"/><text x="150" y="241" text-anchor="middle">Daily rewards</text>
+          <rect x="30" y="266" width="240" height="40" rx="9" fill="#f3e6c8" stroke="#c2531f"/><text x="150" y="291" text-anchor="middle">Order / market sales</text>
+        </g>
+
+        <!-- converter boxes -->
+        <g font-size="12.5" font-weight="600" fill="#2b2218">
+          <rect x="370" y="120" width="240" height="46" rx="9" fill="#e4eccf" stroke="#5f7a30"/>
+          <text x="490" y="140" text-anchor="middle">Recipes (craft)</text>
+          <text x="490" y="157" text-anchor="middle" font-size="10.5" font-weight="400" fill="#5f7a30">station-gated · resources → goods</text>
+          <rect x="370" y="196" width="240" height="46" rx="9" fill="#e4eccf" stroke="#5f7a30"/>
+          <text x="490" y="216" text-anchor="middle">Board upgradeMap</text>
+          <text x="490" y="233" text-anchor="middle" font-size="10.5" font-weight="400" fill="#5f7a30">chain a tile → spawn higher tier</text>
+        </g>
+
+        <!-- sink boxes -->
+        <g font-size="12.5" font-weight="600" fill="#2b2218">
+          <rect x="710" y="60"  width="240" height="40" rx="9" fill="#f1dcd2" stroke="#b13a2a"/><text x="830" y="85" text-anchor="middle">Zone entry cost (50/session)</text>
+          <rect x="710" y="110" width="240" height="40" rx="9" fill="#f1dcd2" stroke="#b13a2a"/><text x="830" y="135" text-anchor="middle">Tier-up cost (resource-gated)</text>
+          <rect x="710" y="160" width="240" height="40" rx="9" fill="#f1dcd2" stroke="#b13a2a"/><text x="830" y="185" text-anchor="middle">Settlement founding (exp.)</text>
+          <rect x="710" y="210" width="240" height="40" rx="9" fill="#f1dcd2" stroke="#b13a2a"/><text x="830" y="235" text-anchor="middle">Building cost</text>
+          <rect x="710" y="260" width="240" height="40" rx="9" fill="#f1dcd2" stroke="#b13a2a"/><text x="830" y="285" text-anchor="middle">Tool charges</text>
+        </g>
+
+        <!-- flows: faucets -> converters (resources) -->
+        <path d="M270 136 C320 150, 330 145, 368 145" fill="none" stroke="#5f7a30" stroke-width="2" marker-end="url(#arrG)"/>
+        <path d="M270 186 C320 200, 330 215, 368 219" fill="none" stroke="#5f7a30" stroke-width="2" marker-end="url(#arrG)"/>
+
+        <!-- flows: converters -> sinks -->
+        <path d="M610 143 C660 140, 670 130, 708 130" fill="none" stroke="#a8926f" stroke-width="2" marker-end="url(#arr)"/>
+        <path d="M610 219 C660 222, 670 228, 708 228" fill="none" stroke="#a8926f" stroke-width="2" marker-end="url(#arr)"/>
+
+        <!-- coin shortcut: faucets straight to coin sinks -->
+        <path d="M270 86 C470 70, 560 78, 708 80" fill="none" stroke="#a8926f" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#arr)"/>
+        <path d="M270 286 C470 330, 600 300, 708 188" fill="none" stroke="#a8926f" stroke-width="2" stroke-dasharray="5 5" marker-end="url(#arr)"/>
+
+        <!-- caption row -->
+        <g font-family="SFMono-Regular, ui-monospace, monospace" font-size="11" fill="#7a5e3f">
+          <line x1="30" y1="360" x2="78" y2="360" stroke="#5f7a30" stroke-width="2"/>
+          <text x="86" y="364">resource flow (faucet → converter → resource-gated sink)</text>
+          <line x1="500" y1="360" x2="548" y2="360" stroke="#a8926f" stroke-width="2" stroke-dasharray="5 5"/>
+          <text x="556" y="364">coin flow (faucet → coin-gated sink, bypasses converters)</text>
+        </g>
+        <text x="490" y="400" text-anchor="middle" font-family="ui-sans-serif, system-ui, sans-serif" font-size="12" fill="#7a5e3f">Coins and resources are two parallel currencies; progression is gated on BOTH, on different axes.</text>
+      </g>
+    </svg>
+    <figcaption>The economy in three columns. Healthy coin pacing does not imply healthy progression pacing — the resource axis is where the softlock lives.</figcaption>
+  </figure>
+
+  <div class="grid">
+    <div class="card"><h4 style="color:var(--ember)">Faucets</h4>
+      <ul>
+        <li><strong>Chain collection coins</strong> — the primary income, per chain resolved on the board.</li>
+        <li><strong>Resource accrual</strong> — chained tiles accrue whole inventory units.</li>
+        <li><strong>Season-end bonus</strong> — flat <code>+25</code> coins at <code>CLOSE_SEASON</code>.</li>
+        <li><strong>Daily rewards</strong> — login-streak grants.</li>
+        <li><strong>Order / market sales</strong> — coin income for resources.</li>
+      </ul>
+    </div>
+    <div class="card"><h4 style="color:var(--moss)">Converters</h4>
+      <ul>
+        <li><strong>Recipes</strong> — craft resources into goods/tools, station-gated.</li>
+        <li><strong>Board upgradeMap</strong> — chaining a tile redirects spawns to a higher-tier tile.</li>
+      </ul>
+    </div>
+    <div class="card"><h4 style="color:var(--danger)">Sinks</h4>
+      <ul>
+        <li><strong>Zone entry</strong> — <code>50</code>/session at home.</li>
+        <li><strong>Tier-up</strong> — resource-gated (the softlock surface).</li>
+        <li><strong>Settlement founding</strong> — coin-gated, exponential.</li>
+        <li><strong>Building cost</strong> + <strong>tool charges</strong>.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section>
+  <p class="kick">The levers underneath</p>
+  <h2>Core formulas</h2>
+  <p class="lede">The real formulas from <code>profile.json</code>, each with a one-line gloss. Every balance argument ultimately bottoms out in one of these.</p>
+
+  <div class="formula">
+    <div class="fname"><span>Chain coins</span><span class="where">src/state.ts:454 · ~linear in chain length</span></div>
+    <code class="feq"><span class="fn">max</span>(<span class="lit">1</span>, <span class="fn">floor</span>(chainLength <span class="op">×</span> tileValue)) <span class="op">+</span> coinHookBonus  <span class="op">×</span> coin_gain_mult</code>
+    <p class="gloss">Coins per chain scale roughly <b>linearly</b> with how many tiles you chained, weighted by the tile's value; building hooks add a flat bonus and boons apply a multiplier. Floor, minimum 1.</p>
+  </div>
+
+  <div class="formula">
+    <div class="fname"><span>Resource accrual</span><span class="where">src/state.ts:392–416 · integer divisor</span></div>
+    <code class="feq">progress[res] <span class="op">+=</span> chainLength ;  wholeUnits <span class="op">=</span> <span class="fn">floor</span>(progress <span class="op">/</span> TILES_PER_RESOURCE[tile])</code>
+    <p class="gloss">Chained tiles add to a per-resource <code>progress</code> counter; every <code>TILES_PER_RESOURCE</code> tiles yields <b>one whole inventory unit</b>, with the remainder carried to the next chain.</p>
+  </div>
+
+  <div class="formula">
+    <div class="fname"><span>Realized value-per-tile</span><span class="where">the dominant-strategy yardstick</span></div>
+    <code class="feq">valuePerTile <span class="op">=</span> ITEMS[res].value <span class="op">/</span> TILES_PER_RESOURCE[tile]</code>
+    <p class="gloss">The coins a tile is <b>actually worth</b> once you account for how many tiles it takes to make a unit. This is the distance-from-power-curve metric the family-value-spread audit ranks every resource by — the closest thing to a "best strategy" signal.</p>
+  </div>
+
+  <div class="formula danger">
+    <div class="fname"><span>Founding cost</span><span class="where">src/features/zones/data.ts:404 · exponential sink</span></div>
+    <code class="feq"><span class="fn">round</span>(<span class="lit">300</span> <span class="op">×</span> <span class="lit">1.7</span><sup style="font-size:.7em">(k−1)</sup>)   <span class="gl">→ 300, 510, 867, 1474, …</span></code>
+    <p class="gloss">The k-th settlement founding costs <b>exponentially</b> more than the last (base <code>300</code>, growth <code>1.7</code>). The main long-horizon coin sink, designed to keep coins meaningful late.</p>
+  </div>
+
+  <div class="formula">
+    <div class="fname"><span>Net coins / run</span><span class="where">per-session cash flow</span></div>
+    <code class="feq">net <span class="op">=</span> chainCoins(this run) <span class="op">−</span> <span class="lit">50</span> <span class="op">+</span> <span class="lit">25</span>  <span class="gl">(+ building bonuses)</span></code>
+    <p class="gloss">A home run nets its chain coins minus the <code>50</code> entry cost plus the <code>25</code> season-end bonus, so the break-even chain income for a home session is about <b>25 coins</b>.</p>
+  </div>
+
+  <div class="formula">
+    <div class="fname"><span>Turn budget</span><span class="where">src/features/zones/data.ts:192</span></div>
+    <code class="feq"><span class="fn">max</span>(<span class="lit">1</span>, <span class="fn">floor</span>((baseTurns <span class="op">+</span> additive <span class="op">+</span> bonus) <span class="op">×</span> (useFertilizer ? <span class="lit">2</span> : <span class="lit">1</span>)))</code>
+    <p class="gloss">How many actions a run gives you. Home <code>baseTurns = 10</code>; fertilizer doubles the budget. Every chain spends a turn, so this caps coins-per-run and resources-per-run together.</p>
+  </div>
+
+  <div class="call"><p><b>Two axes, balanced separately.</b> Coins (chain income → entry / founding / building sinks) and resources (accrual → recipes / tier-up sinks) are <em>parallel</em> currencies. Healthy coin pacing does not imply healthy progression pacing — see <a href="#softlock">the softlock</a>.</p></div>
+</section>
+
+</div>
+
+<!-- ───────────────────────── KNOB REGISTRY ───────────────────────── -->
+<div class="panel" id="knobs">
+
+<section>
+  <p class="kick">The tunable surface</p>
+  <h2>Knob registry</h2>
+  <p class="lede">Every tunable surface the balance pass may touch, mirrored from <code>profile.json &gt; knobs</code>. These are the only places a value change should land. Two are the progression levers — flagged below.</p>
+  <table>
+    <thead><tr><th>Knob</th><th>Path</th><th>Controls</th></tr></thead>
+    <tbody>
+      <tr><td><code>ITEMS[].value</code></td><td><code>src/constants.ts</code></td><td>Resource / tile sell worth (coins).</td></tr>
+      <tr><td><code>TILES_PER_RESOURCE</code></td><td><code>src/constants.ts</code></td><td>Income divisor — tiles chained per 1 inventory unit. Derived from <code>buildTilesPerResource(UPGRADE_THRESHOLDS)</code>.</td></tr>
+      <tr><td><code>UPGRADE_THRESHOLDS</code></td><td><code>src/config/upgradeThresholds.ts</code></td><td>Board upgrade gate — chains to upgrade a tile (decoupled from income).</td></tr>
+      <tr><td><code>RECIPES</code></td><td><code>src/constants.ts:929</code></td><td>Crafting input costs (resources / tools), station + tier.</td></tr>
+      <tr><td><code>BUILDINGS[].cost</code></td><td><code>src/constants.ts:784</code></td><td>Building construction cost — gates home completion and the tier climb.</td></tr>
+      <tr><td><code>ZONES[].entryCost</code></td><td><code>src/features/cartography/data.ts</code></td><td>Coins to start a session in a zone (home = 50).</td></tr>
+      <tr><td><strong><code>tiers[].upgradeCost</code></strong> <span class="chip c-p2" style="vertical-align:1px">PROGRESSION LEVER</span></td><td><code>src/features/cartography/data.ts</code> (MAP_NODES[].tiers)</td><td>Settlement tier-up cost (coins + zone-inventory resources; rung 0 free). Re-costing the early rungs is one half of the lock fix.</td></tr>
+      <tr><td><strong><code>requiresZoneTier</code></strong> <span class="chip c-p1" style="vertical-align:1px">PROGRESSION LEVER</span></td><td><code>src/features/cartography/data.ts</code> (MAP_NODES)</td><td>Zone unlock gate — e.g. the quarry requires home tier 3. <strong>The lever for the softlock.</strong></td></tr>
+      <tr><td><code>SETTLEMENT_FOUNDING_BASE_COINS</code> / <code>_GROWTH</code></td><td><code>src/features/zones/data.ts:384</code></td><td>Settlement founding price escalation (<code>300</code> and <code>1.7</code>).</td></tr>
+      <tr><td><code>SEASON_END_BONUS_COINS</code></td><td><code>src/state/helpers.ts:154</code></td><td>Flat coins granted at <code>CLOSE_SEASON</code> (<code>25</code>).</td></tr>
+      <tr><td><code>DAILY_REWARDS</code></td><td><code>src/constants.ts</code></td><td>Login-streak rewards.</td></tr>
+      <tr><td><code>SEASON_POOL_MODS</code></td><td><code>src/constants.ts</code></td><td>Per-season spawn-weight shifts.</td></tr>
+      <tr><td><code>boards.farm.seasonDrops</code> / <code>upgradeMap</code></td><td><code>src/features/cartography/data.ts</code></td><td>Per-zone tile spawn rates + chain-upgrade redirects.</td></tr>
+    </tbody>
+    <caption>13 knobs · the balance surface mirrored from <code>profile.json &gt; knobs</code>. The two flagged rows are where the progression-stall fix lands.</caption>
+  </table>
+</section>
+
+</div>
+
+<!-- ───────────────────────── FINDINGS & QUESTIONS ───────────────────────── -->
+<div class="panel" id="findings">
+
+<section>
+  <p class="kick">The ledger of findings</p>
+  <h2>Findings</h2>
+  <p class="lede">Three findings stand today. The first is the blocker (its own <a href="#softlock">tab</a>); the other two are understood and waiting on a decision.</p>
+  <div class="grid">
+    <div class="card warnL"><h4>Home progression circular lock <span class="chip c-block">BLOCKER</span></h4>
+      <p>Home can't pass Outpost without mine goods, which come only from a quarry gated on home being City — a circular hard lock, enforced at <code>slice.ts:78</code>. Almost certainly a regression from PR #1299. <a href="#softlock">Full write-up →</a></p>
+      <span class="src">id: home-progression-circular-lock · lever: cartography/data.ts:344</span>
+    </div>
+    <div class="card goldL"><h4>Family-value spread ~10× <span class="chip c-known">KNOWN</span></h4>
+      <p>Realized value-per-tile spans ~10× (<code>pearls</code> ≈ 133/tile vs <code>pie</code> ≈ 12.9/tile; anything &gt; 3× median is flagged). The per-run harness already emits a compression change-list toward a 3–4× ceiling.</p>
+      <span class="src">id: family-value-spread · source: familyValueSpread</span>
+    </div>
+    <div class="card goldL"><h4>Coins too fast vs pacing <span class="chip c-inv">INVESTIGATE</span></h4>
+      <p>Coins reach the founding price in ~2 runs — far faster than the steady ~1–2 week goal. Coins are <em>not</em> the pacing gate today (progression resources are). Once progression is unblocked, consider making coins a softer secondary gate.</p>
+      <span class="src">id: coins-too-fast-vs-pacing · source: campaign harness</span>
+    </div>
+  </div>
+
+  <h3>The value spread, illustrated</h3>
+  <p>The dominant-strategy audit ranks every resource by realized value-per-tile. The spread runs ~10× across the roster: marquee marine / gem resources pay far more per chained tile than staples. The target ceiling is <strong>3–4×</strong> the median.</p>
+  <div class="bars">
+    <div class="bar"><span class="bl">pearls</span><span class="bt" style="width:100%"></span><span class="bv">≈ 133 / tile</span></div>
+    <div class="bar"><span class="bl muted">…median band…</span><span class="bt t" style="width:30%"></span><span class="bv">≈ 40 / tile</span></div>
+    <div class="bar"><span class="bl">pie</span><span class="bt g" style="width:9.7%"></span><span class="bv">≈ 12.9 / tile</span></div>
+  </div>
+  <p class="num" style="color:var(--ink-faint);font-size:11.5px">Illustrative rows · metric = ITEMS[res].value / TILES_PER_RESOURCE[tile] · outlier factor target in profile.json = 3×, KPI ceiling = 4×.</p>
+</section>
+
+<section>
+  <p class="kick">What the pass must resolve</p>
+  <h2>Open questions</h2>
+  <p class="lede">From <code>profile.openQuestions</code> — the decisions a balance pass has to settle, in priority order.</p>
+  <div class="grid">
+    <div class="card mossL"><h4>1 · Is the quarry's home-City gate intended?</h4><p>Or should the mine open earlier so home can climb its ladder? <strong>The single highest-leverage change</strong> (objective 1).</p></div>
+    <div class="card mossL"><h4>2 · Any story/quest escape hatch?</h4><p><strong>Confirmed:</strong> the gate <em>is</em> enforced for travel (<code>slice.ts:78</code>) — a hard lock, not just awkward. Residual: do any story beats or quests grant mine goods / unlock the quarry early? A fresh-save playthrough settles it 100%.</p></div>
+    <div class="card mossL"><h4>3 · Compress the spread, or keep a premium?</h4><p>Pull family value toward a 3–4× ceiling (per the auto change-list), or keep a premium for marquee resources? (objective 2).</p></div>
+    <div class="card mossL"><h4>4 · Confirm the constraints</h4><p>No real-money mechanics; saves must survive value tweaks. Confirm both in the interview.</p></div>
+  </div>
+</section>
+
+</div>
+
+<!-- ───────────────────────── PROPOSED PASS ───────────────────────── -->
+<div class="panel" id="pass">
+
+<section>
+  <p class="kick">Plan · tied to the four objectives</p>
+  <h2>The proposed pass</h2>
+  <div class="call warn">
+    <h4>These are PROPOSALS — nothing here is applied yet.</h4>
+    <p>Each item maps to one of the four goals and stays inside the <a href="#knobs">knob registry</a>. They land only on confirmation, validated by the harness, and recorded in the <a href="#log">decision log</a>.</p>
+  </div>
+  <div class="grid">
+    <div class="card accent"><h4>1 · Break the lock <span class="chip c-p1" style="vertical-align:1px">OBJ 1</span></h4>
+      <p>Re-gate the quarry (lower its <code>requiresZoneTier</code> below City) <strong>and/or</strong> re-cost the early home rungs + tier-0 buildings so the first rungs don't demand mine goods before the mine is reachable. Either edit breaks the cycle; do the smallest one that opens a clean path.</p>
+      <p><strong>Lever:</strong> <code>cartography/data.ts:344</code> · <code>tiers[].upgradeCost</code> · <code>BUILDINGS[].cost</code>.</p>
+    </div>
+    <div class="card accent"><h4>2 · Compress the spread <span class="chip c-p2" style="vertical-align:1px">OBJ 2</span></h4>
+      <p>Apply the per-run harness's auto change-list to pull realized value-per-tile toward a <strong>3–4× ceiling</strong> over the median — trimming marquee outliers (<code>pearls</code>) and/or lifting staples (<code>pie</code>) via <code>ITEMS[].value</code> and <code>TILES_PER_RESOURCE</code>.</p>
+      <p><strong>Guard:</strong> update the family-value snapshot test intentionally.</p>
+    </div>
+    <div class="card accent"><h4>3 · Tune pacing to the bands <span class="chip c-p2" style="vertical-align:1px">OBJ 3</span></h4>
+      <p>Tune founding / tier costs + the coin faucet so the campaign sim lands the milestones in their target bands (Hamlet 3–8, Village 10–20, City 20–35 runs). Make coins a softer secondary gate — raise founding/tier coin costs or trim an early faucet so coins stop arriving in ~2 runs.</p>
+      <p><strong>Levers:</strong> founding base/growth · <code>tiers[].upgradeCost</code> · <code>SEASON_END_BONUS_COINS</code>.</p>
+    </div>
+    <div class="card accent"><h4>4 · Smooth the early grind <span class="chip c-p2" style="vertical-align:1px">OBJ 4</span></h4>
+      <p>Round off the first-rungs friction so early play feels earned, not punishing — adjust early <code>seasonDrops</code> / <code>upgradeMap</code> and the first tier-up costs toward the "balanced middle" feel.</p>
+      <p><strong>Levers:</strong> <code>boards.farm.seasonDrops</code> · <code>UPGRADE_THRESHOLDS</code>.</p>
+    </div>
+  </div>
+
+  <h3 style="margin-top:1.5em">Objective 1 in depth — three ways to break the lock</h3>
+  <p class="lede">The lock has <strong>two interlocking gates</strong>, both routing through <code>block</code>: the <strong>travel gate</strong> (<code>requiresZoneTier</code>, blocks reaching the quarry) and the <strong>founding / completion gate</strong> (founding the next settlement needs home "completed" = ~4 buildings, most needing <code>block</code>). Any fix must clear a farm-only path to the mine.</p>
+  <div class="grid">
+    <div class="card"><h4>Option 1 — Open the mine earlier</h4>
+      <p>Lower the quarry's gate at <code>cartography/data.ts:344</code> from <code>{home,&nbsp;tier&nbsp;3}</code> → <code>{home,&nbsp;tier&nbsp;1}</code> (or <code>tier&nbsp;0</code>).</p>
+      <p><span class="chip c-great">PRO</span> one-line lever; the mine becomes reachable before home needs mine goods.</p>
+      <p><span class="chip c-skip">CON</span> <strong>not sufficient alone</strong> — reaching Hamlet and completing home still need <code>block</code> via Bakery→bread. Also shifts the "mine = late unlock" pacing.</p>
+    </div>
+    <div class="card accent"><h4>Option 2 — Farm-affordable early path <span class="chip c-ship" style="vertical-align:1px">REC. CORE</span></h4>
+      <p>Drop mine goods from the first buildings so home grows + completes from farm goods; keep mine goods on the upper rungs. In <code>constants.ts</code>:</p>
+      <ul>
+        <li><strong>Bakery</strong> <code>{plank:8, block:6, eggs:4}</code> → <code>{plank:8, hay_bundle:6, eggs:4}</code> — the keystone: <code>bread</code> becomes farm-craftable.</li>
+        <li><strong>Mill</strong> <code>{plank:6, bread:8, block:2, iron_bar:8}</code> → <code>{plank:6, bread:8}</code>.</li>
+        <li><strong>Granary</strong> <code>{bread:12, block:6, iron_bar:4}</code> → <code>{bread:12, plank:6}</code>.</li>
+      </ul>
+      <p><span class="chip c-great">PRO</span> preserves zone-unlock order; cozy farm-driven opening (fits "balanced middle"); Village/City still need mine goods.</p>
+      <p><span class="chip c-skip">CON</span> touches a few costs; needs the quarry open before Village → pair with a modest Option 1.</p>
+    </div>
+    <div class="card"><h4>Option 3 — Early mine-good faucet</h4>
+      <p>Seed a small starter stock of <code>block</code>/<code>iron_bar</code>, let the market buy a capped amount, or grant some via an early quest/daily.</p>
+      <p><span class="chip c-great">PRO</span> least structural change to gates/costs.</p>
+      <p><span class="chip c-skip">CON</span> a band-aid; "block from nowhere" undercuts the mine's purpose and can distort the value spread you also want to fix.</p>
+    </div>
+  </div>
+  <div class="call">
+    <h4>Recommendation — Option 2 + a modest Option 1</h4>
+    <p>Re-cost Bakery + Mill + Granary to farm-only <strong>and</strong> open the quarry at <code>{home,&nbsp;tier&nbsp;1}</code> (Hamlet) instead of City. That yields a clean, intent-preserving loop:</p>
+    <p style="text-align:center"><code>Outpost → (farm → bakery → bread) → <strong>Hamlet</strong> → quarry opens → mine&nbsp;block/coke/silver → <strong>Village</strong> → <strong>City</strong> → found&nbsp;#2</code></p>
+    <p>It breaks the circle, keeps the mine a mid-progression unlock, and leaves City / premium tiers needing mine goods. Validate with a fresh-save playthrough after applying.</p>
+  </div>
+
+  <div class="call tip">
+    <h4>First tooling task — close the harness gap.</h4>
+    <p>The campaign sim is <strong>farm-board-only</strong>: it does not model crafting, buildings, or the mine, so it cannot yet validate the lock fix end-to-end. Extend it (or run a manual trace) to model the building/crafting/mine path before claiming objective 1 is fixed. Without it, the milestone bands stay theoretical.</p>
+  </div>
+</section>
+
+</div>
+
+<!-- ───────────────────────── DECISION LOG ───────────────────────── -->
+<div class="panel" id="log">
+
+<section>
+  <p class="kick">Append-only history</p>
+  <h2>Decision log</h2>
+  <p class="lede">The running history of balance decisions. Each pass appends a row — what changed, why, and what the harness measured afterward. Most rows are written by the <code>/game-balance</code> skill on confirmation of a change.</p>
+  <table>
+    <thead><tr><th class="num">Date</th><th>Change</th><th>Rationale</th><th>Measured effect</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="num">2026-06-22</td>
+        <td>Profile generated; goals captured; campaign pacing harness added; softlock finding surfaced. Synced to head; doc restyled to house parchment theme.</td>
+        <td>Establish the baseline Balance Profile + the goals + a deterministic pacing sim before any tuning, and put the doc in the repo's light house style.</td>
+        <td>Home is hard-locked at Outpost (circular quarry gate, enforced at <code>slice.ts:78</code>); coins reach founding #2 in ~2 runs; family-value spread ~10× (<code>pearls</code> ≈ 133 vs <code>pie</code> ≈ 12.9). Three of four KPI milestones currently UNREACHABLE.</td>
+      </tr>
+      <tr><td colspan="4" style="text-align:center;color:var(--ink-faint);font-style:italic">— next pass appends here —</td></tr>
+    </tbody>
+    <caption>Append-only. The seed row records the baseline this doc was generated from.</caption>
+  </table>
+</section>
+
+<section>
+  <p class="kick">The deterministic sim</p>
+  <h2>Harness reference</h2>
+  <p class="lede">The sim that produced every number on this page. It drives the <em>real</em> reducer (no Phaser) and is snapshot-guarded for drift. From <code>profile.harness</code>.</p>
+  <details open>
+    <summary>Commands &amp; code locations</summary>
+    <table>
+      <thead><tr><th>Purpose</th><th>Command / path</th></tr></thead>
+      <tbody>
+        <tr><td>Per-run metrics</td><td><code>npm run playtest -- --zones home --runs 10 --seed 1</code><br><span class="num" style="color:var(--ink-faint);font-size:11px">coins/run, coins/turn, family-value spread, change-list</span></td></tr>
+        <tr><td>Campaign pacing</td><td><code>npm run playtest -- --campaign --zones home --runs 30 --seed 1</code><br><span class="num" style="color:var(--ink-faint);font-size:11px">runs-to-coin-milestone + tier-stall pacing (by playing)</span></td></tr>
+        <tr><td>Progression spine</td><td><code>npm run playtest -- --progression</code><br><span class="num" style="color:var(--ink-faint);font-size:11px">code-derived reachability + per-zone siloed oracle + softlock; rewrites the <a href="progression-timeline.html">progression map</a></span></td></tr>
+        <tr><td>Determinism / drift guard</td><td><code>npx vitest run src/__tests__/playtest-harness.test.ts</code></td></tr>
+        <tr><td>Code</td><td><code>src/playtest/</code> — <code>run.ts</code> (per-run loop), <code>campaign.ts</code> (pacing loop), <code>progression.ts</code> (structural oracle), <code>metrics.ts</code> (spread), <code>targets.ts</code> (bands)</td></tr>
+      </tbody>
+    </table>
+  </details>
+  <div class="call warn">
+    <h4>Known gap</h4>
+    <p>The campaign <em>pacing</em> sim is <strong>farm-board-only</strong> and does not model crafting, buildings, or the mine, so it cannot yet validate a stall <em>fix</em> end-to-end by playing. The <em>structure</em> — reachability and the softlock — is now covered statically by <code>progression.ts</code> and pinned in CI; extending the pacing sim across zones is the remaining tooling task.</p>
+  </div>
+</section>
+
+</div>
+
+<footer>
+  <span>puzzleDrag2 balance ledger · June 2026 · mirror of profile.json · maintained by /game-balance</span>
+  <span>warm · authored · two axes, balanced separately</span>
+</footer>
+
+</div>
+<script>
+// Procedural paper grain — seeded, no imagery.
+(function(){
+  var c=document.getElementById('grain'),x=c&&c.getContext('2d');if(!x)return;
+  function seed(s){return function(){s=(1103515245*s+12345)&0x7fffffff;return s/0x7fffffff}}
+  function draw(){
+    var w=c.width=innerWidth,h=c.height=innerHeight,r=seed(11);x.clearRect(0,0,w,h);
+    for(var i=0;i<Math.floor(w*h/950);i++){var t=r();x.fillStyle='rgba('+(t<.5?'120,94,63':'255,247,230')+','+(0.04+r()*0.06)+')';x.fillRect(r()*w,r()*h,1,1);}
+    x.strokeStyle='rgba(120,94,63,0.05)';for(i=0;i<55;i++){var px=r()*w,py=r()*h,a=r()*Math.PI,l=8+r()*24;x.beginPath();x.moveTo(px,py);x.lineTo(px+Math.cos(a)*l,py+Math.sin(a)*l);x.stroke();}
+    for(i=0;i<6;i++){var cx=r()*w,cy=r()*h,rad=120+r()*240,g=x.createRadialGradient(cx,cy,0,cx,cy,rad);g.addColorStop(0,'rgba(201,185,147,0.05)');g.addColorStop(1,'rgba(201,185,147,0)');x.fillStyle=g;x.fillRect(cx-rad,cy-rad,rad*2,rad*2);}
+  }
+  draw();var t;addEventListener('resize',function(){clearTimeout(t);t=setTimeout(draw,200)});
+})();
+// Grouped tabs with deep-linking (degrades to full scroll with no JS / when printing).
+(function(){
+  var tabs=document.getElementById('tabs');if(!tabs)return;
+  document.body.classList.add('has-tabs');
+  var btns=[].slice.call(tabs.querySelectorAll('.tab'));
+  var panels=[].slice.call(document.querySelectorAll('.panel'));
+  function show(id,scrollSel){
+    var found=false;
+    panels.forEach(function(p){var on=p.id===id;p.classList.toggle('on',on);if(on)found=true;});
+    btns.forEach(function(b){b.classList.toggle('on',b.dataset.tab===id);});
+    if(found&&scrollSel){var el=document.querySelector(scrollSel);if(el)el.scrollIntoView();}
+    return found;
+  }
+  function fromHash(){
+    var hash=location.hash.replace('#','');if(!hash){show('goals');return;}
+    if(document.getElementById(hash)&&document.getElementById(hash).classList.contains('panel')){show(hash);return;}
+    var sec=document.getElementById(hash);
+    if(sec){var panel=sec.closest('.panel');if(panel){show(panel.id,'#'+hash);return;}}
+    show('goals');
+  }
+  btns.forEach(function(b){b.addEventListener('click',function(){history.pushState(null,'','#'+b.dataset.tab);show(b.dataset.tab);window.scrollTo({top:0});});});
+  // Intra-doc anchors switch tabs.
+  document.querySelectorAll('a[href^="#"]').forEach(function(a){
+    a.addEventListener('click',function(e){
+      var id=a.getAttribute('href').slice(1),el=document.getElementById(id);if(!el)return;
+      var panel=el.classList.contains('panel')?el:el.closest('.panel');
+      if(panel){e.preventDefault();history.pushState(null,'','#'+id);show(panel.id,el.classList.contains('panel')?null:'#'+id);if(panel.id===id)window.scrollTo({top:0});}
+    });
+  });
+  addEventListener('popstate',fromHash);fromHash();
+})();
+</script>
+</body>
+</html>

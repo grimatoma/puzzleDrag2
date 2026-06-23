@@ -1,5 +1,163 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
+exports[`campaign harness — drift guard > campaign metrics snapshot (a pacing change must break this) 1`] = `
+{
+  "chainCoinsPerRun": {
+    "max": 74,
+    "mean": 51.125,
+    "median": 49,
+    "min": 40,
+    "stdev": 9.7524,
+  },
+  "coinMilestones": [
+    {
+      "kind": "coin",
+      "label": "found settlement #2 (300c)",
+      "runIndex": 2,
+      "target": [
+        2,
+        12,
+      ],
+      "turns": 20,
+      "verdict": "within",
+    },
+    {
+      "kind": "coin",
+      "label": "found settlement #3 (510c)",
+      "runIndex": 6,
+      "target": [
+        4,
+        20,
+      ],
+      "turns": 60,
+      "verdict": "within",
+    },
+    {
+      "kind": "coin",
+      "label": "found settlement #4 (867c)",
+      "runIndex": -1,
+      "target": undefined,
+      "turns": -1,
+      "verdict": "unreached",
+    },
+    {
+      "kind": "coin",
+      "label": "found settlement #5 (1474c)",
+      "runIndex": -1,
+      "target": undefined,
+      "turns": -1,
+      "verdict": "unreached",
+    },
+  ],
+  "finalBalance": 569,
+  "finalTier": 0,
+  "incomeTrendCorrelation": -0.6144,
+  "netCoinsPerRun": {
+    "max": 92,
+    "mean": 52.375,
+    "median": 39,
+    "min": 23,
+    "stdev": 29.1674,
+  },
+  "runs": [
+    {
+      "balanceAfter": 242,
+      "chainCoins": 42,
+      "netCoins": 92,
+      "runIndex": 1,
+      "tierAfter": 0,
+      "turnsPlayed": 10,
+    },
+    {
+      "balanceAfter": 332,
+      "chainCoins": 40,
+      "netCoins": 90,
+      "runIndex": 2,
+      "tierAfter": 0,
+      "turnsPlayed": 10,
+    },
+    {
+      "balanceAfter": 361,
+      "chainCoins": 54,
+      "netCoins": 29,
+      "runIndex": 3,
+      "tierAfter": 0,
+      "turnsPlayed": 10,
+    },
+    {
+      "balanceAfter": 384,
+      "chainCoins": 48,
+      "netCoins": 23,
+      "runIndex": 4,
+      "tierAfter": 0,
+      "turnsPlayed": 10,
+    },
+    {
+      "balanceAfter": 468,
+      "chainCoins": 49,
+      "netCoins": 84,
+      "runIndex": 5,
+      "tierAfter": 0,
+      "turnsPlayed": 10,
+    },
+    {
+      "balanceAfter": 517,
+      "chainCoins": 74,
+      "netCoins": 49,
+      "runIndex": 6,
+      "tierAfter": 0,
+      "turnsPlayed": 10,
+    },
+    {
+      "balanceAfter": 541,
+      "chainCoins": 49,
+      "netCoins": 24,
+      "runIndex": 7,
+      "tierAfter": 0,
+      "turnsPlayed": 10,
+    },
+    {
+      "balanceAfter": 569,
+      "chainCoins": 53,
+      "netCoins": 28,
+      "runIndex": 8,
+      "tierAfter": 0,
+      "turnsPlayed": 10,
+    },
+  ],
+  "runsPlayed": 8,
+  "startCoins": 150,
+  "tierStall": {
+    "fromTier": 0,
+    "missing": [
+      {
+        "have": 3,
+        "key": "plank",
+        "label": "Plank",
+        "need": 5,
+        "source": "farm",
+      },
+      {
+        "have": 0,
+        "key": "bread",
+        "label": "Bread Loaf",
+        "need": 10,
+        "source": "crafted",
+      },
+      {
+        "have": 3,
+        "key": "eggs",
+        "label": "Eggs",
+        "need": 4,
+        "source": "farm",
+      },
+    ],
+    "toName": "Hamlet",
+    "toTier": 1,
+  },
+}
+`;
+
 exports[`playtest harness — drift guard > metrics snapshot (changing a balance constant must break this) 1`] = `
 {
   "changeList": {
@@ -234,5 +392,175 @@ exports[`playtest harness — drift guard > metrics snapshot (changing a balance
     "min": 0.7143,
     "ratio": 224,
   },
+}
+`;
+
+exports[`progression spine — code-derived oracle > progression-shape snapshot (a reachability/gate/lock change must break this) 1`] = `
+{
+  "oracle": {
+    "freshSavePlayableBoards": [
+      "home",
+      "meadow",
+      "orchard",
+    ],
+    "freshSaveReachable": [
+      "crossroads",
+      "home",
+      "meadow",
+      "orchard",
+    ],
+    "homeProducible": [
+      "eggs",
+      "flour",
+      "hay_bundle",
+      "honey",
+      "horseshoe",
+      "meat",
+      "milk",
+      "pie",
+      "plank",
+      "soup",
+    ],
+    "marketEscape": {
+      "exists": false,
+      "note": "MARKET_PRICES lists block/iron_bar/coke/bread as buyable and BUY_RESOURCE does not itself check the caravan post, but the buy UI is shown only once caravan_post is built (Inventory.tsx) — and caravan_post costs block+iron_bar. So the market is a latent escape valve that is itself mine-gated. Opening it (an early buyable starter good, or ungating the buy UI) is the cheapest lever.",
+    },
+    "softlock": {
+      "blockedRung": "Hamlet",
+      "isLocked": true,
+      "primaryMissing": [
+        "bread",
+      ],
+      "stuckTier": 0,
+      "stuckTierName": "Outpost",
+      "stuckZone": "home",
+      "summary": "A fresh save can reach only 3 playable board(s) (home, meadow, orchard) — all farm. Home, the progression spine, cannot climb past Outpost (tier 0): the Hamlet rung needs bread, which home can neither produce nor craft. Every mine/fish zone that could supply those goods is gated behind the quarry (home tier 3), and the home ladder itself demands mine goods from tier 2 on — a circular lock with no first step.",
+    },
+    "walls": [
+      {
+        "wall": {
+          "missing": [
+            {
+              "key": "bread",
+              "reason": "crafted at the Bakery, whose own build cost needs block (also unobtainable here)",
+            },
+          ],
+          "reachedName": "Outpost",
+          "reachedTier": 0,
+          "toName": "Hamlet",
+          "toTier": 1,
+        },
+        "zone": "home",
+      },
+    ],
+  },
+  "zones": [
+    {
+      "gate": null,
+      "id": "home",
+      "maxSelfTier": 0,
+      "reachableFromFreshSave": true,
+      "wall": {
+        "missing": [
+          "bread",
+        ],
+        "toName": "Hamlet",
+      },
+    },
+    {
+      "gate": null,
+      "id": "meadow",
+      "maxSelfTier": 0,
+      "reachableFromFreshSave": true,
+      "wall": null,
+    },
+    {
+      "gate": null,
+      "id": "orchard",
+      "maxSelfTier": 0,
+      "reachableFromFreshSave": true,
+      "wall": null,
+    },
+    {
+      "gate": null,
+      "id": "crossroads",
+      "maxSelfTier": 0,
+      "reachableFromFreshSave": true,
+      "wall": null,
+    },
+    {
+      "gate": {
+        "tier": 3,
+        "zone": "home",
+      },
+      "id": "quarry",
+      "maxSelfTier": 4,
+      "reachableFromFreshSave": false,
+      "wall": {
+        "missing": [
+          "gold_bar",
+        ],
+        "toName": "Foundry City",
+      },
+    },
+    {
+      "gate": {
+        "tier": 1,
+        "zone": "quarry",
+      },
+      "id": "caves",
+      "maxSelfTier": 0,
+      "reachableFromFreshSave": false,
+      "wall": null,
+    },
+    {
+      "gate": null,
+      "id": "fairground",
+      "maxSelfTier": 0,
+      "reachableFromFreshSave": false,
+      "wall": null,
+    },
+    {
+      "gate": {
+        "tier": 2,
+        "zone": "quarry",
+      },
+      "id": "forge",
+      "maxSelfTier": 0,
+      "reachableFromFreshSave": false,
+      "wall": null,
+    },
+    {
+      "gate": null,
+      "id": "pit",
+      "maxSelfTier": 0,
+      "reachableFromFreshSave": false,
+      "wall": null,
+    },
+    {
+      "gate": {
+        "tier": 1,
+        "zone": "quarry",
+      },
+      "id": "harbor",
+      "maxSelfTier": 0,
+      "reachableFromFreshSave": false,
+      "wall": null,
+    },
+    {
+      "gate": null,
+      "id": "mirefen",
+      "maxSelfTier": 3,
+      "reachableFromFreshSave": false,
+      "wall": null,
+    },
+    {
+      "gate": null,
+      "id": "oldcapital",
+      "maxSelfTier": 0,
+      "reachableFromFreshSave": false,
+      "wall": null,
+    },
+  ],
 }
 `;

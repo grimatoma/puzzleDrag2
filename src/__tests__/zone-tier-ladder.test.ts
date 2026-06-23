@@ -1,7 +1,7 @@
 // Zone Tier Ladder — per-zone settlement tiers. Covers the derivation helpers
 // (cumulative unlock union, plots-per-tier) and the TIER_UP reducer (happy +
 // blocked + max-rung), plus the union(unlocks)===buildings superset invariant.
-// See docs/zone-tier-ladder.html.
+// See reference/docs/zone-tier-ladder.html.
 import { describe, it, expect, beforeEach } from "vitest";
 import { inv, patchInventory } from "../testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../state.js";
