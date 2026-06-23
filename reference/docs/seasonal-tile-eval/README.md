@@ -20,9 +20,18 @@ modules), **not** the separate PixelLab pixel-art route.
   dressing, contrast on matching discs, phase scheduling, the one crossfade
   outlier).
 - **Per-tile scores** — a filterable table of all 80 tiles (KF / idle / WC3 /
-  transitions / consistency / overall + a one-line note each).
-- **Fixes & Recs** — the 6 P0 correctness bugs with `file:line`, the P1 polish
+  transitions / consistency / overall + **each tile's current animation**,
+  common → rare, and a note each).
+- **Plan → 4–5** — a **farm-scoped** roadmap (the 64 land tiles; fish + minerals
+  are a separate pass): bespoke per-tile beats that lift the 15 sub-4 tiles to
+  ≥4 and retire the two shared motifs — the copy-paste produce bounce and the
+  universal winter scarf — per the "uniqueness over repetition, bold WC3" brief.
+- **Fixes & Recs** — the P0 correctness bugs with `file:line`, the P1 polish
   themes, and P2 enhancements.
+
+> Reevaluation note: this pass read the rare-action code closely and found the
+> idle-window collision is not just turkey — **rooster, dodo and pig-in-disguise**
+> share it (a one-line phase fix each), so they were re-scored 5.0 → 4.5.
 
 ## How it was produced
 
