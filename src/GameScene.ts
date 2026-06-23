@@ -2070,9 +2070,12 @@ export class GameScene extends Phaser.Scene {
       }
     }
     // Seasonal tile animation: re-bake the (shared) textures of animated
-    // seasonal tiles on the board at ~20fps. Throttled + distinct-key only, so
-    // the cost is ≤5 small texture redraws per tick (usually 1, often 0).
-    if (this._motionEnabled() && time - this._seasonalAnimLast >= 50) {
+    // seasonal tiles on the board at ~30fps. Throttled + distinct-key only, so
+    // the cost is ≤5 small texture redraws per tick (usually 1, often 0). The
+    // ~33ms cadence keeps the bold idle ACTIONS (a peck dip, a hop, a wing
+    // flare) from strobing — the slower 50ms cadence read as steppy on fast
+    // gestures.
+    if (this._motionEnabled() && time - this._seasonalAnimLast >= 33) {
       this._seasonalAnimLast = time;
       this._animateSeasonalTiles(time / 1000);
     }

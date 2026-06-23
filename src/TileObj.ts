@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { seasonalBakedActive, seasonalIsTransitioning, seasonalIdleFrameCount } from "./textures/seasonal/seasonalArt.js";
+import { seasonalBakedActive, seasonalVectorActive, seasonalIsTransitioning, seasonalIdleFrameCount } from "./textures/seasonal/seasonalArt.js";
 import { idleFrameAt } from "./textures/seasonalIdleTiming.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
 
@@ -172,6 +172,14 @@ export class TileObj {
       }
       const frames = seasonalIdleFrameCount(this.res.key, this.scene.seasonName ?? null);
       this.sprite.setFrame(idleFrameAt(time, this.col, this.row, frames));
+      return;
+    }
+    // All-vector seasonal tiles carry their idle ACTION inside the re-baked
+    // vector `anim` (a canopy sway, a peck dip, a hop, a wing flare). Adding the
+    // sprite-rotation sway on top would fight that in-art motion, so keep the
+    // sprite upright and let the baked frame be the sole gesture.
+    if (seasonalVectorActive(this.res.key)) {
+      if (this.sprite.angle !== 0 && !this._tweenActive) this.sprite.angle = 0;
       return;
     }
     const sway = this.res.look?.sway;
