@@ -1,58 +1,79 @@
-// Seasonal art for the COCONUT fruit tile (`tile_fruit_coconut`).
+// BOLD seasonal art for the COCONUT fruit tile (`tile_fruit_coconut`).
 //
 // One round coconut with a fibrous husk (the three dark "eyes" / face on the
 // front) and a small green sprout-tuft on top, resting low-centre on a grassy
-// pad. The SAME round silhouette + face + tuft is drawn EVERY season — only
-// colour and dressing (frost, snow cap, pad blossoms / fallen leaves / snow,
-// light tint, sheen) change. This is enforced by a single parameterized
-// `paint(ctx, p, bob)`:
-//   - draw(season)      = paint(ctx, SP[season], 0)
-//   - anim(season)      = micro-motion + paint(ctx, SP[season], bobAt(t))
-//   - transition(from)  = paint(ctx, lerpP(SP[from], SP[from+1], smoother(p)), 0)
+// pad. The SAME round silhouette + face + tuft is drawn EVERY season — identity
+// is locked; only colour and a real seasonal PROP swing hard:
 //
-// Because every season is the same paint with tweened params, transitions are
-// seamless: transition(0) ≡ draw(from) and transition(1) ≡ draw(to). The bob
-// uses A*(1-cos(w t))*0.5 so bob(0)=0 with zero velocity → seamless idle.
+//   Spring:  GREEN young coconut (husk green-tinged) + a blossom on the crown.
+//   Summer:  green-brown maturing husk at PEAK, the green tuft fresh + glossy.
+//   Autumn:  full ripe BROWN fibrous coconut + a fallen frond/leaf on the pad.
+//   Winter:  brown coconut clearly under a white SNOW CAP + base snow + frost.
 //
-// PALETTE LOCK: the coconut stays BROWN (fibrous husk) with a GREEN sprout-tuft
-// all year. Ripeness is shown ONLY as husk colour green→brown (young green
-// coconut in spring → full ripe brown in autumn); it is never a different
-// object, never hollowed out, never swapped.
+// The idle is LOUD, two-tier WC3-style, mirroring pepper.bold.ts:
+//   IDLE COMMON  (~6s, win ~0.9s): a slow HEAVY ROCK — the coconut wobbles
+//       side-to-side ~0.16 rad with a base squash. Zero velocity at the window
+//       edges → seamless.
+//   IDLE SPECIAL (~18s, win ~1.1s): a bigger BOUNCE hop — anticipation crouch →
+//       stretch up ~12px → squash landing that settles. May exit the box.
 //
-// Origin-centered in the −24..+24 design box, light from upper-left, flat
-// cel-shaded with a soft dark outline. Pure Canvas-2D vector drawing.
+// Architecture mirrors pepper.bold.ts: a single parameterized
+// `paint(ctx, p, pose)` where `interface P` holds tweenable season params
+// (colours + prop amounts) and `pose` holds the idle gesture (bob / lean /
+// squash). Because every season is the same paint with tweened P, transitions
+// are seamless: transition(0) ≡ draw(from), transition(1) ≡ draw(to). REST pose
+// is all zeros, so draw(season) = paint(ctx, SP[season], REST) and the idle's
+// pose is 0 at every action-window edge → seamless loop.
+//
+// PALETTE LOCK: the coconut stays BROWN-ish (greener when young) with a GREEN
+// sprout-tuft all year. Ripeness is shown ONLY as husk colour green→brown; it
+// is never a different object, never hollowed out, never swapped.
+//
+// Origin-centered in the −24..+24 design box (actions may paint outside it),
+// light from upper-left, flat cel-shaded with a soft dark outline. Pure
+// Canvas-2D vector drawing — never throws, clamps everything, save/restore.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
 import { SEASON_NAMES, type SeasonName } from "../types.js";
 
-// ── Tweenable params ─────────────────────────────────────────────────────────
+// ── Tweenable season params ──────────────────────────────────────────────────
 
 type RGB = [number, number, number];
 
-/** Every field tweens (number or RGB). NO booleans / season strings — the
- *  paint must be a pure function of these so transitions interpolate cleanly. */
+/** Every field tweens (number or RGB). NO booleans / season strings — paint is
+ *  a pure function of these so transitions interpolate cleanly. */
 interface P {
-  huskLight: RGB;   // lit upper-left face of the fibrous husk
-  huskMid: RGB;     // body tone of the husk
-  huskDark: RGB;    // shadowed lower-right of the husk
-  fibre: RGB;       // hair-fibre streaks combed over the husk
-  eye: RGB;         // the three dark "eyes" on the face
-  tuftLight: RGB;   // lit green sprout-tuft
-  tuftDark: RGB;    // shaded sprout-tuft
-  padGrass: RGB;    // top of the grass pad
-  padDark: RGB;     // shaded pad underside
-  soil: RGB;        // contact / base soil under the coconut
-  outline: RGB;     // soft dark outline tint
-  light: RGB;       // ambient light tint laid over the whole tile
-  lightAmt: number; // 0..1 strength of the ambient light wash
-  ripeness: number; // 0..1 green→brown husk (informs fibre/face contrast only)
-  gloss: number;    // 0..1 specular sheen on the husk
-  frostAmt: number; // 0..1 cool frost dusting on the husk
-  snowCapAmt: number; // 0..1 snow cap on the crown of the coconut
-  padSnowAmt: number; // 0..1 snow blanket on the pad
-  blossomAmt: number; // 0..1 tiny blossoms on the pad (spring)
-  fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
+  huskLight: RGB;        // lit upper-left face of the fibrous husk
+  huskMid: RGB;          // body tone of the husk
+  huskDark: RGB;         // shadowed lower-right of the husk
+  fibre: RGB;            // hair-fibre streaks combed over the husk
+  eye: RGB;              // the three dark "eyes" on the face
+  tuftLight: RGB;        // lit green sprout-tuft
+  tuftDark: RGB;         // shaded sprout-tuft
+  padGrass: RGB;         // top of the grass pad
+  padDark: RGB;          // shaded pad underside
+  soil: RGB;             // contact / base soil under the coconut
+  outline: RGB;          // soft dark outline tint
+  light: RGB;            // ambient light tint laid over the whole tile
+  lightAmt: number;      // 0..1 strength of the ambient light wash
+  ripeness: number;      // 0..1 green→brown husk (informs fibre/face contrast)
+  gloss: number;         // 0..1 specular sheen on the husk
+  frostAmt: number;      // 0..1 cool frost dusting on the husk (winter)
+  snowCapAmt: number;    // 0..1 snow cap on the crown of the coconut (winter)
+  padSnowAmt: number;    // 0..1 snow blanket on the pad / base (winter)
+  blossomAmt: number;    // 0..1 blossom on the crown + pad (spring)
+  fallenLeafAmt: number; // 0..1 fallen frond/leaf on the pad (autumn)
 }
+
+/** The idle gesture, separate from season identity. All zero = REST. */
+interface Pose {
+  bob: number;     // vertical offset in design px (negative = up)
+  lean: number;    // top-of-coconut sway, radians (rock side to side)
+  squashX: number; // additive horizontal scale (+0.18 = 18% wider)
+  squashY: number; // additive vertical scale (+0.18 = 18% taller)
+}
+
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
 
@@ -119,119 +140,126 @@ function clampP(p: P): P {
   };
 }
 
-// ── Per-season params ────────────────────────────────────────────────────────
+function safeNum(x: number): number {
+  return Number.isFinite(x) ? x : 0;
+}
+
+// ── Per-season params — pushed HARD ──────────────────────────────────────────
 //
 // PALETTE LOCK: husk stays brown-ish (greener when young), tuft stays green.
-// Spring = young green coconut (husk green-tinged); Summer = green-brown
-// maturing husk at PEAK saturation; Autumn = full ripe brown fibrous coconut;
-// Winter = brown coconut clearly visible under a snow cap + frost.
+// Spring = young GREEN coconut (husk green) + blossom; Summer = green-brown
+// maturing husk at PEAK saturation, glossy fresh tuft; Autumn = full ripe BROWN
+// fibrous coconut + fallen frond; Winter = brown coconut clearly visible under
+// a bold snow cap + base snow + frost.
 
 const SP: Record<SeasonName, P> = {
-  // Spring — young green coconut: husk still green-tinged, dewy lime pad + blossom.
+  // Spring — young GREEN coconut: husk clearly green, dewy lime pad + blossom.
   Spring: {
-    huskLight: [156, 178, 102],
-    huskMid: [118, 142, 70],
-    huskDark: [80, 100, 46],
-    fibre: [96, 116, 56],
-    eye: [70, 70, 40],
-    tuftLight: [150, 216, 96],
-    tuftDark: [76, 144, 54],
-    padGrass: [128, 206, 86],
-    padDark: [72, 138, 58],
+    huskLight: [168, 210, 110],
+    huskMid: [112, 168, 70],
+    huskDark: [66, 116, 46],
+    fibre: [88, 138, 54],
+    eye: [62, 78, 40],
+    tuftLight: [158, 224, 100],
+    tuftDark: [76, 150, 56],
+    padGrass: [128, 210, 86],
+    padDark: [68, 142, 58],
     soil: [120, 84, 48],
-    outline: [48, 56, 30],
-    light: [232, 244, 226],
-    lightAmt: 0.16,
-    ripeness: 0.18,
-    gloss: 0.2,
-    frostAmt: 0,
-    snowCapAmt: 0,
-    padSnowAmt: 0,
-    blossomAmt: 0.85,
-    fallenLeafAmt: 0,
-  },
-  // Summer — maturing green-brown husk at PEAK saturation; mid-green pad, soft sheen.
-  Summer: {
-    huskLight: [186, 150, 86],
-    huskMid: [150, 110, 58],
-    huskDark: [104, 70, 36],
-    fibre: [122, 86, 44],
-    eye: [58, 40, 24],
-    tuftLight: [140, 210, 78],
-    tuftDark: [64, 138, 46],
-    padGrass: [86, 168, 70],
-    padDark: [44, 110, 48],
-    soil: [126, 86, 48],
-    outline: [62, 40, 22],
-    light: [255, 240, 206],
+    outline: [38, 64, 28],
+    light: [230, 246, 220],
     lightAmt: 0.18,
-    ripeness: 0.6,
-    gloss: 0.85,
+    ripeness: 0.12,
+    gloss: 0.24,
+    frostAmt: 0,
+    snowCapAmt: 0,
+    padSnowAmt: 0,
+    blossomAmt: 1.0,
+    fallenLeafAmt: 0,
+  },
+  // Summer — maturing green-brown husk at PEAK saturation; mid-green pad, gloss.
+  Summer: {
+    huskLight: [198, 154, 84],
+    huskMid: [158, 112, 56],
+    huskDark: [104, 68, 34],
+    fibre: [126, 86, 42],
+    eye: [54, 38, 22],
+    tuftLight: [150, 220, 84],
+    tuftDark: [62, 146, 48],
+    padGrass: [84, 174, 72],
+    padDark: [42, 114, 50],
+    soil: [126, 86, 48],
+    outline: [60, 38, 20],
+    light: [255, 242, 204],
+    lightAmt: 0.2,
+    ripeness: 0.58,
+    gloss: 1.0,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
-  // Autumn — full ripe brown fibrous coconut; olive-tan pad, fallen leaves.
+  // Autumn — full ripe BROWN fibrous coconut; olive-tan pad, fallen frond.
   Autumn: {
-    huskLight: [168, 122, 70],
-    huskMid: [128, 84, 44],
-    huskDark: [86, 52, 28],
-    fibre: [104, 64, 32],
-    eye: [50, 32, 20],
-    tuftLight: [150, 150, 80],
-    tuftDark: [104, 110, 52],
-    padGrass: [150, 152, 86],
-    padDark: [104, 96, 52],
+    huskLight: [172, 120, 66],
+    huskMid: [126, 80, 42],
+    huskDark: [82, 48, 26],
+    fibre: [104, 62, 30],
+    eye: [46, 30, 18],
+    tuftLight: [156, 150, 78],
+    tuftDark: [106, 108, 50],
+    padGrass: [156, 154, 84],
+    padDark: [108, 96, 50],
     soil: [120, 80, 44],
-    outline: [56, 34, 20],
-    light: [248, 210, 150],
-    lightAmt: 0.2,
+    outline: [52, 32, 18],
+    light: [250, 204, 138],
+    lightAmt: 0.24,
     ripeness: 1.0,
-    gloss: 0.4,
+    gloss: 0.36,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
-    fallenLeafAmt: 0.85,
+    fallenLeafAmt: 1.0,
   },
-  // Winter — cool blue-grey light; brown coconut CLEARLY visible under snow cap + frost.
+  // Winter — cool blue-grey light; brown coconut CLEARLY visible under a bold
+  // snow cap + a snow drift at the base + frost dusting.
   Winter: {
-    huskLight: [156, 118, 80],
-    huskMid: [120, 86, 56],
-    huskDark: [82, 56, 38],
-    fibre: [104, 74, 48],
-    eye: [54, 38, 28],
-    tuftLight: [128, 168, 120],
-    tuftDark: [82, 124, 80],
-    padGrass: [176, 196, 214],
-    padDark: [120, 146, 172],
-    soil: [128, 110, 96],
-    outline: [52, 40, 34],
-    light: [206, 226, 252],
-    lightAmt: 0.3,
+    huskLight: [156, 118, 82],
+    huskMid: [120, 86, 58],
+    huskDark: [80, 56, 40],
+    fibre: [104, 74, 50],
+    eye: [50, 36, 28],
+    tuftLight: [132, 174, 122],
+    tuftDark: [80, 126, 82],
+    padGrass: [182, 202, 220],
+    padDark: [122, 150, 178],
+    soil: [132, 116, 102],
+    outline: [48, 38, 36],
+    light: [200, 224, 255],
+    lightAmt: 0.34,
     ripeness: 0.9,
-    gloss: 0.25,
-    frostAmt: 0.7,
-    snowCapAmt: 0.85,
-    padSnowAmt: 0.9,
+    gloss: 0.26,
+    frostAmt: 0.8,
+    snowCapAmt: 1.0,
+    padSnowAmt: 1.0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
 };
 
-// ── The single parameterized paint ───────────────────────────────────────────
-
-// Coconut geometry constants (the SAME silhouette every season). A round body
-// resting low-centre on the pad. Origin-centered. The crown (top) sits a touch
-// left of centre; the tuft rises from there.
-const COCO_CX = 0; // body centre x
-const COCO_CY = 7; // body centre y (low on the pad)
-const COCO_RX = 13.5; // body half-width
-const COCO_RY = 14; // body half-height
-const TUFT_X = -2; // tuft sprouts a touch left of crown
+// ── Coconut geometry — the SAME silhouette every season ──────────────────────
+//
+// A round body resting low-centre on the pad. Origin-centered. The crown (top)
+// sits a touch left of centre; the tuft rises from there. Idle pose rocks/bounces
+// the body about a pivot near the base so it "sits" on the pad.
+const COCO_CX = 0;             // body centre x
+const COCO_CY = 7;            // body centre y (low on the pad)
+const COCO_RX = 13.5;         // body half-width
+const COCO_RY = 14;           // body half-height
+const TUFT_X = -2;            // tuft sprouts a touch left of crown
 const TUFT_Y = COCO_CY - COCO_RY; // crown top
+const COCO_BASE_Y = COCO_CY + COCO_RY; // resting base on the pad (pose pivot)
 
 // The three husk "eyes" forming the face, slightly above body centre.
 const EYES: Array<[number, number, number]> = [
@@ -240,18 +268,18 @@ const EYES: Array<[number, number, number]> = [
   [-0.2, COCO_CY + 1.6, 1.9],
 ];
 
-/** Trace the round coconut body path into the current ctx path. */
-function coconutBodyPath(ctx: CanvasRenderingContext2D, bob: number): void {
+/** Trace the round coconut body path (origin-local, unposed). */
+function coconutBodyPath(ctx: CanvasRenderingContext2D): void {
   ctx.beginPath();
-  ctx.ellipse(COCO_CX, COCO_CY + bob, COCO_RX, COCO_RY, 0, 0, Math.PI * 2);
+  ctx.ellipse(COCO_CX, COCO_CY, COCO_RX, COCO_RY, 0, 0, Math.PI * 2);
   ctx.closePath();
 }
 
-/** Draw the small green sprout-tuft rising from the crown. `sway` shifts the
- *  tips horizontally for idle motion (0 = rest pose). */
-function drawTuft(ctx: CanvasRenderingContext2D, p: P, bob: number, sway: number): void {
+/** Draw the small green sprout-tuft rising from the crown (origin-local). `sway`
+ *  shifts the tips horizontally for a faint extra wiggle (0 = rest pose). */
+function drawTuft(ctx: CanvasRenderingContext2D, p: P, sway: number): void {
   const baseX = COCO_CX + TUFT_X;
-  const baseY = TUFT_Y + bob + 1.5;
+  const baseY = TUFT_Y + 1.5;
   // a few short blades fanning up from the crown
   const blades: Array<[number, number]> = [
     [-3.6, -7.5],
@@ -286,28 +314,41 @@ function drawTuft(ctx: CanvasRenderingContext2D, p: P, bob: number, sway: number
   ctx.fill();
 }
 
-/** The whole tile from ONLY `p` and `bob` (plus an idle `tuftSway`). */
-function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0): void {
+// ── The single parameterized paint ───────────────────────────────────────────
+
+/** The whole tile from ONLY `p` (season identity) and `pose` (idle gesture).
+ *  `tuftSway` is a faint additive tuft wiggle layered on top of the pose. */
+function paint(
+  ctx: CanvasRenderingContext2D,
+  raw: P,
+  rawPose: Pose,
+  tuftSway = 0,
+): void {
   const p = clampP(raw);
+  const pose: Pose = {
+    bob: safeNum(rawPose.bob),
+    lean: safeNum(rawPose.lean),
+    squashX: safeNum(rawPose.squashX),
+    squashY: safeNum(rawPose.squashY),
+  };
+  const sway = safeNum(tuftSway);
+
   ctx.save();
   try {
     ctx.globalAlpha = 1;
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
 
-    // ── Pad: low flat grass ellipse, x∈[−18,+18], centre y≈+19 ──────────────
-    // soft contact shadow lower-right, pad colour from P
+    // ── Pad: low flat grass ellipse (does NOT move with the pose) ────────────
     ctx.fillStyle = rgba(p.padDark, 0.4);
     ctx.beginPath();
     ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // shaded underside
     ctx.fillStyle = rgb(p.padDark);
     ctx.beginPath();
     ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
     ctx.fill();
-    // grass top
     ctx.fillStyle = rgb(p.padGrass);
     ctx.beginPath();
     ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
@@ -335,7 +376,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0)
       ctx.stroke();
     }
 
-    // pad snow blanket (winter)
+    // pad snow blanket / base snow (winter)
     if (p.padSnowAmt > 0.01) {
       ctx.fillStyle = rgba([244, 250, 255], 0.92 * p.padSnowAmt);
       ctx.beginPath();
@@ -345,9 +386,14 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0)
       ctx.beginPath();
       ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
       ctx.fill();
+      // snow piled against the coconut base
+      ctx.fillStyle = rgba([248, 252, 255], 0.85 * p.padSnowAmt);
+      ctx.beginPath();
+      ctx.ellipse(0, COCO_BASE_Y - 1, 11, 3.6, 0, 0, Math.PI * 2);
+      ctx.fill();
       // sparkle on the snow
       ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
-      [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
+      ([[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]] as Array<[number, number]>).forEach(([sx, sy]) => {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -373,12 +419,12 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0)
       });
     }
 
-    // fallen leaves on the pad (autumn)
+    // fallen frond / leaves on the pad (autumn)
     if (p.fallenLeafAmt > 0.01) {
       const a = p.fallenLeafAmt;
       const leaves: Array<[number, number, number, RGB]> = [
-        [-12, 19.6, -0.5, [196, 120, 40]],
-        [12, 18.6, 0.7, [176, 72, 32]],
+        [-12, 19.6, -0.5, [200, 122, 40]],
+        [12, 18.6, 0.7, [178, 70, 28]],
       ];
       leaves.forEach(([lx, ly, rot, col]) => {
         ctx.save();
@@ -386,33 +432,42 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0)
         ctx.rotate(rot);
         ctx.fillStyle = rgba(col, a);
         ctx.beginPath();
-        ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 3.4, 1.9, 0, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = rgba([90, 44, 16], a);
         ctx.lineWidth = 0.7;
         ctx.beginPath();
-        ctx.moveTo(-3, 0);
-        ctx.lineTo(3, 0);
+        ctx.moveTo(-3.2, 0);
+        ctx.lineTo(3.2, 0);
         ctx.stroke();
         ctx.restore();
       });
     }
 
-    // ── Soil contact patch directly under the coconut base ──────────────────
+    // ── Contact shadow under the coconut (follows the bob/lean for grounding) ──
+    const tipShift = pose.lean * (COCO_BASE_Y - TUFT_Y); // how far the crown leans
+    const shadowSpread = 1 + clamp01(pose.bob < 0 ? -pose.bob / 13 : 0) * 0.5;
     ctx.fillStyle = rgb(p.soil);
     ctx.beginPath();
-    ctx.ellipse(0, COCO_CY + COCO_RY + bob + 0.5, 9, 2.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(0 + tipShift * 0.15, COCO_BASE_Y + 0.5, 9 * shadowSpread, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
-    // contact shadow of the coconut on the pad
-    ctx.fillStyle = rgba(p.outline, 0.28);
+    ctx.fillStyle = rgba(p.outline, 0.28 / shadowSpread);
     ctx.beginPath();
-    ctx.ellipse(3, COCO_CY + COCO_RY + bob + 1, 12, 2.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(3 + tipShift * 0.18, COCO_BASE_Y + 1, 12 * shadowSpread, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // ── Subject: the coconut (SAME round silhouette every season) ───────────
+    // ── Subject: the coconut, under the idle pose transform ──────────────────
+    ctx.save();
+    // Pivot near the base so lean rocks the CROWN side-to-side and squash anchors
+    // at the base (it "sits" on the pad). bob raises the whole body.
+    ctx.translate(0, COCO_BASE_Y + pose.bob);
+    ctx.rotate(pose.lean);
+    ctx.scale(1 + pose.squashX, 1 + pose.squashY);
+    ctx.translate(0, -COCO_BASE_Y);
+
     // 1) soft dark outline pass (drawn slightly fatter, dark first then light)
     ctx.save();
-    coconutBodyPath(ctx, bob);
+    coconutBodyPath(ctx);
     ctx.lineWidth = 2.4;
     ctx.strokeStyle = rgb(p.outline);
     ctx.stroke();
@@ -422,10 +477,10 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0)
 
     // 2) husk body fill, clipped so detail stays inside the rim
     ctx.save();
-    coconutBodyPath(ctx, bob);
+    coconutBodyPath(ctx);
     ctx.clip();
 
-    const cy = COCO_CY + bob;
+    const cy = COCO_CY;
 
     // base mid tone
     ctx.fillStyle = rgb(p.huskMid);
@@ -481,7 +536,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0)
 
     // the three husk "eyes" / face — dark recessed dots
     EYES.forEach(([ex, ey, er]) => {
-      const y = ey + bob;
+      const y = ey;
       // soft socket shadow
       ctx.fillStyle = rgba(p.huskDark, 0.7);
       ctx.beginPath();
@@ -501,11 +556,11 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0)
 
     // specular sheen on the husk (gloss strength from P)
     if (p.gloss > 0.02) {
-      ctx.fillStyle = rgba([255, 255, 255], 0.12 + 0.4 * p.gloss);
+      ctx.fillStyle = rgba([255, 255, 255], 0.12 + 0.5 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(COCO_CX - 5.5, cy - 6.5, 3.4, 5.2, -0.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgba([255, 255, 255], 0.08 + 0.22 * p.gloss);
+      ctx.fillStyle = rgba([255, 255, 255], 0.08 + 0.3 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(COCO_CX + 1, cy - 8, 1.6, 2.6, -0.2, 0, Math.PI * 2);
       ctx.fill();
@@ -513,7 +568,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0)
 
     // frost dusting (winter) — cool blue speckle on the upward husk
     if (p.frostAmt > 0.02) {
-      ctx.fillStyle = rgba([210, 230, 250], 0.24 * p.frostAmt);
+      ctx.fillStyle = rgba([210, 230, 250], 0.26 * p.frostAmt);
       ctx.beginPath();
       ctx.ellipse(COCO_CX - 1, cy - 6, COCO_RX * 0.9, COCO_RY * 0.5, 0, 0, Math.PI * 2);
       ctx.fill();
@@ -530,7 +585,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0)
     }
 
     ctx.lineCap = "butt";
-    ctx.restore(); // end clip
+    ctx.restore(); // end body clip
 
     // 3) snow cap on the crown (winter) — drawn over, hugging the top rim
     if (p.snowCapAmt > 0.02) {
@@ -538,24 +593,44 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0)
       const cyTop = cy - COCO_RY;
       ctx.fillStyle = rgba([246, 251, 255], 0.95 * a);
       ctx.beginPath();
-      ctx.moveTo(COCO_CX - COCO_RX * 0.7, cyTop + 5);
+      ctx.moveTo(COCO_CX - COCO_RX * 0.72, cyTop + 5);
       ctx.quadraticCurveTo(COCO_CX - 5, cyTop - 2, COCO_CX, cyTop - 1);
-      ctx.quadraticCurveTo(COCO_CX + 5, cyTop - 2, COCO_CX + COCO_RX * 0.7, cyTop + 5);
-      ctx.quadraticCurveTo(COCO_CX + 7, cyTop + 8, COCO_CX + 2, cyTop + 6);
-      ctx.quadraticCurveTo(COCO_CX, cyTop + 8.5, COCO_CX - 2, cyTop + 6);
-      ctx.quadraticCurveTo(COCO_CX - 7, cyTop + 8, COCO_CX - COCO_RX * 0.7, cyTop + 5);
+      ctx.quadraticCurveTo(COCO_CX + 5, cyTop - 2, COCO_CX + COCO_RX * 0.72, cyTop + 5);
+      ctx.quadraticCurveTo(COCO_CX + 7.5, cyTop + 8.5, COCO_CX + 2, cyTop + 6.5);
+      ctx.quadraticCurveTo(COCO_CX, cyTop + 9, COCO_CX - 2, cyTop + 6.5);
+      ctx.quadraticCurveTo(COCO_CX - 7.5, cyTop + 8.5, COCO_CX - COCO_RX * 0.72, cyTop + 5);
       ctx.closePath();
       ctx.fill();
       ctx.fillStyle = rgba([205, 222, 242], 0.5 * a);
       ctx.beginPath();
-      ctx.ellipse(COCO_CX, cyTop + 5.4, COCO_RX * 0.6, 1.8, 0, 0, Math.PI * 2);
+      ctx.ellipse(COCO_CX, cyTop + 5.6, COCO_RX * 0.62, 1.9, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // ── Green sprout-tuft on top (SAME placement every season) ──────────────
-    drawTuft(ctx, p, bob, tuftSway);
+    // ── Blossom on the crown (spring) — a bright bloom tucked by the tuft ─────
+    if (p.blossomAmt > 0.01) {
+      const a = p.blossomAmt;
+      const bx = COCO_CX + 5.5;
+      const by = COCO_CY - COCO_RY + 4;
+      ctx.fillStyle = rgba([255, 250, 252], 0.95 * a);
+      for (let k = 0; k < 5; k++) {
+        const ang = (k / 5) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.ellipse(bx + Math.cos(ang) * 2.0, by + Math.sin(ang) * 1.4, 1.5, 1.1, ang, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = rgba([255, 214, 90], a);
+      ctx.beginPath();
+      ctx.arc(bx, by, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
-    // ── Ambient light wash over the whole tile (per-season tint) ────────────
+    // ── Green sprout-tuft on top (SAME placement every season) ────────────────
+    drawTuft(ctx, p, sway);
+
+    ctx.restore(); // end pose transform
+
+    // ── Ambient light wash over the whole tile (per-season tint) ─────────────
     if (p.lightAmt > 0.001) {
       ctx.globalAlpha = 1;
       const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
@@ -570,65 +645,100 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number, tuftSway = 0)
   }
 }
 
-// ── Idle bob (seamless, zero-velocity at t=0) ────────────────────────────────
+// ── Idle pose clock — two-tier occasional action ─────────────────────────────
 
-// A*(1-cos(w t))*0.5 → 0 at t=0 with zero velocity; period 2π/w.
-function bobAt(t: number, amp = 0.9, w = 1.4): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
+/** Returns 0..1 progress through an action window of length `win` starting at
+ *  phase offset within `period`, else −1 (at rest). Seamless because the pose
+ *  built from q is zero (with zero velocity) at q=0 and q=1. */
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
+}
+
+// A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
+function hump(q: number): number {
+  const s = Math.sin(Math.PI * q);
+  return s * s;
+}
+
+// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
+function anticipate(q: number): number {
+  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
+  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
+  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+}
+
+/** Build the idle pose from the wall clock. Two tiers:
+ *   common slow HEAVY ROCK every ~6s (win 0.9s), rare BOUNCE every ~18s. */
+function poseFromClock(t: number): Pose {
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+
+  // ── COMMON: slow heavy side-to-side rock (~6s, win 0.9s) ──
+  // Crown arm ≈ (COCO_BASE_Y - TUFT_Y) ≈ 28 px → ~0.16 rad gives a hefty sway.
+  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  if (qC >= 0) {
+    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
+    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
+    pose.lean += 0.16 * env * rock;
+    // a heavy squat at the base as it rocks (weight settling side to side)
+    pose.squashY += -0.06 * hump(qC);
+    pose.squashX += 0.05 * hump(qC);
+  }
+
+  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
+  // Anticipation crouch → stretch up ~12px → squash landing → settle.
+  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ rock
+  if (qS >= 0) {
+    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
+    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
+    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
+    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
+    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
+
+    // bob: crouch dips down a touch, then a big rise (negative = up) ~12px.
+    pose.bob += crouch * 1.6 - air * 12.0;
+    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
+    const apex = air;
+    pose.squashY += apex * 0.18 - crouch * 0.12 - land * 0.16;
+    pose.squashX += -apex * 0.13 + crouch * 0.10 + land * 0.14;
+    // a tiny lean wiggle on the way down for life
+    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+  }
+
+  // Reference anticipate() so it stays part of the seamless-curve toolkit and
+  // contributes a faint windup tilt to the common rock (still 0 at edges).
+  if (qC >= 0) {
+    pose.lean += 0.02 * anticipate(qC);
+  }
+
+  return pose;
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
 
 function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
-  return (ctx) => paint(ctx, SP[season], 0, 0);
+  return (ctx) => paint(ctx, SP[season], REST, 0);
 }
 
 function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
   return (ctx, t) => {
-    const bob = bobAt(t);
+    const tt = Number.isFinite(t) ? t : 0;
     // the green tuft sways gently every season (additive, subtle)
-    const tuftSway = Math.sin(t * 1.7) * 1.2 + Math.sin(t * 1.7 + 1) * 0.5;
-    paint(ctx, SP[season], bob, tuftSway);
+    const tuftSway = Math.sin(tt * 1.7) * 1.0 + Math.sin(tt * 1.7 + 1) * 0.4;
+    paint(ctx, SP[season], poseFromClock(tt), tuftSway);
 
+    // Light additive season micro-sparkle (dressing only — never the subject's
+    // own colour/brightness). Kept tiny so the POSE action is the star.
     ctx.save();
     try {
       ctx.globalAlpha = 1;
-      const cy = COCO_CY + bob;
-      if (season === "Spring") {
-        // dew shimmer — a soft pulsing glint that drifts on the husk
-        const g = 0.22 + 0.28 * (0.5 + 0.5 * Math.sin(t * 2.2));
-        ctx.fillStyle = `rgba(255,255,255,${g})`;
-        const gy = cy - 6 + Math.sin(t * 1.1) * 1.4;
-        ctx.beginPath();
-        ctx.arc(-5.5, gy, 1.1 + g * 0.8, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Summer") {
-        // soft sheen on the husk — a slow gloss travelling the lit shoulder
-        const prog = (t * 0.45) % 1;
-        const gy = lerp(cy - COCO_RY + 4, cy + COCO_RY - 4, prog);
-        ctx.fillStyle = "rgba(255,255,255,0.7)";
-        ctx.beginPath();
-        ctx.ellipse(-5, gy, 1.5, 2.8, -0.3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = "rgba(255,255,255,0.34)";
-        ctx.beginPath();
-        ctx.ellipse(0.5, gy * 0.96, 1.0, 1.9, 0, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Autumn") {
-        // faint slow sheen pulsing on the shoulder
-        const s = 0.1 + 0.14 * (0.5 + 0.5 * Math.sin(t * 0.9));
-        ctx.fillStyle = `rgba(255,236,200,${s})`;
-        ctx.beginPath();
-        ctx.ellipse(-4, cy - 5, 5, 3.6, -0.2, 0, Math.PI * 2);
-        ctx.fill();
-      } else {
-        // Winter — drifting snowflakes + cold sheen
+      if (season === "Winter") {
         const seeds: Array<[number, number, number]> = [
           [-9, 0.0, 1.0], [6, 0.4, 0.9], [11, 0.7, 0.8], [-2, 0.25, 0.9],
         ];
         ctx.fillStyle = "#ffffff";
         seeds.forEach(([fx, phase, r]) => {
-          const prog = ((t / 3.0 + phase) % 1 + 1) % 1;
+          const prog = ((tt / 3.0 + phase) % 1 + 1) % 1;
           const fy = -22 + prog * 40;
           const dx = fx + Math.sin(prog * Math.PI * 2 + phase * 6) * 3;
           ctx.globalAlpha = 0.4 + 0.45 * Math.sin(prog * Math.PI);
@@ -636,13 +746,37 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
           ctx.arc(dx, fy, r, 0, Math.PI * 2);
           ctx.fill();
         });
-        ctx.globalAlpha = 0.1 + 0.12 * (0.5 + 0.5 * Math.sin(t * 0.8));
-        ctx.fillStyle = "rgba(210,232,255,1)";
+        ctx.globalAlpha = 1;
+      } else if (season === "Spring") {
+        // a couple of drifting petals
+        ctx.fillStyle = "rgba(255,240,248,0.9)";
+        for (let i = 0; i < 2; i++) {
+          const prog = ((tt / 4.0 + i * 0.5) % 1 + 1) % 1;
+          const px = (i === 0 ? -10 : 9) + Math.sin(prog * Math.PI * 2) * 3;
+          const py = -18 + prog * 34;
+          ctx.globalAlpha = 0.35 + 0.4 * Math.sin(prog * Math.PI);
+          ctx.beginPath();
+          ctx.ellipse(px, py, 1.4, 0.9, prog * 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      } else if (season === "Autumn") {
+        // one slow tumbling leaf
+        const prog = ((tt / 5.0) % 1 + 1) % 1;
+        const px = 11 - prog * 6 + Math.sin(prog * Math.PI * 3) * 2;
+        const py = -16 + prog * 32;
+        ctx.globalAlpha = 0.4 + 0.4 * Math.sin(prog * Math.PI);
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(prog * Math.PI * 4);
+        ctx.fillStyle = "rgba(200,98,32,1)";
         ctx.beginPath();
-        ctx.ellipse(-3, cy - 4, 6, 4.4, -0.2, 0, Math.PI * 2);
+        ctx.ellipse(0, 0, 2.4, 1.3, 0, 0, Math.PI * 2);
         ctx.fill();
+        ctx.restore();
         ctx.globalAlpha = 1;
       }
+      // Summer: no extra dressing — the bounce + glossy husk is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();
@@ -650,14 +784,14 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   };
 }
 
-// ── Forward season→season transitions ────────────────────────────────────────
+// ── Forward season→season transitions (seamless endpoints) ───────────────────
 
 function makeTransition(fromIdx: 0 | 1 | 2): (ctx: CanvasRenderingContext2D, p: number) => void {
   const from = SP[SEASON_NAMES[fromIdx]];
   const to = SP[SEASON_NAMES[fromIdx + 1]];
   return (ctx, pp) => {
     const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(from, to, k), 0, 0);
+    paint(ctx, lerpP(from, to, k), REST, 0);
   };
 }
 
