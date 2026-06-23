@@ -2,16 +2,22 @@
 
 A standalone, self-contained preview of the all-vector seasonal tiles (80 of
 them, across every board category — tree / fruit / grain / veg / grass / flower /
-bird / herd / cattle / mount / fish / mineral / coin / special) — four per-season
-redraws, subtle idle loops, and forward season→season transition morphs. It runs
-the **actual** tile-drawing code from `src/`, so it's a faithful "before
+bird / herd / cattle / mount / fish / mineral / coin / special). Each card shows
+one tile in four parts — its four season **key frames**, its **idle** and
+**major idle** loops, and its three forward season→season transition morphs. It
+runs the **actual** tile-drawing code from `src/`, so it's a faithful "before
 integration" sign-off surface for the motion.
 
 Each tile is one parameterized `paint()` with a per-season parameter set; the
-season stills are `paint(seasonParams)`, the idle adds a rest-anchored bob, and
-the transitions are an eased lerp of those params — which keeps the subject's
-identity constant across seasons and makes every morph start/end exactly on the
-neighbouring season still (no snap at the idle hand-off).
+season stills are `paint(seasonParams)` and the transitions are an eased lerp of
+those params — which keeps the subject's identity constant across seasons and
+makes every morph start/end exactly on the neighbouring season still (no snap at
+the idle hand-off). The idle is **two-tier** (WC3-style): a calm baseline plus an
+occasional bold action (a peck, hop, gust or wing-flare). The page scans each
+tile's idle-loop motion energy to isolate the two tiers onto their own short
+loops — **Idle** (the calm/common motion) and **Major idle** (the bold action on
+repeat) — so a reviewer sees the big gesture without waiting for its ~12–18s
+board cadence.
 
 Open `index.html` directly in a browser — no dev server needed.
 

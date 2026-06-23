@@ -42,10 +42,6 @@
   button.btn.filt { padding: 6px 12px; }
   button.btn.filt.active { background: var(--accent); border-color: var(--accent); color: #fff; }
   button.btn:active { transform: translateY(1px); }
-  select, input[type=range] { font: inherit; }
-  input[type=range] { width: 200px; accent-color: var(--accent); }
-  .scrub-wrap { flex: 1 1 260px; min-width: 220px; }
-  .scrub-wrap input { width: 100%; }
   .toolbar-count { font-size: 12.5px; color: var(--muted); margin: 8px 2px 0; }
   /* holistic per-icon cards */
   .row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 6px; }
@@ -63,14 +59,13 @@
   .hgrid { display: grid; gap: 9px; justify-items: center; }
   .hgrid.s4 { grid-template-columns: repeat(4, 1fr); }
   .hgrid.s3 { grid-template-columns: repeat(3, 1fr); }
+  .hgrid.s2 { grid-template-columns: repeat(2, 1fr); max-width: 260px; }
   .cellbox { width: 100%; text-align: center; }
   .cellbox canvas { width: 84px; height: 84px; border-radius: 9px; display: block; margin: 0 auto; }
   @media (max-width: 420px) { .cellbox canvas { width: 70px; height: 70px; } }
   .cellcap { font-size: 10px; color: var(--muted); margin-top: 3px; white-space: nowrap; }
-  .hsec.idle .cellbox canvas { box-shadow: inset 0 0 0 1px rgba(63,125,78,.14); }
-  /* reference montage */
-  .montage { overflow-x: auto; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); box-shadow: var(--shadow); }
-  .montage canvas { display: block; }
+  .hsec.motion .cellbox canvas { box-shadow: inset 0 0 0 1px rgba(63,125,78,.14); }
+  .cellcap.major { color: var(--accent-ink); font-weight: 700; }
   .legend { color: var(--muted); font-size: 13px; margin: 8px 2px 0; }
   ul.facts { color: var(--muted); max-width: 80ch; padding-left: 20px; }
   ul.facts li { margin: 4px 0; }
@@ -85,9 +80,9 @@
     <h1>Seasonal vector tiles — animation preview</h1>
     <p class="lead">
       <b>Eighty</b> board tiles drawn entirely with canvas vector paths (no pixel art). Each card below shows
-      <b>one tile holistically</b> — its four static season stills, its four per-season <b>idle loops</b>, and its
-      three forward season→season <b>transition morphs</b> — all running at once, the <i>actual</i> tile-drawing
-      code that renders on the board.
+      <b>one tile</b> in four parts — its four season <b>key frames</b>, its <b>idle</b> loop and its
+      <b>major idle</b> (the rare bold action, isolated on its own loop), and its three forward
+      <b>season→season transitions</b> — the <i>actual</i> tile-drawing code that renders on the board.
     </p>
     <p class="lead" style="margin-top:10px;">
       Each tile is one parameterized <code>paint()</code> with a per-season parameter set; the
@@ -98,9 +93,10 @@
       season still</b>, so there is no snap at the hand-off into the idle.
     </p>
     <div class="note">
-      <b>Reviewing duration:</b> idle-loop length is internal to each tile (already per-tile), while the
-      season-transition length is one engine constant today. Use <b>Idle speed</b> and <b>Transition length</b>
-      below to judge how long each should run. Filter by biome — the <b>farm</b> tiles are the current focus.
+      <b>Idle is two-tier (WC3-style):</b> a calm baseline plus an occasional <b>bold action</b> — a peck,
+      hop, gust or wing-flare — that on the board fires only every ~12–18s. So you don't have to wait for it,
+      each card isolates the two tiers on their own short loops: <b>Idle</b> = the calm/common motion,
+      <b>Major idle</b> = the big action looped on repeat. Filter by biome — the <b>farm</b> tiles are the focus.
     </div>
   </header>
 
@@ -115,27 +111,10 @@
       <button class="btn filt" data-group="mineral">Mineral</button>
       <button class="btn filt" data-group="all">All</button>
     </div>
-    <div class="group">
-      <label for="speed">Idle speed</label>
-      <input type="range" id="speed" min="0.25" max="2" step="0.05" value="1" />
-      <span id="speedVal" style="font-size:12.5px;color:var(--muted);width:34px;">1.0×</span>
-    </div>
-    <div class="group scrub-wrap">
-      <label for="transLen" style="white-space:nowrap;">Transition length</label>
-      <input type="range" id="transLen" min="0.8" max="4" step="0.1" value="2" />
-      <span id="transLenVal" style="font-size:12.5px;color:var(--muted);width:42px;">2.0s</span>
-    </div>
   </div>
   <div class="toolbar-count" id="count"></div>
 
-  <div class="row" id="cards"><!-- holistic tile cards injected --></div>
-
-  <h2>Reference grid — every season still &amp; transition mid-frame</h2>
-  <p class="legend">
-    Columns: the four season stills · the three forward transition morphs frozen at 50% ·
-    each season's idle sampled at t≈1.2s. Same code as the live cards above.
-  </p>
-  <div class="montage"><canvas id="montage"></canvas></div>
+  <div class="row" id="cards"><!-- per-tile cards injected --></div>
 
   <h2>What you're looking at</h2>
   <p class="legend" style="margin-bottom:10px;">The full board roster — 80 tiles across every category:</p>
@@ -160,12 +139,16 @@
     <li><b>Identity rule.</b> A tile keeps the SAME silhouette in all four seasons — only its surface
       colour, frost/snow, and the pad's seasonal dressing (spring blossom, autumn fallen leaves,
       winter snow) change. The subject is always clearly the same thing. (Trees are the lone exception.)</li>
-    <li><b>Idle vs. transition.</b> Idle loops are seamless (driven by a continuous clock) and deliberately
-      subtle — the board sprite adds its own sway, so these stay to canopy shimmer, petal sway, a glint, a
-      drifting leaf/snowflake. Transitions morph <i>colour and shape only</i> (no brightness flash) and are
-      one-shot: there is no Winter→Spring morph, so a new run snaps back to Spring.</li>
-    <li><b>Holistic view.</b> Each card shows all of it at once — the four idles and three morphs side by side
-      with the static stills — so motion and <i>duration</i> can be judged per icon, not one phase at a time.</li>
+    <li><b>Idle vs. major idle.</b> Each idle is <b>two-tier</b> (WC3-style): a calm baseline loop — a slow
+      breath, canopy sway or shimmer — overlaid with an <b>occasional bold action</b> that on the board fires
+      every ~12–18s: a hen pecks then hops with a wing-flap, grain nods in a gust, a flower bobs. The
+      <b>Major idle</b> cell isolates that big action and loops it so you can read it at a glance (a big one
+      like a hop may briefly lift outside the tile box). That baked action is the <i>sole</i> on-board gesture
+      now — the engine keeps vector tiles upright instead of adding its old sprite-rotation sway, so the frame
+      carries all the motion.</li>
+    <li><b>Transitions.</b> One-shot morphs of <i>colour and shape only</i> (no brightness flash). There is no
+      Winter→Spring morph, so a new run snaps back to Spring; the three cards loop Spring→Summer, Summer→Autumn,
+      Autumn→Winter for review.</li>
   </ul>
 
   <footer>
@@ -179,11 +162,12 @@
 (function () {
   const DEMO = window.SEASONAL_DEMO;
   const SEASONS = ["Spring", "Summer", "Autumn", "Winter"];
-  const SEA_ABBR = ["Spring", "Summer", "Autumn", "Winter"];
   const TRANS_ABBR = ["Spring → Summer", "Summer → Autumn", "Autumn → Winter"];
   const DESIGN = 74;   // design-box the art is authored against
   const MINI = 84;     // mini-canvas css size
-  const HOLD = 0.7, REWIND = 0.4; // transition-loop: hold at destination, then quick rewind
+  const HOLD = 0.7, REWIND = 0.4, TRANS_SEC = 2; // transition-loop timing
+  const MOTION_SEASON = "Summer"; // idle/major-idle shown in one season (action shape is season-independent)
+  const W_IDLE = 1.2, W_MAJOR = 1.4; // half-windows (s) the idle / major-idle loops sweep
 
   const groupOf = (fam) =>
     (fam === "fish" || fam === "special") ? "sea"
@@ -226,29 +210,83 @@
     c.style.width = size + "px"; c.style.height = size + "px";
     return { c, ctx: c.getContext("2d"), dpr, size };
   }
-  function cell(parent, cap) {
+  function cell(parent, cap, capCls) {
     const box = document.createElement("div"); box.className = "cellbox";
     const cv = makeCanvas(MINI);
     box.appendChild(cv.c);
-    const cc = document.createElement("div"); cc.className = "cellcap"; cc.textContent = cap;
+    const cc = document.createElement("div"); cc.className = "cellcap" + (capCls ? " " + capCls : ""); cc.textContent = cap;
     box.appendChild(cc);
     parent.appendChild(box);
     return cv;
   }
 
-  // Forward-loop progress for a transition preview: morph 0→1 over transSec,
+  // Forward-loop progress for a transition preview: morph 0→1 over TRANS_SEC,
   // hold at the destination, then a quick rewind to the source and repeat.
-  function transP(t, transSec) {
-    const cycle = transSec + HOLD + REWIND;
+  function transP(t) {
+    const cycle = TRANS_SEC + HOLD + REWIND;
     let u = ((t % cycle) + cycle) % cycle;
-    if (u < transSec) return u / transSec;          // forward morph
-    u -= transSec;
+    if (u < TRANS_SEC) return u / TRANS_SEC;         // forward morph
+    u -= TRANS_SEC;
     if (u < HOLD) return 1;                          // hold at the new season
     u -= HOLD;
     return 1 - u / REWIND;                           // quick rewind to the old season
   }
 
-  // ---- build holistic cards ----
+  // The idle `anim(ctx, t)` carries BOTH tiers: a calm/common motion plus a rare
+  // bold action that recurs on a long ~12–18s period. To show each tier without
+  // waiting, scan the loop's motion energy (pixel deviation from the still) and
+  // pick two times: `majorT` = the highest-energy frame (the bold action crest)
+  // and `idleT` = the highest-energy frame at least ±2s away (a calm/common
+  // beat). Each cell then sweeps a short window around its time, so the action is
+  // self-contained (rest→action→rest) and the loop reads cleanly. Cached per tile.
+  const _off = (() => { const c = document.createElement("canvas"); c.width = c.height = 44; return c; })();
+  const _winCache = new Map();
+  function windowsFor(tile) {
+    if (_winCache.has(tile.key)) return _winCache.get(tile.key);
+    const v = tile.V[MOTION_SEASON];
+    let res;
+    if (!v || !v.anim) { res = { hasAnim: false, idleT: 0, majorT: 0 }; _winCache.set(tile.key, res); return res; }
+    const S = 44, octx = _off.getContext("2d", { willReadFrequently: true });
+    const sample = (paint) => {
+      octx.setTransform(1, 0, 0, 1, 0, 0);
+      octx.clearRect(0, 0, S, S);
+      octx.save();
+      octx.translate(S / 2, S / 2); octx.scale(S / DESIGN, S / DESIGN);
+      octx.lineCap = "round"; octx.lineJoin = "round";
+      try { paint(octx); } catch (e) {}
+      octx.restore();
+      return octx.getImageData(0, 0, S, S).data;
+    };
+    const base = sample((c) => v.draw(c));
+    const E = [];
+    for (let i = 0; i <= 180; i++) {            // 0..18s at 0.1s
+      const cur = sample((c) => v.anim(c, i * 0.1));
+      let e = 0;
+      for (let k = 0; k < base.length; k += 4) {
+        e += Math.abs(cur[k] - base[k]) + Math.abs(cur[k + 1] - base[k + 1]) + Math.abs(cur[k + 2] - base[k + 2]);
+      }
+      E.push(e);
+    }
+    let mj = 0;
+    for (let i = 1; i < E.length; i++) if (E[i] > E[mj]) mj = i;
+    let id = -1;
+    for (let i = 0; i < E.length; i++) {
+      if (Math.abs(i - mj) <= 20) continue;     // skip ±2s around the bold action
+      if (id < 0 || E[i] > E[id]) id = i;
+    }
+    if (id < 0) id = mj;
+    res = { hasAnim: true, idleT: id * 0.1, majorT: mj * 0.1 };
+    _winCache.set(tile.key, res);
+    return res;
+  }
+  // Sweep a [center−half, center+half] window forward; the action sits at center
+  // with rest at both edges, so the wrap is seamless.
+  function windowedT(clock, center, half) {
+    const span = 2 * half;
+    return center - half + (((clock % span) + span) % span);
+  }
+
+  // ---- build per-tile cards ----
   const cardsEl = document.getElementById("cards");
   const cards = DEMO.tiles.map((tile) => {
     const group = groupOf(tile.family);
@@ -270,39 +308,34 @@
       return grid;
     }
 
-    const gStatic = section("Static · season stills", "static", "s4");
-    const staticCv = SEASONS.map((s, i) => cell(gStatic, SEA_ABBR[i]));
-    const gIdle = section("Idle loops", "idle", "s4");
-    const idleCv = SEASONS.map((s, i) => cell(gIdle, SEA_ABBR[i]));
+    const gStatic = section("Key frames · season stills", "static", "s4");
+    const staticCv = SEASONS.map((s, i) => cell(gStatic, SEASONS[i]));
+    const gMotion = section("Idle · major idle", "motion", "s2");
+    const idleCv = cell(gMotion, "Idle");
+    const majorCv = cell(gMotion, "Major idle", "major");
     const gTrans = section("Season transitions", "trans", "s3");
     const transCv = [0, 1, 2].map((f) => cell(gTrans, TRANS_ABBR[f]));
 
     cardsEl.appendChild(card);
 
-    // static stills are drawn once
+    // key-frame stills are drawn once
     staticCv.forEach((cv, i) => renderArt(cv.ctx, cv.size, cv.dpr, (ctx) => tile.V[SEASONS[i]].draw(ctx)));
 
-    return { tile, card, group, idleCv, transCv, visible: false };
+    return { tile, card, group, idleCv, majorCv, transCv, visible: false };
   });
 
-  // only animate on-screen cards (80 cards × 7 animated canvases otherwise)
+  // only animate on-screen cards (80 cards × 5 animated canvases otherwise)
   const io = new IntersectionObserver((ents) => {
     ents.forEach((e) => { const rec = e.target.__rec; if (rec) rec.visible = e.isIntersecting; });
   }, { rootMargin: "240px" });
   cards.forEach((rec) => { rec.card.__rec = rec; io.observe(rec.card); });
 
   // ---- controls ----
-  let playing = true, speed = 1, transSec = 2, idleClock = 0, wall = 0, filter = "farm";
+  let playing = true, clock = 0, filter = "farm";
   const playBtn = document.getElementById("playBtn");
-  const speedEl = document.getElementById("speed");
-  const speedVal = document.getElementById("speedVal");
-  const transEl = document.getElementById("transLen");
-  const transVal = document.getElementById("transLenVal");
   const countEl = document.getElementById("count");
 
   playBtn.onclick = () => { playing = !playing; playBtn.textContent = playing ? "⏸ Pause" : "▶ Play"; };
-  speedEl.oninput = () => { speed = +speedEl.value; speedVal.textContent = speed.toFixed(2).replace(/0$/, "") + "×"; };
-  transEl.oninput = () => { transSec = +transEl.value; transVal.textContent = transSec.toFixed(1) + "s"; };
 
   function applyFilter() {
     let n = 0;
@@ -312,67 +345,26 @@
       if (show) n++;
     });
     countEl.textContent = "Showing " + n + " " + (filter === "all" ? "" : filter + " ") +
-      "tile" + (n === 1 ? "" : "s") + " · each card: 4 static season stills, 4 idle loops, 3 season-transition morphs.";
+      "tile" + (n === 1 ? "" : "s") + " · each card: 4 season key frames · idle + major idle · 3 season transitions.";
     document.querySelectorAll(".btn.filt").forEach((b) => b.classList.toggle("active", b.dataset.group === filter));
   }
   document.querySelectorAll(".btn.filt").forEach((b) => { b.onclick = () => { filter = b.dataset.group; applyFilter(); }; });
   applyFilter();
 
-  // ---- reference montage (static) ----
-  function buildMontage() {
-    const CELL = 86, PADL = 64, PADT = 24;
-    const cols = [];
-    for (let s = 0; s < 4; s++) cols.push({ kind: "draw", s, label: SEASONS[s] });
-    for (let f = 0; f < 3; f++) cols.push({ kind: "trans", from: f, label: ["Sp→Su", "Su→Au", "Au→Wi"][f] });
-    for (let s = 0; s < 4; s++) cols.push({ kind: "idle", s, label: SEASONS[s] + "·idle" });
-    const rows = DEMO.tiles;
-    const dpr = Math.min(window.devicePixelRatio || 1, 2.5);
-    const c = document.getElementById("montage");
-    const W = PADL + cols.length * CELL, H = PADT + rows.length * CELL;
-    c.width = Math.round(W * dpr); c.height = Math.round(H * dpr);
-    c.style.width = W + "px"; c.style.height = H + "px";
-    const ctx = c.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, W, H);
-    ctx.font = "12px ui-sans-serif, system-ui, sans-serif"; ctx.fillStyle = "#6b7a85";
-    ctx.textAlign = "center";
-    cols.forEach((col, ci) => ctx.fillText(col.label, PADL + ci * CELL + CELL / 2, 15));
-    ctx.textAlign = "right";
-    rows.forEach((r, ri) => ctx.fillText(r.label, PADL - 8, PADT + ri * CELL + CELL / 2));
-    rows.forEach((tile, ri) => cols.forEach((col, ci) => {
-      const x = PADL + ci * CELL, y = PADT + ri * CELL;
-      ctx.save();
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      ctx.translate(x, y);
-      const scale = CELL / DESIGN;
-      const gg = ctx.createLinearGradient(0, 0, 0, CELL);
-      gg.addColorStop(0, "#eeebe2"); gg.addColorStop(1, "#dcd7c8");
-      ctx.fillStyle = gg; roundRect(ctx, 3, 3, CELL - 6, CELL - 6, CELL * 0.1); ctx.fill();
-      ctx.save();
-      ctx.translate(CELL / 2, CELL / 2); ctx.scale(scale, scale);
-      ctx.lineCap = "round"; ctx.lineJoin = "round";
-      try {
-        if (col.kind === "draw") tile.V[SEASONS[col.s]].draw(ctx);
-        else if (col.kind === "idle") { const v = tile.V[SEASONS[col.s]]; (v.anim ? v.anim(ctx, 1.2) : v.draw(ctx)); }
-        else tile.T[col.from](ctx, 0.5);
-      } catch (e) {}
-      ctx.restore();
-      ctx.restore();
-    }));
-  }
-
   // ---- main loop ----
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000); last = now;
-    if (playing) { idleClock += dt * speed; wall += dt; }
-    const p = transP(wall, transSec);
+    if (playing) clock += dt;
+    const p = transP(clock);
     cards.forEach((rec) => {
       if (!rec.visible || rec.card.classList.contains("hidden")) return;
-      rec.idleCv.forEach((cv, i) => {
-        const v = rec.tile.V[SEASONS[i]];
-        renderArt(cv.ctx, cv.size, cv.dpr, (ctx) => (v.anim ? v.anim(ctx, idleClock) : v.draw(ctx)));
-      });
+      const v = rec.tile.V[MOTION_SEASON];
+      const w = windowsFor(rec.tile);
+      renderArt(rec.idleCv.ctx, rec.idleCv.size, rec.idleCv.dpr,
+        (ctx) => (w.hasAnim ? v.anim(ctx, windowedT(clock, w.idleT, W_IDLE)) : v.draw(ctx)));
+      renderArt(rec.majorCv.ctx, rec.majorCv.size, rec.majorCv.dpr,
+        (ctx) => (w.hasAnim ? v.anim(ctx, windowedT(clock, w.majorT, W_MAJOR)) : v.draw(ctx)));
       rec.transCv.forEach((cv, f) => {
         renderArt(cv.ctx, cv.size, cv.dpr, (ctx) => rec.tile.T[f](ctx, p));
       });
@@ -380,7 +372,6 @@
     requestAnimationFrame(frame);
   }
 
-  buildMontage();
   requestAnimationFrame(frame);
 })();
 </script>
