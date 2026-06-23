@@ -20,13 +20,32 @@ export interface WikiSection {
 
 export const WIKI_SECTIONS: WikiSection[] = [
   {
+    // The "how the game works" hub: the curated Mechanics gallery up front,
+    // then the mechanic-heavy subsystem catalogs whose _index pages double as
+    // explainers. Leads the sidebar so readers meet the systems before the
+    // raw catalogs.
+    id: "systems",
+    label: "Systems",
+    nodes: [
+      { conceptId: "systems" },
+      { conceptId: "seasons" },
+      { conceptId: "workers" },
+      { conceptId: "tools", children: ["toolPowers"] },
+      { conceptId: "buildings" },
+      { conceptId: "zones", children: ["settlementBiomes", "keepers"] },
+      { conceptId: "bosses" },
+    ],
+  },
+  {
+    // The puzzle board and what lives on it. Hazards are board threats tied to
+    // a zone's board (zones reference them via [[hazards:…]]), so they sit here
+    // alongside tiles and board kinds rather than in World.
     id: "board",
     label: "Board",
     nodes: [
       { conceptId: "tiles", children: ["categories", "tileDiscoveryMethods"] },
       { conceptId: "boardKinds" },
-      { conceptId: "zones", children: ["settlementBiomes", "keepers"] },
-      { conceptId: "seasons" },
+      { conceptId: "hazards" },
     ],
   },
   {
@@ -35,8 +54,6 @@ export const WIKI_SECTIONS: WikiSection[] = [
     nodes: [
       { conceptId: "resources" },
       { conceptId: "recipes" },
-      { conceptId: "buildings" },
-      { conceptId: "tools", children: ["toolPowers"] },
     ],
   },
   {
@@ -44,9 +61,6 @@ export const WIKI_SECTIONS: WikiSection[] = [
     label: "World",
     nodes: [
       { conceptId: "npcs" },
-      { conceptId: "workers" },
-      { conceptId: "bosses" },
-      { conceptId: "hazards" },
       { conceptId: "abilities" },
     ],
   },

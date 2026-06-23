@@ -265,6 +265,12 @@ const KNOWN_COLLISIONS: Record<string, string> = {
   portal: "buildings",
   explosives: "tools",
   water_pump: "tools",
+  // "crafting" and "inventory" are each both a screen view and a systems/*
+  // mechanic page; views precedes systems in CONCEPTS order, so views wins the
+  // bare-key lookup. [[systems:crafting]] / [[systems:inventory]] are always
+  // qualified, so the mechanic pages stay reachable.
+  crafting: "views",
+  inventory: "views",
   // "fish" is both the Harbor board-kind key and a tile category; `categories`
   // precedes `boardKinds` in CONCEPTS order, so it wins the bare-key round-trip.
   // Board-kind nav uses the prefixed "boardKinds:fish" focus, so this is benign.

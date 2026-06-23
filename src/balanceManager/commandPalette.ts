@@ -13,6 +13,7 @@ import { TYPE_WORKERS } from "../features/workers/data.js";
 import { BOSSES } from "../features/bosses/data.js";
 import { ZONES, ZONE_IDS } from "../features/zones/data.js";
 import { getToolPower } from "../config/toolPowers.js";
+import { SYSTEMS } from "./wiki/systems.js";
 
 function asArrayValues<T = unknown>(obj: unknown): T[] {
   if (Array.isArray(obj)) return obj as T[];
@@ -129,6 +130,12 @@ export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUIL
     push({ id: bid, kind: "boss", tab: "bosses",
       label, sublabel: `boss · ${season}`,
       keywords: stringList(bid, b.name, b.label, b.season, "boss") });
+  }
+  // Curated mechanics hub — the editorial Systems pages (chaining, crafting, …).
+  for (const s of SYSTEMS) {
+    push({ id: s.key, kind: "system", tab: "systems",
+      label: s.name, sublabel: `system · ${s.key}`,
+      keywords: stringList(s.key, s.name, "system", "mechanic") });
   }
   return entries;
 }

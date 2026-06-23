@@ -197,3 +197,55 @@ describe("Zones page", () => {
     }
   });
 });
+
+// ── Systems hub: Mechanics gallery + moved-catalog intros ──────────────────────
+
+describe("Systems hub — Mechanics bodies", () => {
+  const keys = ["chaining", "promotion", "spawn-pool", "crafting", "trade", "inventory"] as const;
+
+  for (const key of keys) {
+    it(`bodyFor("systems", "${key}") loads and is non-empty`, () => {
+      const html = bodyFor("systems", key);
+      expect(html, `Missing body for systems/${key}`).not.toBeNull();
+      expect(html!.length).toBeGreaterThan(0);
+    });
+
+    it(`bodyFor("systems", "${key}") has no broken [[wikilinks]]`, () => {
+      const html = bodyFor("systems", key);
+      if (!html) return;
+      for (const raw of extractWikiLinks(html)) {
+        expect(resolveWikiLink(raw), `Broken wikilink [[${raw}]] in systems/${key}`).not.toBeNull();
+      }
+    });
+  }
+
+  it('bodyFor("systems", "_index") loads and resolves every [[wikilink]]', () => {
+    const html = bodyFor("systems", "_index");
+    expect(html).not.toBeNull();
+    for (const raw of extractWikiLinks(html!)) {
+      expect(resolveWikiLink(raw), `Broken wikilink [[${raw}]] in systems/_index`).not.toBeNull();
+    }
+  });
+});
+
+describe("Systems hub — moved-catalog _index intros", () => {
+  // seasons/workers/tools are new; bosses was enriched. (zones/buildings _index
+  // are already covered by the Phase 4c category block above.)
+  const concepts = ["seasons", "workers", "tools", "bosses"] as const;
+
+  for (const concept of concepts) {
+    it(`bodyFor("${concept}", "_index") loads and is non-empty`, () => {
+      const html = bodyFor(concept, "_index");
+      expect(html, `Missing _index for ${concept}`).not.toBeNull();
+      expect(html!.length).toBeGreaterThan(0);
+    });
+
+    it(`bodyFor("${concept}", "_index") has no broken [[wikilinks]]`, () => {
+      const html = bodyFor(concept, "_index");
+      if (!html) return;
+      for (const raw of extractWikiLinks(html)) {
+        expect(resolveWikiLink(raw), `Broken wikilink [[${raw}]] in ${concept}/_index`).not.toBeNull();
+      }
+    });
+  }
+});
