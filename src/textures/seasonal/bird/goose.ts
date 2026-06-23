@@ -1,66 +1,45 @@
-// Seasonal art for the GOOSE bird tile (`tile_bird_goose`).
-// Module: src/textures/seasonal/bird/goose.ts  (category BIRD)
+// Production seasonal art for the BIRD GOOSE board tile (`tile_bird_goose`) —
+// the approved bold direction, mirroring the HERD SHEEP reference pattern. A
+// single parameterized `paint(ctx, p, pose)` + four `P` presets + lerped
+// transitions, pushed so the seasons read at a glance and the idle is a real,
+// fun ACTION (a neck-dip peck and a honking wing-flap) rather than a subtle bob.
 //
-// A plump white domestic goose standing on a grassy pad in front-¾ view,
-// turned ~15–20° toward the lower-left: a rounded white body, a long curving
-// neck, a small head with an orange bill, and orange feet. The SAME silhouette
-// is drawn every season — PALETTE LOCK: the body stays white and the bill stays
-// orange all year. Seasons change only the pad, the light wash, a winter feather
-// "fluff" + a little snow on the back + a breath-fog puff at the bill, and the
-// seasonal pad dressing (blossom / fallen leaves / snow).
+// PALETTE LOCK: it is ALWAYS the same plump WHITE domestic goose with a long
+// curving neck, an ORANGE bill and orange feet, on a pad. Seasons change only
+// its plumage VOLUME (sleek spring → fluffed winter), the pad colour, the light
+// wash, the gloss, and BOLD dressing — snow on the back, a little winter SCARF,
+// a breath-fog puff, blossoms, a fallen leaf, frost. The body colour + the
+// signature long-neck/orange-bill silhouette never change; only volume scales it.
 //
-// Enforced by a single parameterized `paint(ctx, p, bob)`:
-//   - draw(season)      = paint(ctx, SP[season], 0)
-//   - anim(season)      = season micro-motion + paint(ctx, SP[season], bobAt(t))
-//   - transition(from)  = paint(ctx, lerpP(SP[from], SP[from+1], smoother(p)), 0)
+// IDLE (two-tier occasional action, carried through a `pose` object):
+//   • COMMON ~6s (win ~0.95s): a NECK-DIP PECK — the long neck dips the head
+//     down ~12–16px to nibble the ground, then arcs back up, with a small body
+//     squash and a tail flick.
+//   • RARE  ~18s (win ~1.2s, phase +3s): a HONK + WING-FLAP — the neck stretches
+//     UP and forward ~14–18px, the bill opens, the wings flap, then it settles.
+//     Anticipation → honk → settle. May reach OUTSIDE the −24..+24 design box.
+// Both gestures return to REST with zero value AND zero velocity at the window
+// edges (raised-cosine windows), so `anim(…, t)` is seamless and `anim(…, 0)`
+// (and `draw`) sit exactly at rest.
 //
-// Because every season is the same paint with tweened params, transitions are
-// seamless: transition(0) ≡ draw(from) and transition(1) ≡ draw(to). The body
-// bob uses A*(1-cos(w t))*0.5 so bob(0)=0 with zero velocity → seamless idle.
-// Origin-centered in the −24..+24 design box, light from upper-left.
+// Origin-centered in the −24..+24 design box, light from upper-left. Never
+// throws; clamps every scalar; save/restore in `finally` + globalAlpha reset.
 
 import type { SeasonalTileEntry, SeasonalTransitionSet } from "../types.js";
 import { SEASON_NAMES, type SeasonName } from "../types.js";
 
-// ── Tweenable params ─────────────────────────────────────────────────────────
+// ── Small math helpers ──────────────────────────────────────────────────────
 
 type RGB = [number, number, number];
 
-/** Every field tweens (number or RGB). NO booleans / season strings — the
- *  paint must be a pure function of these so transitions interpolate cleanly.
- *  PALETTE LOCK: bodyLight/bodyMid/bodyShade stay white-ish; bill/feet stay
- *  orange across all seasons (only the light wash shifts their read). */
-interface P {
-  bodyLight: RGB;   // lit white plumage (upper-left face)
-  bodyMid: RGB;     // body white in ambient
-  bodyShade: RGB;   // shaded under-belly / far side
-  bill: RGB;        // orange bill (locked)
-  billDark: RGB;    // shaded bill / nostril
-  feet: RGB;        // orange feet (locked)
-  eye: RGB;         // eye dot
-  padGrass: RGB;    // top of the grass pad
-  padDark: RGB;     // shaded pad underside
-  outline: RGB;     // soft dark outline tint
-  light: RGB;       // ambient light tint laid over the whole tile
-  lightAmt: number; // 0..1 strength of the ambient light wash
-  plumage: number;  // 0..1 plumage cleanliness/brightness cue (colour only)
-  fluff: number;    // 0..1 winter feather puff (silhouette stays; soft fringe)
-  snowCapAmt: number; // 0..1 snow resting on the back
-  frostAmt: number; // 0..1 cool frost dusting on upward feathers
-  padSnowAmt: number; // 0..1 snow blanket on the pad
-  blossomAmt: number; // 0..1 tiny blossoms on the pad (spring)
-  fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
-}
-
-// ── Local math helpers ───────────────────────────────────────────────────────
-
 function clamp01(x: number): number {
-  if (!(x >= 0)) return 0; // also catches NaN
-  if (x > 1) return 1;
-  return x;
+  return x < 0 ? 0 : x > 1 ? 1 : x;
 }
 
-const smoother = (x: number): number => x * x * x * (x * (6 * x - 15) + 10);
+// guard a wild/non-finite scalar to a safe finite default
+function safeNum(x: number, fallback = 0): number {
+  return Number.isFinite(x) ? x : fallback;
+}
 
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
@@ -70,13 +49,287 @@ function lerpRGB(a: RGB, b: RGB, t: number): RGB {
   return [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)];
 }
 
-function rgb(c: RGB): string {
-  return `rgb(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])})`;
+function rgba(c: RGB, a = 1): string {
+  const r = Math.round(clamp01(c[0] / 255) * 255);
+  const g = Math.round(clamp01(c[1] / 255) * 255);
+  const b = Math.round(clamp01(c[2] / 255) * 255);
+  return `rgba(${r},${g},${b},${clamp01(a)})`;
 }
 
-function rgba(c: RGB, a: number): string {
-  return `rgba(${Math.round(c[0])},${Math.round(c[1])},${Math.round(c[2])},${clamp01(a)})`;
+// quintic smoothstep — zero first & second derivative at both ends
+function smoother(x: number): number {
+  return x * x * x * (x * (6 * x - 15) + 10);
 }
+
+// Two-tier occasional-action clock. Returns a phase in [0,1) WITHIN the action
+// window (the fraction of the way through the gesture), or −1 when at rest. The
+// window opens once per `period` at `phase` seconds in, and is `win` long.
+function actionQ(t: number, period: number, win: number, phase: number): number {
+  const c = (((t + phase) % period) + period) % period;
+  return c < win ? c / win : -1;
+}
+
+// A raised-cosine "bump" 0→1→0 over q∈[0,1], with zero slope at both ends, so a
+// gesture grows in and settles out seamlessly (no velocity at the window edges).
+function bump(q: number): number {
+  if (q < 0 || q > 1) return 0;
+  return 0.5 - 0.5 * Math.cos(q * Math.PI * 2);
+}
+
+// Anticipation→action shape for the HONK: a brief tuck (negative) before the
+// neck stretches, then a clean reach and settle. q∈[0,1]. Returns a REACH
+// factor in roughly −0.16..+1 (negative = tuck-down anticipation, positive =
+// neck stretched up & forward).
+function honkShape(q: number): number {
+  if (q <= 0 || q >= 1) return 0;
+  const antiEnd = 0.24; // first slice = tuck/anticipation
+  if (q < antiEnd) {
+    // tuck down a little (anticipation), zero slope at q=0
+    const a = q / antiEnd;
+    return -0.16 * (0.5 - 0.5 * Math.cos(a * Math.PI));
+  }
+  // stretch arc, zero at the seam to the tuck and at q=1
+  const a = (q - antiEnd) / (1 - antiEnd);
+  return Math.sin(a * Math.PI);
+}
+
+// ── The idle POSE (carries all action state into paint) ──────────────────────
+
+interface Pose {
+  bob: number; // whole-body vertical bob (design px, + = down)
+  lean: number; // body forward/back lean (design px, + = toward head)
+  squashX: number; // body horizontal scale multiplier (squash/stretch)
+  squashY: number; // body vertical scale multiplier
+  neckDip: number; // head/neck vertical travel (design px, + = down peck)
+  neckReach: number; // head/neck up+forward stretch (design px, + = up/forward)
+  peck: number; // 0..1 ground-nibble bill chatter at the dip bottom
+  honk: number; // 0..1 bill-open honk amount
+  wing: number; // 0..1 wing-flap amount
+  tail: number; // signed tail flick (design px)
+  fogPuff: number; // 0..1 extra breath-fog reach (winter exhale)
+}
+
+const REST: Pose = {
+  bob: 0,
+  lean: 0,
+  squashX: 1,
+  squashY: 1,
+  neckDip: 0,
+  neckReach: 0,
+  peck: 0,
+  honk: 0,
+  wing: 0,
+  tail: 0,
+  fogPuff: 0,
+};
+
+// Build a pose from the wall clock: a common NECK-DIP PECK every ~6s and a rare
+// HONK + WING-FLAP every ~18s. Returns to REST (all zeros / unit scales) at
+// every window edge.
+function poseFromClock(tIn: number): Pose {
+  const t = safeNum(tIn, 0);
+  const pose: Pose = {
+    bob: 0,
+    lean: 0,
+    squashX: 1,
+    squashY: 1,
+    neckDip: 0,
+    neckReach: 0,
+    peck: 0,
+    honk: 0,
+    wing: 0,
+    tail: 0,
+    fogPuff: 0,
+  };
+
+  // COMMON ~6s: NECK-DIP PECK (win ~0.95s). The long neck dips the head down
+  // ~12–16px to nibble the ground then arcs back up, with a small body squash
+  // and a tail flick. Built from raised-cosine windows → seamless. Phase 3.0
+  // opens the window at t≈3.0 (well clear of t=0, so anim(0) sits at REST).
+  const cq = actionQ(t, 6, 0.95, 3.0);
+  if (cq >= 0) {
+    const env = bump(cq); // 0→1→0 over the window
+    // a smooth down-then-up arc; bottoms out near the middle of the window
+    const dipArc = Math.sin(cq * Math.PI); // 0→1→0, peak at the dip bottom
+    pose.neckDip = env * (3.0 + 11.0 * dipArc); // head dips ~12–16px down
+    pose.lean = env * 2.2 * dipArc; // body tips slightly toward the ground
+    // a couple of quick nibbles at the bottom of the dip
+    pose.peck = env * dipArc * (0.55 + 0.45 * Math.abs(Math.sin(cq * Math.PI * 5)));
+    // small body squash as it leans down to peck
+    pose.squashY = 1 - env * dipArc * 0.07;
+    pose.squashX = 1 + env * dipArc * 0.05;
+    pose.tail = Math.sin(cq * Math.PI * 5) * env * 2.6; // tail flicks
+    pose.fogPuff = env * dipArc; // winter: an exhale puff as it nibbles
+  }
+
+  // RARE ~18s: HONK + WING-FLAP (win ~1.2s, phase +3s relative to the peck).
+  // The neck stretches UP and forward ~14–18px, the bill opens, the wings flap,
+  // then it settles. May reach OUTSIDE the design box at the apex.
+  const hq = actionQ(t, 18, 1.2, 6.0);
+  if (hq >= 0) {
+    const env = bump(hq);
+    const s = honkShape(hq); // −0.16..+1 (tuck then stretch)
+    if (s < 0) {
+      // anticipation tuck: pull the head down a touch, squash low/wide
+      const c = -s; // 0..0.16
+      pose.neckDip += c / 0.16 * 4.0;
+      pose.squashY = Math.min(pose.squashY, 1 - c * 0.7);
+      pose.squashX = Math.max(pose.squashX, 1 + c * 0.6);
+    } else {
+      pose.neckReach = s * 16; // neck stretches ~14–18px up & forward
+      pose.bob -= s * 1.4; // whole body rises a touch on the call
+      // honk: the bill opens, strongest mid-stretch
+      pose.honk = Math.max(pose.honk, Math.sin(Math.min(1, s) * Math.PI) * 0.5 + s * 0.5);
+      // wings flap a few beats while the call holds
+      pose.wing = Math.max(pose.wing, env * (0.4 + 0.6 * Math.abs(Math.sin(hq * Math.PI * 4))));
+      // stretch tall/narrow as it reaches up
+      pose.squashY = 1 + s * 0.08;
+      pose.squashX = 1 - s * 0.05;
+    }
+    pose.tail += Math.sin(hq * Math.PI) * 1.6; // a tail flag during the call
+    pose.fogPuff = Math.max(pose.fogPuff, env * 0.8); // a big exhale on the honk
+  }
+
+  return pose;
+}
+
+// ── Tweenable parameter set ─────────────────────────────────────────────────
+
+interface P {
+  bodyLight: RGB; // lit white plumage (upper-left face)
+  bodyMid: RGB; // body white in ambient
+  bodyShade: RGB; // shaded under-belly / far side
+  bill: RGB; // orange bill (locked)
+  billDark: RGB; // shaded bill / nostril
+  feet: RGB; // orange feet (locked)
+  eye: RGB; // eye dot
+  padGrass: RGB; // top of the grass pad
+  padDark: RGB; // shaded pad underside / soil
+  outline: RGB; // soft dark outline tint
+  lightWash: RGB; // overall colour-of-light wash
+  lightWashAmt: number; // 0..1 strength of the light wash
+  plumageVolume: number; // 0..1 BOLD puff of the plumage (sleek spring → fluffy winter)
+  glossAmt: number; // 0..1 glossy sheen on the plumage (peak in summer)
+  frostAmt: number; // 0..1 frost sparkle on the plumage
+  backSnowAmt: number; // 0..1 snow settled on its back
+  padSnowAmt: number; // 0..1 snow blanket on the pad
+  blossomAmt: number; // 0..1 blossom on the pad
+  fallenLeafAmt: number; // 0..1 fallen leaf on the pad
+  breathFogAmt: number; // 0..1 breath puff at the bill
+  scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
+  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
+}
+
+// Four BOLD season presets. The goose stays the SAME white long-necked
+// orange-billed goose; only plumage volume + pad + light + gloss + dressing
+// differ — pushed HARD so each season reads at a glance.
+const SP: Record<SeasonName, P> = {
+  // Spring — sleek clean white plumage; bright lime dewy pad + a blossom.
+  // Cool-bright light.
+  Spring: {
+    bodyLight: [255, 255, 255],
+    bodyMid: [238, 240, 242],
+    bodyShade: [196, 202, 212],
+    bill: [246, 150, 46],
+    billDark: [196, 104, 28],
+    feet: [240, 142, 44],
+    eye: [40, 34, 30],
+    padGrass: [128, 214, 84], // vivid fresh lime
+    padDark: [74, 142, 56],
+    outline: [70, 70, 84],
+    lightWash: [200, 240, 255], // cool-bright
+    lightWashAmt: 0.2,
+    plumageVolume: 0.1, // BOLD: clearly sleek, very trim plumage
+    glossAmt: 0.45,
+    frostAmt: 0,
+    backSnowAmt: 0,
+    padSnowAmt: 0,
+    blossomAmt: 0.9,
+    fallenLeafAmt: 0,
+    breathFogAmt: 0,
+    scarfAmt: 0,
+    scarfColor: [206, 64, 60],
+  },
+  // Summer — brightest full glossy white PEAK; saturated mid-green pad; warm
+  // strong light.
+  Summer: {
+    bodyLight: [255, 255, 255],
+    bodyMid: [246, 248, 250],
+    bodyShade: [206, 210, 218],
+    bill: [252, 158, 42],
+    billDark: [206, 110, 26],
+    feet: [248, 150, 40],
+    eye: [38, 32, 28],
+    padGrass: [72, 184, 58], // saturated mid-green
+    padDark: [44, 112, 40],
+    outline: [74, 70, 78],
+    lightWash: [255, 240, 178], // warm
+    lightWashAmt: 0.22,
+    plumageVolume: 0.5, // full normal plumage
+    glossAmt: 1, // peak glossy sheen
+    frostAmt: 0,
+    backSnowAmt: 0,
+    padSnowAmt: 0,
+    blossomAmt: 0,
+    fallenLeafAmt: 0,
+    breathFogAmt: 0,
+    scarfAmt: 0,
+    scarfColor: [206, 64, 60],
+  },
+  // Autumn — warm-tinted plumage in low amber light; olive-tan pad; a fallen
+  // leaf; dulled gloss.
+  Autumn: {
+    bodyLight: [255, 250, 238],
+    bodyMid: [240, 232, 218],
+    bodyShade: [198, 184, 168],
+    bill: [240, 138, 40],
+    billDark: [190, 96, 26],
+    feet: [234, 132, 40],
+    eye: [42, 32, 26],
+    padGrass: [172, 142, 66], // olive-tan browning
+    padDark: [108, 84, 44],
+    outline: [78, 64, 60],
+    lightWash: [255, 184, 96], // low amber, BOLD
+    lightWashAmt: 0.32,
+    plumageVolume: 0.66, // a touch fuller heading into cold
+    glossAmt: 0.3, // dulled gloss
+    frostAmt: 0,
+    backSnowAmt: 0,
+    padSnowAmt: 0,
+    blossomAmt: 0,
+    fallenLeafAmt: 0.92,
+    breathFogAmt: 0,
+    scarfAmt: 0,
+    scarfColor: [206, 64, 60],
+  },
+  // Winter — FLUFFED puffy white feathers read against COOL blue shadows (not a
+  // white-out); snow on the back, frost dusting, breath-fog at the bill, a
+  // little SCARF, snowy pad. Body stays clearly white; bill stays orange.
+  Winter: {
+    bodyLight: [250, 252, 255],
+    bodyMid: [224, 232, 244],
+    bodyShade: [160, 178, 204], // cool blue shadow so white reads in snow
+    bill: [238, 138, 48],
+    billDark: [184, 96, 34],
+    feet: [228, 126, 44],
+    eye: [40, 38, 44],
+    padGrass: [226, 238, 250], // snow on the pad
+    padDark: [142, 164, 190],
+    outline: [62, 64, 86],
+    lightWash: [188, 212, 252], // cool blue-grey, BOLD
+    lightWashAmt: 0.34,
+    plumageVolume: 1, // BOLD: thick fluffy plumage
+    glossAmt: 0.2,
+    frostAmt: 0.82,
+    backSnowAmt: 0.9,
+    padSnowAmt: 0.95,
+    blossomAmt: 0,
+    fallenLeafAmt: 0,
+    breathFogAmt: 0.85,
+    scarfAmt: 1, // a little scarf appears in winter
+    scarfColor: [206, 64, 60],
+  },
+};
 
 function lerpP(a: P, b: P, t: number): P {
   return {
@@ -90,636 +343,702 @@ function lerpP(a: P, b: P, t: number): P {
     padGrass: lerpRGB(a.padGrass, b.padGrass, t),
     padDark: lerpRGB(a.padDark, b.padDark, t),
     outline: lerpRGB(a.outline, b.outline, t),
-    light: lerpRGB(a.light, b.light, t),
-    lightAmt: lerp(a.lightAmt, b.lightAmt, t),
-    plumage: lerp(a.plumage, b.plumage, t),
-    fluff: lerp(a.fluff, b.fluff, t),
-    snowCapAmt: lerp(a.snowCapAmt, b.snowCapAmt, t),
+    lightWash: lerpRGB(a.lightWash, b.lightWash, t),
+    lightWashAmt: lerp(a.lightWashAmt, b.lightWashAmt, t),
+    plumageVolume: lerp(a.plumageVolume, b.plumageVolume, t),
+    glossAmt: lerp(a.glossAmt, b.glossAmt, t),
     frostAmt: lerp(a.frostAmt, b.frostAmt, t),
+    backSnowAmt: lerp(a.backSnowAmt, b.backSnowAmt, t),
     padSnowAmt: lerp(a.padSnowAmt, b.padSnowAmt, t),
     blossomAmt: lerp(a.blossomAmt, b.blossomAmt, t),
     fallenLeafAmt: lerp(a.fallenLeafAmt, b.fallenLeafAmt, t),
+    breathFogAmt: lerp(a.breathFogAmt, b.breathFogAmt, t),
+    scarfAmt: lerp(a.scarfAmt, b.scarfAmt, t),
+    scarfColor: lerpRGB(a.scarfColor, b.scarfColor, t),
   };
 }
 
+// clamp every scalar field defensively (never throw on a wild `p`)
 function clampP(p: P): P {
   return {
     ...p,
-    lightAmt: clamp01(p.lightAmt),
-    plumage: clamp01(p.plumage),
-    fluff: clamp01(p.fluff),
-    snowCapAmt: clamp01(p.snowCapAmt),
-    frostAmt: clamp01(p.frostAmt),
-    padSnowAmt: clamp01(p.padSnowAmt),
-    blossomAmt: clamp01(p.blossomAmt),
-    fallenLeafAmt: clamp01(p.fallenLeafAmt),
+    lightWashAmt: clamp01(safeNum(p.lightWashAmt)),
+    plumageVolume: clamp01(safeNum(p.plumageVolume)),
+    glossAmt: clamp01(safeNum(p.glossAmt)),
+    frostAmt: clamp01(safeNum(p.frostAmt)),
+    backSnowAmt: clamp01(safeNum(p.backSnowAmt)),
+    padSnowAmt: clamp01(safeNum(p.padSnowAmt)),
+    blossomAmt: clamp01(safeNum(p.blossomAmt)),
+    fallenLeafAmt: clamp01(safeNum(p.fallenLeafAmt)),
+    breathFogAmt: clamp01(safeNum(p.breathFogAmt)),
+    scarfAmt: clamp01(safeNum(p.scarfAmt)),
   };
 }
-
-// ── Per-season params ────────────────────────────────────────────────────────
-// PALETTE LOCK: body stays white, bill + feet stay orange. Only pad, light,
-// plumage cue, and winter fluff/snow/frost amounts differ between seasons.
-
-const SP: Record<SeasonName, P> = {
-  // Spring — clean white plumage; bright lime dewy pad + a blossom. Cool-bright.
-  Spring: {
-    bodyLight: [255, 255, 255],
-    bodyMid: [238, 240, 242],
-    bodyShade: [196, 202, 212],
-    bill: [246, 150, 46],
-    billDark: [196, 104, 28],
-    feet: [240, 142, 44],
-    eye: [40, 34, 30],
-    padGrass: [128, 206, 86],
-    padDark: [72, 138, 58],
-    outline: [70, 70, 84],
-    light: [232, 244, 226],
-    lightAmt: 0.16,
-    plumage: 0.85,
-    fluff: 0,
-    snowCapAmt: 0,
-    frostAmt: 0,
-    padSnowAmt: 0,
-    blossomAmt: 0.85,
-    fallenLeafAmt: 0,
-  },
-  // Summer — brightest white PEAK; saturated mid-green pad; warm strong light.
-  Summer: {
-    bodyLight: [255, 255, 255],
-    bodyMid: [246, 248, 250],
-    bodyShade: [206, 210, 218],
-    bill: [252, 158, 42],
-    billDark: [206, 110, 26],
-    feet: [248, 150, 40],
-    eye: [38, 32, 28],
-    padGrass: [86, 168, 70],
-    padDark: [44, 110, 48],
-    outline: [74, 70, 78],
-    light: [255, 240, 206],
-    lightAmt: 0.18,
-    plumage: 1.0,
-    fluff: 0,
-    snowCapAmt: 0,
-    frostAmt: 0,
-    padSnowAmt: 0,
-    blossomAmt: 0,
-    fallenLeafAmt: 0,
-  },
-  // Autumn — white plumage in low amber light; olive-tan pad; fallen leaves.
-  Autumn: {
-    bodyLight: [255, 252, 244],
-    bodyMid: [240, 234, 222],
-    bodyShade: [198, 188, 178],
-    bill: [240, 138, 40],
-    billDark: [190, 96, 26],
-    feet: [234, 132, 40],
-    eye: [42, 32, 26],
-    padGrass: [150, 152, 86],
-    padDark: [104, 96, 52],
-    outline: [78, 64, 60],
-    light: [248, 210, 150],
-    lightAmt: 0.2,
-    plumage: 0.9,
-    fluff: 0,
-    snowCapAmt: 0,
-    frostAmt: 0,
-    padSnowAmt: 0,
-    blossomAmt: 0,
-    fallenLeafAmt: 0.85,
-  },
-  // Winter — fluffed white feathers read against COOL blue shadows (not a
-  // white-out); snow on the back, frost dusting, breath-fog at the bill, snowy
-  // pad. Body stays clearly white; bill stays orange.
-  Winter: {
-    bodyLight: [250, 252, 255],
-    bodyMid: [224, 232, 244],
-    bodyShade: [160, 178, 204], // cool blue shadow so white reads in snow
-    bill: [238, 138, 48],
-    billDark: [184, 96, 34],
-    feet: [228, 126, 44],
-    eye: [40, 38, 44],
-    padGrass: [176, 196, 214],
-    padDark: [120, 146, 172],
-    outline: [62, 64, 86],
-    light: [206, 226, 252],
-    lightAmt: 0.3,
-    plumage: 0.8,
-    fluff: 0.85,
-    snowCapAmt: 0.8,
-    frostAmt: 0.6,
-    padSnowAmt: 0.9,
-    blossomAmt: 0,
-    fallenLeafAmt: 0,
-  },
-};
 
 // ── Goose geometry constants (the SAME silhouette every season) ──────────────
 // Front-¾ view, turned ~15–20° toward lower-left. Body is a plump egg; the long
 // neck rises from the upper-left of the body and curves to a small head with an
-// orange bill pointing lower-left.
+// orange bill pointing lower-left. Plumage VOLUME scales the body radii only.
 
-const BODY_CX = 1.5;   // body centre x (turned right, head reaches left)
-const BODY_CY = 4.5;   // body centre y
-const BODY_RX = 13.5;  // body half-width
-const BODY_RY = 11;    // body half-height
-const TAIL_X = 15;     // tail tip (upper-right)
+const BODY_CX = 1.5; // body centre x (turned right, head reaches left)
+const BODY_CY = 4.5; // body centre y
+const BASE_BODY_RX = 13.5; // body half-width at unit volume
+const BASE_BODY_RY = 11; // body half-height at unit volume
+const TAIL_X = 15; // tail tip (upper-right)
 const TAIL_Y = -1.5;
 
-// Neck path control points (base on upper-left of body → head lower-left).
+// Neck path anchors (base on upper-left of body → head lower-left at rest).
 const NECK_BASE_X = -6;
 const NECK_BASE_Y = -3;
-const HEAD_X = -13.5;
-const HEAD_Y = -14;
+const REST_HEAD_X = -13.5;
+const REST_HEAD_Y = -14;
 const HEAD_R = 4.4;
-const BILL_TIP_X = -20.5; // orange bill tip, pointing lower-left
-const BILL_TIP_Y = -11.5;
+
+// ── Local paint helpers (driven only by `p` + `pose`) ───────────────────────
+
+// volume scale: from clearly-sleek spring to thick fluffy winter
+function bodyRadii(p: P): { rx: number; ry: number } {
+  const vol = 0.92 + p.plumageVolume * 0.2;
+  return { rx: BASE_BODY_RX * vol, ry: BASE_BODY_RY * vol };
+}
 
 /** Trace the plump body egg into the current path. */
-function bodyPath(ctx: CanvasRenderingContext2D, bob: number): void {
+function bodyPath(ctx: CanvasRenderingContext2D, p: P, cx: number, cy: number): void {
+  const { rx, ry } = bodyRadii(p);
   ctx.beginPath();
-  ctx.ellipse(BODY_CX, BODY_CY + bob, BODY_RX, BODY_RY, -0.12, 0, Math.PI * 2);
+  ctx.ellipse(cx, cy, rx, ry, -0.12, 0, Math.PI * 2);
 }
 
-/** Stroke the curving neck as a tapering band (dark base then light fill).
- *  Returns nothing; uses current strokeStyle. */
-function neckStroke(
-  ctx: CanvasRenderingContext2D,
-  bob: number,
-  width: number,
-  color: string,
-): void {
-  ctx.strokeStyle = color;
-  ctx.lineWidth = width;
+// the low flat grass pad the goose stands on, plus seasonal pad dressing
+function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
+  // soft contact shadow, offset to lower-right (light is upper-left)
+  ctx.fillStyle = rgba(p.padDark, 0.4);
   ctx.beginPath();
-  ctx.moveTo(NECK_BASE_X, NECK_BASE_Y + bob);
-  ctx.quadraticCurveTo(-13, -6 + bob, HEAD_X, HEAD_Y + bob);
+  ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // shaded underside of the pad
+  ctx.fillStyle = rgba(p.padDark, 1);
+  ctx.beginPath();
+  ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // grass top
+  ctx.fillStyle = rgba(p.padGrass, 1);
+  ctx.beginPath();
+  ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // tufted top edge — little blades around the upper rim
+  ctx.strokeStyle = rgba(p.padDark, 1);
+  ctx.lineWidth = 1.1;
+  ctx.lineCap = "round";
+  for (let i = -7; i <= 7; i++) {
+    const tx = i * 2.4;
+    const ty = 19 - Math.sqrt(Math.max(0, 1 - (tx / 18) ** 2)) * 5.2;
+    ctx.beginPath();
+    ctx.moveTo(tx, ty + 0.4);
+    ctx.lineTo(tx - 0.8, ty - 2.4);
+    ctx.stroke();
+  }
+  // grass-top highlight glints
+  ctx.strokeStyle = rgba([255, 255, 255], 0.18);
+  ctx.lineWidth = 1;
+  for (let i = -5; i <= 5; i += 2) {
+    const tx = i * 2.6 - 2;
+    ctx.beginPath();
+    ctx.moveTo(tx, 18.4);
+    ctx.lineTo(tx - 0.6, 16.6);
+    ctx.stroke();
+  }
+  ctx.lineCap = "butt";
+
+  // pad snow blanket (winter) — BOLD coverage
+  if (p.padSnowAmt > 0.01) {
+    ctx.fillStyle = rgba([246, 251, 255], 0.92 * p.padSnowAmt);
+    ctx.beginPath();
+    ctx.ellipse(0, 18.4, 17.4, 4.9, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba([210, 226, 244], 0.5 * p.padSnowAmt);
+    ctx.beginPath();
+    ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // a few frost glints on the snow
+    ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
+    for (const [sx, sy] of [[-10, 19], [6, 20], [12, 18], [-2, 21]] as const) {
+      ctx.beginPath();
+      ctx.arc(sx, sy, 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // BOLD blossom on the pad (spring)
+  if (p.blossomAmt > 0.01) {
+    const a = p.blossomAmt;
+    for (const [bx, by, big] of [[-12, 18.5, 1], [11, 20, 0], [0, 21, 0]] as const) {
+      const sc = big ? 1.3 : 1;
+      ctx.fillStyle = rgba(big ? [255, 232, 246] : [255, 250, 252], 0.95 * a);
+      for (let k = 0; k < 5; k++) {
+        const ang = (k / 5) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.ellipse(bx + Math.cos(ang) * 1.5 * sc, by + Math.sin(ang) * 1.0 * sc, 1.1 * sc, 0.8 * sc, ang, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.fillStyle = rgba([255, 214, 90], a);
+      ctx.beginPath();
+      ctx.arc(bx, by, 0.9 * sc, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // a BOLD fallen leaf (autumn)
+  if (p.fallenLeafAmt > 0.01) {
+    const a = p.fallenLeafAmt;
+    const leaves: Array<[number, number, number, RGB]> = [
+      [10, 20.4, 0.7, [214, 132, 40]],
+      [-11, 20, -0.5, [192, 88, 34]],
+      [1, 21, 0.2, [170, 76, 38]],
+    ];
+    for (const [lx, ly, rot, col] of leaves) {
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(rot);
+      ctx.fillStyle = rgba(col, a);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 3.0, 1.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = rgba([110, 58, 24], a);
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(-2.8, 0);
+      ctx.lineTo(2.8, 0);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+}
+
+// the whole goose, standing front-¾ turned toward lower-left, posed by `pose`
+function paintGoose(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
+  const bob = pose.bob;
+  const { rx, ry } = bodyRadii(p);
+
+  // Head travel from the pose: the long neck dips DOWN for the peck and reaches
+  // UP & FORWARD for the honk. Body centre follows lean + bob.
+  const bodyCx = BODY_CX + pose.lean * 0.4;
+  const bodyCy = BODY_CY + bob + pose.lean * 0.2;
+  const headX = REST_HEAD_X - pose.neckReach * 0.55 - pose.lean * 0.6;
+  const headY = REST_HEAD_Y + bob + pose.neckDip - pose.neckReach * 0.85;
+  const billTipX = headX - 7;
+  const billTipY = headY + 2.5 + pose.neckDip * 0.1;
+
+  // ── Contact shadow of the goose on the pad (lower-right) ──────────────────
+  ctx.fillStyle = rgba(p.outline, 0.26);
+  ctx.beginPath();
+  ctx.ellipse(3, 15.5 + bob * 0.5, 13, 3.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // ── Orange feet on the pad (drawn before the body so it overlaps) ─────────
+  const footY = 14 + bob * 0.4;
+  ctx.strokeStyle = rgba(p.outline, 1);
+  ctx.lineWidth = 2.6;
+  ctx.lineCap = "round";
+  for (const fx of [-3.5, 4]) {
+    ctx.beginPath();
+    ctx.moveTo(fx, 9 + bob);
+    ctx.lineTo(fx + 0.6, footY);
+    ctx.stroke();
+  }
+  ctx.fillStyle = rgba(p.feet, 1);
+  for (const fx of [-3.5, 4]) {
+    ctx.beginPath();
+    ctx.moveTo(fx + 0.6, footY - 1.4);
+    ctx.lineTo(fx - 2.4, footY + 1.6);
+    ctx.lineTo(fx + 3.4, footY + 1.6);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.strokeStyle = rgba(p.feet, 1);
+  ctx.lineWidth = 2;
+  for (const fx of [-3.5, 4]) {
+    ctx.beginPath();
+    ctx.moveTo(fx, 9 + bob);
+    ctx.lineTo(fx + 0.6, footY - 0.5);
+    ctx.stroke();
+  }
+  ctx.lineCap = "butt";
+
+  // ── FAR WING flap (behind the body) — opens & beats during the honk ───────
+  if (pose.wing > 0.01) {
+    ctx.save();
+    ctx.translate(bodyCx + 6, bodyCy - 2);
+    ctx.rotate(-0.5 - pose.wing * 0.7);
+    ctx.fillStyle = rgba(p.bodyShade, 0.95);
+    ctx.beginPath();
+    ctx.ellipse(6, 0, 9 + pose.wing * 3, 4.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgba(p.outline, 0.5);
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // The whole body+head are drawn under a squash/stretch transform centred on
+  // the body, so the peck/honk read with anticipation squash + stretch.
+  ctx.save();
+  ctx.translate(bodyCx, bodyCy);
+  ctx.scale(pose.squashX, pose.squashY);
+  ctx.translate(-bodyCx, -bodyCy);
+
+  // ── Tail wedge (upper-right of body), flicks via pose ─────────────────────
+  ctx.fillStyle = rgba(p.bodyShade, 1);
+  ctx.beginPath();
+  ctx.moveTo(bodyCx + 9, bodyCy - 6);
+  ctx.lineTo(TAIL_X + 3 + pose.tail, TAIL_Y + bob - Math.abs(pose.tail) * 0.3);
+  ctx.lineTo(bodyCx + 10, bodyCy + 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = rgba(p.outline, 1);
+  ctx.lineWidth = 1;
   ctx.stroke();
+
+  // ── Neck: dark outline pass then white fill (curves to the posed head) ────
+  const neckPath = (): void => {
+    ctx.beginPath();
+    ctx.moveTo(NECK_BASE_X, NECK_BASE_Y + bobOffset);
+    ctx.quadraticCurveTo(neckCtrlX, neckCtrlY, headX, headY);
+  };
+  const bobOffset = bob;
+  // control point bows the neck: lower-left for the peck, high for the honk
+  const neckCtrlX = (NECK_BASE_X + headX) / 2 - 3 - pose.neckReach * 0.2;
+  const neckCtrlY = (NECK_BASE_Y + headY) / 2 + 1 + pose.neckDip * 0.25 - pose.neckReach * 0.15;
+
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = rgba(p.outline, 1);
+  ctx.lineWidth = 8.6;
+  neckPath();
+  ctx.stroke();
+  ctx.strokeStyle = rgba(p.bodyMid, 1);
+  ctx.lineWidth = 6.2;
+  neckPath();
+  ctx.stroke();
+  // neck highlight on the lit (upper-left) side
+  ctx.strokeStyle = rgba(p.bodyLight, 0.85);
+  ctx.lineWidth = 2.2;
+  neckPath();
+  ctx.stroke();
+
+  // ── Body: outline pass then white fill ────────────────────────────────────
+  bodyPath(ctx, p, bodyCx, bodyCy);
+  ctx.lineWidth = 2.4;
+  ctx.strokeStyle = rgba(p.outline, 1);
+  ctx.stroke();
+
+  bodyPath(ctx, p, bodyCx, bodyCy);
+  ctx.fillStyle = rgba(p.bodyMid, 1);
+  ctx.fill();
+
+  // body shading + lit face (clipped to the body)
+  ctx.save();
+  bodyPath(ctx, p, bodyCx, bodyCy);
+  ctx.clip();
+  // far/under side shade (lower-right)
+  ctx.fillStyle = rgba(p.bodyShade, 0.9);
+  ctx.beginPath();
+  ctx.ellipse(bodyCx + 4, bodyCy + 5, rx, ry * 0.7, -0.1, 0, Math.PI * 2);
+  ctx.fill();
+  // lit upper-left face
+  const bg = ctx.createLinearGradient(bodyCx - rx, bodyCy - ry, bodyCx + rx, bodyCy + ry);
+  bg.addColorStop(0, rgba(p.bodyLight, 1));
+  bg.addColorStop(0.5, rgba(p.bodyMid, 1));
+  bg.addColorStop(1, rgba(p.bodyShade, 1));
+  ctx.fillStyle = bg;
+  ctx.globalAlpha = 0.85;
+  ctx.beginPath();
+  ctx.ellipse(bodyCx - 3, bodyCy - 2, rx * 0.9, ry * 0.85, -0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  // glossy sheen highlight (peak in summer) — a bright soft band on the lit back
+  if (p.glossAmt > 0.02) {
+    ctx.fillStyle = rgba([255, 255, 255], 0.32 * p.glossAmt);
+    ctx.beginPath();
+    ctx.ellipse(bodyCx - 4, bodyCy - 4, rx * 0.55, ry * 0.32, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  // soft wing crease arc (feather seam) on the side
+  ctx.strokeStyle = rgba(p.bodyShade, 0.7);
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.moveTo(bodyCx - 6, bodyCy - 3);
+  ctx.quadraticCurveTo(bodyCx + 6, bodyCy - 1, bodyCx + 11, bodyCy + 4);
+  ctx.stroke();
+  // a couple soft feather lines under the wing
+  ctx.strokeStyle = rgba(p.bodyShade, 0.5);
+  ctx.lineWidth = 1.1;
+  for (const dy of [3, 6]) {
+    ctx.beginPath();
+    ctx.moveTo(bodyCx - 3, bodyCy + dy);
+    ctx.quadraticCurveTo(bodyCx + 7, bodyCy + dy, bodyCx + 11, bodyCy + dy + 1);
+    ctx.stroke();
+  }
+
+  // winter frost dusting on the upward body
+  if (p.frostAmt > 0.02) {
+    ctx.fillStyle = rgba([214, 232, 250], 0.22 * p.frostAmt);
+    ctx.beginPath();
+    ctx.ellipse(bodyCx - 2, bodyCy - 5, rx * 0.85, ry * 0.45, -0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba([240, 248, 255], 0.7 * p.frostAmt);
+    for (const [sx, sy] of [[-6, -3], [-1, -5], [4, -4], [8, -1], [-3, -1], [2, -2]] as const) {
+      ctx.beginPath();
+      ctx.arc(bodyCx + sx, bodyCy + sy, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore(); // end body clip
+
+  // ── Winter FLUFF: soft puffy feather fringe around the body silhouette ────
+  // additive soft fringe — the silhouette/outline itself is unchanged, the
+  // plumage just reads BOLDLY puffier in winter.
+  if (p.plumageVolume > 0.7) {
+    const fl = (p.plumageVolume - 0.7) / 0.3; // 0..1 over the fluffy range
+    ctx.save();
+    ctx.strokeStyle = rgba([250, 253, 255], 0.5 * fl);
+    ctx.lineWidth = 1.2;
+    const n = 24;
+    for (let i = 0; i < n; i++) {
+      const ang = (i / n) * Math.PI * 2;
+      const ax = bodyCx + Math.cos(ang) * rx;
+      const ay = bodyCy + Math.sin(ang) * ry;
+      const reach = (1.8 + 1.4 * Math.sin(i * 1.7)) * fl;
+      const ox = ax + Math.cos(ang) * reach;
+      const oy = ay + Math.sin(ang) * reach;
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ox, oy);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ── Snow cap resting on the back (winter) — BOLD white cap ────────────────
+  if (p.backSnowAmt > 0.02) {
+    const a = p.backSnowAmt;
+    ctx.fillStyle = rgba([246, 251, 255], 0.95 * a);
+    ctx.beginPath();
+    ctx.moveTo(bodyCx - 9, bodyCy - 8);
+    ctx.quadraticCurveTo(bodyCx - 3, bodyCy - 13, bodyCx + 4, bodyCy - 11);
+    ctx.quadraticCurveTo(bodyCx + 11, bodyCy - 9, bodyCx + 12, bodyCy - 5);
+    ctx.quadraticCurveTo(bodyCx + 6, bodyCy - 7, bodyCx + 1, bodyCy - 6);
+    ctx.quadraticCurveTo(bodyCx - 4, bodyCy - 5, bodyCx - 9, bodyCy - 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = rgba([210, 226, 244], 0.5 * a);
+    ctx.beginPath();
+    ctx.ellipse(bodyCx - 1, bodyCy - 8, 8, 1.8, -0.12, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // ── NEAR WING flap (over the body) — opens & beats during the honk ────────
+  if (pose.wing > 0.01) {
+    ctx.save();
+    ctx.translate(bodyCx - 2, bodyCy);
+    ctx.rotate(-0.2 - pose.wing * 0.55);
+    ctx.fillStyle = rgba(p.bodyLight, 1);
+    ctx.beginPath();
+    ctx.ellipse(-7, 0, 9 + pose.wing * 3, 4.6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = rgba(p.outline, 0.6);
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    // a few feather lines on the open wing
+    ctx.strokeStyle = rgba(p.bodyShade, 0.6);
+    ctx.lineWidth = 0.9;
+    for (const off of [-3, 0, 3]) {
+      ctx.beginPath();
+      ctx.moveTo(-3, off * 0.5);
+      ctx.lineTo(-14, off);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  // ── SCARF (winter) — a little knitted band around the neck base ───────────
+  if (p.scarfAmt > 0.01) {
+    const sx = NECK_BASE_X - 1.5;
+    const sy = NECK_BASE_Y + bob + 1.5;
+    ctx.save();
+    ctx.globalAlpha = clamp01(p.scarfAmt);
+    // wrap band
+    ctx.fillStyle = rgba(p.scarfColor, 1);
+    ctx.beginPath();
+    ctx.ellipse(sx, sy, 5.2, 3.0, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // darker underside for depth
+    ctx.fillStyle = rgba([
+      Math.max(0, p.scarfColor[0] - 50),
+      Math.max(0, p.scarfColor[1] - 30),
+      Math.max(0, p.scarfColor[2] - 30),
+    ], 1);
+    ctx.beginPath();
+    ctx.ellipse(sx + 0.4, sy + 1.6, 4.8, 1.6, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // hanging tail of the scarf with a fringe
+    ctx.fillStyle = rgba(p.scarfColor, 1);
+    ctx.beginPath();
+    ctx.moveTo(sx - 3.4, sy + 1.2);
+    ctx.lineTo(sx - 0.2, sy + 2.6);
+    ctx.lineTo(sx - 1.6, sy + 8.4);
+    ctx.lineTo(sx - 4.8, sy + 7.0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = rgba(p.scarfColor, 1);
+    ctx.lineWidth = 0.9;
+    ctx.lineCap = "round";
+    for (const fx of [-4.4, -3.2, -2.0]) {
+      ctx.beginPath();
+      ctx.moveTo(sx + fx, sy + 7.4);
+      ctx.lineTo(sx + fx - 0.3, sy + 9.0);
+      ctx.stroke();
+    }
+    ctx.lineCap = "butt";
+    ctx.restore();
+  }
+
+  // ── Head + orange bill (drawn over the neck top), posed ───────────────────
+  const hx = headX;
+  const hy = headY;
+  // head outline
+  ctx.fillStyle = rgba(p.outline, 1);
+  ctx.beginPath();
+  ctx.arc(hx, hy, HEAD_R + 0.9, 0, Math.PI * 2);
+  ctx.fill();
+  // head white
+  ctx.fillStyle = rgba(p.bodyMid, 1);
+  ctx.beginPath();
+  ctx.arc(hx, hy, HEAD_R, 0, Math.PI * 2);
+  ctx.fill();
+  // head lit highlight (upper-left)
+  ctx.fillStyle = rgba(p.bodyLight, 0.9);
+  ctx.beginPath();
+  ctx.arc(hx - 1.2, hy - 1.4, HEAD_R * 0.6, 0, Math.PI * 2);
+  ctx.fill();
+  // head under-shade
+  ctx.fillStyle = rgba(p.bodyShade, 0.6);
+  ctx.beginPath();
+  ctx.ellipse(hx + 1, hy + 1.6, HEAD_R * 0.7, HEAD_R * 0.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // orange bill pointing lower-left — upper + (honk-opened) lower mandible
+  const btx = billTipX;
+  const bty = billTipY;
+  const gape = pose.honk * 3.2; // bill opens for the honk
+  // upper mandible
+  ctx.fillStyle = rgba(p.bill, 1);
+  ctx.beginPath();
+  ctx.moveTo(hx - 2.4, hy - 1.2);
+  ctx.quadraticCurveTo(btx + 2, bty - 1.5, btx, bty - gape * 0.5);
+  ctx.lineTo(btx + 1.5, bty + 0.6 - gape * 0.5);
+  ctx.quadraticCurveTo(hx - 3.5, hy - 0.2, hx - 2.4, hy - 1.2);
+  ctx.closePath();
+  ctx.fill();
+  // open-mouth dark interior when honking
+  if (gape > 0.2) {
+    ctx.fillStyle = rgba([120, 40, 36], 1);
+    ctx.beginPath();
+    ctx.moveTo(hx - 2.6, hy + 0.2);
+    ctx.lineTo(btx + 1.0, bty - gape * 0.5 + 0.4);
+    ctx.lineTo(btx + 1.4, bty + gape * 0.5 + 1.4);
+    ctx.closePath();
+    ctx.fill();
+  }
+  // lower mandible (drops with the gape)
+  ctx.fillStyle = rgba(p.billDark, 1);
+  ctx.beginPath();
+  ctx.moveTo(hx - 2.4, hy + 0.8);
+  ctx.quadraticCurveTo(btx + 2, bty + 1.6 + gape * 0.5, btx + 1.5, bty + 2.6 + gape);
+  ctx.quadraticCurveTo(hx - 3.5, hy + 2.4 + gape * 0.4, hx - 2.4, hy + 0.8);
+  ctx.closePath();
+  ctx.fill();
+  // nostril
+  ctx.fillStyle = rgba(p.billDark, 1);
+  ctx.beginPath();
+  ctx.arc(hx - 5.5, hy - 0.2, 0.7, 0, Math.PI * 2);
+  ctx.fill();
+  // bill outline (upper edge)
+  ctx.strokeStyle = rgba(p.outline, 0.7);
+  ctx.lineWidth = 0.9;
+  ctx.beginPath();
+  ctx.moveTo(hx - 2.4, hy - 1.2);
+  ctx.quadraticCurveTo(btx + 2, bty - 1.5, btx, bty - gape * 0.5);
+  ctx.stroke();
+
+  // eye
+  ctx.fillStyle = rgba(p.eye, 1);
+  ctx.beginPath();
+  ctx.arc(hx - 1.4, hy - 0.6, 1.05, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = rgba([255, 255, 255], 0.85);
+  ctx.beginPath();
+  ctx.arc(hx - 1.8, hy - 1.0, 0.4, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore(); // end squash/stretch transform
+
+  // ── Peck dust / ground-nibble specks (under the bill at the dip bottom) ───
+  if (pose.peck > 0.02) {
+    ctx.fillStyle = rgba(p.padDark, 0.6 * pose.peck);
+    for (const [dx, dy] of [[-1, 2], [2, 3], [-3, 3]] as const) {
+      ctx.beginPath();
+      ctx.arc(billTipX + dx, billTipY + dy, 0.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ── breath-fog puff at the bill (winter) — drawn OUTSIDE the squash so it
+  // reads as air, not body. Static base puff + an exhale swell during action ──
+  if (p.breathFogAmt > 0.01) {
+    const reach = 3.6 + pose.fogPuff * 3.2;
+    ctx.fillStyle = rgba([235, 244, 255], (0.34 + 0.3 * pose.fogPuff) * p.breathFogAmt);
+    ctx.beginPath();
+    ctx.ellipse(billTipX - reach, billTipY + 0.4, 2.6 + pose.fogPuff * 2.0, 1.9 + pose.fogPuff * 1.4, 0.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
 }
 
-/** The whole tile from ONLY `p` and `bob`. */
-function paint(ctx: CanvasRenderingContext2D, raw: P, bob: number): void {
-  const p = clampP(raw);
+// the overall colour-of-light wash, painted last over the whole tile
+function paintLightWash(ctx: CanvasRenderingContext2D, p: P): void {
+  if (p.lightWashAmt <= 0.001) return;
+  ctx.save();
+  ctx.globalCompositeOperation = "soft-light";
+  ctx.fillStyle = rgba(p.lightWash, p.lightWashAmt);
+  ctx.beginPath();
+  ctx.ellipse(0, 4, 26, 26, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ── THE single paint ────────────────────────────────────────────────────────
+
+function paint(ctx: CanvasRenderingContext2D, pIn: P, pose: Pose): void {
+  const p = clampP(pIn);
   ctx.save();
   try {
     ctx.globalAlpha = 1;
     ctx.lineJoin = "round";
-    ctx.lineCap = "round";
-
-    // ── Pad: low flat grass ellipse, x∈[−18,+18], centre y≈+19 ──────────────
-    ctx.fillStyle = rgba(p.padDark, 0.4);
-    ctx.beginPath();
-    ctx.ellipse(3, 21.5, 16, 4.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = rgb(p.padDark);
-    ctx.beginPath();
-    ctx.ellipse(0, 20.4, 18, 5.4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = rgb(p.padGrass);
-    ctx.beginPath();
-    ctx.ellipse(0, 19, 18, 5.2, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // tufted top edge — little blades around the upper rim
-    ctx.strokeStyle = rgb(p.padDark);
-    ctx.lineWidth = 1.1;
-    for (let i = -7; i <= 7; i++) {
-      const tx = i * 2.4;
-      const ty = 19 - Math.sqrt(Math.max(0, 1 - (tx / 18) ** 2)) * 5.2;
-      ctx.beginPath();
-      ctx.moveTo(tx, ty + 0.4);
-      ctx.lineTo(tx - 0.8, ty - 2.4);
-      ctx.stroke();
-    }
-    // grass-top highlight glints
-    ctx.strokeStyle = rgba([255, 255, 255], 0.18);
-    ctx.lineWidth = 1;
-    for (let i = -5; i <= 5; i += 2) {
-      const tx = i * 2.6 - 2;
-      ctx.beginPath();
-      ctx.moveTo(tx, 18.4);
-      ctx.lineTo(tx - 0.6, 16.6);
-      ctx.stroke();
-    }
-
-    // pad snow blanket (winter)
-    if (p.padSnowAmt > 0.01) {
-      ctx.fillStyle = rgba([244, 250, 255], 0.92 * p.padSnowAmt);
-      ctx.beginPath();
-      ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.6, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = rgba([210, 226, 244], 0.5 * p.padSnowAmt);
-      ctx.beginPath();
-      ctx.ellipse(2, 20, 16, 3.4, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = rgba([255, 255, 255], 0.8 * p.padSnowAmt);
-      [[-9, 17.6], [5, 19], [11, 17.4], [-3, 20]].forEach(([sx, sy]) => {
-        ctx.beginPath();
-        ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
-
-    // blossoms on the pad (spring)
-    if (p.blossomAmt > 0.01) {
-      const a = p.blossomAmt;
-      const spots: Array<[number, number]> = [[-13, 18.5], [12, 17.8], [-4, 21]];
-      spots.forEach(([bx, by], idx) => {
-        ctx.fillStyle = rgba(idx === 1 ? [255, 232, 246] : [255, 250, 252], 0.95 * a);
-        for (let k = 0; k < 5; k++) {
-          const ang = (k / 5) * Math.PI * 2;
-          ctx.beginPath();
-          ctx.ellipse(bx + Math.cos(ang) * 1.5, by + Math.sin(ang) * 1.0, 1.1, 0.8, ang, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        ctx.fillStyle = rgba([255, 214, 90], a);
-        ctx.beginPath();
-        ctx.arc(bx, by, 0.9, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
-
-    // fallen leaves on the pad (autumn)
-    if (p.fallenLeafAmt > 0.01) {
-      const a = p.fallenLeafAmt;
-      const leaves: Array<[number, number, number, RGB]> = [
-        [-12, 19.6, -0.5, [196, 120, 40]],
-        [12, 18.6, 0.7, [176, 72, 32]],
-      ];
-      leaves.forEach(([lx, ly, rot, col]) => {
-        ctx.save();
-        ctx.translate(lx, ly);
-        ctx.rotate(rot);
-        ctx.fillStyle = rgba(col, a);
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = rgba([90, 44, 16], a);
-        ctx.lineWidth = 0.7;
-        ctx.beginPath();
-        ctx.moveTo(-3, 0);
-        ctx.lineTo(3, 0);
-        ctx.stroke();
-        ctx.restore();
-      });
-    }
-
-    // ── Contact shadow of the goose on the pad (lower-right) ─────────────────
-    ctx.fillStyle = rgba(p.outline, 0.26);
-    ctx.beginPath();
-    ctx.ellipse(3, 15.5 + bob * 0.5, 13, 3.2, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // ── Orange feet on the pad (drawn before the body so it overlaps) ────────
-    const footY = 14 + bob * 0.4;
-    ctx.strokeStyle = rgb(p.outline);
-    ctx.lineWidth = 2.6;
-    [-3.5, 4].forEach((fx) => {
-      ctx.beginPath();
-      ctx.moveTo(fx, 9 + bob);
-      ctx.lineTo(fx + 0.6, footY);
-      ctx.stroke();
-    });
-    ctx.fillStyle = rgb(p.feet);
-    [-3.5, 4].forEach((fx) => {
-      // little webbed foot fan
-      ctx.beginPath();
-      ctx.moveTo(fx + 0.6, footY - 1.4);
-      ctx.lineTo(fx - 2.4, footY + 1.6);
-      ctx.lineTo(fx + 3.4, footY + 1.6);
-      ctx.closePath();
-      ctx.fill();
-    });
-    ctx.strokeStyle = rgb(p.feet);
-    ctx.lineWidth = 2;
-    [-3.5, 4].forEach((fx) => {
-      ctx.beginPath();
-      ctx.moveTo(fx, 9 + bob);
-      ctx.lineTo(fx + 0.6, footY - 0.5);
-      ctx.stroke();
-    });
-
-    // ── Tail wedge (upper-right of body), drawn before the body fill ─────────
-    ctx.fillStyle = rgb(p.bodyShade);
-    ctx.beginPath();
-    ctx.moveTo(BODY_CX + 9, BODY_CY - 6 + bob);
-    ctx.lineTo(TAIL_X + 3, TAIL_Y + bob);
-    ctx.lineTo(BODY_CX + 10, BODY_CY + 2 + bob);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = rgb(p.outline);
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    // ── Neck: dark outline pass then white fill ──────────────────────────────
-    neckStroke(ctx, bob, 8.6, rgb(p.outline)); // outline rim
-    neckStroke(ctx, bob, 6.2, rgb(p.bodyMid)); // white neck
-    // neck shading on the right/under edge
-    ctx.save();
-    ctx.beginPath();
-    ctx.moveTo(NECK_BASE_X, NECK_BASE_Y + bob);
-    ctx.quadraticCurveTo(-13, -6 + bob, HEAD_X, HEAD_Y + bob);
-    ctx.lineWidth = 6.2;
-    ctx.strokeStyle = rgb(p.bodyMid);
-    ctx.stroke();
-    ctx.restore();
-    // neck highlight on the lit (upper-left) side
-    neckStroke(ctx, bob, 2.2, rgba(p.bodyLight, 0.85));
-
-    // ── Body: outline pass then white fill ───────────────────────────────────
-    bodyPath(ctx, bob);
-    ctx.fillStyle = rgb(p.outline);
-    ctx.save();
-    ctx.lineWidth = 2.4;
-    ctx.strokeStyle = rgb(p.outline);
-    ctx.stroke();
-    ctx.restore();
-
-    bodyPath(ctx, bob);
-    ctx.fillStyle = rgb(p.bodyMid);
-    ctx.fill();
-
-    // body shading + lit face (clipped to the body)
-    ctx.save();
-    bodyPath(ctx, bob);
-    ctx.clip();
-    // far/under side shade (lower-right)
-    ctx.fillStyle = rgba(p.bodyShade, 0.9);
-    ctx.beginPath();
-    ctx.ellipse(BODY_CX + 4, BODY_CY + 5 + bob, BODY_RX, BODY_RY * 0.7, -0.1, 0, Math.PI * 2);
-    ctx.fill();
-    // lit upper-left face
-    const bg = ctx.createLinearGradient(
-      BODY_CX - BODY_RX, BODY_CY - BODY_RY + bob,
-      BODY_CX + BODY_RX, BODY_CY + BODY_RY + bob,
-    );
-    bg.addColorStop(0, rgb(p.bodyLight));
-    bg.addColorStop(0.5, rgb(p.bodyMid));
-    bg.addColorStop(1, rgb(p.bodyShade));
-    ctx.fillStyle = bg;
-    ctx.globalAlpha = 0.85;
-    ctx.beginPath();
-    ctx.ellipse(BODY_CX - 3, BODY_CY - 2 + bob, BODY_RX * 0.9, BODY_RY * 0.85, -0.12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    // soft wing crease arc (feather seam) on the side
-    ctx.strokeStyle = rgba(p.bodyShade, 0.7);
-    ctx.lineWidth = 1.6;
-    ctx.beginPath();
-    ctx.moveTo(BODY_CX - 6, BODY_CY - 3 + bob);
-    ctx.quadraticCurveTo(BODY_CX + 6, BODY_CY - 1 + bob, BODY_CX + 11, BODY_CY + 4 + bob);
-    ctx.stroke();
-    // a couple soft feather lines under the wing
-    ctx.strokeStyle = rgba(p.bodyShade, 0.5);
-    ctx.lineWidth = 1.1;
-    [3, 6].forEach((dy) => {
-      ctx.beginPath();
-      ctx.moveTo(BODY_CX - 3, BODY_CY + dy + bob);
-      ctx.quadraticCurveTo(BODY_CX + 7, BODY_CY + dy + bob, BODY_CX + 11, BODY_CY + dy + 1 + bob);
-      ctx.stroke();
-    });
-
-    // winter frost dusting on the upward body
-    if (p.frostAmt > 0.02) {
-      ctx.fillStyle = rgba([214, 232, 250], 0.22 * p.frostAmt);
-      ctx.beginPath();
-      ctx.ellipse(BODY_CX - 2, BODY_CY - 5 + bob, BODY_RX * 0.85, BODY_RY * 0.45, -0.12, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = rgba([240, 248, 255], 0.7 * p.frostAmt);
-      const speck: Array<[number, number]> = [
-        [-6, -3], [-1, -5], [4, -4], [8, -1], [-3, -1], [2, -2],
-      ];
-      speck.forEach(([sx, sy]) => {
-        ctx.beginPath();
-        ctx.arc(BODY_CX + sx, BODY_CY + sy + bob, 0.7, 0, Math.PI * 2);
-        ctx.fill();
-      });
-    }
-    ctx.restore(); // end body clip
-
-    // ── Winter fluff: soft feather fringe around the body silhouette ─────────
-    // (additive soft fringe — the silhouette/outline itself is unchanged).
-    if (p.fluff > 0.02) {
-      ctx.save();
-      ctx.strokeStyle = rgba([250, 253, 255], 0.5 * p.fluff);
-      ctx.lineWidth = 1.2;
-      const n = 22;
-      for (let i = 0; i < n; i++) {
-        const ang = (i / n) * Math.PI * 2;
-        // only fringe the lower & side arc (skip where neck/tail attach)
-        const ax = BODY_CX + Math.cos(ang) * BODY_RX;
-        const ay = BODY_CY + bob + Math.sin(ang) * BODY_RY;
-        const ox = ax + Math.cos(ang) * (1.6 + 1.2 * Math.sin(i * 1.7));
-        const oy = ay + Math.sin(ang) * (1.6 + 1.2 * Math.sin(i * 1.3));
-        ctx.beginPath();
-        ctx.moveTo(ax, ay);
-        ctx.lineTo(ox, oy);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    // ── Snow cap resting on the back (winter) ────────────────────────────────
-    if (p.snowCapAmt > 0.02) {
-      const a = p.snowCapAmt;
-      ctx.fillStyle = rgba([246, 251, 255], 0.95 * a);
-      ctx.beginPath();
-      ctx.moveTo(BODY_CX - 9, BODY_CY - 8 + bob);
-      ctx.quadraticCurveTo(BODY_CX - 3, BODY_CY - 13 + bob, BODY_CX + 4, BODY_CY - 11 + bob);
-      ctx.quadraticCurveTo(BODY_CX + 11, BODY_CY - 9 + bob, BODY_CX + 12, BODY_CY - 5 + bob);
-      ctx.quadraticCurveTo(BODY_CX + 6, BODY_CY - 7 + bob, BODY_CX + 1, BODY_CY - 6 + bob);
-      ctx.quadraticCurveTo(BODY_CX - 4, BODY_CY - 5 + bob, BODY_CX - 9, BODY_CY - 8 + bob);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = rgba([210, 226, 244], 0.5 * a);
-      ctx.beginPath();
-      ctx.ellipse(BODY_CX - 1, BODY_CY - 8 + bob, 8, 1.8, -0.12, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    // ── Head + orange bill (drawn over the neck top) ─────────────────────────
-    const hx = HEAD_X;
-    const hy = HEAD_Y + bob;
-    // head outline
-    ctx.fillStyle = rgb(p.outline);
-    ctx.beginPath();
-    ctx.arc(hx, hy, HEAD_R + 0.9, 0, Math.PI * 2);
-    ctx.fill();
-    // head white
-    ctx.fillStyle = rgb(p.bodyMid);
-    ctx.beginPath();
-    ctx.arc(hx, hy, HEAD_R, 0, Math.PI * 2);
-    ctx.fill();
-    // head lit highlight (upper-left)
-    ctx.fillStyle = rgba(p.bodyLight, 0.9);
-    ctx.beginPath();
-    ctx.arc(hx - 1.2, hy - 1.4, HEAD_R * 0.6, 0, Math.PI * 2);
-    ctx.fill();
-    // head under-shade
-    ctx.fillStyle = rgba(p.bodyShade, 0.6);
-    ctx.beginPath();
-    ctx.ellipse(hx + 1, hy + 1.6, HEAD_R * 0.7, HEAD_R * 0.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // orange bill pointing lower-left
-    const btx = BILL_TIP_X;
-    const bty = BILL_TIP_Y + bob;
-    ctx.fillStyle = rgb(p.bill);
-    ctx.beginPath();
-    ctx.moveTo(hx - 2.4, hy - 1.2);
-    ctx.quadraticCurveTo(btx + 2, bty - 1.5, btx, bty);
-    ctx.lineTo(btx + 1.5, bty + 2.6);
-    ctx.quadraticCurveTo(hx - 3.5, hy + 2.4, hx - 2.4, hy - 1.2);
-    ctx.closePath();
-    ctx.fill();
-    // bill shade + nostril
-    ctx.fillStyle = rgb(p.billDark);
-    ctx.beginPath();
-    ctx.moveTo(hx - 2.4, hy + 0.8);
-    ctx.quadraticCurveTo(btx + 2, bty + 1.6, btx + 1.5, bty + 2.6);
-    ctx.quadraticCurveTo(hx - 3.5, hy + 2.4, hx - 2.4, hy + 0.8);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = rgb(p.billDark);
-    ctx.beginPath();
-    ctx.arc(hx - 5.5, hy - 0.2, 0.7, 0, Math.PI * 2);
-    ctx.fill();
-    // bill outline
-    ctx.strokeStyle = rgba(p.outline, 0.7);
-    ctx.lineWidth = 0.9;
-    ctx.beginPath();
-    ctx.moveTo(hx - 2.4, hy - 1.2);
-    ctx.quadraticCurveTo(btx + 2, bty - 1.5, btx, bty);
-    ctx.lineTo(btx + 1.5, bty + 2.6);
-    ctx.stroke();
-
-    // eye
-    ctx.fillStyle = rgb(p.eye);
-    ctx.beginPath();
-    ctx.arc(hx - 1.4, hy - 0.6, 1.05, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = rgba([255, 255, 255], 0.85);
-    ctx.beginPath();
-    ctx.arc(hx - 1.8, hy - 1.0, 0.4, 0, Math.PI * 2);
-    ctx.fill();
-
-    // ── Ambient light wash over the whole tile (per-season tint) ────────────
-    if (p.lightAmt > 0.001) {
-      ctx.globalAlpha = 1;
-      const lg = ctx.createRadialGradient(-10, -14, 2, -10, -14, 46);
-      lg.addColorStop(0, rgba(p.light, p.lightAmt));
-      lg.addColorStop(1, rgba(p.light, p.lightAmt * 0.25));
-      ctx.fillStyle = lg;
-      ctx.fillRect(-24, -24, 48, 48);
-    }
+    ctx.lineCap = "butt";
+    paintPad(ctx, p);
+    paintGoose(ctx, p, pose);
+    paintLightWash(ctx, p);
   } finally {
     ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
     ctx.restore();
   }
 }
 
-// ── Idle bob (seamless, zero-velocity at t=0) ────────────────────────────────
-
-// A*(1-cos(w t))*0.5 → 0 at t=0 with zero velocity; period 2π/w.
-function bobAt(t: number, amp = 0.9, w = 1.4): number {
-  return amp * (1 - Math.cos(w * t)) * 0.5;
-}
-
-// ── Per-season draw / anim ───────────────────────────────────────────────────
+// ── Per-season builders ─────────────────────────────────────────────────────
 
 function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
-  return (ctx) => paint(ctx, SP[season], 0);
+  return (ctx) => paint(ctx, SP[season], REST);
 }
 
 function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
   return (ctx, t) => {
-    // Gentle breathing bob; a slow neck sway + head-bob once per loop is read
-    // through a small extra vertical nod added to the body bob's phase.
-    const breathe = bobAt(t);
-    // head-bob once per loop: a brief dip layered additively (0 at t=0).
-    const nod = 0.6 * (1 - Math.cos(t * 0.7)) * 0.5;
-    paint(ctx, SP[season], breathe + nod);
-
-    ctx.save();
-    try {
-      ctx.globalAlpha = 1;
-      if (season === "Spring") {
-        // dew shimmer — a soft pulsing glint travelling gently on the pad/blade
-        const g = 0.2 + 0.28 * (0.5 + 0.5 * Math.sin(t * 2.0));
-        ctx.fillStyle = `rgba(255,255,255,${g})`;
-        const gx = -8 + Math.sin(t * 0.8) * 5;
-        ctx.beginPath();
-        ctx.arc(gx, 17.5, 0.9 + g * 0.7, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Summer") {
-        // a soft feather sheen — a gentle pale glow pulsing on the lit back
-        const s = 0.1 + 0.16 * (0.5 + 0.5 * Math.sin(t * 1.1));
-        ctx.fillStyle = `rgba(255,255,240,${s})`;
-        ctx.beginPath();
-        ctx.ellipse(BODY_CX - 3, BODY_CY - 4 + breathe, 7, 4.5, -0.12, 0, Math.PI * 2);
-        ctx.fill();
-      } else if (season === "Autumn") {
-        // a fallen leaf stirs — drifts and rocks slightly on the pad
-        const prog = ((t / 4.0) % 1 + 1) % 1;
-        const lx = -12 + prog * 4;
-        const ly = 19.6 - Math.sin(prog * Math.PI) * 2.0;
-        ctx.save();
-        ctx.translate(lx, ly);
-        ctx.rotate(-0.5 + Math.sin(t * 1.6) * 0.4);
-        ctx.fillStyle = "rgba(196,120,40,0.95)";
-        ctx.beginPath();
-        ctx.ellipse(0, 0, 3.2, 1.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "rgba(90,44,16,0.9)";
-        ctx.lineWidth = 0.7;
-        ctx.beginPath();
-        ctx.moveTo(-3, 0);
-        ctx.lineTo(3, 0);
-        ctx.stroke();
-        ctx.restore();
-      } else {
-        // Winter — breath-fog puff pulsing at the bill + a drifting snowflake.
-        // breath-fog: a soft white puff that swells and fades near the bill tip.
-        const cyc = ((t / 2.6) % 1 + 1) % 1;
-        const puff = Math.sin(cyc * Math.PI); // 0→1→0
-        if (puff > 0.01) {
-          const px = BILL_TIP_X - 2 - cyc * 4;
-          const py = BILL_TIP_Y - 1 + breathe - cyc * 2;
-          ctx.fillStyle = `rgba(236,244,255,${0.5 * puff})`;
-          ctx.beginPath();
-          ctx.arc(px, py, 1.6 + cyc * 2.4, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = `rgba(255,255,255,${0.3 * puff})`;
-          ctx.beginPath();
-          ctx.arc(px + 0.8, py + 0.4, 1.0 + cyc * 1.4, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        // a single drifting snowflake
-        const fp = ((t / 3.4) % 1 + 1) % 1;
-        const fy = -22 + fp * 40;
-        const fx = 7 + Math.sin(fp * Math.PI * 2) * 3.5;
-        ctx.globalAlpha = 0.4 + 0.45 * Math.sin(fp * Math.PI);
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.arc(fx, fy, 1.0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1;
-      }
-    } finally {
-      ctx.globalAlpha = 1;
-      ctx.restore();
-    }
+    paint(ctx, SP[season], poseFromClock(safeNum(t, 0)));
   };
 }
 
-// ── Forward season→season transitions ────────────────────────────────────────
+// ── Forward transitions (lerp EVERY field through quintic smoothstep) ─────────
 
+// A monotone ease that is EXACT at the endpoints but can lead or lag.
+function biasedEase(k: number, bias: number): number {
+  const x = clamp01(k);
+  return Math.pow(smoother(x), bias);
+}
+
+// Staged transition. The whole-tile look lerps from SP[from] (p=0) to SP[to]
+// (p=1) — so transition(0) === draw(from) and transition(1) === draw(to)
+// EXACTLY (drawn at REST, matching the idle hand-off). The plumage VOLUME leads
+// (coat fluffs early); snow / frost / breath-fog / scarf LAG (settle late).
 function makeTransition(fromIdx: 0 | 1 | 2): (ctx: CanvasRenderingContext2D, p: number) => void {
-  const from = SP[SEASON_NAMES[fromIdx]];
-  const to = SP[SEASON_NAMES[fromIdx + 1]];
+  const from = SEASON_NAMES[fromIdx];
+  const to = SEASON_NAMES[fromIdx + 1];
   return (ctx, pp) => {
-    const k = smoother(clamp01(pp));
-    paint(ctx, lerpP(from, to, k), 0);
+    const p = clamp01(safeNum(pp, 0));
+    const kBase = smoother(p);
+    const kCoat = biasedEase(p, 0.62); // plumage volume LEADS
+    const kSnow = biasedEase(p, 1.7); // snow / frost / fog / scarf LAG
+
+    const a = SP[from];
+    const b = SP[to];
+    const blended: P = lerpP(a, b, kBase);
+    blended.plumageVolume = lerp(a.plumageVolume, b.plumageVolume, kCoat);
+    blended.backSnowAmt = lerp(a.backSnowAmt, b.backSnowAmt, kSnow);
+    blended.padSnowAmt = lerp(a.padSnowAmt, b.padSnowAmt, kSnow);
+    blended.frostAmt = lerp(a.frostAmt, b.frostAmt, kSnow);
+    blended.breathFogAmt = lerp(a.breathFogAmt, b.breathFogAmt, kSnow);
+    blended.scarfAmt = lerp(a.scarfAmt, b.scarfAmt, kSnow);
+
+    paint(ctx, blended, REST);
+
+    // Transient overlays (strength ∝ sin(π·p): exactly 0 at both ends).
+    const trans = Math.sin(Math.PI * p);
+    if (trans <= 0.0008) return;
+
+    ctx.save();
+    try {
+      const bx = BODY_CX;
+      const by = BODY_CY;
+
+      // Loose feather motes lifting off the thickening plumage — reads the coat
+      // visibly fluffing/growing. Present in EVERY morph (deterministic in p).
+      const fluff = trans * (0.4 + 0.6 * Math.max(0, b.plumageVolume - a.plumageVolume + 0.4));
+      if (fluff > 0.01) {
+        ctx.fillStyle = rgba([255, 255, 255], 0.5 * fluff);
+        const motes: Array<[number, number, number]> = [
+          [-8, -8, 1.1], [3, -10, 1.4], [9, -6, 0.9], [-3, -11, 1.0],
+        ];
+        for (const [mx, my, mr] of motes) {
+          const rise = (1 - Math.cos(Math.PI * p)) * 2.2;
+          ctx.beginPath();
+          ctx.arc(bx + mx, by + my - rise, mr * (0.7 + 0.5 * trans), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Snow settling onto the back during autumn→winter (target gains snow).
+      const snowGain = Math.max(0, b.backSnowAmt - a.backSnowAmt);
+      if (snowGain > 0.01) {
+        ctx.fillStyle = rgba([255, 255, 255], 0.8 * trans * snowGain);
+        const land = smoother(p);
+        const flecks: Array<[number, number]> = [
+          [-6, -10], [-1, -11], [4, -9.5], [7, -8],
+        ];
+        for (const [fxx, fyy] of flecks) {
+          const fall = (1 - land) * 6;
+          ctx.beginPath();
+          ctx.arc(bx + fxx, by + fyy - fall, 1.0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // A breath-fog puff appearing as the cold sets in (target gains fog).
+      const fogGain = Math.max(0, b.breathFogAmt - a.breathFogAmt);
+      if (fogGain > 0.01) {
+        const hx = REST_HEAD_X - 7;
+        const hy = REST_HEAD_Y + 2.5;
+        ctx.fillStyle = rgba([235, 244, 255], 0.4 * trans * fogGain);
+        ctx.beginPath();
+        ctx.ellipse(hx - (4 + trans * 3), hy, 2.6 + trans * 1.8, 1.8 + trans * 1.2, 0.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } finally {
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.restore();
+    }
   };
 }
 
@@ -727,7 +1046,7 @@ const springToSummer = makeTransition(0);
 const summerToAutumn = makeTransition(1);
 const autumnToWinter = makeTransition(2);
 
-// ── Exports ──────────────────────────────────────────────────────────────────
+// ── Public exports ──────────────────────────────────────────────────────────
 
 export const VARIANTS: SeasonalTileEntry = {
   Spring: { draw: draw("Spring"), anim: anim("Spring") },
