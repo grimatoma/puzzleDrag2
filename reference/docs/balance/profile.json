@@ -65,10 +65,13 @@
 
   "harness": {
     "perRun": "npm run playtest -- --zones home --runs 10 --seed 1   (coins/run, coins/turn, family-value spread, change-list)",
-    "campaign": "npm run playtest -- --campaign --zones home --runs 30 --seed 1   (runs-to-coin-milestone + tier-stall pacing)",
-    "tests": "npx vitest run src/__tests__/playtest-harness.test.ts   (determinism + snapshot drift guard)",
-    "code": "src/playtest/  (run.ts per-run loop, campaign.ts pacing loop, metrics.ts spread, targets.ts bands)",
-    "knownGap": "the campaign sim is FARM-board-only and does not model crafting/buildings/mine, so it cannot yet validate a fix to the progression stall end-to-end. Extending it (or a manual trace) is the first tooling task of the pass."
+    "campaign": "npm run playtest -- --campaign --zones home --runs 30 --seed 1   (runs-to-coin-milestone + tier-stall pacing, by playing)",
+    "progression": "npm run playtest -- --progression   (CODE-DERIVED spine: fresh-save reachability + per-zone siloed oracle + softlock detection, no runs played. Rewrites the progression-timeline SPINE+DIFF blocks + emits progression.json/progression-diff.json)",
+    "progressionDiff": "every --progression run diffs the fresh spine vs the committed baseline (reference/docs/balance/progression.baseline.json — the last REVIEWED spine, tracked) and flags what moved since (softlock created/cleared + reachability flips = critical; gate/wall = major; cost tweak = minor); the dashboard marks changed facts OUTDATED. `--progression --accept` promotes current → baseline (the snapshot-test model: review the diff, then accept).",
+    "progressionMap": "reference/docs/balance/progression-timeline.html   (the interactive alignment artifact — handbook §10; Overview banner + Changes tab show the cross-run diff)",
+    "tests": "npx vitest run src/__tests__/playtest-harness.test.ts   (determinism + per-run/campaign/progression-shape snapshot drift guards)",
+    "code": "src/playtest/  (run.ts per-run loop, campaign.ts pacing loop, progression.ts structural oracle, metrics.ts spread, targets.ts bands)",
+    "knownGap": "the campaign PACING sim is FARM-board-only and doesn't model crafting/buildings/mine, so it can't yet validate a stall FIX end-to-end by playing. The progression.ts oracle now covers the STRUCTURE (reachability + softlock) statically and pins it in CI; extending the pacing sim to cross zones is the remaining tooling task."
   },
 
   "targets": {
@@ -81,18 +84,19 @@
     {
       "id": "home-progression-circular-lock",
       "severity": "blocker",
-      "summary": "Home cannot progress past Outpost (tier 0) without mine goods (block/iron_bar), but mine goods come ONLY from the quarry, which carries requiresZoneTier {zone: home, tier: 3 (City)} — and home->City itself needs mine goods. A circular lock. Evidence: at tier 0 only the free Hearth is farm-buildable; the Bakery needed to craft bread (Hamlet's gate) costs block; Mill/Granary need block+iron_bar; completing home to found the next settlement needs ~4 buildings that need block; starting inventory has no mine goods and the market cannot buy them. Almost certainly a side-effect of PR #1299 (zones-as-spine) not reconciling the authored home tier/building costs.",
-      "confirmed": "HARD LOCK. CARTO/TRAVEL enforces the gate (src/features/cartography/slice.ts:78 returns state unchanged when zoneTierGateReason fails), so a fresh save cannot even TRAVEL to the quarry — let alone mine — until home is City. The player is stuck at home Outpost. (Residual uncertainty: story/quest grants not yet traced; a fresh-save manual playtest would confirm 100%.)",
-      "lever": "src/features/cartography/data.ts:344 — the quarry's requiresZoneTier {zone: home, tier: 3}. Lower/re-gate it so the mine opens early, AND/OR re-cost the early home tiers + tier-0 buildings so the first rungs don't demand mine goods before the mine is reachable.",
-      "source": "building-cost + gate trace (CARTO/TRAVEL slice.ts:78); campaign harness"
+      "summary": "A fresh save is HARD-SOFTLOCKED at home Outpost (tier 0). The first rung, Hamlet, needs `bread`; bread is crafted only at the Bakery; the Bakery (a) costs `block` to build and (b) only UNLOCKS at Hamlet — the rung it gates. Three stacked locks, all rooted in mine goods being demanded before the mine is reachable: (A) Bakery build cost includes block:6 [constants.ts:788]; (B) Bakery unlocks at home tier 1, whose gate is bread:10 [cartography/data.ts:264-265] — circular; (C) home Village/City rungs need block/coke/iron_bar [cartography/data.ts:273,282]. Mine goods come only from mine boards, and EVERY mine/fish zone is gated behind the quarry (quarry requiresZoneTier {home, 3}; harbor/caves/forge require the quarry) [cartography/data.ts:344,392,419,446]. Almost certainly collateral from PR #1299 (zones-as-spine) not reconciling the authored home tier/building costs.",
+      "confirmed": "HARD LOCK — now CODE-DERIVED, not just traced. The progression oracle (src/playtest/progression.ts; `npm run playtest -- --progression`) computes fresh-save reachability = {home, meadow, orchard, crossroads} (all farm/no-board) and detects the wall at home Outpost->Hamlet on `bread`. CARTO/TRAVEL also enforces the travel gate (slice.ts:78). The escape-valve audit found NO out: orders/daily-rewards/story grants/init give no mine goods or bread; inventory is siloed per zone so another zone's output can't pay home's tier-up; no tier-0 home building yields bread or mine goods.",
+      "marketLatentEscape": "The ONE near-miss: MARKET_PRICES lists block/iron_bar/coke/bread as buyable and BUY_RESOURCE doesn't itself check the caravan post [market.ts:72-80], but the buy UI only shows once caravan_post is built [Inventory.tsx:299,510] — and caravan_post costs block+iron_bar. So the market is a latent escape that is itself mine-gated. Ungating the buy UI (or seeding an early buyable starter good) is the cheapest single lever.",
+      "lever": "Pick one+ (analysis only — not applied): (1) re-cost the Bakery off `block` so bread is craftable at Outpost from farm goods; (2) move the Bakery's unlock to Outpost (tier 0); (3) lower the quarry's requiresZoneTier from {home,3} [cartography/data.ts:344] so the mine opens early; (4) re-cost home Village/City off mine goods; (5) ungate the market buy UI / seed a starter import. The progression-shape snapshot test will flag whichever fix re-opens the spine.",
+      "source": "code-derived progression oracle (src/playtest/progression.ts) + building-cost/gate trace + escape-valve audit; visualised in reference/docs/balance/progression-timeline.html"
     },
     { "id": "family-value-spread", "severity": "known", "summary": "Realized value-per-tile spans ~10x (pearls ~133/tile vs pie ~12.9/tile; anything >3x median flagged). The per-run harness already emits a compression change-list toward a 3-4x ceiling.", "source": "familyValueSpread" },
     { "id": "coins-too-fast-vs-pacing", "severity": "investigate", "summary": "Coins reach the founding price in ~2 runs — far faster than the steady ~1-2 week goal. Coins are NOT the pacing gate today (progression resources are). For the 'balanced middle' feel, consider making coins a softer secondary gate (raise founding/tier coin costs or trim an early faucet) once progression is unblocked.", "source": "campaign harness" }
   ],
 
   "openQuestions": [
-    "Is the quarry's home-City gate intended, or should the mine open earlier so home can climb its ladder? (objective 1 — the single highest-leverage change)",
-    "Is the quarry tier-gate enforced for travel/PLAY, or only for FOUND_SETTLEMENT? (decides hard-lock vs awkward-ordering)",
+    "RESOLVED (was: is the gate enforced for travel or only founding?): the quarry gate IS enforced for travel (CARTO/TRAVEL slice.ts:78) AND the lock bites even earlier, at home Outpost->Hamlet on crafted `bread` — code-derived by the progression oracle. It is a hard softlock, not awkward ordering.",
+    "DESIGN CALL (objective 1, highest leverage): which lever opens the spine? re-cost the Bakery off `block` + unlock it at Outpost (cleanest first step), and/or lower the quarry's requiresZoneTier, and/or re-cost home Village/City off mine goods, and/or ungate the market buy UI. See finding `home-progression-circular-lock`.lever.",
     "Compress the family-value spread toward a 3-4x ceiling (per the auto change-list), or keep a premium for marquee resources? (objective 2)",
     "Confirm constraints: no real-money; saves must survive value tweaks."
   ]

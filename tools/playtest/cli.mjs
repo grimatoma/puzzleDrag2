@@ -10,19 +10,26 @@
  *   npm run playtest -- --zones home,meadow --runs 20 --seed 1234
  *
  * Flags: --zones <csv>  --runs <n>  --seed <n>  --policy <name>
- *        --rows <n>  --cols <n>  --out <dir>  --no-write  --campaign
+ *        --rows <n>  --cols <n>  --out <dir>  --no-write  --campaign  --progression
  *
  * --campaign switches to the sequential progression sim (src/playtest/campaign.ts):
  * one persistent state, runs carried forward, measuring runs-to-coin-milestone +
  * tier pacing for the FIRST zone in --zones. Writes campaign-report.md /
  * campaign-metrics.json instead of the per-run report.
  *
+ * --progression switches to the CODE-DERIVED spine (src/playtest/progression.ts):
+ * no runs played — it derives fresh-save reachability + the per-zone siloed
+ * progression oracle + softlock detection straight from MAP_NODES/BUILDINGS/RECIPES.
+ * Writes progression.json + progression-report.md AND, when the dashboard exists,
+ * refreshes the code-derived data block inlined between the SPINE markers in
+ * reference/docs/balance/progression-timeline.html (so the doc cannot drift).
+ *
  * The harness logic lives in importable TS under src/playtest/. This file is
  * thin glue: it loads that TS through Vite's SSR pipeline (the same compiler the
  * app build uses — so enums, .js→.ts specifiers, everything resolves exactly as
  * shipped) and does the argv + filesystem work.
  */
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, writeFile, readFile } from "node:fs/promises";
 import path from "node:path";
 // The same plugin vite.config.js / vitest.config.js register — provides the
 // `virtual:seasonal-subjects` module that the texture registry imports.
@@ -41,7 +48,7 @@ globalThis.localStorage = {
 };
 
 function parseArgs(argv) {
-  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false };
+  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, accept: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const val = () => argv[++i];
@@ -55,6 +62,8 @@ function parseArgs(argv) {
       case "--out": out.outDir = val(); break;
       case "--no-write": out.write = false; break;
       case "--campaign": out.campaign = true; break;
+      case "--progression": out.progression = true; break;
+      case "--accept": out.accept = true; break;
       default:
         if (a.startsWith("--")) console.warn(`[playtest] ignoring unknown flag: ${a}`);
     }
@@ -63,6 +72,19 @@ function parseArgs(argv) {
 }
 
 function fmt(n) { return Number.isInteger(n) ? String(n) : n.toFixed(2); }
+
+// Replace the bytes between the NAME:START and NAME:END block-comment markers
+// (e.g. SPINE, DIFF) with `payload`; returns html unchanged if absent. The exact
+// marker byte sequence must appear ONLY at the real assignment in the target file
+// (never in prose), or the wrong span is rewritten.
+function replaceMarkerBlock(html, name, payload) {
+  const START = `/* ${name}:START */`;
+  const END = `/* ${name}:END */`;
+  const a = html.indexOf(START);
+  const b = html.indexOf(END);
+  if (a < 0 || b <= a) return html;
+  return html.slice(0, a) + `${START}\n${payload}\n${END}` + html.slice(b + END.length);
+}
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
@@ -79,9 +101,25 @@ async function main() {
 
   let report;
   let campaign;
+  let progression;
   try {
     const mod = await server.ssrLoadModule("/src/playtest/index.ts");
-    if (args.campaign) {
+    if (args.progression) {
+      const spine = mod.buildProgressionSpine();
+      // Diff the fresh spine against the committed baseline (the last reviewed
+      // state) so a balance pass sees what moved. Baseline lives OUTSIDE the
+      // git-ignored playtest dir so it persists across runs.
+      const baselinePath = path.resolve(process.cwd(), "reference/docs/balance/progression.baseline.json");
+      let baseline = null;
+      try { baseline = JSON.parse(await readFile(baselinePath, "utf8")); } catch { /* none yet */ }
+      const diff = mod.diffSpines(baseline, spine);
+      progression = {
+        spine, diff, baselinePath, hadBaseline: !!baseline,
+        // The diff to embed after establishing/accepting a baseline (baseline == current).
+        unchangedDiff: mod.diffSpines(spine, spine),
+        reportMarkdown: mod.renderProgressionReport(spine) + "\n\n" + mod.renderProgressionDiff(diff),
+      };
+    } else if (args.campaign) {
       campaign = mod.runCampaign({
         zoneId: args.zones[0], runs: args.runs, seed: args.seed,
         policy: args.policy, rows: args.rows, cols: args.cols,
@@ -94,6 +132,70 @@ async function main() {
     }
   } finally {
     await server.close();
+  }
+
+  // ── Progression mode: the code-derived spine + softlock oracle + diff ────
+  if (progression) {
+    const { spine, diff } = progression;
+    const o = spine.oracle;
+    console.log(`\npuzzleDrag2 progression spine — code-derived (no runs played)\n`);
+    console.log(`  fresh-save reachable: ${o.freshSaveReachable.join(", ")}`);
+    console.log(`  playable boards: ${o.freshSavePlayableBoards.join(", ") || "(none)"}`);
+    if (o.softlock) {
+      console.log(`  ⛔ SOFTLOCK: home stuck at ${o.softlock.stuckTierName} (tier ${o.softlock.stuckTier}); ` +
+        `${o.softlock.blockedRung} needs ${o.softlock.primaryMissing.join(", ")}`);
+    } else {
+      console.log(`  ✓ no softlock detected (home can climb its full ladder)`);
+    }
+    for (const w of o.walls) {
+      console.log(`  wall · ${w.zone}: ${w.wall.reachedName} → ${w.wall.toName} blocked on ${w.wall.missing.map((m) => m.key).join(", ")}`);
+    }
+    // Cross-run diff vs the committed baseline.
+    console.log(`\n  ${diff.unchanged ? "✓" : "⚠"} ${diff.headline}`);
+    for (const c of diff.changes.slice(0, 12)) {
+      const arrow = c.kind === "changed" ? `${c.before} → ${c.after}` : c.kind === "added" ? `+ ${c.after}` : `− ${c.before}`;
+      console.log(`     [${c.severity}] ${c.name}: ${arrow}`);
+    }
+    if (diff.changes.length > 12) console.log(`     …and ${diff.changes.length - 12} more (see progression-diff.md)`);
+
+    if (!args.write) { console.log("\n(--no-write: skipped file output)\n"); return; }
+    const outDir = path.resolve(process.cwd(), args.outDir);
+    await mkdir(outDir, { recursive: true });
+    await writeFile(path.join(outDir, "progression.json"), JSON.stringify(spine, null, 2) + "\n", "utf8");
+    await writeFile(path.join(outDir, "progression-report.md"), progression.reportMarkdown + "\n", "utf8");
+    await writeFile(path.join(outDir, "progression-diff.json"), JSON.stringify(diff, null, 2) + "\n", "utf8");
+    console.log(`\n  wrote progression.json, progression-report.md, progression-diff.json → ${args.outDir}`);
+
+    // Establish the baseline on first run; promote current → baseline on --accept.
+    // After either, the embedded diff is "unchanged" (baseline == current).
+    let embeddedDiff = diff;
+    const establishing = !progression.hadBaseline;
+    if (establishing || args.accept) {
+      await writeFile(progression.baselinePath, JSON.stringify(spine, null, 2) + "\n", "utf8");
+      embeddedDiff = progression.unchangedDiff; // baseline now == current → no pending changes
+      console.log(`  ${establishing ? "established" : "accepted → updated"} baseline progression.baseline.json`);
+    }
+
+    // Refresh the inlined, code-derived data blocks in the dashboard so the
+    // self-contained HTML never drifts. Two marker pairs: SPINE (current spine)
+    // and DIFF (changes-vs-baseline). The exact "/* X:START */" byte sequence
+    // must appear ONLY at the real assignment — never in prose — or this rewrites
+    // the wrong span.
+    const dashPath = path.resolve(process.cwd(), "reference/docs/balance/progression-timeline.html");
+    try {
+      let html = await readFile(dashPath, "utf8");
+      const before = html;
+      html = replaceMarkerBlock(html, "SPINE", `const SPINE = ${JSON.stringify(spine)};`);
+      html = replaceMarkerBlock(html, "DIFF", `const DIFF = ${JSON.stringify(embeddedDiff)};`);
+      if (html !== before) {
+        await writeFile(dashPath, html, "utf8");
+        console.log(`  refreshed SPINE + DIFF data blocks in progression-timeline.html`);
+      } else {
+        console.log(`  progression-timeline.html data blocks already current`);
+      }
+    } catch { /* dashboard not present yet — fine */ }
+    console.log("");
+    return;
   }
 
   // ── Campaign mode: progression pacing for a single zone ──────────────────

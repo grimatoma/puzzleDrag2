@@ -545,6 +545,107 @@ isn't always on the curve you were watching.
 
 ---
 
+## 10. The progression map — the alignment artifact
+
+*Applies to:* any game with **sequenced or gated content** — campaigns, tech
+trees, zone/biome unlocks, settlement tiers, skill trees, chapter gates. (A pure
+arcade score-attack game with no unlocks doesn't need one.) For a single-player
+progression game it is the **most important artifact the balance skill produces**,
+because it is where the designer and the skill *confirm they are looking at the
+same game* before a single number is tuned.
+
+**Why it comes before tuning.** Goals (§ workflow step 1) say where the designer
+wants the journey to *go*. The economy model (§4) says how resources *flow*. The
+progression map says what the journey actually *is*, right now, as the code
+encodes it: the ordered spine of milestones, what each one costs, what it unlocks,
+and what gates stand between them. Tuning a cost before you both agree on the
+map is how you optimize the wrong rung. **Alignment is the deliverable here, not
+numbers** — the map is the handshake.
+
+### What it must show
+
+1. **The spine** — the ordered backbone of major milestones (the tiers/chapters/
+   ranks a player climbs), with each rung's **entry/upgrade cost** and **what it
+   unlocks** (content, buildings, recipes, zones, abilities).
+2. **The gates** — every precondition between rungs. A gate is a *content faucet
+   valve*: "you may not reach B until you have done A." Name the gate *type*:
+   - **resource gate** — needs N of resource X (the common case);
+   - **tier/level gate** — needs another track at a given rung (e.g. *zone Y unlocks
+     at home tier 3*);
+   - **token/quest gate** — needs a scripted item or beat.
+3. **Reachability** — from a *fresh save*, which content is actually attainable?
+   Walk the gate graph outward from the start state. Anything you can't reach is
+   either intended late-game or an accidental dead-end (see below).
+4. **Branches & convergence** — where the path forks (optional zones, side tracks)
+   and where forks rejoin (a gate that needs goods from two branches).
+
+### The gating math, and the failure mode it hides
+
+A progression gate is fine **iff** the resources it demands are *producible by
+content the player has already reached* when they hit the gate. The failure mode
+is the **circular / unreachable gate**: rung B needs resource X; X is only made by
+content C; C is gated behind rung B (or behind something downstream of B). No
+first step exists — the player is **softlocked**. This is the progression analogue
+of §3's cliff, and it is invisible on any single cost curve because it spans
+*tracks*: each track looks climbable in isolation; only the cross-track gate graph
+reveals the lock.
+
+**Per-container resources (the subtle one).** If resources are **siloed** — held
+per zone/save-slot/inventory rather than globally — then a gate on track T can
+only ever be paid from what track T *itself* produces. Goods made elsewhere can't
+be spent here even if the player owns them. Model affordability **per container**,
+not globally, or you will declare a wall passable that isn't. (puzzleDrag2's tier-
+ups spend the *target zone's own* inventory; a sibling zone's output can't pay
+them — so the home ladder's mine-good costs are unpayable no matter what other
+zones produce.)
+
+### Make it code-derived, or it lies
+
+A progression map hand-drawn in a slide deck **drifts the instant a cost changes**,
+and a stale alignment artifact is worse than none — it certifies agreement on a
+game that no longer exists. The discipline: **derive the map from the same
+constants the game runs on** (the zone/tier/recipe/building tables), as a pure
+function, so the picture *cannot* diverge from the build. Then:
+
+- **Render it** — a visual, interactive timeline/graph is the form a designer can
+  actually review and sign off on (spine + gates + reachability, costs coloured by
+  resource family, locks called out). Visual + interactive beats a wall of tables.
+- **Assert it** — turn the reachability/softlock check into a **test** that pins
+  the progression shape. A constant edit that re-gates a zone or re-opens a lock
+  then *breaks CI intentionally* — which is exactly how you catch the regression
+  class that introduces a softlock in the first place. (The lock most often
+  arrives as collateral from a *structural* progression rework, not a deliberate
+  number change — so a guard that watches the shape, not the values, is what
+  catches it.)
+- **Diff it across runs** — a balance pass is iterative, so the map must be a
+  *living instrument*, not a one-time snapshot. Keep a committed **baseline** of
+  the last *reviewed* spine; on every regeneration, diff the fresh spine against
+  it and surface **what moved** — did the softlock clear, did a zone become
+  reachable, did a tier cost change — classified by significance (a created/
+  cleared softlock or a reachability flip is *critical*; a gate or wall move is
+  *major*; a cost tweak is *minor*). Render changed facts as **outdated** in the
+  report (strike the old value, show the new) so a stale claim reads as stale at a
+  glance, and promote the baseline only on an explicit **review/accept** step (the
+  snapshot-test model: see the diff, then accept). This closes the loop: change a
+  number → regenerate → the map tells you, in the designer's own terms, exactly
+  what your change did to the journey.
+
+### How to read it with the designer
+
+Put the map in front of them and ask the alignment questions the numbers can't:
+*Is this the order you intended? Is anything reachable that shouldn't be yet — or
+walled that shouldn't be? Is every gate's demand producible by then?* Only once
+the map is **agreed** do the KPI targets (workflow step 1) attach to real rungs
+and the tuning in steps 5–8 have a correct target. The map is the shared mental
+model; the rest of the pass edits against it.
+
+*Instance:* puzzleDrag2's map is `reference/docs/balance/progression-timeline.html`
+(the interactive artifact), derived by `src/playtest/progression.ts` and emitted
+via `npm run playtest -- --progression`; its softlock guard is the progression-
+shape snapshot in `src/__tests__/playtest-harness.test.ts`.
+
+---
+
 ## Sources
 
 Primary research documents (this handbook draws its named concepts and worked
