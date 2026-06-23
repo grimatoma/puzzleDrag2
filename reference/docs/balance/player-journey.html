@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Player Journey — Hearthwood Vale</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ════════════════════════════════════════════════════════════════
+     THEME — shared with the rest of the Balance Profile docs
+     (progression-redesign.html): hearth-amber dominant, vale-green
+     accent, warm paper.
+     ════════════════════════════════════════════════════════════════ */
+  :root{
+    --ink:#2a2620; --muted:#6f6754; --line:#e6ddca; --bg:#fbf7ee;
+    --paper:#fffdf6; --code:#f1e9d6;
+    --accent:#b6531f;       /* hearth amber  */
+    --accent2:#3f7d4e;      /* vale green    */
+    --shadow:0 1px 2px rgba(40,28,8,.06), 0 6px 20px -10px rgba(40,28,8,.22);
+    --ok:#3f7d4e; --warn:#d4760c; --info:#1f6f9c; --danger:#b5341f; --idle:#8a8270;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font:400 16px/1.64 var(--sans); color:var(--ink); margin:0;
+    background:
+      radial-gradient(1200px 520px at 80% -8%, color-mix(in srgb,var(--accent) 9%,transparent), transparent 60%),
+      radial-gradient(1000px 460px at -10% 4%, color-mix(in srgb,var(--accent2) 9%,transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, #f3ecdd 100%);
+    background-attachment:fixed; background-color:var(--bg);
+  }
+  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{background:var(--code);padding:.08rem .36rem;border-radius:4px;font:.84em var(--mono);color:#6a4a26;}
+  pre{background:var(--code);padding:.9rem 1.05rem;border-radius:10px;overflow-x:auto;box-shadow:var(--shadow);font:.84rem/1.5 var(--mono);}
+  pre code{background:none;padding:0;}
+
+  .page{max-width:1120px;margin:0 auto;padding:1.5rem 1.25rem 5rem;}
+
+  header.hero{
+    border-bottom:3px solid var(--accent); padding:1.4rem 1.5rem 1.1rem; margin-bottom:1.2rem;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 9%,transparent), color-mix(in srgb,var(--accent2) 8%,transparent));
+    border-radius:14px 14px 6px 6px; box-shadow:var(--shadow);
+  }
+  header.hero h1{font:800 2.7rem/1.08 var(--serif);letter-spacing:-.015em;margin:.1rem 0 .35rem;color:var(--ink);}
+  .sub{color:var(--muted);font-size:1.04rem;margin:.2rem 0 .75rem;max-width:70ch;}
+  .meta{font-size:.8rem;color:var(--muted);margin:.4rem 0 .7rem;}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .chip{font-size:.78rem;font-weight:600;padding:.2rem .6rem;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,#fff);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,#fff);}
+
+  nav.tabs{display:flex;flex-wrap:wrap;gap:.35rem;border-bottom:2px solid var(--line);margin:.1rem 0 1.7rem;}
+  nav.tabs .tab{font:700 1rem/1 var(--serif);letter-spacing:-.01em;padding:.62rem 1.15rem;cursor:pointer;color:var(--muted);background:transparent;border:1px solid transparent;border-bottom:none;border-radius:11px 11px 0 0;margin-bottom:-2px;transition:color .14s,background .14s,border-color .14s;}
+  nav.tabs .tab:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);}
+  nav.tabs .tab.active{color:var(--ink);background:var(--paper);border-color:var(--line);border-top:3px solid var(--accent);box-shadow:0 -5px 16px -9px rgba(40,28,8,.30);}
+
+  html.tabs-on main>.panel{display:none;}
+  html.tabs-on main>.panel.active{display:block;}
+
+  main{min-width:0;}
+  section{scroll-margin-top:1rem;}
+  h2{font:800 1.85rem/1.15 var(--serif);letter-spacing:-.01em;margin-top:0;border-bottom:1px solid var(--line);padding-bottom:.25rem;color:var(--ink);}
+  section + section h2{margin-top:2.4rem;}
+  h3{font:600 1.22rem/1.25 var(--serif);margin-top:1.5rem;color:var(--ink);}
+  h4{font:700 1rem/1.2 var(--sans);margin:.9rem 0 .2rem;color:var(--ink);text-transform:uppercase;letter-spacing:.04em;font-size:.78rem;}
+  p,li{margin:.45rem 0;}
+
+  table{border-collapse:collapse;width:100%;margin:.9rem 0;font-size:.88rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  th,td{border:1px solid var(--line);padding:.46rem .65rem;text-align:left;vertical-align:top;}
+  th{background:color-mix(in srgb,var(--accent) 9%,#fff);color:var(--ink);font-weight:700;}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg) 60%,#fff);}
+
+  .box{background:color-mix(in srgb,var(--accent2) 8%,#fff);border-left:4px solid var(--accent2);padding:.75rem 1.05rem;margin:1.1rem 0;border-radius:0 8px 8px 0;box-shadow:var(--shadow);}
+  .box.warn{background:color-mix(in srgb,var(--danger) 7%,#fff);border-left-color:var(--danger);}
+  .box.tip{background:color-mix(in srgb,var(--ok) 9%,#fff);border-left-color:var(--ok);}
+  .box.open{background:color-mix(in srgb,var(--warn) 10%,#fff);border-left-color:var(--warn);}
+  .box b{font-family:var(--serif);}
+  .quote{font-style:italic;color:#4a4234;}
+
+  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:.1rem .5rem;border-radius:999px;color:#fff;}
+  .pill.ok{background:var(--ok);} .pill.warn{background:var(--warn);} .pill.info{background:var(--info);}
+  .pill.danger{background:var(--danger);} .pill.idle{background:var(--idle);}
+  .legend{font-size:.78rem;color:var(--muted);margin:.4rem 0;display:flex;gap:.8rem;flex-wrap:wrap;}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:.7rem 1.1rem;margin:.85rem 0;box-shadow:var(--shadow);transition:transform .14s,box-shadow .14s;}
+  .card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(40,28,8,.08),0 12px 28px -12px rgba(40,28,8,.3);}
+  .card.g{border-left-color:var(--accent2);}
+  .card .ph{font:800 .82rem/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--accent);}
+  .card h3{margin:.15rem 0 .3rem;}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin:1rem 0;}
+  .grid .card{margin:0;}
+
+  .kv{display:grid;grid-template-columns:max-content 1fr;gap:.15rem .8rem;margin:.5rem 0 .2rem;font-size:.9rem;}
+  .kv dt{font-weight:700;color:var(--muted);}
+  .kv dd{margin:0;}
+
+  .diagram{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:1.1rem;margin:1.1rem 0;overflow-x:auto;box-shadow:var(--shadow);}
+
+  details{border:1px solid var(--line);border-radius:10px;padding:.2rem .9rem;margin:.85rem 0;background:var(--paper);box-shadow:var(--shadow);}
+  details>summary{cursor:pointer;font:600 1.02rem/1.3 var(--serif);padding:.45rem 0;color:var(--ink);}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  header.hero{animation:fadeUp .55s cubic-bezier(.21,.61,.35,1) both;}
+  html.tabs-on main>.panel.active{animation:fadeUp .4s cubic-bezier(.21,.61,.35,1) both;}
+
+  @media (max-width:820px){
+    header.hero h1{font-size:2.1rem;}
+    nav.tabs{gap:.2rem;}
+    nav.tabs .tab{padding:.5rem .8rem;font-size:.92rem;}
+    .kv{grid-template-columns:1fr;}
+  }
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;} .card:hover{transform:none;} }
+  @media print{ nav.tabs{display:none;} details{border:0;box-shadow:none;} a{color:inherit;} body{background:#fff;} header.hero,table,.box,.diagram,.card,details,pre{box-shadow:none;} html.tabs-on main>.panel{display:block!important;} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>The Player Journey</h1>
+    <p class="sub">The <strong>ideal user journey</strong> through Hearthwood Vale, end to end — <em>which</em> systems the player meets, <em>when</em> each one enters, the <em>want</em> that earns it, and the <em>pacing</em> target for each phase. The connective tissue the game's many built systems are still missing.</p>
+    <p class="meta">Balance Profile · Player-journey artifact · Draft for review · 2026-06-22 · scope: full arc (Town&nbsp;1 → endgame)</p>
+    <div class="chips">
+      <span class="chip">journey</span>
+      <span class="chip">pacing</span>
+      <span class="chip">feature schedule</span>
+      <span class="chip">progression spine</span>
+      <span class="chip">full arc</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" data-tab="overview">Overview</button>
+    <button class="tab" role="tab" data-tab="journey">The Journey</button>
+    <button class="tab" role="tab" data-tab="schedule">Feature Schedule</button>
+    <button class="tab" role="tab" data-tab="decisions">Decisions</button>
+    <button class="tab" role="tab" data-tab="pacing">Pacing &amp; Next</button>
+  </nav>
+
+  <main>
+
+    <!-- ════════════════════ OVERVIEW ════════════════════ -->
+    <div class="panel" id="overview" role="tabpanel" aria-label="Overview">
+
+      <section id="thesis">
+        <h2>Overview</h2>
+        <p>puzzleDrag2 has <strong>most of its systems built</strong> — the drag-chain board, refining, orders, the market, per-zone tier ladders, the mine, fishing, bosses, story beats. What it does <strong>not</strong> have is the <strong>journey that links them</strong>: the order they enter, the want that earns each one, and the pace at which they arrive. This doc defines that journey.</p>
+        <div class="box tip"><b>TL;DR.</b> The intended shape is already locked — <strong>Town&nbsp;1 (farm) → expedition → Town&nbsp;2 (mine + the combination) → branch into open exploration → the Long Return</strong>. The spine is even wired in data. But it <strong>can't execute</strong> (a circular softlock walls the first step) and its <strong>pacing is unmodeled</strong>. This artifact captures the full-arc journey, the feature-introduction schedule, and the design calls that make it run.</p>
+      </section>
+
+      <section id="two-layers">
+        <h2>"Balancing the journey" is two jobs, in order</h2>
+        <div class="grid">
+          <div class="card"><h3>1 · Structural spine</h3><p>Does the journey <strong>connect</strong> — in the right order, one new idea at a time, with <strong>no softlock</strong>? Modelled by the code-derived <a href="progression-timeline.html">progression oracle</a>. <span class="pill danger">RED today</span> — a fresh save is hard-walled at the first rung.</p></div>
+          <div class="card g"><h3>2 · Pacing curve</h3><p><strong>How long</strong> does each phase take versus the session-shape target (~2–3 short runs/day, steady ~1–2&nbsp;weeks to mid-game)? Modelled by the campaign harness. <span class="pill warn">un-instrumented</span> across zones — the sim only plays the farm board today.</p></div>
+        </div>
+        <p>You can't pace a journey that doesn't connect, so the structural fix comes first, then the pacing curve, then the numbers. That ordering <strong>is the plan</strong> (see <a href="#next">Pacing &amp; Next</a>).</p>
+      </section>
+
+      <section id="principle">
+        <h2>The principle that answers "when do we add a feature?"</h2>
+        <div class="box"><p class="quote" style="font-size:1.08rem;">Introduce a system the phase <strong>after</strong> the player feels the want for it — and <strong>never before</strong> its inputs are producible.</p></div>
+        <p>The softlock is exactly this rule violated: the game demands <code>bread</code> to grow the town before it has taught or enabled bread. Read the <a href="#schedule" data-go="schedule">Feature Schedule</a> as this principle applied system by system. Two corollaries shape everything below:</p>
+        <ul>
+          <li><strong>Soft efficiency gates, not hard possession gates, for cross-system dependencies.</strong> A rung that <em>requires</em> a good can deadlock if that good isn't producible yet. A dependency where the raw input <em>works</em> but the crafted one works <em>better</em> can never deadlock. (This is the "raw food buys mine turns, supplies buy more" model — generalised.)</li>
+          <li><strong>One forcing function per phase.</strong> Each phase should answer "what do I do next?" with one obvious thing — the <em>expedition</em> is the model. Compress choice early (linear farm→mine), expand it late (branch).</li>
+        </ul>
+      </section>
+
+    </div>
+
+    <!-- ════════════════════ THE JOURNEY ════════════════════ -->
+    <div class="panel" id="journey" role="tabpanel" aria-label="The Journey">
+
+      <section id="spine">
+        <h2>The arc at a glance</h2>
+        <div class="diagram">
+          <svg viewBox="0 0 980 300" width="100%" role="img" aria-label="Five-phase journey: A The Drag, B Farm to Town, C The Combination with a capstone boss, D The Frontier branching into several zones, E The Long Return.">
+            <defs>
+              <marker id="arr" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/></marker>
+            </defs>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="13" font-weight="600">
+              <!-- linear tutorial spine -->
+              <rect x="14"  y="120" width="120" height="60" rx="11" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)" stroke-width="1.5"/>
+              <text x="74" y="146" text-anchor="middle" fill="var(--ink)">A · The Drag</text>
+              <text x="74" y="164" text-anchor="middle" fill="var(--muted)" font-size="10.5">core verb</text>
+
+              <rect x="170" y="120" width="140" height="60" rx="11" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)" stroke-width="1.5"/>
+              <text x="240" y="146" text-anchor="middle" fill="var(--ink)">B · Farm → Town</text>
+              <text x="240" y="164" text-anchor="middle" fill="var(--muted)" font-size="10.5">🏡 Town 1 · build the town</text>
+
+              <rect x="346" y="120" width="150" height="60" rx="11" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)" stroke-width="1.5"/>
+              <text x="421" y="143" text-anchor="middle" fill="var(--ink)">C · The Combination</text>
+              <text x="421" y="161" text-anchor="middle" fill="var(--muted)" font-size="10.5">⛏️ Town 2 · farm + mine</text>
+              <text x="421" y="175" text-anchor="middle" fill="var(--danger)" font-size="10">★ capstone boss</text>
+
+              <line x1="134" y1="150" x2="166" y2="150" stroke="var(--muted)" stroke-width="2.5" marker-end="url(#arr)"/>
+              <line x1="310" y1="150" x2="342" y2="150" stroke="var(--muted)" stroke-width="2.5" marker-end="url(#arr)"/>
+              <text x="328" y="140" text-anchor="middle" fill="var(--muted)" font-size="9.5">expedition</text>
+
+              <!-- branch node -->
+              <circle cx="556" cy="150" r="20" fill="color-mix(in srgb,var(--accent) 18%,#fff)" stroke="var(--accent)" stroke-width="1.5"/>
+              <text x="556" y="156" text-anchor="middle" fill="var(--accent)" font-size="18">⇲</text>
+              <line x1="496" y1="150" x2="532" y2="150" stroke="var(--muted)" stroke-width="2.5" marker-end="url(#arr)"/>
+              <text x="556" y="196" text-anchor="middle" fill="var(--muted)" font-size="9.5">D · The Frontier — choose</text>
+
+              <!-- frontier branches -->
+              <rect x="650" y="20"  width="150" height="46" rx="10" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
+              <text x="725" y="40" text-anchor="middle" fill="var(--ink)">🐀 Town 3 (farm+rats)</text>
+              <text x="725" y="56" text-anchor="middle" fill="var(--muted)" font-size="10">hazard mgmt</text>
+
+              <rect x="650" y="78"  width="150" height="46" rx="10" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
+              <text x="725" y="98" text-anchor="middle" fill="var(--ink)">🪨 Caves (mine+)</text>
+              <text x="725" y="114" text-anchor="middle" fill="var(--muted)" font-size="10">rare gems</text>
+
+              <rect x="650" y="136" width="150" height="46" rx="10" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
+              <text x="725" y="156" text-anchor="middle" fill="var(--ink)">⚓ Harbor / Mirefen</text>
+              <text x="725" y="172" text-anchor="middle" fill="var(--muted)" font-size="10">fishing biome</text>
+
+              <rect x="650" y="194" width="150" height="46" rx="10" fill="color-mix(in srgb,var(--accent) 11%,#fff)" stroke="var(--accent)"/>
+              <text x="725" y="214" text-anchor="middle" fill="var(--ink)">🍎 Orchard (farm+)</text>
+              <text x="725" y="230" text-anchor="middle" fill="var(--muted)" font-size="10">luxury crops</text>
+
+              <line x1="574" y1="142" x2="646" y2="46"  stroke="var(--muted)" stroke-width="1.8" marker-end="url(#arr)"/>
+              <line x1="576" y1="146" x2="646" y2="101" stroke="var(--muted)" stroke-width="1.8" marker-end="url(#arr)"/>
+              <line x1="576" y1="154" x2="646" y2="159" stroke="var(--muted)" stroke-width="1.8" marker-end="url(#arr)"/>
+              <line x1="574" y1="158" x2="646" y2="217" stroke="var(--muted)" stroke-width="1.8" marker-end="url(#arr)"/>
+
+              <!-- endgame, deep-end gated -->
+              <rect x="838" y="100" width="128" height="100" rx="11" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)" stroke-width="1.5" stroke-dasharray="5 3"/>
+              <text x="902" y="136" text-anchor="middle" fill="var(--ink)">E · The</text>
+              <text x="902" y="154" text-anchor="middle" fill="var(--ink)">Long Return</text>
+              <text x="902" y="174" text-anchor="middle" fill="var(--danger)" font-size="10">🏛️ 3 tokens →</text>
+              <text x="902" y="187" text-anchor="middle" fill="var(--danger)" font-size="10">Old Capital</text>
+              <line x1="800" y1="150" x2="834" y2="150" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <text x="817" y="140" text-anchor="middle" fill="var(--muted)" font-size="9">gate</text>
+            </g>
+          </svg>
+          <p class="legend"><span><span class="pill ok">green</span> fixed teaching spine</span><span><span class="pill warn">amber</span> player-chosen frontier</span><span><span class="pill danger">dashed</span> deep-end, milestone-gated</span></p>
+        </div>
+
+        <h3>The journey in one table</h3>
+        <p class="legend">Pacing is in <em>runs</em> (≈ one ~10-turn session; ~2.5/day). <strong>Targets to validate, not measurements</strong> — see <a href="#next" data-go="pacing">Pacing &amp; Next</a>.</p>
+        <table>
+          <thead><tr><th>Phase</th><th>New systems (the "when")</th><th>The <em>want</em> it answers</th><th>Gate out</th><th>Pacing target</th></tr></thead>
+          <tbody>
+            <tr><td><strong>A · The Drag</strong></td><td>board, drag-chain, turn budget, chain→resource→coins, seasons</td><td>— (the core verb itself)</td><td>finish one run</td><td>run 1 · first ~10 min</td></tr>
+            <tr><td><strong>B · Farm → Town</strong></td><td>inventory, town screen, buildings, refine grain→flour→<strong>bread</strong>, <strong>orders</strong>, <strong>market</strong>, <strong>tier-up ×3</strong> (Outpost→City)</td><td>"I want more plots &amp; buildings"</td><td>reach <strong>City</strong> → raise the wagon</td><td>runs ~2–22 · days 1–8 (a rung every ~3–7 runs)</td></tr>
+            <tr><td><strong>C · The Combination</strong></td><td>expedition, <strong>mine board</strong>, food→mine-turns (raw ok / supplies better), Workshop/Forge tools, hazards, <strong>capstone boss</strong></td><td>"my farm is mature — what <em>uses</em> it?"</td><td>beat Town 2 boss = <strong>mid-game</strong></td><td>runs ~22–35 · days 8–14</td></tr>
+            <tr><td><strong>D · The Frontier</strong></td><td>free branch travel, per-zone <strong>specializations</strong>, <strong>Town 3 (farm+rats)</strong>, caves, harbor/mirefen, orchard</td><td>"I've mastered the loop — let me choose"</td><td>soft (cost/difficulty); each zone a mini-Phase-B</td><td>runs ~35–100 · weeks 2–5</td></tr>
+            <tr><td><strong>E · The Long Return</strong></td><td>forge, <strong>hearth tokens</strong> (one per deep branch), pit boss tier, <strong>Old Capital</strong> finale &nbsp;<span class="pill idle">parked content</span></td><td>the long chase / completion</td><td>3 tokens → capital</td><td>runs 100+ · weeks 5+ <em>(most speculative)</em></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="phases">
+        <h2>Phase by phase</h2>
+
+        <div class="card g">
+          <div class="ph">Phase A</div><h3>The Drag — the core verb, alone</h3>
+          <p>The first run teaches one thing: <strong>drag through 3+ adjacent matching tiles → a resource is credited and coins drop</strong>. Nothing else is on screen — no map, no town, no crafting. The whole game is one satisfying verb before it is anything else.</p>
+          <dl class="kv">
+            <dt>New</dt><dd>board · drag-chain · turn budget · chain→resource→coins · the season backdrop</dd>
+            <dt>Want</dt><dd>none yet — this <em>creates</em> the want (coins, a fuller board)</dd>
+            <dt>Gate out</dt><dd>complete a run (close the season)</dd>
+            <dt>Pacing</dt><dd>run 1, first ~10 minutes</dd>
+          </dl>
+        </div>
+
+        <div class="card g">
+          <div class="ph">Phase B</div><h3>Farm → Town — the core loop forms</h3>
+          <p>Coins from Phase A buy a reason to build. The player meets the <strong>town</strong>, places <strong>buildings</strong>, learns the <strong>refining chain</strong> (grain → flour at the Mill → bread at the Bakery), fills <strong>orders</strong> and trades at the <strong>market</strong>, and performs the first <strong>tier-ups</strong> (Outpost → Hamlet → Village → City; plots 3 → 6 → 12 → 20). The closed loop: <em>chain grain → bake bread → spend farm goods to tier up → unlock more plots &amp; buildings → chain more.</em></p>
+          <dl class="kv">
+            <dt>New</dt><dd>inventory · town · buildings · refine→bread · orders · market · 3 tier-ups</dd>
+            <dt>Want</dt><dd>"more plots and building types" — created by scarce plots at Outpost</dd>
+            <dt>Gate out</dt><dd>reach <strong>City</strong>, which raises the wagon for the expedition (one forcing function)</dd>
+            <dt>Pacing</dt><dd>runs ~2–22; a visible "the town grew" beat every ~3–7 runs</dd>
+          </dl>
+          <div class="box warn"><b>This is where the journey breaks today.</b> The first rung (Hamlet) demands <code>bread</code>; bread needs the Bakery; the Bakery costs <code>block</code> (a mine good) <em>and</em> only unlocks <em>at</em> Hamlet — the rung it gates. Town&nbsp;1 must be made <strong>self-contained on farm goods</strong> (Decision&nbsp;2). Until then, Phase&nbsp;B is unreachable past its first step.</div>
+        </div>
+
+        <div class="card g">
+          <div class="ph">Phase C</div><h3>The Combination — farm + mine, together</h3>
+          <p>The expedition opens <strong>Town&nbsp;2, the mine</strong>. Its lesson is <em>the combination</em>: mine turns are bought with <strong>food</strong>. You can spend <strong>raw farm goods directly</strong> to buy turns, or — better — convert them at the <strong>Kitchen</strong> into <code>supplies</code> for more turns per good. Stone chains yield <code>block</code>, ore chains yield <code>iron_bar</code>; the Workshop/Forge turn metal into better tools; hazards (cave-ins, gas, moles) add urgency the farm never had. The phase — and the introductory loop — closes on a <strong>capstone boss</strong>.</p>
+          <dl class="kv">
+            <dt>New</dt><dd>expedition · mine board · food→turns (soft gradient) · metal tools · hazards · ★ boss</dd>
+            <dt>Want</dt><dd>"my farm is mature — give it a second use" — created by a maxed Town 1</dd>
+            <dt>Gate out</dt><dd>beat the capstone boss; the map opens. <strong>This is mid-game.</strong></dd>
+            <dt>Pacing</dt><dd>runs ~22–35 (days 8–14) — the steady ~1–2 week target lands here</dd>
+          </dl>
+          <div class="box"><b>Why "raw also works" matters.</b> Because raw food <em>always</em> buys at least some mine turns, the mine can never softlock on "I didn't craft supplies." Crafting is the optimization, not the key. This is the soft-efficiency-gate principle that retires the whole class of bug the bread softlock belongs to.</div>
+        </div>
+
+        <div class="card">
+          <div class="ph">Phase D</div><h3>The Frontier — branch &amp; specialize</h3>
+          <p>With farm + mine mastered, the map <strong>opens</strong>. The player founds zones in <strong>their own order</strong> — <strong>Town&nbsp;3 (farm + rats)</strong> with its hazard-management lesson, the <strong>caves</strong> (rare gems), the <strong>harbor/Mirefen</strong> fishing biome, the <strong>orchard</strong> (luxury crops). Each is its own mini-Phase-B: found → climb its ladder → learn its specialization. Differentiation is by cost and difficulty, not a fixed sequence.</p>
+          <dl class="kv">
+            <dt>New</dt><dd>free travel · per-zone specializations · rats hazard + Ratcatcher · fishing · deeper crops</dd>
+            <dt>Want</dt><dd>"let me pick what to deepen" — created by an open map and distinct zone identities</dd>
+            <dt>Gate out</dt><dd>soft — accumulate toward the deep-end milestone (tokens)</dd>
+            <dt>Pacing</dt><dd>runs ~35–100; a zone's ladder in ~8–15 runs (the player is an expert now — faster than Town 1)</dd>
+          </dl>
+        </div>
+
+        <div class="card">
+          <div class="ph">Phase E</div><h3>The Long Return — the endgame chase &nbsp;<span class="pill idle">parked content</span></h3>
+          <p>The completion arc. The deepest zones (the <strong>Black Forge</strong>, the <strong>Pit</strong> boss tier) yield <strong>hearth tokens</strong>; the three tokens open the <strong>Old Capital</strong> and end <em>The Long Return</em>. Per the direction doc this is <strong>deep-end gated</strong> — open most of the frontier early, but keep the finale behind a milestone so it stays earned.</p>
+          <dl class="kv">
+            <dt>New</dt><dd>forge · hearth tokens · boss tier · capital finale · (parked: keepers, festivals, hinterland)</dd>
+            <dt>Want</dt><dd>"finish the story / chase mastery" — the long retention tail</dd>
+            <dt>Gate out</dt><dd>collect 3 hearth tokens → the capital</dd>
+            <dt>Pacing</dt><dd>runs 100+, weeks 5+. <strong>Most speculative</strong> — this content isn't built, so its pacing is the least certain.</dd>
+          </dl>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- ════════════════════ FEATURE SCHEDULE ════════════════════ -->
+    <div class="panel" id="schedule" role="tabpanel" aria-label="Feature Schedule">
+
+      <section id="schedule-sec">
+        <h2>Feature-introduction schedule</h2>
+        <p>The direct answer to "<em>when do we put in each system?</em>". Every system enters the phase where the player has just developed an appetite for it and its inputs are producible — never earlier. Retention systems are the exception: they run from the start but <strong>gate nothing</strong>.</p>
+        <table>
+          <thead><tr><th>System</th><th>Enters</th><th>Why then (the want it answers)</th></tr></thead>
+          <tbody>
+            <tr><td>Drag-chain board · turn budget · seasons</td><td><strong>A</strong></td><td>the core verb; everything else is built on it</td></tr>
+            <tr><td>Coins · sell value</td><td><strong>A</strong></td><td>the first reward; creates the first want (spend them)</td></tr>
+            <tr><td>Inventory</td><td><strong>B</strong></td><td>chains now accrue goods worth holding, not just coins</td></tr>
+            <tr><td>Town · buildings · plots</td><td><strong>B</strong></td><td>coins need a sink with permanence; the town is the canvas</td></tr>
+            <tr><td>Refining (grain→flour→bread)</td><td><strong>B</strong></td><td>raw goods want a use; refining is the first depth step</td></tr>
+            <tr><td>Orders · market</td><td><strong>B</strong></td><td>gives direction ("make this") + a coin faucet/sink to balance against</td></tr>
+            <tr><td>Tier-up ladder (Outpost→City)</td><td><strong>B</strong></td><td>the spine — turns "more buildings" into a paced climb</td></tr>
+            <tr><td>Daily rewards · almanac-as-mastery</td><td><strong>B</strong> <span class="pill info">gates nothing</span></td><td>retention from day 1; rewards, never a content key</td></tr>
+            <tr><td>Tools / fertilizer</td><td><strong>B→C</strong></td><td>the first optimization layer, once the base loop is fluent</td></tr>
+            <tr><td>Expedition (forcing function)</td><td><strong>C</strong></td><td>turns "what next?" into one obvious answer at City</td></tr>
+            <tr><td>Mine board</td><td><strong>C</strong></td><td>a second biome — but only after the farm is mastered</td></tr>
+            <tr><td>Food → mine-turns ("the combination")</td><td><strong>C</strong></td><td>fuses the two economies; the phase's central lesson</td></tr>
+            <tr><td>Metal tools (Workshop/Forge) · hazards</td><td><strong>C</strong></td><td>mine output wants refinement; hazards add the new tension</td></tr>
+            <tr><td>Capstone boss</td><td><strong>C</strong></td><td>proves mastery of farm+mine before the map opens</td></tr>
+            <tr><td>Free travel / branch</td><td><strong>D</strong></td><td>expansion of choice, earned by completing the linear tutorial</td></tr>
+            <tr><td>Per-zone specialization · rats · fishing</td><td><strong>D</strong></td><td>each zone teaches one new wrinkle on the mastered loop</td></tr>
+            <tr><td>Hearth tokens · boss tier · capital finale</td><td><strong>E</strong></td><td>the long chase; deliberately gated to stay earned</td></tr>
+            <tr><td>Keepers · festivals · idle hinterland</td><td><strong>E</strong> <span class="pill idle">parked</span></td><td>texture for the endgame; not in the locked slice</td></tr>
+          </tbody>
+        </table>
+        <div class="box tip"><b>How to read this as a checklist.</b> When proposing <em>any</em> new feature, ask the two questions: (1) which phase's <em>want</em> does it answer? (2) are its inputs producible by then? If it answers no existing want, it's too early; if its inputs aren't producible, it's a softlock waiting to happen.</div>
+      </section>
+
+    </div>
+
+    <!-- ════════════════════ DECISIONS ════════════════════ -->
+    <div class="panel" id="decisions" role="tabpanel" aria-label="Decisions">
+
+      <section id="decisions-sec">
+        <h2>Design calls (this discussion)</h2>
+        <p>The decisions that shape the journey above, captured for the record. Five settled, one open.</p>
+
+        <div class="card"><h3><span class="pill ok">settled</span> 1 · Full-arc scope</h3><p>The timeline runs A → endgame, not just the 3-town slice. Caveat carried forward: <strong>parked content (E) is paced most speculatively</strong> because it isn't built and may change.</p></div>
+
+        <div class="card"><h3><span class="pill ok">settled</span> 2 · Self-contained Town&nbsp;1 (the softlock fix)</h3><p>Re-cost the home tier ladder <em>and</em> the Bakery off <strong>all mine goods</strong>, and unlock the Bakery at <strong>Outpost</strong>. The entire farm → bread → tier-up loop must close on <strong>farm goods alone</strong>. Mine goods are first demanded in Town&nbsp;2. This makes Town&nbsp;1 a clean farm tutorial and flips the progression oracle from RED to green.</p></div>
+
+        <div class="card"><h3><span class="pill ok">settled</span> 3 · Soft efficiency gates for cross-system dependencies</h3><p>Settlement-tier costs stay <strong>hard accumulation gates</strong> (the spine should make you save up — that's the pacing). But every <strong>cross-system dependency</strong> is a <strong>soft gradient</strong>: the raw input works, the crafted one works better. Structurally retires the softlock class of bug. First instance: food→mine-turns.</p></div>
+
+        <div class="card"><h3><span class="pill ok">settled</span> 4 · The combination is in v1, soft</h3><p>Town&nbsp;2 teaches food→mine-turns as its core lesson, but raw farm goods buy turns directly (crafted <code>supplies</code> just buy more). The "aha" without a hard stop.</p></div>
+
+        <div class="card"><h3><span class="pill ok">settled</span> 5 · Frontier opens after Town&nbsp;2, deep-end gated</h3><p>On beating the capstone boss the branch zones become foundable in <strong>any order</strong>, differentiated by cost/difficulty. The deepest content (forge, pit, capital) stays behind a later milestone so the finale is earned.</p></div>
+
+        <div class="card g"><h3><span class="pill warn">open</span> 6 · How crafting gets "real substance"</h3>
+          <p>The one unresolved fork. The goal — crafting should feel like a <em>process</em>, not a silent instant button — is agreed. The lever is not.</p>
+          <table style="margin-top:.6rem;">
+            <thead><tr><th>Option</th><th>What it is</th><th>Trade</th></tr></thead>
+            <tbody>
+              <tr><td>Real-time timer <span class="pill idle">your lean</span></td><td>craft takes real seconds–minutes (non-monetized)</td><td>runs on a <em>different clock</em> than the turn/season economy → idle-app arbitrage; nudges an active puzzler toward a check-in idle game; re-opens the monetization surface the "instant crafting / no-P2W" call deliberately closed</td></tr>
+              <tr><td>In-game-time gate <span class="pill ok">recommended</span></td><td>craft completes <em>next run</em> or ferments <em>over a season</em> (Stardew model)</td><td>same anticipation + plan-ahead feel, but stays on your clock — no idle weirdness, no monetization surface</td></tr>
+              <tr><td>Crafting juice</td><td>economically instant, but a satisfying multi-second animated reveal</td><td>fixes "feels weightless" with zero balancing/monetization cost; separates <em>feel</em> from <em>gate</em></td></tr>
+            </tbody>
+          </table>
+          <p style="margin-top:.5rem;"><strong>Recommendation:</strong> <em>juice</em> + a <em>light in-game-time gate on the deeper refines only</em> (basic refines stay instant so Town&nbsp;1 stays snappy). Resolve when we set pacing.</p>
+        </div>
+
+        <h3>To verify (flagged uncertainty)</h3>
+        <div class="box"><p>The direction doc says player levels are <strong>fully retired</strong> (zone-tier ladder is the sole spine); the older redesign doc lists live <code>node.level</code> gates. The cartography data has no <code>node.level</code> field, so retirement looks at least partly done — but <strong>confirm against <code>src/state/biomeAccess.ts</code> and <code>MapScene.ts</code></strong> before the pacing work leans on it.</p></div>
+      </section>
+
+    </div>
+
+    <!-- ════════════════════ PACING & NEXT ════════════════════ -->
+    <div class="panel" id="pacing" role="tabpanel" aria-label="Pacing and Next">
+
+      <section id="targets">
+        <h2>Pacing targets (proposed — to validate)</h2>
+        <p>Worked backward from the captured session shape: <strong>~2–3 short runs/day</strong>, <strong>steady ~1–2 weeks to mid-game</strong>. A <em>run</em> ≈ one ~10-turn session. These are the <strong>targets the costs must hit</strong>, not yet measurements.</p>
+        <table>
+          <thead><tr><th>Milestone</th><th>Target (runs)</th><th>Calendar @ ~2.5/day</th><th>Cadence note</th></tr></thead>
+          <tbody>
+            <tr><td>First tier-up (Outpost→Hamlet)</td><td>~3–5</td><td>day 1–2</td><td>early, to confirm the loop quickly</td></tr>
+            <tr><td>Town&nbsp;1 mid (Village)</td><td>~8–12</td><td>day 3–5</td><td>a rung every ~3–7 runs keeps the "grew" beat alive</td></tr>
+            <tr><td>Town&nbsp;1 complete (City) → expedition</td><td>~15–22</td><td>day 6–9</td><td>the forcing function fires</td></tr>
+            <tr><td>Town&nbsp;2 founded + combination learned</td><td>~22–30</td><td>day 9–12</td><td>the difficulty step; watch for a spike</td></tr>
+            <tr><td><strong>Mid-game</strong> (capstone boss beaten)</td><td>~25–35</td><td>day 10–14</td><td>the ~1–2 week target lands here</td></tr>
+            <tr><td>First frontier zone complete</td><td>~45–60</td><td>weeks 2–3</td><td>faster than Town 1 — the player is expert</td></tr>
+            <tr><td>Endgame reached (3 tokens)</td><td>100+</td><td>weeks 5+</td><td>speculative — parked content</td></tr>
+          </tbody>
+        </table>
+        <div class="box warn"><b>The instrumentation gap.</b> The campaign harness (<code>npm run playtest -- --campaign</code>) only plays the <strong>farm board</strong> today — it cannot yet validate the cross-zone curve above by playing. Extending it to cross the farm→mine boundary (and model crafting/buildings) is the tooling task that turns these targets from <em>proposed</em> into <em>proven</em>. The <a href="progression-timeline.html">progression oracle</a> already pins the <em>structure</em> (reachability + softlock) in CI.</p></div>
+      </section>
+
+      <section id="next">
+        <h2>The sequence from here</h2>
+        <p>Agreed order of operations: <strong>render the journey → decide pacing → balance the numbers to match.</strong></p>
+        <div class="grid">
+          <div class="card g"><h3>① Render the journey <span class="pill ok">this doc</span></h3><p>The full-arc spine, feature schedule, and design calls — the thing we review and sign off on.</p></div>
+          <div class="card"><h3>② Decide pacing</h3><p>Lock the per-phase run targets + the per-tier-up cost shape. Resolve the open crafting fork (Decision&nbsp;6). Fix the softlock (Decision&nbsp;2) so the oracle goes green and the journey actually executes.</p></div>
+          <div class="card"><h3>③ Balance the numbers</h3><p>Tune <code>upgradeCost</code>, recipe inputs, item values, and faucets to hit the targets — one lever family at a time, re-tested against the (extended) harness. Compress the ~10× family-value spread in the same pass.</p></div>
+        </div>
+        <div class="box tip"><b>Smallest first step whenever we move to code:</b> Decision&nbsp;2 (re-cost Town&nbsp;1 off mine goods + unlock the Bakery at Outpost). It's the single change that turns the progression oracle from RED to green and makes the whole journey playable end-to-end — everything else is tuning on top of a spine that runs.</p></div>
+      </section>
+
+    </div>
+
+  </main>
+</div>
+
+<script>
+  (function(){
+    var root = document.documentElement;
+    var tabs = [].slice.call(document.querySelectorAll('nav.tabs .tab'));
+    var panels = [].slice.call(document.querySelectorAll('main > .panel'));
+    if(!tabs.length || !panels.length) return;
+    root.classList.add('tabs-on');
+
+    function resolve(id){
+      for(var i = 0; i < panels.length; i++){
+        if(panels[i].id === id) return { panel: panels[i], section: null };
+        var sec = id && panels[i].querySelector('#' + (window.CSS && CSS.escape ? CSS.escape(id) : id));
+        if(sec) return { panel: panels[i], section: sec };
+      }
+      return null;
+    }
+    function activate(id, push, scrollToSection){
+      var hit = resolve(id) || { panel: panels[0], section: null };
+      panels.forEach(function(p){ p.classList.toggle('active', p === hit.panel); });
+      tabs.forEach(function(t){
+        var on = t.getAttribute('data-tab') === hit.panel.id;
+        t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      if(scrollToSection && hit.section) hit.section.scrollIntoView({ block: 'start' });
+      else window.scrollTo(0, 0);
+      if(push){ var h = '#' + id; if(location.hash !== h) history.pushState(null, '', h); }
+    }
+    tabs.forEach(function(t){ t.addEventListener('click', function(){ activate(t.getAttribute('data-tab'), true, false); }); });
+    // in-panel jump links (data-go="tabId") and hash anchors
+    document.addEventListener('click', function(e){
+      var go = e.target.closest('[data-go]');
+      if(go){ e.preventDefault(); activate(go.getAttribute('data-go'), true, false); return; }
+      var a = e.target.closest('a[href^="#"]'); if(!a) return;
+      var id = a.getAttribute('href').slice(1);
+      if(resolve(id)){ e.preventDefault(); activate(id, true, true); }
+    });
+    window.addEventListener('popstate', function(){ activate((location.hash || '').slice(1), false, true); });
+    activate((location.hash || '').slice(1), false, true);
+  })();
+</script>
+</body>
+</html>
