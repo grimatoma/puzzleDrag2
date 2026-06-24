@@ -7,12 +7,15 @@
 // (blossom / fallen leaf / snow cap + base snow), and the idle is loud rather
 // than subtle:
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the leaf tuft rocks
-//       /leans ~10-12 design-px at the tip with a squash at the base. Zero
-//       velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger SHAKE/BOUNCE — a squash-stretch hop
-//       ~12-14 design-px up, anticipation crouch → stretch up → squash landing
-//       that settles. May briefly exit the −24..+24 box.
+//   IDLE COMMON  (~6s, win ~1.2s): a calm LEAF-RUSTLE — the leafy top sways /
+//       quivers a gentle few px while the bulb stays planted (a small lean about
+//       the base, concentrated at the leaf tips). Zero velocity at the window
+//       edges (seamless). NOT a hop.
+//   IDLE RARE    (~18s, win ~1.6s): a SOIL-SHRUG — the beet sinks a touch, then
+//       shrugs UP out of the soil baring more of its taproot with a little side
+//       twist, and settles back down; a couple of soil flecks are kicked off the
+//       base (additive overlay in anim(), enveloped to 0 at the edges). A shrug-
+//       and-settle with a twist, NOT a clean vertical hop.
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized `paint(ctx,p,pose)`
 // where `interface P` holds tweenable season params (colours + prop amounts) and
@@ -625,50 +628,70 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+// A localized bump over the sub-window [a,b] (peaks mid-window). Built as
+// sin²(π·u) of the clamped, remapped param, so it reaches 0 with ZERO value AND
+// ZERO velocity at u=0 and u=1 — i.e. it vanishes smoothly outside [a,b] and, in
+// particular, at the action-window edges q=0 / q=1. The seamless building block
+// for sequencing the shrug's sink → rise → settle phases.
+function bump(q: number, a: number, b: number): number {
+  if (b <= a) return 0;
+  let u = (q - a) / (b - a);
+  if (!(u > 0)) return 0; // ≤0 or NaN
+  if (u >= 1) return 0;
+  u = Math.sin(Math.PI * u);
+  return u * u;
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** Build the idle pose from the wall clock. Two tiers, NEITHER a bounce — both
+ *  in-character for a root crop:
+ *    COMMON — a calm LEAF-RUSTLE: the leafy top sways/quivers a few times while
+ *             the bulb stays planted (small lean about the base ⇒ big arm at the
+ *             leaf tips, tiny arm at the bulb), every ~6s (win 1.2s).
+ *    RARE   — a SOIL-SHRUG: the beet sinks a touch, then shrugs UP out of the
+ *             soil baring more of its root with a little side twist, and settles
+ *             back down, every ~18s (win 1.6s). Pose-driven, not a clean hop.
+ *  Each factor is 0 with zero value AND zero velocity at the window edges, so the
+ *  pose returns exactly to REST (seamless loop); REST ⇒ poseFromClock(0) = REST. */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // ~0.17 rad lean → leaf-tip arm ≈ (BEET_PIVOT_Y - (-23.5)) ≈ 39 px gives a
-  // generous ~10-12 px sway at the tip.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: a calm LEAF-RUSTLE (~6s, win 1.2s) ──
+  // A small lean about the base (BEET_PIVOT_Y=16): the leaf tips (arm ≈ 39px)
+  // sway a gentle ~3-4px while the bulb (arm ≈ 7px) barely stirs — reads as the
+  // foliage rustling, not the whole beet rocking. A couple of soft quivers under
+  // a sin-envelope; the bulb stays seated (near-zero squash). Both factors are 0
+  // with zero velocity at the edges (env·rock and hump), so it returns to REST.
+  const qC = actionQ(t, 6.0, 1.2, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.16 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
-    // faint windup tilt — keeps anticipate() in the seamless toolkit.
-    pose.lean += 0.02 * anticipate(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0 envelope, zero at edges
+    const rustle = Math.sin(qC * Math.PI * 4); // two soft quivers within the window
+    pose.lean += 0.058 * env * rustle; // leaf tips sway; integer-π so 0 at edges
+    // a faint breathing settle at the base — keeps the bulb planted, no hop.
+    pose.squashY += -0.012 * hump(qC);
+    pose.squashX += 0.01 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12-14px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  // ── RARE: a SOIL-SHRUG (~18s, win 1.6s) — bare the root, then settle ──
+  // Phase 3s so the window lands at t mod 18 ∈ [15, 16.6) — clear of every COMMON
+  // beat (t mod 6 ∈ {0,6,12}) and ending before the 18≡0 seam. The motion: a
+  // brief sink into the soil (anticipation), a shrug UP that bares more taproot
+  // with a side twist, then a settle back down. Composed from localized `bump`s
+  // and `hump`, every one of which is 0 with zero velocity at qS=0 and qS=1.
+  const qS = actionQ(t, 18.0, 1.6, 3.0);
   if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
+    const sink = bump(qS, 0.0, 0.34); // early dip down into the soil
+    const rise = bump(qS, 0.16, 0.92); // the shrug up — bares the root
+    const twist = bump(qS, 0.1, 0.96); // a side twist that grows then unwinds
 
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    pose.squashY += air * 0.20 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -air * 0.14 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+    // bob: sink down a touch (+), then a bigger shrug up (−) baring the root.
+    pose.bob += sink * 1.8 - rise * 9.0;
+    // a side twist/lean as it lifts — a shrug, not a straight vertical hop. One
+    // direction on the way up, easing off as it settles back down.
+    pose.lean += 0.07 * twist - 0.02 * sink;
+    // the bulb shoulders pull up out of the collar as it shrugs: a little taller
+    // + narrower at the apex, a touch wider+shorter as it sinks/settles.
+    pose.squashY += rise * 0.07 - sink * 0.05;
+    pose.squashX += -rise * 0.05 + sink * 0.045;
   }
 
   return pose;
@@ -684,6 +707,44 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   return (ctx, t) => {
     const tt = Number.isFinite(t) ? t : 0;
     paint(ctx, SP[season], poseFromClock(tt));
+
+    // ── SOIL-SHRUG dressing: a couple of soil flecks kicked off the base as the
+    // beet shrugs up out of the soil. Additive overlay only (never in the still);
+    // shares the RARE clock with poseFromClock and is enveloped by the shrug's
+    // own rise — `bump(...)` is 0 with zero velocity at the window edges, so the
+    // flecks are absent at the edges and, since the window is gated off at t=0
+    // (qS<0), exactly absent at t=0. Soil colour tints with the season.
+    {
+      const qS = actionQ(tt, 18.0, 1.6, 3.0);
+      const lift = qS >= 0 ? bump(qS, 0.16, 0.92) : 0; // tracks the shrug, 0 at edges
+      if (lift > 0.001) {
+        const soil = SP[season].soil;
+        // each fleck: [base x, base y, horizontal drift, peak height] — hops up
+        // from the soil collar and falls back, its own arc scaled by `lift`.
+        const flecks: Array<[number, number, number, number]> = [
+          [-5.5, 17.0, -3.0, 5.5],
+          [4.5, 17.6, 3.2, 6.5],
+          [-1.0, 18.2, 0.6, 4.5],
+        ];
+        ctx.save();
+        try {
+          for (let i = 0; i < flecks.length; i++) {
+            const [bx, by, drift, peak] = flecks[i];
+            const arc = Math.sin(Math.PI * lift); // 0..1..0 over the shrug, per-fleck rise
+            const fx = bx + drift * lift;
+            const fy = by - peak * arc; // up (negative) then back down to the collar
+            ctx.globalAlpha = 0.7 * arc;
+            ctx.fillStyle = rgb(soil);
+            ctx.beginPath();
+            ctx.arc(fx, fy, 1.1 - 0.25 * (i % 2), 0, Math.PI * 2);
+            ctx.fill();
+          }
+        } finally {
+          ctx.globalAlpha = 1;
+          ctx.restore();
+        }
+      }
+    }
 
     // Light additive season micro-sparkle (dressing only — never the subject's
     // own colour/brightness). Kept tiny so the POSE action is the star.

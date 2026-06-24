@@ -8,12 +8,13 @@
 // cap all year). Seasons swing HARD on colour + gloss + a real seasonal prop
 // (blossom / fallen leaf / snow cap + base snow), and the idle is loud:
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the eggplant rocks
-//       ~10–12 design-px at the top with a squash at the base. Anticipation →
-//       peak → settle, zero velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger SHAKE/BOUNCE — a squash-stretch
-//       hop ~12–14 design-px up, anticipation crouch, stretch on the way up,
-//       and a squash landing that overshoots then settles (may exit the box).
+//   IDLE COMMON  (~6s, win ~1.0s): a GLOSSY JIGGLE — the heavy glossy body
+//       settles with a soft squash pulse + a small ringing wobble and a little
+//       lean (the gloss highlight rides with it). NOT a hop; zero value AND
+//       velocity at the window edges (seamless).
+//   IDLE RARE    (~18s, win ~1.3s): a CALYX CREAK — the green stem-cap creaks /
+//       twists about its own hub (concentrated at the TOP) while the body gives
+//       a heavier jiggle, then everything settles. Phased clear of the common.
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized
 // `paint(ctx, p, pose)` where `interface P` holds tweenable season params
@@ -60,12 +61,13 @@ interface P {
 /** The idle gesture, separate from season identity. All zero = REST. */
 interface Pose {
   bob: number;     // vertical offset in design px (negative = up)
-  lean: number;    // top-of-eggplant sway, radians (rock side to side)
+  lean: number;    // whole-body sway, radians (rock side to side about the base)
   squashX: number; // additive horizontal scale (+0.18 = 18% wider)
   squashY: number; // additive vertical scale (+0.18 = 18% taller)
+  capLean: number; // calyx-ONLY twist, radians (creak concentrated at the top)
 }
 
-const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, capLean: 0 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
 
@@ -273,6 +275,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     lean: safeNum(rawPose.lean),
     squashX: safeNum(rawPose.squashX),
     squashY: safeNum(rawPose.squashY),
+    capLean: safeNum(rawPose.capLean),
   };
 
   ctx.save();
@@ -504,6 +507,15 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     const capBaseY = top - 1.5;
     const capBack = lerpRGB(p.cap, p.capDark, 0.5);
 
+    // The calyx + stem creak about the calyx hub — a twist CONCENTRATED at the
+    // top, distinct from the whole-body `lean` (which pivots near the base). At
+    // capLean = 0 (REST / still) this transform is identity, so the cap is drawn
+    // exactly where the still expects it.
+    ctx.save();
+    ctx.translate(0, capBaseY);
+    ctx.rotate(pose.capLean);
+    ctx.translate(0, -capBaseY);
+
     // calyx — a green star with a few pointed sepal leaves hugging the shoulder
     const sepals: Array<[number, number]> = [
       [-6.4, 3.4],
@@ -584,6 +596,8 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     ctx.quadraticCurveTo(-1.4, capBaseY - 5.5, -0.4, capBaseY - 7.5);
     ctx.stroke();
 
+    ctx.restore(); // end calyx creak transform
+
     ctx.restore(); // end pose transform
 
     // ── Ambient light wash over the whole tile (per-season tint) ─────────────
@@ -612,60 +626,64 @@ function actionQ(t: number, period: number, win: number, phase: number): number 
 }
 
 // A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
-// sin^2(pi q) → smooth in/out, peak at q=0.5.
+// sin^2(pi q) → smooth in/out, peak at q=0.5. Because hump(q) is 0 AND hump'(q)
+// is 0 at q∈{0,1}, ANY finite factor multiplied by hump(q) inherits zero value
+// and zero velocity at the window edges — the building block of every seamless
+// factor below.
 function hump(q: number): number {
   const s = Math.sin(Math.PI * q);
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
-}
-
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** Build the idle pose from the wall clock. Two tiers, NEITHER a bounce hop —
+ *  both fit the eggplant's heavy glossy shape:
+ *    COMMON — a GLOSSY JIGGLE: the weighty body settles with a soft squash pulse
+ *             + a small ringing wobble and a little lean (the gloss highlight
+ *             rides with it, since it is painted under the squash transform).
+ *    RARE   — a CALYX CREAK: the green stem-cap creaks/twists about its own hub
+ *             (capLean, concentrated at the TOP) while the body gives a heavier
+ *             jiggle, then everything settles.
+ *  Every factor is enveloped by hump(q) (and lean/creak swings carry their own
+ *  sin that is 0 at the edges too), so the pose returns to REST with zero value
+ *  AND zero velocity at q=0 and q=1 → a seamless loop. */
 function poseFromClock(t: number): Pose {
-  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, capLean: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // Tip arm ≈ (EGG_PIVOT_Y - EGG_TOP) ≈ 27 px → ~10–12 px sway at the top.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: a GLOSSY JIGGLE (~6s, win 1.0s) ──
+  // The heavy glossy body wobbles/settles: a soft squat pulse that bulges wide,
+  // a small secondary ring so it reads as a jiggle (not a single squat), and a
+  // gentle lean riding with it. No vertical hop — the weight stays seated.
+  const qC = actionQ(t, 6.0, 1.0, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.16 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
+    const env = hump(qC); // 0..1..0, zero value+velocity at edges
+    const ring = Math.sin(qC * Math.PI * 3); // a few jiggle oscillations
+    // primary squash pulse — the body settles its weight (squat down, bulge wide)
+    pose.squashY += -0.07 * env;
+    pose.squashX += 0.06 * env;
+    // secondary ringing jiggle (smaller, faster) so it quivers as it settles
+    pose.squashY += 0.03 * env * ring;
+    pose.squashX += -0.025 * env * ring;
+    // a little lean riding with the jiggle (one gentle L→R, 0 at edges via env)
+    pose.lean += 0.045 * env * Math.sin(qC * Math.PI * 2);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~13px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  // ── RARE: a CALYX CREAK (~18s, win 1.3s, phase 3s — clear of the common) ──
+  // The green calyx + stem creak/twist about their own hub (capLean), a slow
+  // out-and-back wring concentrated at the top, while the heavy body gives a
+  // bigger jiggle than the common beat and then settles.
+  const qS = actionQ(t, 18.0, 1.3, 3.0);
   if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air; // 0..1 in the air
-    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-  }
-
-  // Reference anticipate() so it stays part of the seamless-curve toolkit and
-  // contributes a faint windup tilt to the common wobble (still 0 at edges).
-  if (qC >= 0) {
-    pose.lean += 0.02 * anticipate(qC);
+    const env = hump(qS); // 0..1..0, zero value+velocity at edges
+    // CALYX CREAK: one slow twist out→back, plus a small settling micro-creak.
+    pose.capLean += 0.22 * env * Math.sin(qS * Math.PI * 2);
+    pose.capLean += 0.05 * env * Math.sin(qS * Math.PI * 4);
+    // BODY: a heavier jiggle than the common (deeper squat + bulge) + a ring.
+    pose.squashY += -0.10 * env;
+    pose.squashX += 0.09 * env;
+    pose.squashY += 0.04 * env * Math.sin(qS * Math.PI * 3);
+    pose.squashX += -0.035 * env * Math.sin(qS * Math.PI * 3);
+    // a small whole-body settle lean (gentle, 0 at edges via env)
+    pose.lean += 0.03 * env * Math.sin(qS * Math.PI * 2);
   }
 
   return pose;
@@ -731,7 +749,7 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the bounce + glossy purple is the show.
+      // Summer: no extra dressing — the glossy jiggle + glossy purple is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

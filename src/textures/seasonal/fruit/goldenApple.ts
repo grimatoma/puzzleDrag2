@@ -1,34 +1,38 @@
 // BOLD seasonal art for the GOLDEN APPLE fruit tile (`tile_fruit_golden_apple`).
 //
-// One glowing GOLDEN apple — classic apple silhouette with a short stem and a
-// small leaf — resting low-centre on a grassy pad. The SAME apple silhouette is
-// drawn every season; only colour, light, gloss and the seasonal dressing
-// (blossom / fallen leaf / snow cap + frost / base snow) change. This is the
-// APPROVED "bold & fun" direction: the seasons swing HARD on light + a real
-// seasonal prop, and the idle is a two-tier WC3-style occasional action rather
-// than a constant nudge:
+// One glowing, METALLIC GOLDEN apple — classic apple silhouette with a short
+// stem and a small leaf — resting low-centre on a grassy pad. The SAME apple
+// silhouette is drawn every season; only colour, light, gloss and the seasonal
+// dressing (blossom / fallen leaf / snow cap + frost / base snow) change. The
+// gold is pushed to read as POLISHED METAL — a high-contrast warm gradient and a
+// tight, bright specular hotspot — so a legendary item never reads as an
+// ordinary yellow apple. The idle sells the rarity rather than a generic bounce:
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the apple rocks/leans
-//       ~10–12 design-px at the top with a little squash at the base.
-//       Anticipation → peak → settle, zero velocity at the window edges.
-//   IDLE SPECIAL (~18s, win ~1.2s): a small SPARKLE BURST — instead of a plain
-//       bounce, the magical golden apple flares bright and radiates a few gold
-//       sparkle rays/stars for ~1s (a tiny lift rides under it), then settles.
-//       The rays may paint OUTSIDE the −24..+24 box (no engine clip).
+//   IDLE COMMON  (~6s, win ~1.4s): a slow GLEAM — a small, calm lean-and-settle
+//       plus a faint specular glint that slides a touch across the lit shoulder.
+//       Every factor is 0 (zero velocity) at the window edges; the glint
+//       envelopes to 0 alpha at the edges (invisible at rest).
+//   IDLE RARE    (~18s, win ~1.6s): a radiant SHINE-SWEEP — a bright specular
+//       band rakes diagonally across the gold (clipped to the body) while a few
+//       four-pointed gold stars pop at it, with a tiny "proud" puff-up riding
+//       under it. The sweep + sparkles are additive (globalCompositeOperation
+//       "lighter") and enveloped to 0 at the window edges, so they are invisible
+//       at t=0. The stars may paint just OUTSIDE the −24..+24 box (no engine clip).
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized `paint(ctx,p,pose)`
 // where `interface P` holds tweenable season params (colours + prop amounts) and
-// `pose` holds the idle gesture (bob / lean / squash + the sparkle burst).
-// Because every season is the same paint with tweened P, transitions are
-// seamless: transition(0) ≡ draw(from), transition(1) ≡ draw(to). REST pose has
-// all zeros (burst < 0 = off), so draw(season) = paint(ctx, SP[season], REST) and
-// the idle's pose is 0 at every action-window edge → seamless loop.
+// `pose` holds the idle gesture (bob / lean / squash + the two specular-overlay
+// progresses `glint` and `sweep`). Because every season is the same paint with
+// tweened P, transitions are seamless: transition(0) ≡ draw(from),
+// transition(1) ≡ draw(to). REST pose has all zeros (glint/sweep < 0 = off), so
+// draw(season) = paint(ctx, SP[season], REST) and the idle's pose is 0 (and the
+// overlays invisible) at t=0 → seamless loop.
 //
 // PALETTE LOCK: the apple stays a glowing warm GOLD all year. Ripeness shows in
 // richness/shade only — NEVER a hue change away from gold. The gold glow stays
-// locked bright even under winter frost.
+// locked bright even under winter frost. Silhouette/identity is constant.
 //
-// Origin-centered in the −24..+24 design box (the sparkle burst may paint
+// Origin-centered in the −24..+24 design box (the shine-sweep stars may paint
 // outside it), light from upper-left, flat cel-shaded with a soft dark outline.
 // Pure Canvas-2D vector drawing — never throws, clamps everything, save/restore,
 // resets globalAlpha.
@@ -64,16 +68,20 @@ interface P {
   leafTurn: number;      // 0..1 leaf turning amber (autumn) — leaf colour cue only
 }
 
-/** The idle gesture, separate from season identity. All zero / burst<0 = REST. */
+/** The idle gesture, separate from season identity. All-zero / progress<0 =
+ *  REST. `glint` and `sweep` are 0..1 window progresses for the two additive
+ *  specular overlays (<0 = off); both envelope to 0 alpha at their window edges
+ *  so the loop is seamless and nothing shows at t=0. */
 interface Pose {
   bob: number;     // vertical offset in design px (negative = up)
   lean: number;    // top-of-apple sway, radians (rock side to side)
   squashX: number; // additive horizontal scale (+0.18 = 18% wider)
   squashY: number; // additive vertical scale (+0.18 = 18% taller)
-  burst: number;   // 0..1 progress of the rare sparkle burst (<0 = off)
+  glint: number;   // 0..1 progress of the COMMON travelling gleam (<0 = off)
+  sweep: number;   // 0..1 progress of the RARE radiant shine-sweep (<0 = off)
 }
 
-const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, burst: -1 };
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, glint: -1, sweep: -1 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
 
@@ -150,10 +158,11 @@ function safeNum(x: number): number {
 
 const SP: Record<SeasonName, P> = {
   // Spring — a little pale, gold-green tinged young gold; dewy lime pad + blossom.
+  // Metallic: brighter near-white-gold light over a deeper warm-bronze dark.
   Spring: {
-    skinLight: [248, 232, 150],
-    skinMid: [224, 192, 88],
-    skinDark: [176, 142, 52],
+    skinLight: [255, 244, 176],
+    skinMid: [226, 188, 80],
+    skinDark: [156, 118, 38],
     stem: [120, 92, 50],
     leaf: [134, 196, 92],
     padGrass: [128, 206, 86],
@@ -172,10 +181,11 @@ const SP: Record<SeasonName, P> = {
     leafTurn: 0,
   },
   // Summer — bright polished PEAK gold; saturated mid-green pad; strong sheen.
+  // Metallic: a hot near-white specular top, rich gold body, deep amber-bronze base.
   Summer: {
-    skinLight: [255, 236, 132],
-    skinMid: [250, 198, 54],
-    skinDark: [198, 142, 28],
+    skinLight: [255, 248, 168],
+    skinMid: [252, 196, 46],
+    skinDark: [176, 118, 18],
     stem: [112, 82, 42],
     leaf: [86, 170, 70],
     padGrass: [86, 168, 70],
@@ -194,10 +204,11 @@ const SP: Record<SeasonName, P> = {
     leafTurn: 0,
   },
   // Autumn — rich deep glowing-gold; olive-tan pad; fallen leaves; leaf to amber.
+  // Metallic: warm bright top, deep glowing gold body, dark molten-bronze base.
   Autumn: {
-    skinLight: [248, 214, 104],
-    skinMid: [224, 168, 44],
-    skinDark: [160, 110, 24],
+    skinLight: [255, 226, 120],
+    skinMid: [226, 164, 40],
+    skinDark: [140, 90, 18],
     stem: [110, 76, 36],
     leaf: [206, 146, 48],
     padGrass: [150, 152, 86],
@@ -217,10 +228,11 @@ const SP: Record<SeasonName, P> = {
   },
   // Winter — frost-rimmed gold + a bold snow cap + base snow; gold STAYS bright
   // and glowing through the cool light. Clearly snowy.
+  // Metallic: still a bright gold top over a deeper warm base, even under frost.
   Winter: {
-    skinLight: [242, 224, 150],
-    skinMid: [216, 178, 76],
-    skinDark: [152, 120, 52],
+    skinLight: [250, 234, 160],
+    skinMid: [220, 176, 70],
+    skinDark: [138, 102, 40],
     stem: [104, 86, 64],
     leaf: [128, 150, 120],
     padGrass: [182, 202, 220],
@@ -274,10 +286,6 @@ function appleBodyPath(ctx: CanvasRenderingContext2D): void {
   ctx.closePath();
 }
 
-// Apple centre (in design-box coords, before pose) — anchor for the sparkle burst.
-const APP_CX = 0;
-const APP_CY = lerp(APP_TOP, APP_BOT, 0.42);
-
 // ── Small dressing helper ─────────────────────────────────────────────────────
 
 /** A four-pointed sparkle star at (x,y). */
@@ -304,7 +312,8 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     lean: safeNum(rawPose.lean),
     squashX: safeNum(rawPose.squashX),
     squashY: safeNum(rawPose.squashY),
-    burst: rawPose.burst, // <0 = off; used as 0..1 only when >=0
+    glint: Number.isFinite(rawPose.glint) ? rawPose.glint : -1, // <0 = off
+    sweep: Number.isFinite(rawPose.sweep) ? rawPose.sweep : -1, // <0 = off
   };
 
   ctx.save();
@@ -469,22 +478,52 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     ctx.ellipse(5, bot - 5, APP_HALF * 0.8, (bot - top) * 0.42, -0.3, 0, Math.PI * 2);
     ctx.fill();
 
-    // soft warm sheen band across the upper-left shoulder + metallic gold glints
+    // METALLIC sheen — a broad warm sheen band + a TIGHT bright specular hot dot
+    // and a hard pin-point core, so the gold reads as polished metal (not a matte
+    // yellow apple). Plus a small lower-right rim reflection.
     if (p.gloss > 0.02) {
+      // broad warm sheen across the upper-left shoulder
       ctx.fillStyle = rgba([255, 250, 220], 0.18 + 0.34 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(-5, lerp(top, bot, 0.3), 5.6, 3.4, -0.5, 0, Math.PI * 2);
       ctx.fill();
-      // primary specular dot — the metallic-gold highlight
-      ctx.fillStyle = rgba([255, 255, 244], 0.4 + 0.5 * p.gloss);
+      // tighter, brighter specular highlight — the metallic hotspot
+      ctx.fillStyle = rgba([255, 255, 248], 0.5 + 0.5 * p.gloss);
       ctx.beginPath();
-      ctx.ellipse(-5.5, top + 3.5, 1.9, 2.6, -0.4, 0, Math.PI * 2);
+      ctx.ellipse(-5.5, top + 3.4, 1.5, 2.2, -0.4, 0, Math.PI * 2);
       ctx.fill();
-      // small secondary glint lower-right (reflected fill light)
-      ctx.fillStyle = rgba([255, 248, 214], 0.22 + 0.3 * p.gloss);
+      // hard pin-point core (the give-away of a polished metallic surface)
+      ctx.fillStyle = rgba([255, 255, 255], 0.55 + 0.45 * p.gloss);
+      ctx.beginPath();
+      ctx.arc(-6, top + 2.6, 0.85, 0, Math.PI * 2);
+      ctx.fill();
+      // small secondary rim reflection lower-right (reflected fill light)
+      ctx.fillStyle = rgba([255, 248, 214], 0.24 + 0.34 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(6.5, bot - 6, 1.1, 1.8, 0.3, 0, Math.PI * 2);
       ctx.fill();
+    }
+
+    // ── COMMON travelling gleam — a faint specular glint sliding a touch across
+    //    the lit shoulder (clipped to the body). Enveloped to 0 alpha at the
+    //    window edges, so nothing shows at rest. ────────────────────────────────
+    if (pose.glint >= 0) {
+      const g = clamp01(pose.glint);
+      const env = Math.sin(g * Math.PI); // 0 -> 1 -> 0
+      // travel a short diagonal arc across the upper-left face
+      const gx = lerp(-7.5, -1.5, g);
+      const gy = lerp(top + 2.0, lerp(top, bot, 0.34), g);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = `rgba(255,252,224,${0.4 * env})`;
+      ctx.beginPath();
+      ctx.ellipse(gx, gy, 2.6, 1.5, -0.6, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = `rgba(255,255,250,${0.5 * env})`;
+      ctx.beginPath();
+      ctx.arc(gx, gy, 0.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
     }
 
     // frost dusting (winter) — cool blue speckle on the upward skin, gold shows
@@ -505,13 +544,32 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
       });
     }
 
-    // RARE burst — a clipped inner gold flare so the apple itself glows brighter
-    if (pose.burst >= 0) {
-      const env = Math.sin(clamp01(pose.burst) * Math.PI); // 0->1->0
-      ctx.fillStyle = rgba([255, 248, 206], 0.5 * env);
+    // RARE radiant SHINE-SWEEP — a bright specular band travels diagonally
+    // across the gold (clipped to the body), like light raking over polished
+    // metal. Enveloped to 0 alpha at the window edges (invisible at rest). The
+    // sparkle stars that pop at the band are drawn UNCLIPPED below.
+    if (pose.sweep >= 0) {
+      const sw = clamp01(pose.sweep);
+      const env = Math.sin(sw * Math.PI); // 0 -> 1 -> 0 overall presence
+      // band centre travels from upper-left to lower-right across the body
+      const bandCx = lerp(-APP_HALF - 4, APP_HALF + 4, sw);
+      const bandCy = lerp(top - 2, bot + 2, sw);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      // a long thin diagonal bright strip (the raking specular band)
+      const sweepGrad = ctx.createLinearGradient(bandCx - 6, bandCy - 6, bandCx + 6, bandCy + 6);
+      sweepGrad.addColorStop(0, `rgba(255,236,150,0)`);
+      sweepGrad.addColorStop(0.5, `rgba(255,252,226,${0.85 * env})`);
+      sweepGrad.addColorStop(1, `rgba(255,236,150,0)`);
+      ctx.fillStyle = sweepGrad;
+      ctx.save();
+      ctx.translate(bandCx, bandCy);
+      ctx.rotate(-Math.PI / 4); // diagonal band, perpendicular to travel
       ctx.beginPath();
-      ctx.ellipse(-1, midY, APP_HALF + 2, (bot - top) * 0.6, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, 0, 4.2, (bot - top) * 0.95, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.restore();
+      ctx.restore();
     }
 
     ctx.restore(); // end body clip
@@ -577,45 +635,40 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
 
     ctx.restore(); // end pose transform
 
-    // ── RARE idle SPARKLE BURST — radiating gold rays + stars (UNCLIPPED) ─────
-    // A few gold rays sweeping out from the apple center, plus stars at the tips.
-    // Fits the magical golden apple; may paint outside the −24..+24 box (no clip).
-    if (pose.burst >= 0) {
-      const b = clamp01(pose.burst);
-      const env = Math.sin(b * Math.PI);  // overall envelope, 0->1->0
-      const reach = 9 + 15 * b;            // rays grow outward over the window
-      const cx = APP_CX;
-      const cy = APP_CY + pose.bob;
+    // ── RARE SPARKLE STARS popping at the shine-sweep (UNCLIPPED) ─────────────
+    // A few four-pointed gold stars flash at the leading edge of the travelling
+    // band as it rakes across the apple — selling the legendary rarity. Each is
+    // enveloped to 0 at the window edges (invisible at rest); they may paint just
+    // outside the −24..+24 box (no engine clip).
+    if (pose.sweep >= 0) {
+      const sw = clamp01(pose.sweep);
+      const env = Math.sin(sw * Math.PI); // overall presence, 0 -> 1 -> 0
+      // the band's leading point in design-box coords (mirrors the clipped band)
+      const bandCx = lerp(-APP_HALF - 4, APP_HALF + 4, sw);
+      const bandCy = lerp(top - 2, bot + 2, sw) + pose.bob;
       ctx.save();
       ctx.globalCompositeOperation = "lighter";
-      // central warm-gold flare
-      const flare = ctx.createRadialGradient(cx, cy, 0, cx, cy, 16 + 8 * b);
-      flare.addColorStop(0, `rgba(255,250,210,${0.8 * env})`);
-      flare.addColorStop(0.4, `rgba(255,224,130,${0.4 * env})`);
-      flare.addColorStop(1, "rgba(255,210,90,0)");
-      ctx.fillStyle = flare;
+      // a soft warm-gold glow riding the band's centre
+      const glow = ctx.createRadialGradient(bandCx, bandCy, 0, bandCx, bandCy, 9);
+      glow.addColorStop(0, `rgba(255,250,214,${0.5 * env})`);
+      glow.addColorStop(1, "rgba(255,224,130,0)");
+      ctx.fillStyle = glow;
       ctx.beginPath();
-      ctx.arc(cx, cy, 22 + 8 * b, 0, Math.PI * 2);
+      ctx.arc(bandCx, bandCy, 9, 0, Math.PI * 2);
       ctx.fill();
-      // a few radiating gold rays (5), slow spin
-      const rays = 5;
-      const spin = b * 0.5 - Math.PI / 2; // start pointing up
-      for (let i = 0; i < rays; i++) {
-        const ang = (i / rays) * Math.PI * 2 + spin;
-        const ex = cx + Math.cos(ang) * reach;
-        const ey = cy + Math.sin(ang) * reach;
-        const grad = ctx.createLinearGradient(cx, cy, ex, ey);
-        grad.addColorStop(0, `rgba(255,248,206,${0.7 * env})`);
-        grad.addColorStop(1, "rgba(255,224,130,0)");
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 1.6;
-        ctx.beginPath();
-        ctx.moveTo(cx, cy);
-        ctx.lineTo(ex, ey);
-        ctx.stroke();
-        // a gold star at each ray tip
-        sparkle(ctx, ex, ey, 1.4 + 1.2 * env, 0.85 * env, "255,246,200");
-      }
+      // three stars staggered along the band, each a brief twinkle (0 at edges)
+      const stars: Array<[number, number, number]> = [
+        [-3.5, -6.5, 0.0],   // [perp offset along the diagonal, , phase]
+        [3.0, 5.5, 0.33],
+        [-1.0, 1.0, 0.66],
+      ];
+      stars.forEach(([ox, oy, ph]) => {
+        // local twinkle: a hump centred at phase ph, zero at the window edges
+        const local = clamp01(1 - Math.abs(sw - (0.25 + ph * 0.5)) * 3.2);
+        const tw = env * Math.sin(local * Math.PI);
+        if (tw <= 0.001) return;
+        sparkle(ctx, bandCx + ox, bandCy + oy, 1.3 + 1.4 * tw, 0.9 * tw, "255,247,205");
+      });
       ctx.restore();
     }
 
@@ -645,9 +698,9 @@ function actionQ(t: number, period: number, win: number, phase: number): number 
 }
 
 const COMMON_PERIOD = 6;
-const COMMON_WIN = 0.9;
+const COMMON_WIN = 1.4;
 const RARE_PERIOD = 18;
-const RARE_WIN = 1.2;
+const RARE_WIN = 1.6;
 
 // A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
 function hump(q: number): number {
@@ -655,45 +708,47 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
-}
-
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare SPARKLE BURST every ~18s (win 1.2s). */
+/** Build the idle pose from the wall clock. Two tiers, both CALM (this is a
+ *  precious, dignified golden apple — no jittery wobble):
+ *    COMMON (~6s, win 1.4s): a slow gleam — a small lean-and-settle plus a faint
+ *      specular glint that slides a touch across the lit shoulder.
+ *    RARE   (~18s, win 1.6s): a radiant SHINE-SWEEP — a bright specular band
+ *      rakes diagonally across the gold with a few star sparkles popping at it,
+ *      and a tiny "proud" puff-up rides under it.
+ *  Every factor is built from products that are 0 (with zero velocity) at the
+ *  window edges, so the pose returns to REST seamlessly; both overlays envelope
+ *  to 0 alpha at their edges, so NOTHING shows at t=0. The RARE is phased 3.0s
+ *  clear of the COMMON. */
 function poseFromClock(t: number): Pose {
   const tt = Number.isFinite(t) ? t : 0;
-  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, burst: -1 };
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, glint: -1, sweep: -1 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // ~0.17 rad lean → top travels ~ pivotArm*0.17. Arm ≈ (APP_PIVOT_Y - APP_TOP)
-  // ≈ 24 px → ~10–12 px sway at the top.
+  // ── COMMON: a slow, calm gleam (~6s, win 1.4s) ──
+  // A gentle single lean out and back (≈0.06 rad → a few px at the top), a faint
+  // settle at the base, and a travelling specular glint (drawn in paint()).
   const qC = actionQ(tt, COMMON_PERIOD, COMMON_WIN, 0.0);
-  if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.17 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
-    // faint windup tilt from the seamless-curve toolkit (still 0 at edges)
-    pose.lean += 0.02 * anticipate(qC);
+  if (qC > 0) {
+    pose.glint = qC; // faint glint slides across; enveloped to 0 alpha at edges
+    const env = Math.sin(Math.PI * qC);        // 0..1..0, zero at edges
+    const lean1 = Math.sin(qC * Math.PI * 2);  // one slow lean out and back
+    pose.lean += 0.06 * env * lean1;
+    // a soft settle of weight into the base (tiny, 0 at edges)
+    pose.squashY += -0.03 * hump(qC);
+    pose.squashX += 0.025 * hump(qC);
   }
 
-  // ── RARE SPECIAL: SPARKLE BURST (~18s, win 1.2s) ──
-  // A small lift rides under the burst (anticipation dip → pop up → settle),
-  // while the radiating gold rays/stars are drawn in paint() from pose.burst.
-  const qS = actionQ(tt, RARE_PERIOD, RARE_WIN, 3.0); // phase 3s so it stays clear of the wobble
+  // ── RARE: radiant SHINE-SWEEP (~18s, win 1.6s) ──
+  // The shine band + sparkles are drawn in paint() from pose.sweep. A tiny proud
+  // puff-up (small squashY) and a gentle lift ride under it — anticipation dip
+  // early, then settle. All factors are 0 at the window edges.
+  const qS = actionQ(tt, RARE_PERIOD, RARE_WIN, 3.0); // phase 3s → clear of the COMMON
   if (qS >= 0) {
-    pose.burst = qS;
-    const env = Math.sin(qS * Math.PI);                 // 0->1->0
+    pose.sweep = qS;
+    const env = Math.sin(qS * Math.PI);                  // 0 -> 1 -> 0
     const antic = Math.sin(qS * Math.PI * 2) * (1 - qS); // brief downbeat early
-    pose.bob += -6 * env - 1.6 * Math.max(0, antic);     // gentle ~6px lift
-    pose.squashY += 0.10 * env;                          // soft stretch on the flare
-    pose.squashX += -0.07 * env;
+    pose.bob += -3.0 * env - 1.2 * Math.max(0, antic);   // a small, dignified lift
+    pose.squashY += 0.08 * env;                          // a tiny proud puff-up
+    pose.squashX += -0.05 * env;
   }
 
   return pose;
@@ -759,7 +814,7 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the peak gold + the sparkle burst is the show.
+      // Summer: no extra dressing — the peak metallic gold + the shine-sweep is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

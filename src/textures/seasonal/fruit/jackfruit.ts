@@ -22,11 +22,13 @@
 // REST pose is all zeros, so draw(season) = paint(ctx, SP[season], REST) and the
 // idle pose is 0 (with zero velocity) at every action-window edge → seamless.
 //
-// Two-tier WC3-style idle via `actionQ`:
-//   COMMON  (~6s, win ~1.0s): a slow HEAVY ROCK — it's a big fruit, so it leans
-//       side-to-side ponderously with a weighty squat, not a flick.
-//   RARE    (~18s, win ~1.2s): a SHAKE/BOUNCE hop — anticipation crouch → stretch
-//       up → squash landing → settle (the fruit may rise out of the box briefly).
+// Two-tier idle via `actionQ` — a HEAVY SLOW WOBBLE in character with the
+// fruit's big knobbly mass (a low-frequency, high-inertia rock, never a hop):
+//   COMMON  (~6s, win ~1.6s): one slow, weighty single rock — a deliberate lean
+//       to one side and back over a pronounced base squat.
+//   RARE    (~18s, win ~3.6s): a bigger, even slower HEAVE — the fruit leans far,
+//       HOLDS over its mass, then settles back with an overshoot squash (mass
+//       momentum). Pose-only, no hop.
 //
 // Origin-centered in the −24..+24 design box (idle actions may paint outside it),
 // light from upper-left, flat cel-shaded with a soft dark outline. Pure
@@ -608,55 +610,66 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+// A ramp-up → HOLD → ramp-down envelope, 0..1..hold..1..0. Smootherstep ramps
+// (zero slope at their ends) over the first/last `up` fraction of the window and
+// a flat hold of 1 between, so the value AND its velocity are 0 at q=0 and q=1.
+// This is what lets the heavy fruit lean far, hold, then settle without a snap.
+function holdRamp(q: number, up: number): number {
+  if (!(q >= 0) || q >= 1) return 0;
+  const u = up > 0.001 ? Math.min(0.5, up) : 0.001;
+  if (q < u) return smoother(q / u); // 0→1 with zero slope at q=0
+  if (q > 1 - u) return smoother((1 - q) / u); // 1→0 with zero slope at q=1
+  return 1; // held over (the slow, weighty hold)
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common HEAVY ROCK every ~6s (win 1.0s), rare BOUNCE every ~18s (win 1.2s).
- *  It's a big heavy fruit, so the common wobble is a slow ponderous lean, not a
- *  quick flick: ~0.12 rad rock (~3px at the top) with a weighty squat. */
+/** Build the idle pose from the wall clock. Two tiers, BOTH a heavy slow wobble
+ *  that sells the jackfruit's big knobbly MASS — never a hop. The motion is a
+ *  low-frequency, high-inertia rock: a slow lean that eases in and out over a
+ *  pronounced base squat (the heavy fruit settling its weight).
+ *
+ *  COMMON (~6s, win 1.6s): one slow, weighty single rock — a deliberate lean to
+ *      one side and back over a deep base squat. Slower than a normal wobble.
+ *  RARE  (~18s, win 3.6s): a bigger, even slower HEAVE — the heavy fruit leans
+ *      far, HOLDS over its mass, then settles back with an overshoot squash
+ *      (mass momentum). Pose-only, no hop.
+ *
+ *  Every additive term is a product of factors that are each 0 at q=0 and q=1
+ *  (hump = sin²(πq); holdRamp's smootherstep ends; smoother(q) at q=1), so the
+ *  pose returns to REST with zero value AND zero velocity → a seamless loop.
+ *  poseFromClock(0) === REST (all zeros). */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: slow heavy side-to-side rock (~6s, win 1.0s) ──
-  const qC = actionQ(t, 6.0, 1.0, 0.0);
+  // ── COMMON: one slow, weighty single rock (~6s, win 1.6s) ──
+  // A heavy fruit doesn't flick — it leans ponderously to one side and settles
+  // back, the base squatting deep under its weight. `hump` eases the lean in and
+  // out and is 0 (with zero velocity) at both edges, so it's a clean single rock.
+  const qC = actionQ(t, 6.0, 1.6, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC);   // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 2); // one slow lean each way (heavy)
-    pose.lean += 0.12 * env * rock;
-    // a weighty squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.05 * hump(qC);
-    pose.squashX += 0.045 * hump(qC);
+    const h = hump(qC); // 0..1..0, zero value+velocity at edges
+    pose.lean += -0.1 * h;      // a slow, deliberate one-sided lean (~3px at top)
+    pose.squashY += -0.07 * h;  // pronounced base squat — settling its weight
+    pose.squashX += 0.06 * h;
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.2s) ──
-  // Anticipation crouch → stretch up → squash landing → settle. May briefly
-  // rise out of the box at the apex.
-  const qS = actionQ(t, 18.0, 1.2, 3.0); // phase 3s so it doesn't collide w/ rock
+  // ── RARE: a bigger, even slower HEAVE (~18s, win 3.6s) ──
+  // The heavy fruit leans FAR to one side, HOLDS there over its mass, then
+  // settles back with an overshoot squash. Slower and bolder than COMMON, and
+  // in the opposite direction so the two beats read distinct. Window (t mod 18)
+  // ∈ [8, 11.6) — phase 10 places it in the gap between the COMMON rocks at
+  // [0,1.6)/[6,7.6)/[12,13.6), so the two tiers never overlap.
+  const qS = actionQ(t, 18.0, 3.6, 10.0);
   if (qS >= 0) {
-    const crouch = qS < 0.2 ? Math.sin((qS / 0.2) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.2 && qS < 0.84 ? (qS - 0.2) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0;       // arc up & down
-    const landWin = qS >= 0.76 ? Math.min(1, (qS - 0.76) / 0.24) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0;    // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~12px.
-    pose.bob += crouch * 1.8 - air * 12.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    pose.squashY += air * 0.18 - crouch * 0.12 - land * 0.15;
-    pose.squashX += -air * 0.13 + crouch * 0.10 + land * 0.13;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.04 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-  }
-
-  // Keep anticipate() in the seamless-curve toolkit: a faint windup tilt on the
-  // common rock (still 0 at the window edges).
-  if (qC >= 0) {
-    pose.lean += 0.015 * anticipate(qC);
+    const heave = holdRamp(qS, 0.34); // 0→1→HOLD→0, zero velocity at edges
+    // mass-momentum settle: a late, wide over-squash that peaks on the way back.
+    // hump·smoother is 0 at both edges (hump→0) and weighted toward q=1 by
+    // smoother(q), so it reads as the body thumping wide as it settles.
+    const overshoot = hump(qS) * smoother(qS);
+    pose.lean += 0.2 * heave;        // a far, heavy lean — held over (deliberate)
+    pose.squashY += -0.1 * heave;    // deep base squat under the held heave
+    pose.squashX += 0.09 * heave;
+    pose.squashY += -0.06 * overshoot; // extra over-squat as the weight settles
+    pose.squashX += 0.055 * overshoot;
   }
 
   return pose;
