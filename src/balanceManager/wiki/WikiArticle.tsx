@@ -57,6 +57,8 @@ import { DailyRewardsTrack, hasDailyReward } from "./sections/DailyRewardsTrack.
 import { AchievementCard, hasAchievementCard } from "./sections/AchievementCard.jsx";
 import MemberTiles, { hasMemberTiles } from "./sections/MemberTiles.jsx";
 import { BuildingRecipes, hasBuildingRecipes } from "./sections/BuildingRecipes.jsx";
+import { BuildingGrants, hasBuildingGrants } from "./sections/BuildingGrants.jsx";
+import { ToolAcquisition, hasToolAcquisition } from "./sections/ToolAcquisition.jsx";
 import { BuildingAbilities, hasHostAbilities } from "./sections/BuildingAbilities.jsx";
 import { RecipeRelations, hasRecipeRelationFlow } from "./sections/RecipeRelations.jsx";
 import { entityAccent } from "./conceptAccent.js";
@@ -183,6 +185,8 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   // - WhereUsed (item articles): "where is this item id referenced".
   const isItemConcept = conceptId === "resources" || conceptId === "tiles" || conceptId === "tools";
   const showWhereUsed = isItemConcept && hasWhereUsed(entityKey);
+  // ToolAcquisition (tool articles): every way the tool enters the global bag.
+  const showToolAcquisition = conceptId === "tools" && hasToolAcquisition(entityKey);
 
   // Concept-specific enrichment sections.
   // - BossDifficulty (boss articles): derived difficulty assessment.
@@ -215,6 +219,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
     (conceptId === "categories" || conceptId === "tileDiscoveryMethods") &&
     hasMemberTiles(conceptId, entityKey);
   const showBuildingRecipes = conceptId === "buildings" && hasBuildingRecipes(entityKey);
+  const showBuildingGrants = conceptId === "buildings" && hasBuildingGrants(entityKey);
   const showHostAbilities =
     (conceptId === "buildings" || conceptId === "workers") &&
     hasHostAbilities(conceptId, entityKey, entity);
@@ -243,8 +248,10 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
     ...(showBoardKindDetail ? [{ id: "board-kind-detail", label: "Tiles, dangers & seasons" }] : []),
     ...(showNpcGifts ? [{ id: "npc-gifts", label: "Gift preferences" }] : []),
     ...(showBuildingRecipes ? [{ id: "building-recipes", label: "Recipes crafted here" }] : []),
+    ...(showBuildingGrants ? [{ id: "building-grants", label: "Tools produced" }] : []),
     ...(showHostAbilities ? [{ id: "host-abilities", label: conceptId === "workers" ? "Worker abilities" : "Building abilities" }] : []),
     ...(showRecipeRelations ? [{ id: "recipe-relations", label: "Crafting flow" }] : []),
+    ...(showToolAcquisition ? [{ id: "tool-acquisition", label: "How to get it" }] : []),
     ...(showWhereUsed ? [{ id: "used-in", label: "Used in" }] : []),
     ...(body != null ? [{ id: "about", label: "About" }] : []),
     { id: "properties", label: "Properties" },
@@ -383,11 +390,16 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
 
           {showBuildingRecipes && <BuildingRecipes buildingId={entityKey} />}
 
+          {showBuildingGrants && <BuildingGrants buildingId={entityKey} />}
+
           {showHostAbilities && entity != null && (
             <BuildingAbilities conceptId={conceptId as "buildings" | "workers"} entityKey={entityKey} entity={entity} />
           )}
 
           {showRecipeRelations && entity != null && <RecipeRelations recipe={entity} />}
+
+          {/* Tool acquisition (tool articles): how to get it */}
+          {showToolAcquisition && <ToolAcquisition toolId={entityKey} />}
 
           {/* Cross-references: where this item is used */}
           {showWhereUsed && <WhereUsed itemId={entityKey} />}
