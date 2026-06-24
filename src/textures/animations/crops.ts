@@ -8,9 +8,7 @@
 
 import {
   TAU,
-  breathe,
   loopPhase,
-  beat,
   twinkle,
   easeInOutSine,
   easeOutBack,
