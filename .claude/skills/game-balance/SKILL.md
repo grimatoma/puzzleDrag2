@@ -149,7 +149,10 @@ cited) or the per-game Profile — so the skill gets smarter instead of re-resea
 Generated on first use, version-controlled in the game's repo:
 - **A design doc** (a self-contained HTML doc under the repo's docs/ folder is ideal): goals & KPI
   targets, the faucet/drain economy map + formulas, target curves, the knob registry, and a decision log.
-  The artifact you'd review with another designer.
+  The artifact you'd review with another designer. **Write it up with the `design-doc` skill** —
+  decisions-only prose, the design split from the status/decision-log and from the generated numbers, and
+  *rewritten from blank* when decisions change rather than edited in place (so it doesn't accrete into a
+  rambling sticky-note journal).
 - **A progression map** (handbook §10) — the interactive, **code-derived** timeline of the spine, gates,
   unlocks, reachability, and any softlock. The alignment artifact; render it visual and back it with a
   shape-pinning test so it can't drift.
