@@ -1,41 +1,80 @@
-// Animated arcane icons. Each function redraws the WHOLE icon at time `t` (seconds).
-// Pure, self-contained, no imports. Drawn at origin within a ~-24..+24 box.
+// Animated arcane icons — same jewel-tone look as src/textures/categories/arcane.ts,
+// but alive. Each fn redraws the WHOLE icon at time `t` (seconds). The static
+// geometry/palette is the strong part and is preserved; the MOTION and FRAMING are
+// rebuilt to lead with real deformation (bob/rock/squash/float/pour) with glints &
+// glows demoted to a secondary accent. Loops tile exactly because every position is
+// driven from `loopPhase`/`pingPong`/`breathe`/`beat` (never a raw sawtooth), and the
+// contact shadows couple to vertical motion via `groundShadow`. The default
+// "static body + animated overlay" pattern is gone: every body moves.
 
-// Small deterministic pseudo-random helper derived from an index seed.
-function rand(seed: number): number {
-  const x = Math.sin(seed * 127.1 + 311.7) * 43758.5453;
-  return x - Math.floor(x);
-}
+import {
+  TAU,
+  clamp01,
+  lerp,
+  breathe,
+  loopPhase,
+  pingPong,
+  beat,
+  easeInOutSine,
+  easeOutCubic,
+  easeOutBack,
+  groundShadow,
+  glint,
+  sparkle,
+} from "./_anim.js";
 
+// ---------------------------------------------------------------------------
+// arcane_candle — the benchmark flame deformation, but now LOOP-CLEAN: the sway/
+// flicker sines are retuned to integer multiples of one base frequency so they
+// share a single period, and a periodic GUST beat leans the flame, gutters it
+// (shorter + dimmer), then lets it recover with a small overshoot. Embers ride a
+// deterministic per-index loopPhase. Re-centred down ~2.6u (off_y -2.6).
 function animCandle(ctx: CanvasRenderingContext2D, t: number): void {
-  // Flame sway + height driven by layered sin for an organic flicker.
-  const sway = Math.sin(t * 5.3) * 1.4 + Math.sin(t * 9.1) * 0.6;
-  const flick = 0.85 + Math.sin(t * 7.0) * 0.1 + Math.sin(t * 13.0) * 0.05;
-  const flameTipY = -23 - (flick - 1) * 6; // taller/shorter tip
-  const glowPulse = 0.55 + Math.sin(t * 3.0) * 0.18 + (flick - 0.85) * 0.6;
+  ctx.save();
+  ctx.translate(0, 2.6); // re-frame: was sitting ~2.6u high
 
-  // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.26)";
-  ctx.beginPath();
-  ctx.ellipse(0, 23, 13, 3.5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // One base period (1.2s); all flame sines are integer multiples of it → the
+  // whole flicker tiles seamlessly instead of beating against itself forever.
+  const base = (t / 1.2) * TAU;
+  const idle = Math.sin(base * 2) * 1.0 + Math.sin(base * 5) * 0.45; // organic jitter, loops
+  const flickIdle = Math.sin(base * 4) * 0.09 + Math.sin(base * 7) * 0.045;
 
-  // Warm flame glow (pulsing)
+  // Gust beat: every ~3.6s a wind shoves the flame (lean), it gutters (collapses
+  // short + dim), then it RECOVERS with a brief flare taller than rest before
+  // settling — a real shove → duck → spring, not a metronome.
+  const gustCycle = loopPhase(t, 3.6);
+  const g = beat(t, 3.6, 0.32); // shove window (0→1→0)
+  const gustLean = g * 4.2; // hard lean during the gust
+  const gutter = g * (0.55 + 0.25 * Math.sin(base * 9)); // height collapse on gust
+  // Recover flare: a damped overshoot right after the gust window ends.
+  const recover = gustCycle > 0.32 && gustCycle < 0.6
+    ? Math.sin(((gustCycle - 0.32) / 0.28) * Math.PI) * 0.12
+    : 0;
+
+  const sway = idle + gustLean * easeInOutSine(g);
+  const flick = 0.92 + flickIdle - gutter * 0.5 + recover;
+  const flameTipY = -23 - (flick - 0.92) * 6 + gutter * 5; // shorter when guttering
+  const glowPulse = 0.55 + Math.sin(base * 3) * 0.14 + (flick - 0.92) * 1.0 - gutter * 0.5;
+
+  // Contact shadow brightens/sharpens a touch as the flame flares.
+  groundShadow(ctx, 0, 23, 13, 3.5, 0, 0.24 + Math.max(0, flick - 0.95) * 0.4);
+
+  // Warm flame glow (pulsing, follows the sway)
   const glow = ctx.createRadialGradient(sway * 0.5, -16, 1, sway * 0.5, -14, 20);
-  glow.addColorStop(0, `rgba(255,210,120,${glowPulse})`);
+  glow.addColorStop(0, `rgba(255,210,120,${clamp01(glowPulse)})`);
   glow.addColorStop(0.5, "rgba(255,160,60,0.25)");
   glow.addColorStop(1, "rgba(255,150,40,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(sway * 0.5, -14, 20, 0, Math.PI * 2);
+  ctx.arc(sway * 0.5, -14, 20, 0, TAU);
   ctx.fill();
 
   // Brass holder base
-  const base = ctx.createLinearGradient(0, 12, 0, 22);
-  base.addColorStop(0, "#e6c24a");
-  base.addColorStop(0.5, "#b8902a");
-  base.addColorStop(1, "#6a4e12");
-  ctx.fillStyle = base;
+  const baseGrad = ctx.createLinearGradient(0, 12, 0, 22);
+  baseGrad.addColorStop(0, "#e6c24a");
+  baseGrad.addColorStop(0.5, "#b8902a");
+  baseGrad.addColorStop(1, "#6a4e12");
+  ctx.fillStyle = baseGrad;
   ctx.beginPath();
   ctx.moveTo(-11, 22);
   ctx.bezierCurveTo(-13, 16, -7, 14, -6, 13);
@@ -63,7 +102,7 @@ function animCandle(ctx: CanvasRenderingContext2D, t: number): void {
   // Brass highlight
   ctx.fillStyle = "rgba(255,245,200,0.5)";
   ctx.beginPath();
-  ctx.ellipse(-6, 18, 1.4, 3.5, 0.2, 0, Math.PI * 2);
+  ctx.ellipse(-6, 18, 1.4, 3.5, 0.2, 0, TAU);
   ctx.fill();
 
   // Candle wax body
@@ -86,7 +125,7 @@ function animCandle(ctx: CanvasRenderingContext2D, t: number): void {
   // Wax top rim + drip
   ctx.fillStyle = "rgba(255,255,255,0.45)";
   ctx.beginPath();
-  ctx.ellipse(0, -10, 5, 1.6, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, -10, 5, 1.6, 0, 0, TAU);
   ctx.fill();
   ctx.strokeStyle = "rgba(255,255,255,0.55)";
   ctx.lineWidth = 1.4;
@@ -95,29 +134,30 @@ function animCandle(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineTo(-4, 5);
   ctx.stroke();
 
-  // Wick
+  // Wick — bends toward the flame's lean.
   ctx.strokeStyle = "#2a2018";
   ctx.lineWidth = 1.4;
   ctx.beginPath();
   ctx.moveTo(0, -10);
-  ctx.lineTo(sway * 0.25, -14);
+  ctx.quadraticCurveTo(sway * 0.18, -12, sway * 0.3, -14);
   ctx.stroke();
 
-  // Rising embers (occasional sparks tracking upward and fading)
+  // Rising embers — deterministic per-index loop (no Math.random).
   for (let i = 0; i < 4; i++) {
-    const phase = (t * 0.6 + i * 0.27 + rand(i + 1) * 0.5) % 1;
-    const ex = sway + Math.sin(phase * 6.0 + i) * 2.2 + (rand(i + 7) - 0.5) * 2;
-    const ey = -16 - phase * 14;
-    const ea = (1 - phase) * 0.8 * Math.max(0, Math.sin(phase * Math.PI));
-    ctx.fillStyle = `rgba(255,200,110,${ea.toFixed(3)})`;
+    const ph = loopPhase(t, 1.4, i * 0.27);
+    const ex = sway + Math.sin(ph * TAU + i) * 2.2 + (i - 1.5) * 0.8;
+    const ey = -16 - ph * 14;
+    const ea = (1 - ph) * 0.8 * Math.max(0, Math.sin(ph * Math.PI));
+    ctx.fillStyle = `rgba(255,200,110,${ea})`;
     ctx.beginPath();
-    ctx.arc(ex, ey, 0.7 + (1 - phase) * 0.5, 0, Math.PI * 2);
+    ctx.arc(ex, ey, 0.7 + (1 - ph) * 0.5, 0, TAU);
     ctx.fill();
   }
 
-  // Flame (outer) — swaying tip + flickering height
+  // Flame (outer) — real deformation: the tip sways, the body leans into the
+  // gust (control points shear), the height collapses while guttering.
   const cx = sway * 0.4;
-  const tipX = sway;
+  const tipX = sway * 1.15;
   const flame = ctx.createRadialGradient(cx, -16, 1, cx, -15, 7);
   flame.addColorStop(0, "#fff7d0");
   flame.addColorStop(0.4, "#ffcf60");
@@ -126,38 +166,54 @@ function animCandle(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.fillStyle = flame;
   ctx.beginPath();
   ctx.moveTo(tipX, flameTipY);
-  ctx.bezierCurveTo(-5 + cx, -18, -4 + cx, -11, 0, -10);
-  ctx.bezierCurveTo(4 + cx, -11, 5 + cx, -18, tipX, flameTipY);
+  ctx.bezierCurveTo(-5 + cx + gustLean * 0.3, -18, -4 + cx, -11, 0, -10);
+  ctx.bezierCurveTo(4 + cx + gustLean * 0.3, -11, 5 + cx, -18, tipX, flameTipY);
   ctx.closePath();
   ctx.fill();
 
-  // Flame inner bright core
-  ctx.fillStyle = `rgba(255,255,255,${(0.75 + (flick - 0.85) * 1.2).toFixed(3)})`;
+  // Flame inner bright core — taller when the flame is tall, ducks on a gust.
+  ctx.fillStyle = `rgba(255,255,255,${clamp01(0.78 + (flick - 0.92) * 1.2 - gutter * 0.6)})`;
   ctx.beginPath();
-  ctx.ellipse(cx * 0.6, -14, 1.6, 3.0 + (flick - 0.85) * 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(cx * 0.6, -14, 1.6, Math.max(1, 3.0 + (flick - 0.92) * 4 - gutter * 3), 0, 0, TAU);
   ctx.fill();
+
+  ctx.restore();
 }
 
+// ---------------------------------------------------------------------------
+// arcane_potion_red — was a frozen flask. Now the whole bottle BOBS and gently
+// ROCKS about its base, the liquid surface SLOSHES with follow-through (it lags
+// and over-tilts opposite the rock), the body counter-shifts, and a bubble pops
+// at the surface on a beat with a clean sparkle. Re-centred up ~4.3u (off_y +4.3).
 function animPotionRed(ctx: CanvasRenderingContext2D, t: number): void {
-  const glowPulse = 0.4 + Math.sin(t * 2.2) * 0.16;
+  ctx.save();
+  ctx.translate(0, -4.3); // re-frame: was sitting ~4.3u low
 
-  // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.beginPath();
-  ctx.ellipse(0, 23, 13, 3.5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  const bob = Math.sin((t / 1.7) * TAU) * 1.3; // gentle vertical bob
+  const rock = Math.sin((t / 2.3) * TAU) * 0.05; // body rock about the base
+  const slosh = Math.sin((t / 2.3) * TAU - 0.9) * 1.7; // liquid lags the rock (follow-through)
+  const glowPulse = 0.4 + Math.sin((t / 1.7) * TAU) * 0.14;
 
-  // Outer glow (pulsing)
+  groundShadow(ctx, 0, 23, 13, 3.5, bob, 0.25);
+
+  // Outer glow (pulsing) — drawn in world space so the aura stays put.
   const glow = ctx.createRadialGradient(0, 8, 2, 0, 8, 26);
   glow.addColorStop(0, `rgba(255,70,90,${glowPulse})`);
   glow.addColorStop(0.6, "rgba(255,40,60,0.18)");
   glow.addColorStop(1, "rgba(255,40,60,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(0, 8, 26, 0, Math.PI * 2);
+  ctx.arc(0, 8, 26, 0, TAU);
   ctx.fill();
 
-  const flask = () => {
+  // Bob + rock about the round bottom (~y=18).
+  ctx.save();
+  ctx.translate(0, bob);
+  ctx.translate(0, 18);
+  ctx.rotate(rock);
+  ctx.translate(0, -18);
+
+  const flask = (): void => {
     ctx.beginPath();
     ctx.moveTo(-3, -14);
     ctx.lineTo(-3.5, -4);
@@ -172,53 +228,58 @@ function animPotionRed(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.fillStyle = "rgba(210,235,245,0.22)";
   ctx.fill();
 
-  // Liquid (clipped)
+  // Liquid (clipped) — the body shifts a hair against the slosh.
   ctx.save();
   flask();
   ctx.clip();
-  const liquid = ctx.createRadialGradient(-3, 4, 2, 0, 10, 18);
+  const liquid = ctx.createRadialGradient(-3 + slosh * 0.4, 4, 2, 0, 10, 18);
   liquid.addColorStop(0, "#ff8a8a");
   liquid.addColorStop(0.5, "#e02838");
   liquid.addColorStop(1, "#700818");
   ctx.fillStyle = liquid;
   ctx.beginPath();
-  ctx.rect(-15, 0, 30, 24);
+  ctx.rect(-15 + slosh * 0.5, 0, 30, 24);
   ctx.fill();
 
-  // Liquid surface shimmer (wave offset over time)
-  const shimmer = Math.sin(t * 3.1) * 0.8;
-  ctx.strokeStyle = "rgba(255,200,200,0.6)";
-  ctx.lineWidth = 1.4;
+  // Sloshing surface: a tilted, lagging meniscus (the follow-through made real).
+  ctx.strokeStyle = "rgba(255,200,200,0.65)";
+  ctx.lineWidth = 1.6;
   ctx.beginPath();
-  ctx.moveTo(-11, 0.5 + shimmer * 0.3);
-  ctx.quadraticCurveTo(0, 2.5 + shimmer, 11, 0.5 - shimmer * 0.3);
+  ctx.moveTo(-11, 0.8 + slosh * 0.7);
+  ctx.quadraticCurveTo(0, 2.4 - slosh * 0.5, 11, 0.8 - slosh * 0.7);
   ctx.stroke();
+  // A thin lighter band above it sells liquid depth.
+  ctx.fillStyle = "rgba(255,150,160,0.35)";
+  ctx.beginPath();
+  ctx.moveTo(-12, 1.2 + slosh * 0.7);
+  ctx.quadraticCurveTo(0, 3.0 - slosh * 0.5, 12, 1.2 - slosh * 0.7);
+  ctx.lineTo(12, 5 - slosh * 0.5);
+  ctx.quadraticCurveTo(0, 6 - slosh * 0.3, -12, 5 + slosh * 0.5);
+  ctx.closePath();
+  ctx.fill();
 
-  // Rising bubbles that pop at the surface (~y=1)
-  ctx.fillStyle = "rgba(255,220,220,0.7)";
-  const surfaceY = 1.0;
+  // Rising bubbles — deterministic loop, drift toward the surface (~y=1.5).
+  const surfaceY = 1.5;
   for (let i = 0; i < 5; i++) {
-    const speed = 0.35 + rand(i + 1) * 0.25;
-    const phase = (t * speed + rand(i + 3)) % 1;
+    const ph = loopPhase(t, 2.6, (i * 0.41) % 1);
     const startY = 17;
-    const by = startY - phase * (startY - surfaceY);
-    const wob = Math.sin(phase * 8 + i) * 1.3;
-    const bx = (rand(i + 5) - 0.5) * 12 + wob;
-    const baseR = 0.8 + rand(i + 9) * 0.8;
-    // Shrink/pop near surface
-    const popZone = 0.85;
-    let r = baseR;
-    let alpha = 0.7;
-    if (phase > popZone) {
-      const p = (phase - popZone) / (1 - popZone);
-      r = baseR * (1 + p * 0.6);
-      alpha = 0.7 * (1 - p);
-    }
+    const by = lerp(startY, surfaceY, easeOutCubic(ph));
+    const wob = Math.sin(ph * 8 + i) * 1.3 + slosh * 0.3;
+    const bx = ((i % 5) - 2) * 2.4 + wob;
+    const baseR = 0.8 + (i % 3) * 0.35;
+    const pop = ph > 0.85 ? (ph - 0.85) / 0.15 : 0;
+    const r = baseR * (1 + pop * 0.6);
+    const alpha = 0.7 * (1 - pop);
     if (alpha <= 0.02) continue;
-    ctx.fillStyle = `rgba(255,220,220,${alpha.toFixed(3)})`;
+    ctx.fillStyle = `rgba(255,220,220,${alpha})`;
     ctx.beginPath();
-    ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.arc(bx, by, r, 0, TAU);
     ctx.fill();
+  }
+  // Bubble-pop sparkle beat: once per cycle a bubble bursts at the surface.
+  const popBeat = beat(t, 2.6, 0.18, 0.82);
+  if (popBeat > 0.01) {
+    sparkle(ctx, 2 + slosh, surfaceY - 0.5, 1.4 + popBeat * 0.8, popBeat * 0.8, "255,225,225");
   }
   ctx.restore();
 
@@ -228,8 +289,8 @@ function animPotionRed(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Specular streak
-  ctx.strokeStyle = "rgba(255,255,255,0.65)";
+  // Specular streak (demoted, follows the glass)
+  ctx.strokeStyle = "rgba(255,255,255,0.6)";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(-8, 2);
@@ -260,28 +321,46 @@ function animPotionRed(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.moveTo(-3.4, -13);
   ctx.lineTo(3.4, -13);
   ctx.stroke();
+
+  ctx.restore();
+  ctx.restore();
 }
 
+// ---------------------------------------------------------------------------
+// arcane_potion_blue — the deadest of the set and visually bottom-heavy (a
+// half-empty cone). Fixes: the liquid is RAISED to fill most of the cone, a
+// FIZZING COLUMN streams up the centre, and a periodic REACTION SURGE squashes
+// the flask + bumps the level + flares the glow. Re-centred up ~7.4u (off_y +7.4).
 function animPotionBlue(ctx: CanvasRenderingContext2D, t: number): void {
-  const glowPulse = 0.4 + Math.sin(t * 2.4 + 1) * 0.16;
+  ctx.save();
+  ctx.translate(0, -7.4); // re-frame: was sitting ~7.4u low
 
-  // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.beginPath();
-  ctx.ellipse(0, 23, 15, 3.5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // Reaction surge: rest, then a quick swell that springs back (one beat).
+  const surge = beat(t, 3.2, 0.42); // 0 at rest, 0→1→0 during a reaction
+  const squashX = 1 + surge * 0.07; // flask bulges wide on the surge
+  const squashY = 1 - surge * 0.06;
+  const levelRise = surge * 3.2; // liquid jumps during the reaction
+  const glowPulse = 0.42 + Math.sin((t / 2.4) * TAU + 1) * 0.12 + surge * 0.22;
 
-  // Outer glow (pulsing)
-  const glow = ctx.createRadialGradient(0, 12, 2, 0, 12, 26);
+  groundShadow(ctx, 0, 23, 15, 3.5, -surge * 1.5, 0.25);
+
+  // Outer glow (pulsing, flares with the surge)
+  const glow = ctx.createRadialGradient(0, 10, 2, 0, 10, 26);
   glow.addColorStop(0, `rgba(80,170,255,${glowPulse})`);
   glow.addColorStop(0.6, "rgba(40,120,255,0.18)");
   glow.addColorStop(1, "rgba(40,120,255,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(0, 12, 26, 0, Math.PI * 2);
+  ctx.arc(0, 10, 26, 0, TAU);
   ctx.fill();
 
-  const flask = () => {
+  // Squash about the wide base (~y=20).
+  ctx.save();
+  ctx.translate(0, 20);
+  ctx.scale(squashX, squashY);
+  ctx.translate(0, -20);
+
+  const flask = (): void => {
     ctx.beginPath();
     ctx.moveTo(-3.5, -16);
     ctx.lineTo(-3.5, -6);
@@ -299,53 +378,54 @@ function animPotionBlue(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.fillStyle = "rgba(210,235,245,0.22)";
   ctx.fill();
 
-  // Liquid (clipped)
+  // Liquid (clipped) — RAISED: surface now sits up near the shoulders (~y=-2),
+  // not down at y=7. The reaction surge lifts it further.
   ctx.save();
   flask();
   ctx.clip();
-  const liquid = ctx.createRadialGradient(-4, 10, 2, 0, 16, 20);
+  const surfaceY = -1.5 - levelRise;
+  const liquid = ctx.createRadialGradient(-4, 12, 2, 0, 18, 22);
   liquid.addColorStop(0, "#8ad6ff");
   liquid.addColorStop(0.5, "#2884e0");
   liquid.addColorStop(1, "#0a2c80");
   ctx.fillStyle = liquid;
   ctx.beginPath();
-  ctx.rect(-16, 6, 32, 20);
+  ctx.rect(-16, surfaceY, 32, 26 - surfaceY);
   ctx.fill();
 
-  // Liquid surface highlight (shimmer)
-  const shimmer = Math.sin(t * 3.4 + 0.5) * 0.7;
-  ctx.strokeStyle = "rgba(200,235,255,0.6)";
-  ctx.lineWidth = 1.4;
+  // Sloshing surface highlight (lifts with the surge).
+  const wobble = Math.sin((t / 1.6) * TAU) * 0.8;
+  ctx.strokeStyle = "rgba(200,235,255,0.65)";
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(-9, 6.8 + shimmer * 0.3);
-  ctx.quadraticCurveTo(0, 8.6 + shimmer, 9, 6.8 - shimmer * 0.3);
+  ctx.moveTo(-9, surfaceY + 0.4 + wobble * 0.3);
+  ctx.quadraticCurveTo(0, surfaceY + 1.8 + wobble, 9, surfaceY + 0.4 - wobble * 0.3);
   ctx.stroke();
 
-  // Rising bubbles in the cone (narrowing toward top)
-  const surfaceY = 7.5;
-  for (let i = 0; i < 6; i++) {
-    const speed = 0.32 + rand(i + 2) * 0.28;
-    const phase = (t * speed + rand(i + 4)) % 1;
-    const startY = 20;
-    const by = startY - phase * (startY - surfaceY);
-    // Cone narrows toward top, so horizontal range shrinks as bubble rises.
-    const widthAtY = 1.5 + (by - surfaceY) * 0.5;
-    const wob = Math.sin(phase * 7 + i * 1.3) * 1.2;
-    const bx = (rand(i + 6) - 0.5) * widthAtY + wob;
-    const baseR = 0.7 + rand(i + 11) * 0.9;
-    const popZone = 0.86;
-    let r = baseR;
-    let alpha = 0.75;
-    if (phase > popZone) {
-      const p = (phase - popZone) / (1 - popZone);
-      r = baseR * (1 + p * 0.6);
-      alpha = 0.75 * (1 - p);
-    }
-    if (alpha <= 0.02) continue;
-    ctx.fillStyle = `rgba(220,240,255,${alpha.toFixed(3)})`;
+  // FIZZING COLUMN: a dense ribbon of fine bubbles boiling up the centre line,
+  // tighter and faster than the old scattered bubbles. Surges during a reaction.
+  const fizzCount = 10;
+  for (let i = 0; i < fizzCount; i++) {
+    const ph = loopPhase(t, 1.1 + (i % 3) * 0.25, (i / fizzCount) % 1);
+    const by = lerp(21, surfaceY + 0.5, ph);
+    const sway = Math.sin(ph * TAU * 2 + i) * (1.3 + (by - surfaceY) * 0.06);
+    const bx = sway + (i % 2 === 0 ? 0.6 : -0.6);
+    const r = (0.5 + (i % 3) * 0.25) * (1 + surge * 0.5);
+    const a = (0.45 + 0.4 * Math.sin(ph * Math.PI)) * (0.7 + surge * 0.3);
+    ctx.fillStyle = `rgba(220,240,255,${clamp01(a)})`;
     ctx.beginPath();
-    ctx.arc(bx, by, r, 0, Math.PI * 2);
+    ctx.arc(bx, by, r, 0, TAU);
     ctx.fill();
+  }
+  // Reaction froth at the surface during the surge.
+  if (surge > 0.05) {
+    for (let i = 0; i < 4; i++) {
+      const fx = (i - 1.5) * 3.2 + Math.sin(t * 6 + i) * 1.2;
+      ctx.fillStyle = `rgba(220,245,255,${surge * 0.6})`;
+      ctx.beginPath();
+      ctx.arc(fx, surfaceY + Math.sin(i * 1.7) * 0.8, 1.0 + surge * 0.8, 0, TAU);
+      ctx.fill();
+    }
   }
   ctx.restore();
 
@@ -355,8 +435,8 @@ function animPotionBlue(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Specular streak
-  ctx.strokeStyle = "rgba(255,255,255,0.6)";
+  // Specular streak (demoted)
+  ctx.strokeStyle = "rgba(255,255,255,0.55)";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(-8, 6);
@@ -370,17 +450,31 @@ function animPotionBlue(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.moveTo(-4.5, -16);
   ctx.lineTo(4.5, -16);
   ctx.stroke();
+
+  ctx.restore();
+  ctx.restore();
 }
 
+// ---------------------------------------------------------------------------
+// arcane_crystal_ball — the internal swirl is genuine but `t*0.5` never looped
+// and the claws were faint scratches. Fixes: PHASE-LOCK the spin to a sub-turn
+// that exploits the swirl's 3-fold symmetry (rotate exactly TAU/3 per loop → the
+// galaxy tiles), add a SCRYING PULSE (breathing aura + a periodic bright flare),
+// and THICKEN the cradle claws. Re-centred up ~2.6u (off_y +2.6).
 function animCrystalBall(ctx: CanvasRenderingContext2D, t: number): void {
-  const auraPulse = 0.5 + Math.sin(t * 1.8) * 0.12;
-  const spin = t * 0.5; // slow galaxy rotation
+  ctx.save();
+  ctx.translate(0, -2.6); // re-frame: was sitting ~2.6u low
 
-  // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
-  ctx.beginPath();
-  ctx.ellipse(0, 23, 16, 3.5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // The three swirl arms are offset by 2.1 rad; a full TAU/3 turn maps arm→arm,
+  // so driving the angle as loopPhase * (TAU/3) makes the rotation seamless.
+  const spin = loopPhase(t, 6.0) * (TAU / 3);
+  const sparkSpin = loopPhase(t, 9.0) * (TAU / 3);
+  // Scrying pulse: a slow breath plus a periodic brighter flare (a "vision").
+  const breath = breathe(t, 3.4, 0.12, 0.5);
+  const scry = beat(t, 5.5, 0.5); // bright flare event
+  const auraPulse = breath + scry * 0.3;
+
+  groundShadow(ctx, 0, 23, 16, 3.5, 0, 0.28);
 
   // Ornate stand base
   const base = ctx.createLinearGradient(0, 14, 0, 24);
@@ -398,24 +492,38 @@ function animCrystalBall(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineWidth = 1.6;
   ctx.stroke();
 
-  // Stand claws
-  ctx.strokeStyle = "#8a6a22";
-  ctx.lineWidth = 2.6;
-  [-7, 0, 7].forEach((cx) => {
+  // Stand claws — THICKENED into proper cradling talons (was 2.6px scratches),
+  // with a darker base stroke + a lit edge so they read as gold metal.
+  ([-8, 0, 8] as number[]).forEach((cx) => {
+    ctx.strokeStyle = "#5a3e12";
+    ctx.lineWidth = 4.4;
+    ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(cx * 0.5, 16);
-    ctx.quadraticCurveTo(cx, 12, cx, 6);
+    ctx.quadraticCurveTo(cx, 11, cx * 0.92, 4);
     ctx.stroke();
+    ctx.strokeStyle = "#caa24a";
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(cx * 0.5, 16);
+    ctx.quadraticCurveTo(cx, 11, cx * 0.92, 4);
+    ctx.stroke();
+    // Claw tip catching the ball.
+    ctx.fillStyle = "#e6c24a";
+    ctx.beginPath();
+    ctx.arc(cx * 0.92, 4, 1.5, 0, TAU);
+    ctx.fill();
   });
+  ctx.lineCap = "butt";
 
-  // Glow behind ball (pulsing aura)
+  // Glow behind ball (scrying aura, pulses)
   const glow = ctx.createRadialGradient(0, -2, 2, 0, -2, 22);
-  glow.addColorStop(0, `rgba(150,110,255,${auraPulse})`);
+  glow.addColorStop(0, `rgba(150,110,255,${clamp01(auraPulse)})`);
   glow.addColorStop(0.6, "rgba(110,80,230,0.2)");
   glow.addColorStop(1, "rgba(110,80,230,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(0, -2, 22, 0, Math.PI * 2);
+  ctx.arc(0, -2, 22, 0, TAU);
   ctx.fill();
 
   // Glass sphere
@@ -425,15 +533,15 @@ function animCrystalBall(ctx: CanvasRenderingContext2D, t: number): void {
   sphere.addColorStop(1, "#0e0826");
   ctx.fillStyle = sphere;
   ctx.beginPath();
-  ctx.arc(0, -2, 14, 0, Math.PI * 2);
+  ctx.arc(0, -2, 14, 0, TAU);
   ctx.fill();
 
-  // Swirling galaxy inside (rotating, clipped)
+  // Swirling galaxy inside (rotating, clipped) — brightens on a scry flare.
   ctx.save();
   ctx.beginPath();
-  ctx.arc(0, -2, 14, 0, Math.PI * 2);
+  ctx.arc(0, -2, 14, 0, TAU);
   ctx.clip();
-  ctx.strokeStyle = "rgba(180,140,255,0.7)";
+  ctx.strokeStyle = `rgba(180,140,255,${clamp01(0.6 + scry * 0.35)})`;
   ctx.lineWidth = 1.6;
   for (let i = 0; i < 3; i++) {
     ctx.beginPath();
@@ -448,31 +556,37 @@ function animCrystalBall(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.stroke();
   }
 
-  // Star sparks inside (twinkling, drifting with the swirl)
+  // Star sparks inside — rotate with the locked spin so they tile too.
   const sparks: Array<[number, number, number]> = [
     [-6, -7, 1.2], [5, -5, 1], [2, 2, 1.4], [-4, 3, 0.9], [7, -9, 0.8],
   ];
   sparks.forEach(([sx, sy, sr], i) => {
-    // Gently rotate spark positions around center for a living galaxy.
-    const ang = spin * 0.6;
+    const ang = sparkSpin;
     const rx = sx * Math.cos(ang) - (sy + 2) * Math.sin(ang);
     const ry = sx * Math.sin(ang) + (sy + 2) * Math.cos(ang) - 2;
-    const tw = 0.5 + 0.5 * Math.abs(Math.sin(t * 2.5 + i * 1.7));
-    ctx.fillStyle = `rgba(255,255,255,${(0.85 * tw).toFixed(3)})`;
-    ctx.beginPath();
-    ctx.arc(rx, ry, sr * (0.7 + tw * 0.5), 0, Math.PI * 2);
-    ctx.fill();
+    const tw = 0.5 + 0.5 * Math.abs(Math.sin((t / 1.0) * TAU * 0.4 + i * 1.7));
+    sparkle(ctx, rx, ry, sr * (0.7 + tw * 0.6), 0.4 + 0.5 * tw + scry * 0.2, "235,225,255");
   });
+  ctx.restore();
+
+  // A demoted feathered sheen drifts across the polished glass (clipped to the
+  // sphere, low intensity — a secondary accent, not a hard streak).
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(0, -2, 14, 0, TAU);
+  ctx.clip();
+  ctx.translate(0, -2);
+  glint(ctx, loopPhase(t, 5.0), { span: 12, width: 6, intensity: 0.22, length: 30 });
   ctx.restore();
 
   // Sphere outline
   ctx.strokeStyle = "#1a0e3a";
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(0, -2, 14, 0, Math.PI * 2);
+  ctx.arc(0, -2, 14, 0, TAU);
   ctx.stroke();
 
-  // Specular streak (fixed)
+  // Specular streak (fixed glass highlight)
   ctx.strokeStyle = "rgba(255,255,255,0.7)";
   ctx.lineWidth = 2.4;
   ctx.beginPath();
@@ -480,19 +594,42 @@ function animCrystalBall(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.stroke();
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.beginPath();
-  ctx.ellipse(-6, -9, 2.4, 3.4, -0.5, 0, Math.PI * 2);
+  ctx.ellipse(-6, -9, 2.4, 3.4, -0.5, 0, TAU);
   ctx.fill();
+
+  ctx.restore();
 }
 
+// ---------------------------------------------------------------------------
+// arcane_runestone — was near-dead (a frozen stone, runes only brightness-
+// pulsed). Now the tablet FLOATS (a slow bob + slight tilt, shadow couples), the
+// shimmer sweep is brighter and loop-clean, and the three runes IGNITE STROKE-BY-
+// STROKE in sequence: each lights with a flare + a spark at its tip, holds, then
+// the cycle repeats. Re-centred up ~2.8u (off_y +2.8).
 function animRunestone(ctx: CanvasRenderingContext2D, t: number): void {
-  // Each rune pulses its glow with its own phase.
-  const pulse = (phase: number) => 0.55 + 0.45 * Math.sin(t * 2.4 + phase);
+  ctx.save();
+  ctx.translate(0, -2.8); // re-frame: was sitting ~2.8u low
 
-  // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.28)";
-  ctx.beginPath();
-  ctx.ellipse(0, 23, 15, 3.5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  const bob = breathe(t, 3.0, 1.6, 0); // slow levitation
+  const tilt = Math.sin((t / 4.2) * TAU) * 0.04; // faint drift tilt
+
+  groundShadow(ctx, 0, 23, 15, 3.5, bob, 0.28);
+
+  // Float + tilt the whole tablet about its centre.
+  ctx.save();
+  ctx.translate(0, bob);
+  ctx.rotate(tilt);
+
+  const tablet = (): void => {
+    ctx.beginPath();
+    ctx.moveTo(-11, -19);
+    ctx.lineTo(10, -20);
+    ctx.lineTo(12, 6);
+    ctx.lineTo(9, 21);
+    ctx.lineTo(-9, 22);
+    ctx.lineTo(-12, 2);
+    ctx.closePath();
+  };
 
   // Stone tablet
   const stone = ctx.createLinearGradient(0, -20, 0, 22);
@@ -500,14 +637,7 @@ function animRunestone(ctx: CanvasRenderingContext2D, t: number): void {
   stone.addColorStop(0.5, "#5e636c");
   stone.addColorStop(1, "#3a3e46");
   ctx.fillStyle = stone;
-  ctx.beginPath();
-  ctx.moveTo(-11, -19);
-  ctx.lineTo(10, -20);
-  ctx.lineTo(12, 6);
-  ctx.lineTo(9, 21);
-  ctx.lineTo(-9, 22);
-  ctx.lineTo(-12, 2);
-  ctx.closePath();
+  tablet();
   ctx.fill();
   ctx.strokeStyle = "#23262c";
   ctx.lineWidth = 2;
@@ -534,37 +664,57 @@ function animRunestone(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineTo(4, 4);
   ctx.stroke();
 
-  // Magical shimmer sweeping across the tablet (diagonal band of light)
+  // Magical shimmer sweeping the tablet — brighter and loop-clean (loopPhase).
   ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(-11, -19);
-  ctx.lineTo(10, -20);
-  ctx.lineTo(12, 6);
-  ctx.lineTo(9, 21);
-  ctx.lineTo(-9, 22);
-  ctx.lineTo(-12, 2);
-  ctx.closePath();
+  tablet();
   ctx.clip();
-  const sweep = ((t * 0.35) % 1) * 60 - 24; // -24..36 travel
-  const shimmer = ctx.createLinearGradient(sweep - 10, -20, sweep + 10, 20);
+  const sweep = -24 + loopPhase(t, 3.6) * 60; // -24..36, tiles exactly
+  const shimmer = ctx.createLinearGradient(sweep - 12, -20, sweep + 12, 20);
   shimmer.addColorStop(0, "rgba(150,210,255,0)");
-  shimmer.addColorStop(0.5, "rgba(170,220,255,0.18)");
+  shimmer.addColorStop(0.5, "rgba(180,228,255,0.28)");
   shimmer.addColorStop(1, "rgba(150,210,255,0)");
   ctx.fillStyle = shimmer;
   ctx.fillRect(-13, -21, 27, 45);
   ctx.restore();
 
-  // Glowing rune marks (pulsing brightness via shadowBlur + alpha)
-  const drawRune = (phase: number, body: () => void) => {
-    const p = pulse(phase);
+  // Sequential ignition: one master cycle lights rune 0, then 1, then 2, each
+  // with its own flare window, so the runes "charge" in turn instead of all
+  // throbbing together. `lit(i)` is that rune's 0..1 glow.
+  const cyclePhase = loopPhase(t, 4.2); // whole ignition cycle
+  const lit = (i: number): number => {
+    const start = i * 0.26;
+    const local = (cyclePhase - start) / 0.26;
+    if (local < 0) {
+      // pre-ignite: a faint resting ember so it's never fully dark
+      return 0.18;
+    }
+    if (local < 1) {
+      // ignite: fast flare up, then ease to a steady hold
+      return 0.18 + 0.82 * easeOutBack(clamp01(local), 1.6);
+    }
+    return 1; // held lit for the rest of the cycle
+  };
+
+  const drawRune = (i: number, body: () => void, sparkAt: [number, number]): void => {
+    const p = lit(i);
     ctx.save();
-    ctx.shadowColor = `rgba(80,180,255,${(0.9 * p).toFixed(3)})`;
-    ctx.shadowBlur = 3 + p * 6;
-    ctx.strokeStyle = `rgba(122,208,255,${(0.55 + 0.45 * p).toFixed(3)})`;
-    ctx.lineWidth = 2;
+    ctx.strokeStyle = `rgba(122,208,255,${clamp01(0.4 + 0.6 * p)})`;
+    ctx.lineWidth = 2 + p * 0.6;
     ctx.lineCap = "round";
+    // A soft halo under the stroke (stub-safe: no shadowBlur reliance) by
+    // stroking a faint wider pass first.
+    ctx.save();
+    ctx.strokeStyle = `rgba(120,190,255,${clamp01(0.22 * p)})`;
+    ctx.lineWidth = 4.5 + p * 1.5;
     body();
     ctx.restore();
+    body();
+    ctx.restore();
+    // Ignition spark at the rune's tip right as it catches.
+    const igniteBeat = beat(t, 4.2, 0.1, (i * 0.26) % 1);
+    if (igniteBeat > 0.01) {
+      sparkle(ctx, sparkAt[0], sparkAt[1], 1.3 + igniteBeat * 0.9, igniteBeat * 0.9, "190,230,255");
+    }
   };
 
   // Rune 1 (arrow-like)
@@ -577,9 +727,9 @@ function animRunestone(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.moveTo(-5, -4);
     ctx.lineTo(-1, -1);
     ctx.stroke();
-  });
+  }, [-5, -12]);
   // Rune 2 (angular)
-  drawRune(2.0, () => {
+  drawRune(1, () => {
     ctx.beginPath();
     ctx.moveTo(4, -10);
     ctx.lineTo(4, 4);
@@ -587,35 +737,59 @@ function animRunestone(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.lineTo(8, -6);
     ctx.lineTo(4, -2);
     ctx.stroke();
-  });
+  }, [8, -6]);
   // Rune 3 (cross mark)
-  drawRune(4.0, () => {
+  drawRune(2, () => {
     ctx.beginPath();
     ctx.moveTo(-3, 8);
     ctx.lineTo(2, 14);
     ctx.moveTo(2, 8);
     ctx.lineTo(-3, 14);
     ctx.stroke();
-  });
+  }, [0, 11]);
+
+  ctx.restore();
+  ctx.restore();
 }
 
+// ---------------------------------------------------------------------------
+// arcane_magic_dust — the WORST framing (everything jammed upper-right, off_x
+// +7.1, off_y +4.6) on a frozen pouch. Fixes: RE-CENTRE the whole composition,
+// then make the pour real — the pouch TILTS to pour on a beat (squashing as it
+// tips), a DUST STREAM falls along an arc (deterministic particle loop, gated by
+// the pour), and sparkles pop along the stream + settle below.
 function animMagicDust(ctx: CanvasRenderingContext2D, t: number): void {
-  // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.beginPath();
-  ctx.ellipse(-2, 23, 13, 3.5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.save();
+  // Re-frame: shift the action left & up so it's centred, not crammed upper-right.
+  ctx.translate(-6.0, -3.2);
 
-  // Spilled dust glow (gentle pulse)
-  const glowPulse = 0.55 + Math.sin(t * 2.6) * 0.14;
+  // Pour beat: rest upright, then tip to pour, hold, recover. `beat` gates the
+  // actual stream + squash so at rest the pouch is closed and quiet.
+  const pour = beat(t, 4.0, 0.55); // 0 at rest, 0→1→0 while pouring
+  const tip = pour * 0.42; // radians the pouch rotates to pour
+  const squash = 1 + pour * 0.08; // belly bulges as it tips and empties
+
+  // Glow tracks the pour mouth, gently pulsing and flaring while pouring.
+  const glowPulse = 0.5 + Math.sin((t / 2.6) * TAU) * 0.12 + pour * 0.18;
+
+  groundShadow(ctx, 2, 23, 13, 3.5, 0, 0.25);
+
   const glow = ctx.createRadialGradient(10, 4, 2, 10, 4, 22);
-  glow.addColorStop(0, `rgba(255,220,120,${glowPulse})`);
+  glow.addColorStop(0, `rgba(255,220,120,${clamp01(glowPulse)})`);
   glow.addColorStop(0.6, "rgba(255,200,80,0.18)");
   glow.addColorStop(1, "rgba(255,200,80,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(10, 4, 22, 0, Math.PI * 2);
+  ctx.arc(10, 4, 22, 0, TAU);
   ctx.fill();
+
+  // Tip + squash the pouch about its lower body (~(-3, 16)) so the mouth swings
+  // toward the spill. Drawn body unchanged otherwise.
+  ctx.save();
+  ctx.translate(-3, 16);
+  ctx.rotate(tip);
+  ctx.scale(squash, 2 - squash);
+  ctx.translate(3, -16);
 
   // Pouch body
   const pouch = ctx.createRadialGradient(-6, 6, 2, -3, 10, 18);
@@ -649,7 +823,7 @@ function animMagicDust(ctx: CanvasRenderingContext2D, t: number): void {
   // Cloth highlight
   ctx.fillStyle = "rgba(255,235,180,0.25)";
   ctx.beginPath();
-  ctx.ellipse(-7, 6, 2, 7, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(-7, 6, 2, 7, -0.3, 0, TAU);
   ctx.fill();
 
   // Drawstring tie + mouth
@@ -661,175 +835,194 @@ function animMagicDust(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.stroke();
   ctx.fillStyle = "#caa24a";
   ctx.beginPath();
-  ctx.arc(-2, -6, 2, 0, Math.PI * 2);
+  ctx.arc(-2, -6, 2, 0, TAU);
   ctx.fill();
   ctx.strokeStyle = "#7a5a10";
   ctx.lineWidth = 0.8;
   ctx.stroke();
+  ctx.restore(); // end pouch tip/squash
 
-  // Spilling dust stream (static base spill, matches static icon)
-  ctx.save();
-  for (let i = 0; i < 18; i++) {
-    const tt = i / 17;
-    const dx = 3 + tt * 14 + Math.sin(i * 2.1) * 2;
-    const dy = -3 + tt * tt * 12 - 6 + Math.cos(i * 1.7) * 2;
-    const r = 0.6 + (1 - tt) * 1.1;
-    ctx.fillStyle = `rgba(255,225,130,${(0.5 + (1 - tt) * 0.5).toFixed(3)})`;
+  // DUST STREAM: a falling arc of motes from the mouth (~(6,-1)) outward and
+  // down. Each mote rides its own loopPhase along the arc; the stream only flows
+  // while pouring (amount = pour), so at rest the pouch is closed and quiet.
+  const sx0 = 6;
+  const sy0 = -1;
+  const streamN = 16;
+  for (let i = 0; i < streamN; i++) {
+    const ph = loopPhase(t, 0.9, (i / streamN) % 1);
+    const flow = clamp01(pour * 1.4 - ph * 0.15); // head of stream leads
+    if (flow <= 0.02) continue;
+    // Arc: launches up-right out of the mouth, then falls.
+    const dx = sx0 + ph * 12;
+    const dy = sy0 - 4 * ph + ph * ph * 16; // up then down (gravity)
+    const wob = Math.sin(ph * 7 + i) * 1.4;
+    const r = (0.6 + (1 - ph) * 1.0) * (0.6 + flow * 0.6);
+    ctx.fillStyle = `rgba(255,225,130,${clamp01((0.4 + (1 - ph) * 0.5) * flow)})`;
     ctx.beginPath();
-    ctx.arc(dx, dy, r, 0, Math.PI * 2);
+    ctx.arc(dx + wob * 0.4, dy, r, 0, TAU);
     ctx.fill();
   }
-  ctx.restore();
 
-  // Drifting motes rising upward from the pouch mouth
-  for (let i = 0; i < 5; i++) {
-    const speed = 0.25 + rand(i + 20) * 0.2;
-    const phase = (t * speed + rand(i + 30)) % 1;
-    const mx = -2 + (rand(i + 40) - 0.5) * 8 + Math.sin(phase * 5 + i) * 2;
-    const my = -6 - phase * 14;
-    const ma = Math.max(0, Math.sin(phase * Math.PI)) * 0.85;
+  // A few drifting motes rising from the mouth (ambient, always faintly present).
+  for (let i = 0; i < 4; i++) {
+    const ph = loopPhase(t, 2.4, (i * 0.31) % 1);
+    const mx = 4 + Math.sin(ph * 5 + i) * 3;
+    const my = -4 - ph * 12;
+    const ma = Math.max(0, Math.sin(ph * Math.PI)) * 0.7;
     if (ma <= 0.02) continue;
-    ctx.fillStyle = `rgba(255,235,150,${ma.toFixed(3)})`;
+    ctx.fillStyle = `rgba(255,235,150,${ma})`;
     ctx.beginPath();
-    ctx.arc(mx, my, 0.8 + (1 - phase) * 0.4, 0, Math.PI * 2);
+    ctx.arc(mx, my, 0.8 + (1 - ph) * 0.4, 0, TAU);
     ctx.fill();
   }
 
-  // Twinkling sparkle stars (staggered phases)
-  const drawStar = (sx: number, sy: number, s: number, alpha: number) => {
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = "#fff6d0";
-    ctx.beginPath();
-    for (let k = 0; k < 4; k++) {
-      const a = (k / 4) * Math.PI * 2;
-      const ax = Math.cos(a);
-      const ay = Math.sin(a);
-      ctx.moveTo(sx, sy);
-      ctx.lineTo(sx + ax * s, sy + ay * s);
-      ctx.lineTo(sx + Math.cos(a + Math.PI / 4) * s * 0.3, sy + Math.sin(a + Math.PI / 4) * s * 0.3);
-    }
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(sx, sy, s * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  };
-  const stars: Array<[number, number, number, number]> = [
-    [14, -4, 4, 0],
-    [8, -12, 3, 1.6],
-    [18, 4, 2.6, 3.2],
-    [20, -8, 2, 4.7],
+  // Sparkles popping along the stream + settling in the spill — staggered beats
+  // synced to the pour so they fire as dust lands.
+  const sparkSpots: Array<[number, number, number]> = [
+    [10, 2, 0.0],
+    [14, 7, 0.25],
+    [17, 11, 0.5],
+    [7, -8, 0.7],
   ];
-  stars.forEach(([sx, sy, sBase, phase]) => {
-    const tw = 0.5 + 0.5 * Math.sin(t * 3.0 + phase);
-    drawStar(sx, sy, sBase * (0.55 + tw * 0.6), 0.4 + tw * 0.6);
+  sparkSpots.forEach(([px, py, off]) => {
+    const b = beat(t, 4.0, 0.16, (0.45 + off) % 1) * clamp01(pour * 2);
+    const idle = pingPong(t, 3.0, off) * 0.3; // a faint always-on glimmer
+    const a = Math.max(b, idle * 0.5);
+    if (a > 0.02) sparkle(ctx, px, py, 1.6 + b * 1.0, a, "255,246,200");
   });
+
+  ctx.restore();
 }
 
+// ---------------------------------------------------------------------------
+// arcane_pentacle — was a rigid 360° hubcap spin of a 5-fold-symmetric sigil
+// (so it just looked like a wheel). Rebuilt as a RITUAL: the rings COUNTER-ROTATE
+// in gentle opposed oscillations (no full turn), the pentagram DRAWS ON point by
+// point each cycle, and the five points IGNITE in sequence with sparks, finishing
+// in a whole-sigil pulse before fading to re-draw. Framing was already centred.
 function animPentacle(ctx: CanvasRenderingContext2D, t: number): void {
-  const spin = t * 0.4; // slow sigil rotation
-  const glowPulse = 0.4 + Math.sin(t * 2.0) * 0.12;
+  const glowPulse = 0.4 + Math.sin((t / 3.0) * TAU) * 0.12;
 
-  // Outer ambient glow (pulsing)
+  // Opposed gentle oscillations — the "counter-rotate" without a hubcap spin.
+  const outerRot = Math.sin((t / 4.0) * TAU) * 0.14;
+  const innerRot = -Math.sin((t / 3.2) * TAU) * 0.18;
+
+  // Ritual cycle: the pentagram is drawn on (drawProg 0..1), held + pulsed, then
+  // a quick fade resets it. One master loop keeps everything in lockstep.
+  const cycle = loopPhase(t, 5.0);
+  const drawProg = easeInOutSine(clamp01(cycle / 0.55)); // strokes appear over first 55%
+  const holdPulse = beat(t, 5.0, 0.22, 0.6); // a bright pulse once fully drawn
+
+  // Outer ambient glow (pulsing, flares on the ritual pulse)
   const glow = ctx.createRadialGradient(0, 0, 4, 0, 0, 24);
-  glow.addColorStop(0, `rgba(150,110,255,${glowPulse})`);
+  glow.addColorStop(0, `rgba(150,110,255,${clamp01(glowPulse + holdPulse * 0.3)})`);
   glow.addColorStop(0.6, "rgba(120,90,240,0.18)");
   glow.addColorStop(1, "rgba(120,90,240,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(0, 0, 24, 0, Math.PI * 2);
+  ctx.arc(0, 0, 24, 0, TAU);
   ctx.fill();
 
-  // Rotate the whole sigil ring slowly.
-  ctx.save();
-  ctx.rotate(spin);
+  const litCol = (a: number): string => `rgba(185,160,255,${clamp01(a)})`;
 
+  // Outer ring — counter-rotating, drawn as a sweep that grows with the ritual
+  // so it "inscribes" rather than just sitting there.
   ctx.save();
-  ctx.shadowColor = "rgba(160,130,255,0.9)";
-  ctx.shadowBlur = 6;
-  ctx.strokeStyle = "#b9a0ff";
+  ctx.rotate(outerRot);
+  ctx.strokeStyle = litCol(0.75 + holdPulse * 0.25);
   ctx.lineWidth = 2;
-  // Outer ring
+  ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.arc(0, 0, 18, 0, Math.PI * 2);
+  ctx.arc(0, 0, 18, -Math.PI / 2, -Math.PI / 2 + TAU * drawProg);
   ctx.stroke();
-  // Inner ring
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  ctx.arc(0, 0, 14.5, 0, Math.PI * 2);
-  ctx.stroke();
-  // Five-point star (pentagram)
-  const pts: Array<[number, number]> = [];
-  for (let i = 0; i < 5; i++) {
-    const a = -Math.PI / 2 + (i / 5) * Math.PI * 2;
-    pts.push([Math.cos(a) * 13, Math.sin(a) * 13]);
-  }
-  ctx.lineWidth = 2;
-  ctx.lineJoin = "round";
-  ctx.beginPath();
-  const order = [0, 2, 4, 1, 3];
-  order.forEach((idx, k) => {
-    const [px, py] = pts[idx];
-    if (k === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  });
-  ctx.closePath();
-  ctx.stroke();
-  ctx.restore();
-
-  // Faint inner fill of star
-  ctx.save();
-  const order2 = [0, 2, 4, 1, 3];
-  ctx.beginPath();
-  order2.forEach((idx, k) => {
-    const a = -Math.PI / 2 + (idx / 5) * Math.PI * 2;
-    const px = Math.cos(a) * 13;
-    const py = Math.sin(a) * 13;
-    if (k === 0) ctx.moveTo(px, py);
-    else ctx.lineTo(px, py);
-  });
-  ctx.closePath();
-  ctx.fillStyle = "rgba(150,120,255,0.12)";
-  ctx.fill();
-  ctx.restore();
-
-  // Rune ticks between rings
-  ctx.strokeStyle = "rgba(200,180,255,0.7)";
+  // Rune ticks between the rings appear with the draw.
+  ctx.strokeStyle = litCol(0.6 + holdPulse * 0.3);
   ctx.lineWidth = 1;
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
+  const ticks = Math.floor(12 * drawProg + 0.001);
+  for (let i = 0; i < ticks; i++) {
+    const a = (i / 12) * TAU;
     ctx.beginPath();
     ctx.moveTo(Math.cos(a) * 14.5, Math.sin(a) * 14.5);
     ctx.lineTo(Math.cos(a) * 18, Math.sin(a) * 18);
     ctx.stroke();
   }
+  ctx.restore();
 
-  // Sparks at star points (twinkling)
+  // Inner ring — counter-rotates the other way.
+  ctx.save();
+  ctx.rotate(innerRot);
+  ctx.strokeStyle = litCol(0.7 + holdPulse * 0.25);
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(0, 0, 14.5, Math.PI / 2, Math.PI / 2 + TAU * drawProg);
+  ctx.stroke();
+  ctx.restore();
+
+  // Pentagram — DRAWN ON: the 5-stroke path (order 0,2,4,1,3,close) appears edge
+  // by edge as `drawProg` advances, instead of the whole star spinning.
+  const pts: Array<[number, number]> = [];
   for (let i = 0; i < 5; i++) {
-    const a = -Math.PI / 2 + (i / 5) * Math.PI * 2;
-    const px = Math.cos(a) * 13;
-    const py = Math.sin(a) * 13;
-    const tw = 0.55 + 0.45 * Math.sin(t * 3.2 + i * 1.3);
-    ctx.fillStyle = `rgba(255,255,255,${(0.9 * tw).toFixed(3)})`;
+    const a = -Math.PI / 2 + (i / 5) * TAU;
+    pts.push([Math.cos(a) * 13, Math.sin(a) * 13]);
+  }
+  const order = [0, 2, 4, 1, 3, 0]; // 5 edges, closing back to start
+  const edges = 5;
+  const drawn = drawProg * edges; // how many edges are visible
+  ctx.strokeStyle = litCol(0.85 + holdPulse * 0.15);
+  ctx.lineWidth = 2;
+  ctx.lineCap = "round";
+  for (let e = 0; e < edges; e++) {
+    const seg = clamp01(drawn - e);
+    if (seg <= 0) break;
+    const [ax, ay] = pts[order[e]];
+    const [bx, by] = pts[order[e + 1]];
     ctx.beginPath();
-    ctx.arc(px, py, 1.2 + tw * 0.8, 0, Math.PI * 2);
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(lerp(ax, bx, seg), lerp(ay, by, seg));
+    ctx.stroke();
+  }
+
+  // Faint inner fill — fades in only once the star is essentially complete.
+  if (drawProg > 0.92) {
+    const fillA = (drawProg - 0.92) / 0.08;
+    ctx.beginPath();
+    for (let k = 0; k <= edges; k++) {
+      const [px, py] = pts[order[k]];
+      if (k === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+    ctx.fillStyle = `rgba(150,120,255,${clamp01(0.12 * fillA + holdPulse * 0.1)})`;
     ctx.fill();
   }
 
-  ctx.restore(); // end sigil rotation
-
-  // Orbiting sparks circling the sigil (counter-orbit for liveliness)
+  // Sequential point-ignite: each star point catches in turn as the draw reaches
+  // it, then all five flare together on the hold pulse.
   for (let i = 0; i < 5; i++) {
-    const a = -spin * 1.3 + (i / 5) * Math.PI * 2;
-    const orbitR = 20 + Math.sin(t * 1.7 + i) * 1.5;
-    const sx = Math.cos(a) * orbitR;
-    const sy = Math.sin(a) * orbitR;
-    const tw = 0.6 + 0.4 * Math.sin(t * 2.5 + i * 2.0);
-    ctx.fillStyle = `rgba(200,180,255,${(0.8 * tw).toFixed(3)})`;
-    ctx.beginPath();
-    ctx.arc(sx, sy, 0.8 + tw * 0.6, 0, Math.PI * 2);
-    ctx.fill();
+    const [px, py] = pts[i];
+    // Which draw-fraction this point gets reached at (points are hit in `order`).
+    const orderIndex = order.indexOf(i);
+    const reachAt = orderIndex / edges;
+    const local = clamp01((drawProg - reachAt) * 6); // fast catch when reached
+    const ignite = beat(t, 5.0, 0.08, (reachAt * 0.55) % 1); // spark at the moment
+    const a = 0.3 * local + 0.6 * ignite + holdPulse * 0.6;
+    if (a > 0.02) sparkle(ctx, px, py, 1.4 + ignite * 1.1 + holdPulse * 0.6, a, "230,220,255");
+  }
+
+  // Orbiting sparks circling the sigil — gentle opposed drift (not a rigid spin),
+  // present once the ritual has mostly drawn.
+  for (let i = 0; i < 5; i++) {
+    const a = -pingPong(t, 8.0) * 1.2 + (i / 5) * TAU;
+    const orbitR = 20 + Math.sin((t / 1.7) * TAU + i) * 1.5;
+    const ox = Math.cos(a) * orbitR;
+    const oy = Math.sin(a) * orbitR;
+    const tw = (0.4 + 0.4 * Math.sin((t / 2.5) * TAU + i * 2.0)) * clamp01(drawProg * 1.5);
+    if (tw > 0.02) {
+      ctx.fillStyle = `rgba(200,180,255,${clamp01(0.8 * tw)})`;
+      ctx.beginPath();
+      ctx.arc(ox, oy, 0.8 + tw * 0.6, 0, TAU);
+      ctx.fill();
+    }
   }
 }
 
