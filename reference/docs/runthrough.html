@@ -50,6 +50,7 @@
   .pull.tide{border-color:var(--tide)} .pull.tide .h{color:var(--tide)}
   .pull.stone{border-color:var(--stone)} .pull.stone .h{color:#6c6457}
   .pull.green{border-color:var(--green)} .pull.green .h{color:#567032}
+  .pull.ember{border-color:var(--ember)} .pull.ember .h{color:var(--ember)}
   .tokens{display:flex; gap:10px; flex-wrap:wrap; margin:22px 0}
   .token{flex:1 1 200px; background:var(--paper-2); border:1px solid var(--line);
     border-radius:12px; padding:12px 14px}
@@ -58,12 +59,37 @@
   .token.farm{border-top:4px solid var(--green)}
   .token.mine{border-top:4px solid var(--stone)}
   .token.fish{border-top:4px solid var(--tide)}
+  /* economy + systems helpers */
+  .grid2{display:flex; gap:16px; flex-wrap:wrap; margin:22px 0}
+  .card{flex:1 1 300px; background:var(--paper-2); border:1px solid var(--line);
+    border-radius:12px; padding:14px 16px}
+  .card h4{font-family:ui-sans-serif,system-ui,sans-serif; font-size:11px; font-weight:800;
+    letter-spacing:.14em; text-transform:uppercase; margin:0 0 8px; color:var(--gold-deep)}
+  .card ul{margin:0; padding-left:18px}
+  .card li{margin:0 0 7px; font-size:15px; line-height:1.5; color:#43382a}
+  .card li b{color:var(--ink)}
+  .card.faucet{border-top:4px solid var(--green)} .card.faucet h4{color:#567032}
+  .card.sink{border-top:4px solid var(--ember)} .card.sink h4{color:var(--ember)}
+  .chain{font-family:ui-sans-serif,system-ui,sans-serif; font-size:14px;
+    background:#fff7e8; border:1px solid var(--line); border-radius:8px;
+    padding:8px 12px; margin:6px 0; color:#43382a}
+  .chain b{color:var(--gold-deep)}
+  .ladder{margin:20px 0; border-top:1px dashed var(--line)}
+  .rung{display:flex; gap:14px; align-items:baseline; padding:11px 2px;
+    border-bottom:1px dashed var(--line)}
+  .rung .name{flex:0 0 120px; font-family:ui-sans-serif,system-ui,sans-serif;
+    font-weight:800; font-size:14px; color:var(--gold-deep)}
+  .rung .name small{display:block; font-weight:600; color:var(--stone);
+    letter-spacing:.04em; font-size:11px; margin-top:2px}
+  .rung .body{font-size:15px; line-height:1.55}
+  .rung .body em{font-style:normal; font-weight:700; color:var(--ink)}
   .end{text-align:center; margin-top:60px; color:var(--ink-soft); font-style:italic}
   .end .star{color:var(--gold); font-style:normal; letter-spacing:.4em; font-size:14px}
   footer.note{margin-top:46px; padding-top:18px; border-top:1px solid var(--line);
     font:13px/1.6 ui-sans-serif,system-ui,sans-serif; color:#8a7d68}
   a{color:var(--gold-deep)}
-  @media (max-width:520px){ h1{font-size:32px} .wrap{padding:36px 16px 90px} }
+  @media (max-width:520px){ h1{font-size:32px} .wrap{padding:36px 16px 90px}
+    .rung{flex-direction:column; gap:2px} .rung .name{flex:none} }
 </style>
 </head>
 <body>
@@ -72,15 +98,17 @@
   <header class="title">
     <div class="kicker">puzzleDrag2 · a readthrough</div>
     <h1>From a Cold Hearth to the Old Capital</h1>
-    <div class="sub">one full playthrough, told as a story</div>
+    <div class="sub">one full playthrough — the board, the town, and the whole economy — told as a story</div>
   </header>
 
   <div class="rule"></div>
 
   <p class="lede">This is a single, start-to-finish walk through the game — not a
   manual and not a wiki, just the <strong>shape of one complete run</strong>: what
-  you see, what you do, and how a dead little settlement grows back into a living
-  kingdom. Read it top to bottom the way you'd play it.</p>
+  you see, what you do, how the tiles you unlock change the way the board plays,
+  what you actually build, where every coin and every resource <em>comes from</em>
+  and where it <em>goes</em>, and how a dead little settlement grows back into a
+  living kingdom. Read it top to bottom the way you'd play it.</p>
 
   <!-- 1 -->
   <h2><span class="n">1</span> The opening</h2>
@@ -103,70 +131,299 @@
   three or more and the chain lights up; let go, and it <em class="kw">collects</em>.</p>
   <p>Collecting does three things at once. The tiles you gathered turn into a
   <em class="kw">resource</em> dropped into your stores — grass becomes hay, grain
-  becomes flour, trees become planks, birds become eggs, fruit becomes pie. If the
+  becomes flour, trees become planks, birds become eggs, fruit becomes pie — and
+  the harvest also pays you a few <em class="kw">coins</em> on the spot. If the
   chain was long enough to cross a threshold, a higher <em class="kw">upgrade
   tile</em> blooms where you finished, so good chains seed better boards. And any
   partner tiles sitting right beside your chain get swept up too — a
-  <em class="kw">cross-collect</em> bonus that rewards reading the whole board, not
-  just one line. Then everything above slides down to fill the gaps and fresh tiles
+  <em class="kw">cross-collect</em> bonus (grass pulls in grain, fruit pulls in
+  trees, herds pull in vegetables) that rewards reading the whole board, not just
+  one line. Then everything above slides down to fill the gaps and fresh tiles
   drop in from the top.</p>
   <div class="pull">
     <div class="h">The rhythm of a session</div>
     <p>Each visit to a board is a handful of turns — roughly ten. As your turns
     burn down, the <em class="kw">seasons drift</em> across the board behind your
     play: spring greens into summer, ambers into autumn, then settles toward
-    winter. It's the visual heartbeat of a run. When the turns are gone, a harvest
-    summary tallies what you made and you head back to town. What you're really
-    chasing the whole time: longer chains, clever cross-collect adjacencies, and not
-    wasting turns.</p>
+    winter, and each season quietly reweights what the board hands you. It's the
+    visual heartbeat of a run. When the turns are gone, a harvest summary tallies
+    what you made and you head back to town. What you're really chasing the whole
+    time: longer chains, clever cross-collect adjacencies, and not wasting turns.</p>
   </div>
 
   <!-- 3 -->
-  <h2><span class="n">3</span> Lighting the hearth</h2>
-  <div class="scene">The first harvest, and a town that grows</div>
-  <p>Your first goal is small and warm: gather enough hay to light the hearth.
-  You harvest your first tile, then twenty bundles of hay, and the fire catches —
+  <h2><span class="n">3</span> The living deck</h2>
+  <div class="scene">Unlocking tiles, and the gifts they carry</div>
+  <p>You don't play the same board forever. The set of tiles that can appear is a
+  collection you <em class="kw">grow</em>, and most of the game's depth lives here.
+  The plain starters — grass, wheat, an apple tree, a pheasant, a pig — are with
+  you from the first drag. Everything past them you have to <em class="kw">earn</em>,
+  and there are five different ways a new tile enters your world:</p>
+  <div class="card" style="border-top:4px solid var(--green)">
+    <h4>Five ways to unlock a tile</h4>
+    <ul>
+      <li><b>By chaining</b> — collect enough of a kind and a relative shows up.
+        Chain twenty grass over time and <em>Meadow Grass</em> joins the pool;
+        chain eighteen apples and the <em>Golden Apple</em> appears.</li>
+      <li><b>By research</b> — pour research points into a kind to coax out a
+        variant (fifty into grass unlocks <em>Spiky Grass</em>; twenty into eggs
+        unlocks the <em>Turkey</em>).</li>
+      <li><b>By buying it</b> — pay coins outright. A <em>Clover</em> is 200, a
+        <em>Dodo</em> 250, a <em>Melon</em> 500 — and the joke-rare
+        <em>Pig in Disguise</em> a flat 100,000.</li>
+      <li><b>By owning a building</b> — some tiles only show once you've raised the
+        building that justifies them (the Kitchen brings broccoli to the fields).</li>
+      <li><b>By daily login</b> — a few are calendar rewards for showing up, like
+        the <em>Triceratops</em> that lands on day 30.</li>
+    </ul>
+  </div>
+  <p>And unlocking a tile isn't just a new picture — most of them carry an
+  <em class="kw">ability</em> that changes how the board plays. This is the part the
+  word "deck" really earns: you're tuning the machine.</p>
+  <div class="pull green">
+    <div class="h">What the new tiles actually do</div>
+    <p>Some <em class="kw">hand you free moves</em> each season just for being on the
+    board — a clover or a palm is worth two, a melon a generous five — so a turn-poor
+    session loosens up. Some <em class="kw">seed more of their own kind</em>: Meadow
+    Grass adds a grass slot to the spawn pool, Spiky Grass adds two, thickening the
+    board with the thing you most want to chain. Some <em class="kw">pay extra
+    coins</em> — a Golden Apple tips five coins every harvest; the rare Golden Coin
+    tile pays twenty <em>per tile</em> you collect with it. And some bend the turn
+    economy: a humble Pig refunds a <em>free move</em> any time you chain six or more.
+    Building your collection is really building a strategy.</p>
+  </div>
+  <p>A long chain doesn't just pay out — where you let go, a tile of the next
+  <em class="kw">tier</em> blooms in place, so good play literally upgrades the
+  board under you: grass climbs toward Meadow then Spiky, an apple toward a Pear
+  then a Golden Apple, a pig toward a Hog, a Boar, a Warthog. How long a chain has
+  to be to trigger that bloom depends on the family — grain comes easy at five,
+  most farm tiles want six, fruit and flowers and mounts hold out for seven to ten.</p>
+  <div class="pull stone">
+    <div class="h">A few tiles aren't crops at all</div>
+    <p>Out in the harder lands, special tiles show up on a timer and ask to be
+    <em>caught</em>. Deep in a mine a <em class="kw">Mysterious Ore</em> surfaces
+    once a session with a five-turn fuse — chain it together with a couple of dirt
+    tiles before it decays and it pays a <em class="kw">Rune</em>, the rare currency
+    that powers the late-game Portal. On the coast a <em class="kw">Giant Pearl</em>
+    does the same, asking to be chained with the fish around it. Miss the window and
+    they slump back into ordinary tiles. They're the board's little heists.</p>
+  </div>
+
+  <!-- 4 -->
+  <h2><span class="n">4</span> Lighting the hearth</h2>
+  <div class="scene">From a tile, to a table, to a town that grows</div>
+  <p>Your first goal is small and warm: gather enough hay to light the hearth. You
+  harvest your first tile, then twenty bundles of hay, and the fire catches —
   <em class="npc">Mira</em> arrives to keep you company, and soon <em class="npc">Old
-  Tomas</em> too. Now the loop opens up. Neighbors post <em class="kw">orders</em>
-  — bring me bread, bring me soup — and filling them pays <em class="kw">coins</em>,
-  the one currency that follows you everywhere. You <em class="kw">craft</em> raw
-  resources into finished goods at your stations (the mill grinds flour, the bakery
-  bakes bread), and you raise your first real building: the granary, room for
-  tomorrow.</p>
+  Tomas</em> too. Now the loop opens up. Neighbors post <em class="kw">orders</em> —
+  bring me bread, bring me soup — and filling them pays coins (more the closer your
+  bond with that neighbor). But a raw tile rarely satisfies an order on its own;
+  most of what the town wants has to be <em class="kw">made</em>.</p>
+  <p>That's the second half of the economy: the board grows <em class="kw">raw</em>
+  resources, and your <em class="kw">crafting stations</em> turn them into finished
+  goods. The chain from dirt to dinner is the spine of every farm run:</p>
+  <div class="chain">🌾 <b>Mill + Bakery:</b> wheat → flour, then flour + eggs → <b>bread</b> (and honey rolls, harvest pies, a festival loaf)</div>
+  <div class="chain">🫙 <b>Larder:</b> blackberries → jam, then jam + eggs → <b>preserves</b>; fish + milk + soup → chowder</div>
+  <div class="chain">⚒️ <b>Forge:</b> iron + coke → <b>hinges</b> and lanterns; gold bars → rings and gem-crowns</div>
+  <div class="chain">🍲 <b>Kitchen / Smokehouse:</b> flour → <b>supplies</b>; meat + coke → <b>cured meat</b> — the food that fuels expeditions</div>
+  <p>Finished goods are worth far more than the raw stuff they came from — that's
+  what fills the lucrative orders and, later, what you sell at market for coins. So
+  a farm run isn't just "make hay." It's: chain the fields, haul the raw goods home,
+  run them through the right stations, and turn the output into coins and buildings.</p>
   <div class="pull green">
     <div class="h">Spend coins on hands that ease the work</div>
-    <p>Those coins go furthest on <em class="kw">workers</em>. Some are paid to make a
-    crop <em class="kw">need a shorter chain</em> — hire a grain hand and a run of
-    wheat that used to demand six tiles to pay off now rewards you at five, so every
-    drag does more and the board feels looser. Others <em class="kw">cut your crafting
-    costs</em>, so the same bread takes less flour. Hiring takes a coin and a
-    villager (your housing decides how many hands you can keep), and it's one of the
-    main ways an early grind softens into an easy, generous rhythm — you're quietly
-    buying the work down.</p>
+    <p>Coins go furthest on <em class="kw">workers</em>. Some are paid to make a crop
+    <em class="kw">need a shorter chain</em> — hire a grain hand and a run of wheat
+    that used to demand six tiles pays off at five, so every drag does more. Others
+    <em class="kw">cut your crafting costs</em> (a baker shaves a flour off every
+    loaf) or simply <em class="kw">tip extra coins</em> per chain (a tax collector,
+    a florist). Each hire stacks, up to about ten, so the benefit deepens the more
+    you commit. Hiring costs a few coins and a <em class="kw">villager</em> — and
+    villagers come from <em>housing</em>, so your population caps how many hands you
+    can keep. It's one of the main ways an early grind softens into an easy,
+    generous rhythm: you're quietly buying the work down.</p>
+  </div>
+  <div class="pull">
+    <div class="h">Tools — single-use bursts you craft at the Workshop</div>
+    <p>Once you've built a Workshop, raw materials become <em class="kw">tools</em>,
+    and tools are how you break a board open. A <em>Bomb</em> blows a 3×3 hole where
+    you tap (your Powder Store quietly stamps out two every season). A <em>Sickle</em>
+    reaps a whole row; an <em>Auger</em> bores a column; a <em>Blast Charge</em>
+    clears a full cross. A <em>Plough</em> harvests every grass and grain tile at
+    once; a <em>Fruit Picker</em> gathers all the fruit. When a board's gone stale, a
+    <em>Reshuffle Horn</em> deals a fresh one and a <em>Magic Seed</em> simply hands
+    you five more turns. Mines get their own kit — drills, stone hammers, water pumps
+    to flood out lava — and the rarest, Portal-summoned tools (the <em>Magic Wand</em>
+    that sweeps every tile of a type you tap, the <em>Philosopher's Stone</em> that
+    turns stone to gold) bend the rules outright.</p>
   </div>
   <p>As you raise buildings, the town itself <em class="kw">levels up</em> beneath
   you — from a bare <em class="place">Outpost</em> to a <em class="place">Hamlet</em>,
   then a <em class="place">Village</em>, then a full <em class="place">City</em>.
-  Each tier-up costs a basket of goods you've been making, and each one widens the
-  town: more <em class="kw">plots</em> to build on, and a longer list of buildings
-  you're allowed to raise. By the time Hearthwood Vale is a City it sprawls across
-  twenty plots, loud and lived-in — the cold ruin you started in, grown all the way
-  up.</p>
+  Each tier-up costs a basket of the goods you've been making, and each one widens
+  the town: more <em class="kw">plots</em> to build on, and a longer list of
+  buildings you're allowed to raise.</p>
+
+  <!-- 5 -->
+  <h2><span class="n">5</span> What you'd actually build</h2>
+  <div class="scene">One farm town, Outpost to City</div>
+  <p>Here's the catch that gives a town its character: at every tier you
+  <em class="kw">unlock far more buildings than you have plots for</em>. So a
+  playthrough of Hearthwood Vale isn't a checklist — it's a sequence of real
+  choices. This is roughly how one run fills in, and why:</p>
+  <div class="ladder">
+    <div class="rung">
+      <div class="name">Outpost<small>3 plots · 5 unlocked</small></div>
+      <div class="body">The <em>Hearth</em> is free and anchors the place, so it
+      never costs a plot-choice. That leaves two real picks from Mill, Bakery,
+      Granary and Inn. Take the <em>Bakery</em> (bread is your first money-maker)
+      and the <em>Granary</em> — it pays for itself with <em>+1 turn</em> every farm
+      session and <em>+300</em> storage. The Mill and Inn wait.</div>
+    </div>
+    <div class="rung">
+      <div class="name">Hamlet<small>6 plots · +3 unlocked</small></div>
+      <div class="body">Now <em>Housing</em> (your first villagers, which means your
+      first workers), a <em>Larder</em> to bottle preserves for richer orders, and
+      a <em>Silo</em> to keep your field layout between visits. The squeeze eases —
+      but only for a moment.</div>
+    </div>
+    <div class="rung">
+      <div class="name">Village<small>12 plots · +9 unlocked</small></div>
+      <div class="body">The pressure returns hard: nine new buildings, far more than
+      the doubling of plots covers. Yield-boosters earn their keep here — a
+      <em>Sawmill</em> (+1 plank per oak chain), an <em>Apiary</em> (+1 honey per
+      pansy), a <em>Stable</em> (+1 horseshoe per horse). Add the <em>Kitchen</em>
+      (it bakes the <em>supplies</em> that get you into mines), a second
+      <em>Housing</em>, and a <em>Chapel</em> that simply pays +50 coins a season.
+      Brewery, Watchtower and Apothecary are the ones you'll likely leave out.</div>
+    </div>
+    <div class="rung">
+      <div class="name">City<small>20 plots · +13 unlocked</small></div>
+      <div class="body">Peak pressure: close to thirty buildings ever unlocked,
+      twenty plots ever available. The keystones go in — <em>Workshop</em> (tools),
+      <em>Forge</em> (metal goods, the high-coin crafts), <em>Caravan Post</em> (sell
+      anything at market), the third <em>Housing</em>, an <em>Observatory</em> (gems
+      upgrade a step sooner), and the <em>Portal</em>. You physically cannot fit a
+      Clock Tower, a Lighthouse, a Powder Store and a Brewery on top of all that —
+      so a City is a statement about <em>what your town is for</em>.</div>
+    </div>
+  </div>
   <div class="pull">
-    <div class="h">You can't build everything — so choose</div>
-    <p>Here's the catch that gives the town its character: at every tier you
-    <em class="kw">unlock far more buildings than you have plots for</em>. The little
-    Outpost lets you pick three buildings from five; the City unlocks close to thirty
-    buildings but only ever has twenty plots. So you're always <em class="kw">choosing
-    what your town is for</em> — lean into baking and brewing, or sawmills and a
-    forge, or housing and workshops? Plots are precious, and what you leave out
-    matters as much as what you build. Later you can knock things down and re-plan,
-    but the squeeze never fully goes away, and that's the point: the town is a series
-    of small, real decisions, not a checklist.</p>
+    <div class="h">Buildings are bought with resources, not coins</div>
+    <p>Almost nothing on that ladder costs coins — buildings are paid in the
+    <em>goods you've been hauling and crafting</em>. A Bakery is 8 planks, 6 hay and
+    4 eggs. A Granary is 12 bread, 6 stone blocks and 4 iron bars. A City-tier Forge
+    wants 15 iron bars. So "building your town" is really a demand on your whole
+    production chain — which is exactly why you mine and fish and bake: to feed the
+    next plot. Later you can knock a building down and re-plan, but plots stay
+    precious, and what you leave out matters as much as what you raise.</p>
   </div>
 
-  <!-- 4 -->
-  <h2><span class="n">4</span> The Keeper at the fence</h2>
+  <!-- 6 -->
+  <h2><span class="n">6</span> Coins, and the road out</h2>
+  <div class="scene">How you pay your way to the next land</div>
+  <p>One quick clarification, because the two get confused: <em class="kw">coins</em>
+  are the money — the single currency that follows you everywhere. <em class="kw">Gold</em>
+  in this world is a <em>metal</em> you mine, a gold bar, that goes into the Forge for
+  rings and gem-crowns. You don't spend gold bars to travel; you spend
+  <em class="kw">coins</em>. So the real question — "how do I afford the next zone?" —
+  is a question about coins, and coins come from everywhere you play:</p>
+  <div class="grid2">
+    <div class="card faucet">
+      <h4>Where coins come from</h4>
+      <ul>
+        <li><b>Harvesting chains</b> — every collect pays coins (roughly tiles ×
+          their value); the steady drip that funds everything.</li>
+        <li><b>Filling orders</b> — neighbor requests pay out, scaled up by how well
+          you know that neighbor.</li>
+        <li><b>Daily quests &amp; the almanac</b> — small bounties and login rewards
+          that climb from a few coins to a thousand.</li>
+        <li><b>The market</b> — once you've a Caravan Post, sell any crafted good.</li>
+        <li><b>Standing income</b> — a Chapel pays +50 a season; coin-tiles and beaten
+          Keepers drop lump sums.</li>
+      </ul>
+    </div>
+    <div class="card sink">
+      <h4>Where coins go</h4>
+      <ul>
+        <li><b>Founding a new town</b> — the big one. Your second settlement costs
+          <b>300</b> coins, and the price climbs ×1.7 each time after (≈510, then
+          ≈867…).</li>
+        <li><b>Entering a board</b> — every session has a toll: <b>50</b> coins for a
+          farm or the first harbor, <b>100</b> for the mines and the deep marsh,
+          <b>200</b> for the Black Forge.</li>
+        <li><b>Hiring workers</b> — each hire costs coins, ramping as you stack them.</li>
+        <li><b>Decorations</b> — vanity that buys town prestige, 60–400 coins each.</li>
+      </ul>
+    </div>
+  </div>
+  <p>But coins alone don't open the map — there's a <em class="kw">progress gate</em>
+  too. Founding is <em class="kw">non-linear</em>: you can settle any site you can
+  <em>reach</em> and <em>afford</em>. Reaching the mountains, though, means your home
+  has to have grown all the way to a <em class="place">City</em> first; the deeper
+  <em class="place">Lanternlit Caves</em>, the <em class="place">Coast</em>, and the
+  marsh wait until your first quarry hits its early tiers; the <em class="place">Black
+  Forge</em> waits until that quarry is a real Mining Camp. So the road out is paced
+  by two things at once — the coins in your purse and how far you've already come.
+  You never have to finish one town before starting the next; you can have several
+  in progress and switch between them freely, leaving a place that isn't grabbing you
+  and coming back later.</p>
+
+  <!-- 7 -->
+  <h2><span class="n">7</span> The economy at a glance</h2>
+  <div class="scene">Every faucet, every drain</div>
+  <p>Strip away the story and the whole game is one balance sheet: things that
+  <em class="kw">generate</em> resources, and things that <em class="kw">consume</em>
+  them. A healthy run keeps the left side ahead of the right. Here is the entire
+  ledger in one place.</p>
+  <div class="grid2">
+    <div class="card faucet">
+      <h4>Generators — where resources are made</h4>
+      <ul>
+        <li><b>The board</b> — the source of everything. Each tile family yields one
+          raw good: grass→hay, grain→flour, trees→planks, birds→eggs, herds→meat,
+          cattle→milk, mounts→horseshoes, flowers→honey, fruit→pie, veg→soup; mines
+          give blocks, iron/copper/silver/gold bars, coke and cut gems; the coast
+          gives fish, shells, pearls, oil, ink and jade.</li>
+        <li><b>Cross-collect &amp; upgrade blooms</b> — adjacency bonuses and tier-up
+          tiles squeeze extra yield out of the same drag.</li>
+        <li><b>Crafting stations</b> — Bakery, Larder, Forge, Kitchen, Smokehouse and
+          Workshop convert raw goods into far more valuable finished ones.</li>
+        <li><b>Building &amp; worker bonuses</b> — a Sawmill adds planks, an Apiary
+          adds honey, a Powder Store stamps out bombs, line-workers thin the chain
+          you need.</li>
+        <li><b>Special tiles</b> — Mysterious Ore and the Giant Pearl mint
+          <em>runes</em>; coin-tiles mint coins.</li>
+      </ul>
+    </div>
+    <div class="card sink">
+      <h4>Sinks — where resources are spent</h4>
+      <ul>
+        <li><b>Crafting</b> — every finished good eats its raw inputs (3 flour + 1 egg
+          per loaf, and so on).</li>
+        <li><b>Constructing buildings</b> — each plot costs a basket of goods
+          (planks, bread, blocks, iron…), never just coins.</li>
+        <li><b>Tier-ups</b> — leveling the town itself demands a bigger basket each
+          rung (a City wants 28 bread, 14 pies, 18 eggs, and more).</li>
+        <li><b>Tools</b> — crafted from raw materials and spent in a single use.</li>
+        <li><b>Expedition fuel</b> — mine and harbor runs are <em>paid in food</em>:
+          supplies, cured meat and iron rations baked back home are spent as turns.</li>
+        <li><b>Orders &amp; festivals</b> — goods handed to neighbors, and the great
+          larder filled for the finale, leave your stores for good.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="pull ember">
+    <div class="h">The loop that ties the whole kingdom together</div>
+    <p>Notice how the sinks reach across zones. You bake bread on the <em>farm</em> so
+    you can afford the turns to dig in the <em>mountain</em>; you mine iron so you can
+    build the Forge that makes the goods you sell; you sell at market for the coins
+    that found the <em>coast</em>. No single board can sustain itself — the economy is
+    deliberately woven so that every land you raise feeds the next.</p>
+  </div>
+
+  <!-- 8 -->
+  <h2><span class="n">8</span> The Keeper at the fence</h2>
   <div class="scene">The first reckoning</div>
   <p>Every settlement has a <em class="kw">Keeper</em> — an old guardian spirit of
   the land — and once your home has grown enough, yours comes to the fence to be
@@ -177,52 +434,51 @@
   that one corner of the old kingdom lives again. Wren tells you the road beyond has
   opened. Act one is done.</p>
 
-  <!-- 5 -->
-  <h2><span class="n">5</span> The world opens</h2>
+  <!-- 9 -->
+  <h2><span class="n">9</span> The world opens</h2>
   <div class="scene">The caravan and the map</div>
   <p>To leave the Vale you <em class="kw">outfit a caravan</em>, paid for in coins,
   and roll it out onto the <em class="place">map</em> — a hand-drawn world of regions
   beyond your own: the <em class="place">Greenfields</em>, the <em class="place">Wilds</em>,
   the <em class="place">Stoneholds</em>, the <em class="place">Coast</em>, and far off,
-  the <em class="place">Old Capital</em>. Founding a new town here is
-  <em class="kw">non-linear</em>: you can settle any site the map lets you
-  <em>reach</em> and that you can <em>afford</em>, and the cost climbs with each town
-  you open. You never have to finish one town before starting the next — you can have
-  <em class="kw">several in progress at once</em> and switch between them freely,
-  leaving a place that isn't grabbing you and coming back later.</p>
-  <p>The smith <em class="npc">Bram</em> arrives, asking for a forge; once you build
-  it and craft your first iron, the Vale has metal, and harder country becomes worth
-  visiting. <em class="npc">Sister Liss</em> follows, a healer for the road ahead.</p>
+  the <em class="place">Old Capital</em>. The smith <em class="npc">Bram</em> arrives,
+  asking for a forge; once you build it and craft your first iron, the Vale has metal,
+  and harder country becomes worth visiting. <em class="npc">Sister Liss</em> follows,
+  a healer for the road ahead.</p>
   <div class="pull green">
     <div class="h">Two farms to learn the rhythm</div>
     <p>Your first steps out are gentle: <em class="place">Greenmeadow</em> and the
     <em class="place">Wild Orchard</em> are farm towns like home — same green logic
-    of grass and grain and fruit — so you find your feet before the world gets
-    stranger.</p>
+    of grass and grain and fruit, same 50-coin toll — so you find your feet before
+    the world gets stranger.</p>
   </div>
 
-  <!-- 6 -->
-  <h2><span class="n">6</span> Three realms, three tokens</h2>
+  <!-- 10 -->
+  <h2><span class="n">10</span> Three realms, three tokens</h2>
   <div class="scene">Every land grows differently</div>
   <p>The heart of the long game is that each <em class="kw">kind</em> of settlement
-  plays by its own rules, and the old kingdom needs one of each restored. Each is its
-  own board, its own resources kept in its own stores, its own Keeper, and its own
-  token at the end.</p>
+  plays by its own rules, with its own tiles, its own resources kept in its own
+  stores, its own tools, its own Keeper, and its own token at the end. The old
+  kingdom needs one of each restored.</p>
   <div class="pull stone">
     <div class="h">The Stoneholds — mining</div>
     <p>At the <em class="place">Cracked Quarry</em> and the
-    <em class="place">Lanternlit Caves</em> you work stone and ore instead of
-    grass: blocks, iron and copper bars, coke, cut gems, silver and gold. The boards
-    are deeper and slower to tame, and the tier ladder runs long — Dig Site, Prospect
-    Camp, Mining Camp, Boomtown, Smeltworks, all the way to a roaring Foundry City.</p>
+    <em class="place">Lanternlit Caves</em> you work stone and ore instead of grass:
+    blocks, iron and copper bars, coke, cut gems, silver and gold. The boards are
+    deeper and slower to tame — you bring drills, stone hammers and gold picks, pump
+    out lava and blast through cave-ins — and you spend <em class="kw">food</em> from
+    home as your turns. The tier ladder runs long: Dig Site, Prospect Camp, Mining
+    Camp, Boomtown, Smeltworks, all the way to a roaring Foundry City, with each rung
+    asking for heavier metal than the last.</p>
   </div>
   <div class="pull tide">
     <div class="h">The Coast — fishing</div>
     <p>At <em class="place">Saltspray Harbor</em> and <em class="place">Mirefen
     Hollow</em> the water itself moves: tides roll in and out across your turns,
-    changing what the board offers. You pull fish, shellfish, pearls and oil from a
-    stilt-village that grows out over the marsh — Fishing Stilt to Bogwalk Hamlet to
-    Mire Village to Fen Town.</p>
+    changing what the board offers. You pull fish, shellfish, pearls, oil and ink
+    from a stilt-village that grows out over the marsh — Fishing Stilt to Bogwalk
+    Hamlet to Mire Village to Fen Town — and here the tier-ups are paid in the sea's
+    own bounty: fillets, oil, and at the end a pearl.</p>
   </div>
   <p>Around all this sits the warm machinery of a settled world: the worker economy,
   daily quests and an almanac that tracks your mastery, decorations to make a town
@@ -237,19 +493,19 @@
     <div class="token fish"><div class="t">Tidesinger Pearl</div><div class="d">earned by completing a fishing settlement</div></div>
   </div>
 
-  <!-- 7 -->
-  <h2><span class="n">7</span> The Harvest Festival</h2>
+  <!-- 11 -->
+  <h2><span class="n">11</span> The Harvest Festival</h2>
   <div class="scene">The Vale lives again</div>
   <p>Back home, the work pays off in the warmest beat of the game. With every
-  building raised and the festival larder filled — fifty each of the staples that
-  carried you here, the grass and wheat and flour and berries and oak — Hearthwood
-  Vale throws a <em class="kw">Harvest Festival</em>. The place you found cold and
-  silent is now loud with people and full of food. This is the emotional summit of
-  the settled world: not a number going up, but a home that is unmistakably,
-  finally, <em>alive</em>.</p>
+  building raised and the festival larder filled — heaps of the staples that carried
+  you here, the grass and wheat and flour and berries and oak — Hearthwood Vale
+  throws a <em class="kw">Harvest Festival</em>. The place you found cold and silent
+  is now loud with people and full of food. This is the emotional summit of the
+  settled world: not a number going up, but a home that is unmistakably, finally,
+  <em>alive</em>.</p>
 
-  <!-- 8 -->
-  <h2><span class="n">8</span> The Old Capital</h2>
+  <!-- 12 -->
+  <h2><span class="n">12</span> The Old Capital</h2>
   <div class="scene">The road the whole journey pointed at</div>
   <p>With every settlement restored and all <em class="kw">three Hearth Tokens</em>
   in hand — seed, iron, and pearl, the farm, the mountain, and the sea — the last
@@ -268,11 +524,18 @@
 
   <footer class="note">
     A narrative readthrough of the intended full experience. Place, character,
-    resource, and progression names are drawn from the game's source
-    (<code>src/features/cartography/data.ts</code>, <code>src/features/zones/data.ts</code>,
-    <code>src/story.ts</code>, <code>src/constants.ts</code>, <code>src/GameScene.ts</code>).
-    The board loop, settlement tiers, Keeper trials, and Hearth-Token finale are how
-    the game is built; the arc is told as the complete, intended journey end to end.
+    resource, building, tile, tool, and progression details are drawn from the
+    game's source — the board loop and tiles (<code>src/GameScene.ts</code>,
+    <code>src/game/*.ts</code>, <code>src/features/tileCollection/data.ts</code>,
+    <code>src/config/upgradeThresholds.ts</code>), buildings, recipes and tools
+    (<code>src/constants.ts</code>), workers (<code>src/features/workers/data.ts</code>),
+    the tier ladders and zone tolls (<code>src/features/cartography/data.ts</code>),
+    the founding-cost economy (<code>src/features/zones/data.ts</code>), and the
+    rune-minting special tiles (<code>src/features/mine/</code>,
+    <code>src/features/fish/</code>). The systems — chains, tile abilities, the
+    plots-vs-unlocks squeeze, the coin and resource ledger, Keeper trials and the
+    Hearth-Token finale — are how the game is built; the arc is told as the complete,
+    intended journey end to end.
   </footer>
 
 </div>
