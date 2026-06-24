@@ -48,6 +48,7 @@ import { NpcGifts, hasNpcGifts } from "./sections/NpcGifts.jsx";
 import { TileUnlock, hasTileUnlock } from "./sections/TileUnlock.jsx";
 import { TileSeasonalShowcase } from "./TileSeasonalShowcase.jsx";
 import { ZoneDetail, hasZoneDetail } from "./sections/ZoneDetail.jsx";
+import { ZoneTierLadder, hasZoneTierLadder } from "./sections/ZoneTierLadder.jsx";
 import { BoardKindDetail, hasBoardKindDetail } from "./sections/BoardKindDetail.jsx";
 import { AbilitySpec, hasAbilitySpec } from "./sections/AbilitySpec.jsx";
 import { ToolPowerSpec, hasToolPowerSpec } from "./sections/ToolPowerSpec.jsx";
@@ -198,6 +199,8 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
   const showTileUnlock = conceptId === "tiles" && hasTileUnlock(entityKey);
   const showZoneDetail =
     conceptId === "zones" && hasZoneDetail(entity as Parameters<typeof hasZoneDetail>[0]);
+  const showZoneTierLadder =
+    conceptId === "zones" && hasZoneTierLadder(entity as Parameters<typeof hasZoneTierLadder>[0]);
   const showBoardKindDetail =
     conceptId === "boardKinds" &&
     hasBoardKindDetail(entity as Parameters<typeof hasBoardKindDetail>[0]);
@@ -245,6 +248,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
     ...(showAchievementCard ? [{ id: "achievement", label: "Achievement" }] : []),
     ...(showTileUnlock ? [{ id: "tile-unlock", label: "How to unlock" }] : []),
     ...(showZoneDetail ? [{ id: "zone-detail", label: "Drop rates & upgrades" }] : []),
+    ...(showZoneTierLadder ? [{ id: "zone-tier-ladder", label: "Settlement tiers" }] : []),
     ...(showBoardKindDetail ? [{ id: "board-kind-detail", label: "Tiles, dangers & seasons" }] : []),
     ...(showNpcGifts ? [{ id: "npc-gifts", label: "Gift preferences" }] : []),
     ...(showBuildingRecipes ? [{ id: "building-recipes", label: "Recipes crafted here" }] : []),
@@ -375,6 +379,14 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           {/* Zone drop rates & chain upgrades (zone articles) */}
           {showZoneDetail && entity != null && (
             <ZoneDetail zone={entity as React.ComponentProps<typeof ZoneDetail>["zone"]} />
+          )}
+
+          {/* Zone settlement-tier ladder & per-rung upgrade costs (zone articles) */}
+          {showZoneTierLadder && entity != null && (
+            <ZoneTierLadder
+              zoneId={entityKey}
+              zone={entity as React.ComponentProps<typeof ZoneTierLadder>["zone"]}
+            />
           )}
 
           {/* Board-kind detail: tile roster, dangers, seasons & zones */}
