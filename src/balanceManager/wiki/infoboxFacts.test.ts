@@ -261,4 +261,87 @@ describe("infoboxFacts — tile category", () => {
     expect(cat).toBeDefined();
     expect(cat!.value).toBe(TILE_TYPES_MAP["tile_grain_wheat"].category);
   });
+
+  it("omits the redundant 'Kind' fact (every entry is a tile)", () => {
+    const e = getEntity("tiles", "tile_grass_grass");
+    const facts = infoboxFacts("tiles", "tile_grass_grass", e);
+    expect(facts.find((f) => f.label === "Kind")).toBeUndefined();
+  });
+});
+
+// ─── Power / attribute facts (buildings + tiles) and recipe ingredients ──────
+
+describe("infoboxFacts — building powers", () => {
+  it("summarises ability effects as the first facts (Granary turns + storage)", () => {
+    const e = getEntity("buildings", "granary");
+    const facts = infoboxFacts("buildings", "granary", e);
+    // Granary carries turn_budget_bonus(+1) and inventory_cap_bonus(+300).
+    expect(facts.find((f) => f.label === "Turns")?.value).toBe("+1/session");
+    expect(facts.find((f) => f.label === "Storage")?.value).toBe("+300 cap");
+    // Powers lead — they appear before the generic Level/Cost facts.
+    const turnsIdx = facts.findIndex((f) => f.label === "Turns");
+    const levelIdx = facts.findIndex((f) => f.label === "Level");
+    expect(turnsIdx).toBeGreaterThanOrEqual(0);
+    expect(turnsIdx).toBeLessThan(levelIdx);
+  });
+
+  it("includes a simplified 'Crafts' fact for crafting-station buildings (Bakery)", () => {
+    const e = getEntity("buildings", "bakery");
+    const facts = infoboxFacts("buildings", "bakery", e);
+    const crafts = facts.find((f) => f.label === "Crafts");
+    expect(crafts).toBeDefined();
+    expect(crafts!.value).toContain("Bread");
+  });
+
+  it("includes an 'Unlocks' fact for buildings that unlock a tile (Kitchen → Broccoli)", () => {
+    const e = getEntity("buildings", "kitchen");
+    const facts = infoboxFacts("buildings", "kitchen", e);
+    const unlocks = facts.find((f) => f.label === "Unlocks");
+    expect(unlocks).toBeDefined();
+    expect(unlocks!.value).toContain("Broccoli");
+  });
+
+  it("includes a 'Discount' fact for recipe-input-reduce buildings (Mill)", () => {
+    const e = getEntity("buildings", "mill");
+    const facts = infoboxFacts("buildings", "mill", e);
+    const discount = facts.find((f) => f.label === "Discount");
+    expect(discount).toBeDefined();
+    expect(discount!.value.length).toBeGreaterThan(0);
+  });
+
+  it("emits no power facts for a plain building (only Level/Cost)", () => {
+    const e = getEntity("buildings", "inn");
+    const facts = infoboxFacts("buildings", "inn", e);
+    expect(facts.find((f) => f.label === "Crafts")).toBeUndefined();
+    expect(facts.find((f) => f.label === "Unlocks")).toBeUndefined();
+    expect(facts.find((f) => f.label === "Level")).toBeDefined();
+  });
+});
+
+describe("infoboxFacts — tile powers", () => {
+  it("leads with the tile's ability as a fact (Turkey grants free moves)", () => {
+    const e = getEntity("tiles", "tile_bird_turkey");
+    const facts = infoboxFacts("tiles", "tile_bird_turkey", e);
+    const free = facts.find((f) => f.label === "Free moves");
+    expect(free?.value).toBe("+2/season");
+    expect(facts.findIndex((f) => f.label === "Free moves")).toBe(0);
+  });
+
+  it("includes a 'Spawns' fact for spawn-boost tiles (Meadow Grass)", () => {
+    const e = getEntity("tiles", "tile_grass_meadow");
+    const facts = infoboxFacts("tiles", "tile_grass_meadow", e);
+    expect(facts.find((f) => f.label === "Spawns")).toBeDefined();
+  });
+});
+
+describe("infoboxFacts — recipe ingredients", () => {
+  it("includes a simplified 'Ingredients' fact with label-resolved inputs", () => {
+    const e = getEntity("recipes", "rec_bread");
+    const facts = infoboxFacts("recipes", "rec_bread", e);
+    const ingredients = facts.find((f) => f.label === "Ingredients");
+    expect(ingredients).toBeDefined();
+    // rec_bread inputs: { flour: 3, eggs: 1 } → counts + resolved labels.
+    expect(ingredients!.value).toContain("3 ");
+    expect(ingredients!.value).toContain("Flour");
+  });
 });
