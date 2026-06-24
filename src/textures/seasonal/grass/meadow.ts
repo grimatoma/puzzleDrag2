@@ -11,13 +11,16 @@
 //       bend ~12–16 design-px in a traveling-wave sway, phase-offset per blade so
 //       the tuft ripples, with a small base squash. Pivots at the base.
 //       Zero velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.25s): a VISITING BUTTERFLY flits in to a flower,
-//       hovers a beat, then flies off — a charming once-in-a-while moment.
-//       Off-screen (zero) at both window edges (seamless).
+//   IDLE SPECIAL (~18s, win ~1.3s): a VISITING BEE — a fuzzy striped bee flits in
+//       from the right, swoops down to a wildflower head, bobs/hovers a beat to
+//       sip, then flits off up-left and fades. The BOLD rare beat. The bee + its
+//       soft additive pollen-glow are alpha-enveloped to 0 at both window edges
+//       (so it is invisible at t=0 and at the loop seam — seamless). The bee
+//       body is drawn over the tuft; the glow is the additive overlay layer.
 //
 // The architecture is a single parameterized `paint(ctx, p, pose)` where
 // `interface P` holds tweenable season params (colours + 0..1 prop amounts) and
-// `pose` holds the idle gesture (bob / lean / squash / wave / butterfly). Because
+// `pose` holds the idle gesture (bob / lean / squash / wave / bee). Because
 // every season is the same paint with tweened P, transitions are seamless:
 //   transition(0) ≡ draw(from), transition(1) ≡ draw(to).
 // REST pose has all zeros, so draw(season) = paint(ctx, SP[season], REST) and the
@@ -62,6 +65,18 @@ interface P {
   fallenLeafAmt: number; // 0..1 fallen leaf on the pad (autumn)
 }
 
+/** The visiting-bee state for the rare idle (separate from season identity).
+ *  `alpha` envelopes the WHOLE pollinator (body + additive glow) to 0 at the
+ *  window edges, so it is invisible at t=0 and at the loop seam. */
+interface BeeState {
+  alpha: number; // 0..1 overall pollinator visibility (0 at window edges)
+  x: number;     // bee centre x (design px), origin-centered
+  y: number;     // bee centre y
+  flap: number;  // wing-flap width factor (fast)
+  tilt: number;  // body tilt, radians
+  clock: number; // continuous local time for wing/antennae micro-motion
+}
+
 /** The idle gesture, separate from season identity. All zero = REST. */
 interface Pose {
   bob: number;      // vertical offset in design px (negative = up)
@@ -70,15 +85,13 @@ interface Pose {
   squashY: number;  // additive vertical scale (+0.18 = 18% taller)
   wave: number;     // -1..1 wind-wave amplitude scalar (drives traveling sway)
   wavePhase: number; // radians — travel phase of the wind wave across the tuft
-  flutter: number;  // 0..1 butterfly visibility / opacity
-  flyX: number;     // butterfly x position in design px
-  flyY: number;     // butterfly y position in design px
-  wing: number;     // -1..1 wing-flap phase
+  bee: BeeState;    // the rare visiting bee (alpha 0 = absent)
 }
 
 const REST: Pose = {
   bob: 0, lean: 0, squashX: 0, squashY: 0,
-  wave: 0, wavePhase: 0, flutter: 0, flyX: 0, flyY: 0, wing: 0,
+  wave: 0, wavePhase: 0,
+  bee: { alpha: 0, x: 0, y: 0, flap: 0.5, tilt: 0, clock: 0 },
 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
@@ -159,110 +172,113 @@ function safeNum(x: number): number {
 // ── Per-season params — pushed HARD ──────────────────────────────────────────
 
 const SP: Record<SeasonName, P> = {
-  // Spring — fresh green meadow grasses with the FIRST wildflowers opening (its
-  // signature). Cool-bright light, dewy lime pad, pad blossoms.
+  // Spring — fresh dewy lime meadow with the FIRST wildflowers opening BRIGHT
+  // (its signature). Cool-bright pastel light, dewy lime pad, lots of pad
+  // blossoms. The bloom colour is pushed vivid so spring reads at a glance.
   Spring: {
-    bladeLight: [160, 222, 104],
-    bladeMid: [102, 184, 68],
-    bladeDark: [52, 122, 48],
-    stem: [120, 184, 84],
-    petal: [255, 232, 250],
-    petalDark: [216, 168, 214],
-    centre: [255, 210, 78],
-    padGrass: [128, 212, 86],
-    padDark: [66, 144, 58],
+    bladeLight: [176, 236, 116],
+    bladeMid: [104, 192, 72],
+    bladeDark: [48, 122, 50],
+    stem: [120, 188, 84],
+    petal: [255, 196, 234],
+    petalDark: [224, 132, 196],
+    centre: [255, 214, 80],
+    padGrass: [136, 222, 92],
+    padDark: [64, 150, 60],
     soil: [120, 84, 48],
-    outline: [34, 66, 28],
-    light: [228, 248, 218],
+    outline: [32, 64, 28],
+    light: [230, 250, 220],
     lightAmt: 0.18,
-    lushness: 0.4,
+    lushness: 0.45,
     dryness: 0,
-    flowerAmt: 0.85,
+    flowerAmt: 1.0,
     seedHeadAmt: 0,
-    gloss: 0.24,
+    gloss: 0.26,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
-    blossomAmt: 0.85,
+    blossomAmt: 1.0,
     fallenLeafAmt: 0,
   },
-  // Summer — LUSH peak meadow: thick deep green with ABUNDANT colourful
-  // wildflowers, high gloss, warm bright light.
+  // Summer — LUSH peak meadow (PEAK): thick deep saturated green with ABUNDANT
+  // hot-coloured wildflowers, high gloss, warm bright light. The richest swing.
   Summer: {
-    bladeLight: [150, 212, 92],
-    bladeMid: [82, 172, 62],
-    bladeDark: [42, 116, 46],
-    stem: [86, 158, 60],
-    petal: [255, 138, 96],
-    petalDark: [206, 78, 88],
-    centre: [255, 206, 70],
-    padGrass: [82, 176, 72],
-    padDark: [42, 116, 50],
+    bladeLight: [142, 214, 84],
+    bladeMid: [72, 168, 56],
+    bladeDark: [34, 110, 42],
+    stem: [78, 154, 56],
+    petal: [255, 120, 78],
+    petalDark: [210, 64, 80],
+    centre: [255, 208, 64],
+    padGrass: [74, 174, 66],
+    padDark: [36, 112, 48],
     soil: [126, 86, 48],
-    outline: [30, 72, 26],
-    light: [255, 244, 200],
-    lightAmt: 0.2,
+    outline: [26, 70, 24],
+    light: [255, 246, 196],
+    lightAmt: 0.22,
     lushness: 1.0,
     dryness: 0,
     flowerAmt: 1.0,
     seedHeadAmt: 0,
-    gloss: 0.9,
+    gloss: 1.0,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
-  // Autumn — DRY GOLD meadow gone to seed: amber/straw blades, flowers turned to
-  // fluffy seed-heads, a fallen leaf, dulled gloss, low amber light.
+  // Autumn — DRY RUST-GOLD meadow gone to seed: amber/straw blades with rust
+  // tips, flowers fully turned to fluffy seed-heads, fallen leaves, dulled gloss,
+  // low amber light. Pushed warmer/rustier so the seeding read is unmistakable.
   Autumn: {
-    bladeLight: [218, 182, 96],
-    bladeMid: [182, 142, 64],
-    bladeDark: [124, 92, 42],
-    stem: [180, 154, 86],
-    petal: [214, 186, 120],
-    petalDark: [160, 128, 74],
-    centre: [200, 168, 96],
-    padGrass: [156, 154, 84],
-    padDark: [106, 96, 50],
-    soil: [120, 78, 42],
-    outline: [74, 50, 24],
-    light: [250, 204, 138],
-    lightAmt: 0.24,
-    lushness: 0.25,
-    dryness: 0.95,
+    bladeLight: [226, 174, 84],
+    bladeMid: [188, 132, 56],
+    bladeDark: [122, 80, 36],
+    stem: [184, 150, 82],
+    petal: [210, 176, 112],
+    petalDark: [156, 120, 68],
+    centre: [202, 162, 88],
+    padGrass: [164, 150, 78],
+    padDark: [108, 92, 46],
+    soil: [118, 74, 40],
+    outline: [70, 46, 22],
+    light: [252, 196, 124],
+    lightAmt: 0.26,
+    lushness: 0.22,
+    dryness: 1.0,
     flowerAmt: 0,
-    seedHeadAmt: 0.9,
-    gloss: 0.3,
+    seedHeadAmt: 1.0,
+    gloss: 0.28,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
-    fallenLeafAmt: 0.9,
+    fallenLeafAmt: 1.0,
   },
-  // Winter — meadow under SNOW: bleached straw stalks, bold snow blanket/drift on
-  // the pad + snow weighing the dried stalks, frost, cool blue-grey light. A
-  // dried flower stalk still pokes through (low flowerAmt as a bare seed-head).
+  // Winter — meadow under SNOW: bleached straw stalks (still clearly straw, NOT
+  // whited-out), bold snow blanket/drift on the pad + snow weighing the dried
+  // stalks, strong frost, cool blue-grey light. A dried seed-head still pokes
+  // through. Frost is pushed for a colder read while the tuft stays visible.
   Winter: {
-    bladeLight: [198, 190, 162],
-    bladeMid: [158, 150, 124],
-    bladeDark: [108, 102, 88],
-    stem: [176, 168, 144],
-    petal: [200, 196, 178],
-    petalDark: [150, 146, 130],
-    centre: [176, 168, 140],
-    padGrass: [184, 204, 222],
-    padDark: [122, 150, 178],
-    soil: [130, 112, 98],
-    outline: [56, 54, 56],
-    light: [202, 224, 255],
-    lightAmt: 0.34,
-    lushness: 0.2,
+    bladeLight: [192, 186, 158],
+    bladeMid: [150, 142, 118],
+    bladeDark: [100, 96, 82],
+    stem: [172, 164, 140],
+    petal: [196, 192, 176],
+    petalDark: [146, 142, 128],
+    centre: [172, 164, 138],
+    padGrass: [190, 210, 228],
+    padDark: [118, 148, 178],
+    soil: [128, 110, 96],
+    outline: [52, 52, 56],
+    light: [198, 222, 255],
+    lightAmt: 0.4,
+    lushness: 0.18,
     dryness: 0.55,
     flowerAmt: 0,
     seedHeadAmt: 0.35,
-    gloss: 0.18,
-    frostAmt: 0.75,
+    gloss: 0.16,
+    frostAmt: 0.92,
     snowCapAmt: 1.0,
     padSnowAmt: 1.0,
     blossomAmt: 0,
@@ -409,9 +425,147 @@ function drawFlower(
   ctx.restore();
 }
 
+// ── The visiting bee (rare idle) ─────────────────────────────────────────────
+// A fuzzy striped honeybee: translucent fast-flapping wings, a banded gold/black
+// body, head + eye + twitching antennae — mirrors the on-model bee craft. Drawn
+// at the bee's current (x,y), enveloped by `bee.alpha` (0 at the window edges →
+// invisible at t=0). A soft pollen-glow halo is laid down ADDITIVELY first; the
+// body is then drawn in normal blend so the critter stays crisp and readable.
+function drawBee(ctx: CanvasRenderingContext2D, bee: BeeState): void {
+  const a = clamp01(bee.alpha);
+  if (a <= 0.01) return;
+  const t = safeNum(bee.clock);
+  const flap = safeNum(bee.flap);
+
+  ctx.save();
+  try {
+    ctx.translate(safeNum(bee.x), safeNum(bee.y));
+
+    // 1) soft pollen-glow halo — ADDITIVE overlay (the prompt's additive layer).
+    //    Warm, low-alpha, scaled by the envelope so it never blows out the tile.
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    const glow = ctx.createRadialGradient(0, 0, 0.5, 0, 0, 9);
+    glow.addColorStop(0, rgba([255, 226, 130], 0.5 * a));
+    glow.addColorStop(0.5, rgba([255, 200, 90], 0.22 * a));
+    glow.addColorStop(1, rgba([255, 200, 90], 0));
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(0, 0, 9, 0, Math.PI * 2);
+    ctx.fill();
+    // a couple of drifting pollen sparkles trailing the bee
+    ctx.fillStyle = rgba([255, 244, 196], 0.6 * a);
+    ([[3.6, 2.6, 0.9], [5.2, -1.0, 0.7], [-3.2, 3.4, 0.6]] as Array<[number, number, number]>)
+      .forEach(([sx, sy, r]) => {
+        const tw = 0.6 + 0.4 * Math.sin(t * 7 + sx);
+        ctx.globalAlpha = a * tw;
+        ctx.beginPath();
+        ctx.arc(sx, sy, r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+    ctx.globalAlpha = 1;
+    ctx.restore();
+
+    // 2) the bee body — normal blend, crisp. Scaled to sit against the tile.
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.scale(0.46, 0.46);
+    ctx.rotate(safeNum(bee.tilt) + Math.sin(t * 1.3) * 0.05);
+    ctx.lineJoin = "round";
+
+    // wings — translucent, behind the body, flapping fast
+    ([-1, 1] as const).forEach((side) => {
+      ctx.save();
+      ctx.translate(-2, -6);
+      ctx.scale(side * flap, 1);
+      const wing = ctx.createLinearGradient(0, -8, 10, 0);
+      wing.addColorStop(0, "rgba(232,246,255,0.72)");
+      wing.addColorStop(1, "rgba(184,212,236,0.4)");
+      ctx.fillStyle = wing;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.bezierCurveTo(4, -12, 16, -14, 18, -6);
+      ctx.bezierCurveTo(18, -1, 8, 2, 0, 0);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = "rgba(120,150,180,0.6)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.restore();
+    });
+
+    // body — fuzzy gold oval with a dark outline
+    const body = ctx.createRadialGradient(-4, -2, 2, 0, 4, 16);
+    body.addColorStop(0, "#ffe082");
+    body.addColorStop(0.6, "#f5b400");
+    body.addColorStop(1, "#a06a00");
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.ellipse(0, 4, 13, 10, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "#3a2606";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // stripes (clipped to the body)
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, 4, 13, 10, 0, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.fillStyle = "#2a1c04";
+    [-2, 6].forEach((x) => {
+      ctx.beginPath();
+      ctx.ellipse(x, 4, 2.6, 11, 0, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.restore();
+
+    // stinger
+    ctx.fillStyle = "#2a1c04";
+    ctx.beginPath();
+    ctx.moveTo(12, 4);
+    ctx.lineTo(17, 4);
+    ctx.lineTo(12, 7);
+    ctx.closePath();
+    ctx.fill();
+
+    // head + eye
+    ctx.fillStyle = "#2a1c04";
+    ctx.beginPath();
+    ctx.arc(-12, 1, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#fff8e0";
+    ctx.beginPath();
+    ctx.arc(-13, 0, 1.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#0a0e04";
+    ctx.beginPath();
+    ctx.arc(-13.4, 0.3, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // antennae — slight twitch
+    const ant = Math.sin(t * 6) * 0.8;
+    ctx.strokeStyle = "#2a1c04";
+    ctx.lineWidth = 1.2;
+    [-1.4, -3].forEach((d) => {
+      ctx.beginPath();
+      ctx.moveTo(-15, -2);
+      ctx.quadraticCurveTo(-19, -7 + d, -20, -8 + d - ant);
+      ctx.stroke();
+    });
+
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+}
+
 /** The whole tile from ONLY `p` (season identity) and `pose` (idle gesture). */
 function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
   const p = clampP(raw);
+  const rawBee = rawPose.bee ?? REST.bee;
   const pose: Pose = {
     bob: safeNum(rawPose.bob),
     lean: safeNum(rawPose.lean),
@@ -419,10 +573,14 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     squashY: safeNum(rawPose.squashY),
     wave: safeNum(rawPose.wave),
     wavePhase: safeNum(rawPose.wavePhase),
-    flutter: clamp01(safeNum(rawPose.flutter)),
-    flyX: safeNum(rawPose.flyX),
-    flyY: safeNum(rawPose.flyY),
-    wing: safeNum(rawPose.wing),
+    bee: {
+      alpha: clamp01(safeNum(rawBee.alpha)),
+      x: safeNum(rawBee.x),
+      y: safeNum(rawBee.y),
+      flap: safeNum(rawBee.flap),
+      tilt: safeNum(rawBee.tilt),
+      clock: safeNum(rawBee.clock),
+    },
   };
 
   ctx.save();
@@ -683,50 +841,11 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
 
     ctx.restore(); // end pose transform
 
-    // ── Visiting butterfly (idle special) — drawn over the tuft ──────────────
-    if (pose.flutter > 0.01) {
-      const a = pose.flutter;
-      const wingPhase = pose.wing; // -1..1
-      const wingOpen = 0.45 + 0.55 * (0.5 + 0.5 * wingPhase); // 0..1 spread
-      ctx.save();
-      ctx.globalAlpha = a;
-      ctx.translate(pose.flyX, pose.flyY);
-      // body
-      ctx.fillStyle = rgb([60, 44, 40]);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 0.9, 2.4, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // wings (left + right, flap by squashing horizontally)
-      const wingCol: RGB = [255, 156, 70];
-      const wingEdge: RGB = [196, 72, 60];
-      ([-1, 1] as const).forEach((side) => {
-        ctx.save();
-        ctx.scale(side * wingOpen, 1);
-        ctx.fillStyle = rgb(wingCol);
-        ctx.beginPath();
-        ctx.ellipse(2.6, -1.2, 2.4, 1.8, -0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.beginPath();
-        ctx.ellipse(2.2, 1.4, 1.8, 1.5, 0.4, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.fillStyle = rgba(wingEdge, 0.8);
-        ctx.beginPath();
-        ctx.ellipse(3.4, -1.4, 0.9, 0.8, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-      });
-      // antennae
-      ctx.strokeStyle = rgb([60, 44, 40]);
-      ctx.lineWidth = 0.5;
-      ctx.beginPath();
-      ctx.moveTo(0, -2.2);
-      ctx.lineTo(-1.2, -4.0);
-      ctx.moveTo(0, -2.2);
-      ctx.lineTo(1.2, -4.0);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-      ctx.restore();
-    }
+    // ── Visiting bee (idle special) — the bold rare beat, over the tuft ──────
+    // Its soft pollen-glow is an ADDITIVE overlay; the bee body is drawn normally
+    // so it reads as a solid critter. The whole thing is enveloped by bee.alpha
+    // (0 at the window edges), so it is invisible at t=0 and at the loop seam.
+    drawBee(ctx, pose.bee);
 
     // ── Ambient light wash over the whole tile (per-season tint) ─────────────
     if (p.lightAmt > 0.001) {
@@ -767,68 +886,76 @@ function anticipate(q: number): number {
 }
 
 /** Build the idle pose from the wall clock. Two tiers:
- *   common WIND WAVE every ~6s (win 0.95s), rare BUTTERFLY every ~18s (win 1.25s). */
+ *   common WIND WAVE every ~6s (win 0.95s), rare BEE every ~18s (win 1.3s). */
 function poseFromClock(t: number): Pose {
   const pose: Pose = {
     bob: 0, lean: 0, squashX: 0, squashY: 0,
-    wave: 0, wavePhase: 0, flutter: 0, flyX: 0, flyY: 0, wing: 0,
+    wave: 0, wavePhase: 0,
+    bee: { alpha: 0, x: 0, y: 0, flap: 0.5, tilt: 0, clock: 0 },
   };
 
   // ── COMMON: wind wave (~6s, win 0.95s) ──
   // A traveling-wave sway: the tuft bends in the wind, blades ripple across.
-  // Envelope (sin) is 0 at the window edges; the wave amplitude rides it so the
-  // whole gesture has zero velocity at q=0 and q=1 → seamless.
+  // Envelope is `hump` (sin²) so it is 0 WITH ZERO VELOCITY at q=0 and q=1 — the
+  // whole gesture eases in and settles out with no tick at the window edges
+  // (truly seamless). It still peaks at 1 mid-window, so the sway reads the same.
   const qC = actionQ(t, 6.0, 0.95, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
+    const env = hump(qC); // sin²(πq): 0..1..0, value AND slope 0 at edges
     // amplitude swells & settles; phase travels (gust passes through the tuft)
     pose.wave = env * (0.7 + 0.3 * Math.sin(qC * Math.PI * 2));
     pose.wavePhase = qC * Math.PI * 3.0; // gust travels across during the window
     // whole-tuft base lean in the gust direction + a small base squash
     pose.lean += 0.10 * env;
-    pose.squashY += -0.05 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
+    pose.squashY += -0.05 * env;
+    pose.squashX += 0.05 * env;
     // a faint windup tilt (still 0 at edges) keeps anticipate() in the toolkit
     pose.lean += 0.015 * anticipate(qC);
   }
 
-  // ── RARE SPECIAL: visiting butterfly (~18s, win 1.25s, phase +3s) ──
-  // Flies in from off-screen left, arcs up to a flower, hovers, then flies off
-  // to the right & up. Opacity 0 at both edges → off-screen/zero at the window
-  // edges (seamless). Wings flap throughout.
-  const qS = actionQ(t, 18.0, 1.25, 3.0);
+  // ── RARE SPECIAL: visiting BEE (~18s, win 1.3s, phase +3s) — the bold beat ──
+  // Flies in from off-screen RIGHT, swoops down to a wildflower head, bobs/hovers
+  // a beat to sip, then flits off up-LEFT. `alpha` (the whole pollinator envelope,
+  // body + additive glow) is 0 at both window edges → invisible at t=0 and at the
+  // loop seam (seamless). Endpoints sit off-screen so the fade is hidden anyway.
+  const qS = actionQ(t, 18.0, 1.3, 3.0);
   if (qS >= 0) {
-    // visibility fades in over the first ~12% and out over the last ~15%
-    const fadeIn = clamp01(qS / 0.12);
-    const fadeOut = clamp01((1 - qS) / 0.15);
-    pose.flutter = Math.min(fadeIn, fadeOut);
+    const bee = pose.bee;
+    // overall envelope: 0 at edges, quick on/off, full through the visit
+    bee.alpha = clamp01(Math.sin(Math.PI * qS) * 3);
+    bee.clock = t; // continuous local time → wings/antennae keep moving
 
-    // Path: enter low-left → up to a flower head near (-1,-22) → hover → exit
-    // up-right. Use a smooth parametric path; endpoints sit off-screen so the
-    // fade-zero edges are harmless either way.
-    const enterX = -30;
-    const exitX = 30;
-    const flowerX = -1.0;
-    const flowerY = STEM_TOP - 1.0; // just above the central flower head
-    const hoverStart = 0.40;
-    const hoverEnd = 0.62;
+    // fast wing-flap factor (animBee idiom): a fluttering 0.45..1.2 width
+    bee.flap = 0.45 + Math.abs(Math.sin(t * 22)) * 0.75;
+
+    // flight path: enter top-right → flower head → hover/sip → exit up-left
+    const enterX = 30;
+    const enterY = -16;
+    const exitX = -30;
+    const exitY = -18;
+    const flowerX = 2.0;                 // near a right-of-centre flower head
+    const flowerY = STEM_TOP + 1.0;      // just at the bloom (sips here)
+    const hoverStart = 0.38;
+    const hoverEnd = 0.64;
     if (qS < hoverStart) {
+      // swoop in (ease toward the bloom) with a little bobbing approach
       const u = smoother(qS / hoverStart);
-      pose.flyX = lerp(enterX, flowerX, u);
-      // arc: dip below then rise to the flower (a little bobbing approach)
-      pose.flyY = lerp(8, flowerY, u) + Math.sin(u * Math.PI) * -4 + Math.sin(qS * 30) * 0.8;
+      bee.x = lerp(enterX, flowerX, u);
+      bee.y = lerp(enterY, flowerY, u) + Math.sin(u * Math.PI) * -3 + Math.sin(qS * 26) * 0.9;
+      bee.tilt = 0.32 - 0.28 * u; // nose-down on approach, leveling out
     } else if (qS < hoverEnd) {
-      // hover at the flower with a gentle bob
+      // hover/sip at the bloom with a gentle bob
       const h = (qS - hoverStart) / (hoverEnd - hoverStart);
-      pose.flyX = flowerX + Math.sin(h * Math.PI * 2) * 1.2;
-      pose.flyY = flowerY + Math.sin(h * Math.PI * 3) * 1.0;
+      bee.x = flowerX + Math.sin(h * Math.PI * 2) * 1.6;
+      bee.y = flowerY + Math.sin(h * Math.PI * 3) * 1.4;
+      bee.tilt = 0.04 + Math.sin(h * Math.PI * 2) * 0.06;
     } else {
+      // flit off up-left
       const u = smoother((qS - hoverEnd) / (1 - hoverEnd));
-      pose.flyX = lerp(flowerX, exitX, u);
-      pose.flyY = lerp(flowerY, -18, u) + Math.sin(u * Math.PI) * -3;
+      bee.x = lerp(flowerX, exitX, u);
+      bee.y = lerp(flowerY, exitY, u) + Math.sin(u * Math.PI) * -3;
+      bee.tilt = -0.18 - 0.18 * u; // banks the other way leaving
     }
-    // wings flap fast throughout
-    pose.wing = Math.sin(qS * Math.PI * 26);
   }
 
   return pose;

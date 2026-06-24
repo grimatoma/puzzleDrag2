@@ -2,21 +2,28 @@
 //
 // One dense raised TUFT of upright grass blades fanning symmetrically from a
 // small pad. The SAME tuft silhouette (the SAME set of blade curves) is drawn
-// every season (identity-safe) — only colour + a real seasonal prop (blossoms /
-// fallen leaf / frost + snow blanket + snow caps) and the light tint change. The
-// idle is lively rather than subtle:
+// every season (identity-safe) — only colour + a real seasonal prop (a spring
+// hero bloom / golden seed-heads + fallen leaf / frost + snow blanket + snow
+// caps) and the light tint change. The four stills are pushed to read crisply:
+// fresh lime SPRING (a tiny upright daisy standing in the tuft), lush deep-green
+// SUMMER (peak gloss), golden-tan AUTUMN (defined seed-heads with awns), and
+// snow-dusted WINTER (grass still clearly poking through — frost, never a
+// white-out). The idle is lively rather than subtle:
 //
 //   IDLE COMMON  (~6s, win ~0.95s): a WIND WAVE — the blades bend ~12–16 design-px
 //       in a traveling-wave sway, each blade phase-offset so the gust ripples
 //       across the tuft; pivot at the base, tips travel most, small base squash.
 //       Zero with zero velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.2s, phase +3s): a CRITTER PEEKS — a tiny critter
-//       (a little mouse-ish head) pops up from within the tuft, looks left then
-//       right, then ducks back down. Off-screen / zero at the window edges.
+//   IDLE SPECIAL (~18s, win ~1.6s, phase +3s): a DANDELION SEED-PUFF RELEASES — a
+//       fuzzy seed-head globe rises in a gap that the blades part open, then its
+//       seeds detach and drift up/away, fading. The puff is an ADDITIVE OVERLAY
+//       in `anim` (NOT in the season still), multiplied by a sin² envelope so it
+//       is invisible — value AND velocity 0 — at the window edges (and at t=0).
+//       The blades' parting/rustle reaction rides the pose and is also 0 there.
 //
 // The architecture is a single parameterized `paint(ctx, p, pose)` where
 // `interface P` holds tweenable season params (colours + prop amounts) and
-// `pose` holds the idle gesture (bob / lean / squash + wind & critter fields).
+// `pose` holds the idle gesture (bob / lean / squash + wind & a centre `part`).
 // Because every season is the same paint with tweened P, transitions are
 // seamless:  transition(0) ≡ draw(from),  transition(1) ≡ draw(to).
 // REST pose has all zeros, so draw(season) = paint(ctx, SP[season], REST) and the
@@ -55,10 +62,16 @@ interface P {
   snowBlanketAmt: number; // 0..1 snow nestled AMONG the blades (winter)
   padSnowAmt: number;     // 0..1 snow blanket on the pad (winter)
   blossomAmt: number;     // 0..1 wildflowers in/around the tuft (spring/summer)
+  springFlower: number;   // 0..1 one upright hero bloom standing among the blades (spring)
+  seedHead: number;       // 0..1 crisp golden seed-heads crowning the tips (autumn)
   fallenLeafAmt: number;  // 0..1 fallen leaf on the pad (autumn)
 }
 
-/** The idle gesture, separate from season identity. All zero = REST. */
+/** The idle gesture, separate from season identity. All zero = REST. The rare
+ *  beat (dandelion-puff release) is NOT a pose field — it is drawn as an additive
+ *  overlay in `anim`, enveloped to 0 at the window edges (invisible at t=0). The
+ *  only pose contribution the rare makes is `part`: the blades parting/quivering
+ *  as the puff lets go. */
 interface Pose {
   bob: number;     // vertical offset in design px (negative = up)
   lean: number;    // global breeze lean, radians (whole tuft sways)
@@ -66,8 +79,7 @@ interface Pose {
   squashY: number; // additive vertical scale at the base (+0.18 = 18% taller)
   wind: number;    // wind-wave amplitude in design px (tips travel this far)
   windPhase: number; // traveling-wave phase across the tuft
-  critter: number; // 0..1 how far the critter head has popped up (0 = hidden)
-  critterLook: number; // -1..+1 critter head turn (look left/right)
+  part: number;    // 0..1 a centre PARTING — blades near the middle lean aside (puff release)
 }
 
 const REST: Pose = {
@@ -77,8 +89,7 @@ const REST: Pose = {
   squashY: 0,
   wind: 0,
   windPhase: 0,
-  critter: 0,
-  critterLook: 0,
+  part: 0,
 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
@@ -128,6 +139,8 @@ function lerpP(a: P, b: P, t: number): P {
     snowBlanketAmt: lerp(a.snowBlanketAmt, b.snowBlanketAmt, t),
     padSnowAmt: lerp(a.padSnowAmt, b.padSnowAmt, t),
     blossomAmt: lerp(a.blossomAmt, b.blossomAmt, t),
+    springFlower: lerp(a.springFlower, b.springFlower, t),
+    seedHead: lerp(a.seedHead, b.seedHead, t),
     fallenLeafAmt: lerp(a.fallenLeafAmt, b.fallenLeafAmt, t),
   };
 }
@@ -145,6 +158,8 @@ function clampP(p: P): P {
     snowBlanketAmt: clamp01(p.snowBlanketAmt),
     padSnowAmt: clamp01(p.padSnowAmt),
     blossomAmt: clamp01(p.blossomAmt),
+    springFlower: clamp01(p.springFlower),
+    seedHead: clamp01(p.seedHead),
     fallenLeafAmt: clamp01(p.fallenLeafAmt),
   };
 }
@@ -156,90 +171,97 @@ function safeNum(x: number): number {
 // ── Per-season params — pushed HARD ──────────────────────────────────────────
 
 const SP: Record<SeasonName, P> = {
-  // Spring — fresh, sparse-but-BRIGHT new green blades, dewy lime pad, a few
-  // wildflowers in the tuft; cool-bright light.
+  // Spring — fresh LIME new green blades, crisp dewy bright pad, a tiny upright
+  // hero bloom standing in the tuft + scattered pad wildflowers; cool-bright light.
   Spring: {
-    bladeLight: [188, 236, 112],
-    bladeMid: [120, 204, 74],
-    bladeDark: [62, 146, 52],
-    tipTint: [216, 248, 146],
-    padGrass: [134, 212, 90],
-    padDark: [74, 144, 60],
+    bladeLight: [202, 244, 120],
+    bladeMid: [124, 210, 76],
+    bladeDark: [62, 150, 54],
+    tipTint: [224, 250, 150],
+    padGrass: [142, 220, 96],
+    padDark: [74, 148, 62],
     soil: [120, 84, 48],
-    outline: [38, 78, 32],
-    light: [228, 248, 230],
+    outline: [38, 80, 32],
+    light: [230, 250, 232],
     lightAmt: 0.18,
-    lushness: 0.5,
-    tipAmt: 0.32,
-    gloss: 0.3,
+    lushness: 0.52,
+    tipAmt: 0.34,
+    gloss: 0.32,
     dryness: 0,
     frostAmt: 0,
     snowCapAmt: 0,
     snowBlanketAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0.8,
+    springFlower: 1.0,
+    seedHead: 0,
     fallenLeafAmt: 0,
   },
-  // Summer — LUSH thick deep-green tuft at PEAK, little flowers dotted in, high
-  // gloss, warm bright light.
+  // Summer — LUSH thick deep-green tuft at PEAK saturation, little flowers dotted
+  // in, high gloss, warm bright light.
   Summer: {
-    bladeLight: [156, 222, 84],
-    bladeMid: [64, 168, 56],
-    bladeDark: [28, 106, 42],
-    tipTint: [176, 230, 100],
-    padGrass: [82, 176, 72],
-    padDark: [40, 116, 50],
+    bladeLight: [158, 226, 84],
+    bladeMid: [58, 166, 52],
+    bladeDark: [24, 102, 40],
+    tipTint: [178, 232, 100],
+    padGrass: [78, 178, 70],
+    padDark: [38, 114, 48],
     soil: [126, 86, 48],
-    outline: [20, 72, 30],
+    outline: [18, 70, 28],
     light: [255, 244, 204],
     lightAmt: 0.2,
     lushness: 1.0,
     tipAmt: 0.22,
-    gloss: 0.9,
+    gloss: 0.95,
     dryness: 0,
     frostAmt: 0,
     snowCapAmt: 0,
     snowBlanketAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0.55,
+    springFlower: 0,
+    seedHead: 0,
     fallenLeafAmt: 0,
   },
-  // Autumn — DRY gold/tan grass gone to seed, dulled gloss, amber light, a
-  // fallen leaf on the pad.
+  // Autumn — DRY golden-tan grass gone to seed, crisp golden SEED-HEADS crowning
+  // the tips, dulled gloss, low amber light, a fallen leaf on the pad.
   Autumn: {
-    bladeLight: [216, 188, 92],
-    bladeMid: [176, 142, 60],
-    bladeDark: [120, 92, 46],
-    tipTint: [228, 186, 78], // golden seed-head tips
-    padGrass: [164, 152, 84],
-    padDark: [114, 96, 52],
+    bladeLight: [224, 192, 96],
+    bladeMid: [182, 144, 60],
+    bladeDark: [122, 90, 44],
+    tipTint: [236, 192, 82], // golden seed-head tips
+    padGrass: [168, 154, 82],
+    padDark: [116, 96, 50],
     soil: [120, 78, 42],
-    outline: [70, 50, 24],
-    light: [250, 200, 134],
-    lightAmt: 0.24,
-    lushness: 0.42,
-    tipAmt: 0.9,
-    gloss: 0.28,
-    dryness: 0.85,
+    outline: [72, 50, 24],
+    light: [252, 196, 126],
+    lightAmt: 0.26,
+    lushness: 0.4,
+    tipAmt: 0.92,
+    gloss: 0.26,
+    dryness: 0.9,
     frostAmt: 0,
     snowCapAmt: 0,
     snowBlanketAmt: 0,
     padSnowAmt: 0,
     blossomAmt: 0,
+    springFlower: 0,
+    seedHead: 1.0,
     fallenLeafAmt: 1.0,
   },
   // Winter — grass poking through SNOW: a bold snow blanket/drift over the base,
-  // snow caps weighing the blades, frost on the tips; blades still green-grey and
-  // clearly a tuft; cool blue-grey light.
+  // snow caps weighing the blades, frost on the tips; blades still green-grey with
+  // a touch more contrast so they clearly read as a tuft; cool blue-grey light.
+  // Frost dusts — it never whites the grass out.
   Winter: {
-    bladeLight: [156, 184, 152],
-    bladeMid: [98, 138, 108],
-    bladeDark: [62, 100, 82],
-    tipTint: [212, 230, 230],
-    padGrass: [182, 200, 218],
-    padDark: [122, 148, 174],
+    bladeLight: [160, 190, 156],
+    bladeMid: [94, 136, 106],
+    bladeDark: [56, 96, 78],
+    tipTint: [214, 232, 232],
+    padGrass: [184, 202, 220],
+    padDark: [120, 146, 172],
     soil: [128, 110, 96],
-    outline: [50, 66, 70],
+    outline: [48, 64, 68],
     light: [202, 224, 255],
     lightAmt: 0.34,
     lushness: 0.4,
@@ -251,6 +273,8 @@ const SP: Record<SeasonName, P> = {
     snowBlanketAmt: 0.85,
     padSnowAmt: 0.95,
     blossomAmt: 0,
+    springFlower: 0,
+    seedHead: 0,
     fallenLeafAmt: 0,
   },
 };
@@ -306,6 +330,18 @@ function bladeSway(b: Blade, wind: number, windPhase: number): number {
   return wind * reach * wave;
 }
 
+/** Tip offset from the centre PARTING (the rare puff release): blades near the
+ *  middle lean OUTWARD to their own side, opening a small gap where the puff
+ *  sits; outer blades barely move. `part` is 0 at rest. Returns design-px. */
+function bladePart(b: Blade, part: number): number {
+  if (part <= 0) return 0;
+  // central blades part most (centrality 1 at centre → 0 by |baseX|≈3)
+  const centrality = Math.max(0, 1 - Math.abs(b.baseX) / 3.2);
+  // push to the blade's own side; a dead-centre blade nudges slightly right
+  const side = b.tipX === 0 ? 1 : Math.sign(b.tipX);
+  return part * centrality * side * 6;
+}
+
 // ── The single parameterized paint ───────────────────────────────────────────
 
 /** The whole tile from ONLY `p` (season identity) and `pose` (idle gesture). */
@@ -318,8 +354,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     squashY: safeNum(rawPose.squashY),
     wind: safeNum(rawPose.wind),
     windPhase: safeNum(rawPose.windPhase),
-    critter: clamp01(safeNum(rawPose.critter)),
-    critterLook: safeNum(rawPose.critterLook),
+    part: clamp01(safeNum(rawPose.part)),
   };
 
   ctx.save();
@@ -452,7 +487,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     const widthScale = 0.82 + 0.32 * p.lushness;
 
     const drawBlade = (b: Blade): void => {
-      const sway = bladeSway(b, pose.wind, pose.windPhase);
+      const sway = bladeSway(b, pose.wind, pose.windPhase) + bladePart(b, pose.part);
       const baseX = b.baseX;
       const baseY = TUFT_BASE_Y;
       const tipX = b.tipX + sway;
@@ -499,12 +534,33 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
         ctx.stroke();
       }
 
-      // 5) dry seed head clinging to the tip (autumn gone-to-seed)
-      if (p.dryness > 0.04 && !b.back) {
-        ctx.fillStyle = rgba(p.tipTint, 0.85 * p.dryness);
+      // 5) seed head crowning the tip (autumn gone-to-seed) — a crisp golden
+      //    oval body with a couple of fine awns, so it reads as a defined
+      //    seedhead, not just a smudge of tint. Front blades only.
+      const headAmt = Math.max(p.dryness, p.seedHead);
+      if (headAmt > 0.04 && !b.back) {
+        const tilt = Math.atan2(tipX - cx, -(tipY - cy)); // align to blade direction
+        // body — darker gold under, brighter gold over for a little form
+        ctx.fillStyle = rgba(p.bladeDark, 0.55 * headAmt);
         ctx.beginPath();
-        ctx.ellipse(tipX, tipY, 1.0 + 0.6 * p.dryness, 1.7 + 0.7 * p.dryness, 0, 0, Math.PI * 2);
+        ctx.ellipse(tipX, tipY + 0.6, 1.1 + 0.7 * headAmt, 1.9 + 0.9 * headAmt, tilt, 0, Math.PI * 2);
         ctx.fill();
+        ctx.fillStyle = rgba(p.tipTint, 0.9 * headAmt);
+        ctx.beginPath();
+        ctx.ellipse(tipX - 0.3, tipY - 0.1, 0.9 + 0.6 * headAmt, 1.6 + 0.8 * headAmt, tilt, 0, Math.PI * 2);
+        ctx.fill();
+        // a couple of fine awns spraying off the crown (crisp seedhead read)
+        if (p.seedHead > 0.2) {
+          ctx.strokeStyle = rgba(p.tipTint, 0.7 * p.seedHead);
+          ctx.lineWidth = 0.6;
+          for (let k = -1; k <= 1; k++) {
+            const aw = tilt + k * 0.42;
+            ctx.beginPath();
+            ctx.moveTo(tipX, tipY);
+            ctx.lineTo(tipX + Math.sin(aw) * 3.4, tipY - Math.cos(aw) * 3.4);
+            ctx.stroke();
+          }
+        }
       }
 
       // 6) gloss sheen glint partway up a lit blade (summer/spring)
@@ -531,54 +587,57 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
       if (b.back) drawBlade(b);
     });
 
-    // ── Critter peeking up from WITHIN the tuft (rare idle) ───────────────────
-    // Drawn between the back and front rows so it nestles inside the blades.
-    if (pose.critter > 0.01) {
-      const c = pose.critter;
-      const headY = TUFT_BASE_Y - 6 - c * 11; // rises out of the tuft
-      const headX = 1.2 + pose.critterLook * 2.2;
+    // ── Spring hero bloom standing UP among the blades (spring still) ─────────
+    // A short stem rises from the tuft base to a small daisy-like bloom, drawn
+    // between the back and front rows so the blades overlap it (nestled IN the
+    // tuft). It is dressing gated by `springFlower` (0 elsewhere) — it never
+    // changes the grass silhouette. It rides the tuft's sway/parting so it moves
+    // with the blades rather than floating.
+    if (p.springFlower > 0.02) {
+      const a = p.springFlower;
+      const swayRef: Blade = { baseX: -0.4, tipX: -1.5, tipY: -24, ctrl: -1, width: 2.6, back: false, phase: 0.5 };
+      const drift = bladeSway(swayRef, pose.wind, pose.windPhase) + bladePart(swayRef, pose.part);
+      const baseX = -1.4;
+      const baseY = TUFT_BASE_Y - 1;
+      const headX = baseX - 4 + drift;
+      const headY = TUFT_BASE_Y - 17;
+      const cx = baseX - 3 + drift * 0.6;
+      const cy = lerp(baseY, headY, 0.5);
       ctx.save();
-      ctx.globalAlpha = clamp01(c * 1.3);
-      // body shadow blob (still partly buried in the blades)
-      ctx.fillStyle = "rgba(40,32,28,0.35)";
+      ctx.globalAlpha = clamp01(a);
+      // stem (a slim green stalk that bends with the tuft)
+      ctx.strokeStyle = rgb(p.bladeDark);
+      ctx.lineWidth = 1.6;
       ctx.beginPath();
-      ctx.ellipse(headX, headY + 3.4, 3.6, 2.4, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // little grey-brown head
-      ctx.fillStyle = "rgb(150,128,110)";
+      ctx.moveTo(baseX, baseY);
+      ctx.quadraticCurveTo(cx, cy, headX, headY);
+      ctx.stroke();
+      ctx.strokeStyle = rgba(p.bladeMid, 0.9);
+      ctx.lineWidth = 0.8;
       ctx.beginPath();
-      ctx.ellipse(headX, headY, 3.4, 3.0, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "rgb(176,156,138)";
+      ctx.moveTo(baseX, baseY);
+      ctx.quadraticCurveTo(cx, cy, headX, headY);
+      ctx.stroke();
+      // bloom — soft outline + white petals + warm centre
+      ctx.fillStyle = rgba(p.outline, 0.5);
       ctx.beginPath();
-      ctx.ellipse(headX - 0.8, headY - 0.7, 2.0, 1.7, 0, 0, Math.PI * 2);
+      ctx.arc(headX, headY, 4.1, 0, Math.PI * 2);
       ctx.fill();
-      // ears
-      ctx.fillStyle = "rgb(150,128,110)";
-      ctx.beginPath();
-      ctx.arc(headX - 2.2, headY - 2.6, 1.5, 0, Math.PI * 2);
-      ctx.arc(headX + 2.2, headY - 2.6, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "rgb(210,168,170)";
-      ctx.beginPath();
-      ctx.arc(headX - 2.2, headY - 2.6, 0.7, 0, Math.PI * 2);
-      ctx.arc(headX + 2.2, headY - 2.6, 0.7, 0, Math.PI * 2);
-      ctx.fill();
-      // eyes (looks left/right via critterLook) — only when mostly up
-      const eyeA = clamp01((c - 0.45) / 0.55);
-      if (eyeA > 0.01) {
-        const ex = headX + pose.critterLook * 0.7;
-        ctx.fillStyle = `rgba(28,22,20,${eyeA})`;
+      ctx.fillStyle = "rgb(255,250,252)";
+      for (let k = 0; k < 6; k++) {
+        const ang = (k / 6) * Math.PI * 2 + 0.3;
         ctx.beginPath();
-        ctx.arc(ex - 1.1, headY - 0.2, 0.7, 0, Math.PI * 2);
-        ctx.arc(ex + 1.1, headY - 0.2, 0.7, 0, Math.PI * 2);
-        ctx.fill();
-        // nose
-        ctx.fillStyle = `rgba(210,120,128,${eyeA})`;
-        ctx.beginPath();
-        ctx.arc(headX, headY + 1.4, 0.7, 0, Math.PI * 2);
+        ctx.ellipse(headX + Math.cos(ang) * 2.2, headY + Math.sin(ang) * 2.2, 1.5, 1.0, ang, 0, Math.PI * 2);
         ctx.fill();
       }
+      ctx.fillStyle = "rgb(255,206,84)";
+      ctx.beginPath();
+      ctx.arc(headX, headY, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "rgba(255,236,170,0.9)";
+      ctx.beginPath();
+      ctx.arc(headX - 0.5, headY - 0.5, 0.7, 0, Math.PI * 2);
+      ctx.fill();
       ctx.restore();
     }
 
@@ -654,9 +713,23 @@ function hump(q: number): number {
   return s * s;
 }
 
+// ── The RARE beat (dandelion-puff release) window ─────────────────────────────
+// One shared clock for the rare so the tuft REACTION (in `poseFromClock`) and the
+// puff OVERLAY (in `anim`) stay in lock-step. Period ~18s, window ~1.6s, phase +3s
+// so it never collides with the common gust. Progress is −1 outside the window.
+const RARE_PERIOD = 18.0;
+const RARE_WIN = 1.6;
+const RARE_PHASE = 3.0;
+
+function rareProgress(t: number): number {
+  return actionQ(t, RARE_PERIOD, RARE_WIN, RARE_PHASE);
+}
+
 /** Build the idle pose from the wall clock. Two tiers:
- *   common WIND WAVE every ~6s (win 0.95s), rare CRITTER PEEK every ~18s (win
- *   1.2s, phase +3s so it never collides with the gust). */
+ *   common WIND WAVE every ~6s (win 0.95s), and the tuft REACTION to the rare
+ *   dandelion-puff release every ~18s (the puff itself is an additive overlay in
+ *   `anim`). Both contributions are 0 with zero velocity at their window edges,
+ *   so `poseFromClock(0) === REST` and the loop is seamless. */
 function poseFromClock(t: number): Pose {
   const pose: Pose = {
     bob: 0,
@@ -665,8 +738,7 @@ function poseFromClock(t: number): Pose {
     squashY: 0,
     wind: 0,
     windPhase: 0,
-    critter: 0,
-    critterLook: 0,
+    part: 0,
   };
 
   // ── COMMON: wind WAVE (~6s, win 0.95s) ──
@@ -687,24 +759,23 @@ function poseFromClock(t: number): Pose {
     pose.squashX += 0.05 * hump(qC);
   }
 
-  // ── RARE SPECIAL: CRITTER PEEK (~18s, win 1.2s, phase 3s) ──
-  // A tiny critter pops up from within the tuft, looks left then right, then
-  // ducks back down. Zero at the window edges (off-screen / buried) → seamless.
-  const qS = actionQ(t, 18.0, 1.2, 3.0);
+  // ── RARE: tuft reaction to the dandelion-puff RELEASE (~18s) ──
+  // The blades part around the puff, hold, then close — plus a little rustle as
+  // the seeds let go. Every term is 0 with zero velocity at q=0 and q=1, so it
+  // adds nothing at the window edges (and nothing at t=0).
+  const qS = rareProgress(t);
   if (qS >= 0) {
-    // rise/hold/duck: quick up, brief hold while looking, then duck. Use a
-    // raised-cosine so critter=0 with zero velocity at q=0 and q=1.
-    const up = clamp01((qS - 0.1) / 0.22);     // emerges
-    const down = clamp01((qS - 0.78) / 0.22);  // ducks back
-    const upS = up * up * (3 - 2 * up);         // smoothstep
-    const downS = down * down * (3 - 2 * down);
-    pose.critter = clamp01(upS - downS);
-    // look left then right while up (settles to 0 at the edges)
-    pose.critterLook = Math.sin((qS - 0.1) * Math.PI * 2.0) * pose.critter;
-    // the tuft gives a tiny rustle as the critter moves (zero at edges)
-    pose.wind += 5 * Math.sin(qS * Math.PI) * Math.sin(qS * Math.PI * 5) * 0.4;
+    // open the parting (smoothstep up), hold, then close (smoothstep down)
+    const open = clamp01((qS - 0.08) / 0.24);
+    const close = clamp01((qS - 0.74) / 0.24);
+    const openS = open * open * (3 - 2 * open);
+    const closeS = close * close * (3 - 2 * close);
+    pose.part = clamp01(openS - closeS);
+    // a small rustle as the puff lets go (zero at edges via the hump envelope)
+    pose.wind += 4.5 * hump(qS) * Math.sin(qS * Math.PI * 5);
     pose.windPhase += qS * Math.PI * 2;
-    pose.squashY += -0.03 * hump(qS);
+    // the tuft settles a hair as the seedhead's weight leaves
+    pose.squashY += -0.025 * hump(qS);
   }
 
   return pose;
@@ -716,13 +787,128 @@ function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
   return (ctx) => paint(ctx, SP[season], REST);
 }
 
+// ── RARE beat overlay: a dandelion seed-puff RELEASES ─────────────────────────
+// Drawn ADDITIVELY on top of `paint`, entirely inside `anim` — it is NOT part of
+// the season still. A fuzzy seed-head globe stands in the parted gap, then its
+// seeds detach and drift up/outward, fading. The whole overlay is multiplied by
+// `env = sin²(π·qS)`, which is 0 with zero velocity at the window edges, so the
+// puff is INVISIBLE at the edges (and absent entirely at t=0, where the window
+// has not opened). Deterministic; clamps; never throws.
+
+// Fixed seeds: [angle from head (rad), radius on the globe, release order 0..1].
+const PUFF_SEEDS: ReadonlyArray<readonly [number, number, number]> = [
+  [-2.35, 6.2, 0.10], [-1.62, 6.6, 0.30], [-0.95, 6.0, 0.55],
+  [-0.30, 6.8, 0.72], [0.35, 6.4, 0.20], [1.00, 6.7, 0.45],
+  [1.65, 6.1, 0.62], [2.40, 6.5, 0.85], [-2.95, 5.6, 0.38], [2.95, 5.8, 0.78],
+];
+
+function drawDandelionRare(ctx: CanvasRenderingContext2D, t: number): void {
+  const qS = rareProgress(t);
+  if (qS < 0) return; // outside the window (includes t=0) → nothing drawn
+  const env = (() => {
+    const s = Math.sin(Math.PI * qS);
+    return s * s; // 0..1..0, zero value AND zero velocity at q=0 and q=1
+  })();
+  if (env <= 0.001) return;
+
+  // The puff stands in the parted gap, just above the tuft. A gentle rise as it
+  // forms; the stem bends a touch with the rare rustle (kept self-contained).
+  const headX = -1.4;
+  const headY = TUFT_BASE_Y - 19 - 2 * env; // lifts slightly while present
+  const baseX = -1.0;
+  const baseY = TUFT_BASE_Y - 2;
+
+  // How much of the globe has shed: 0 until ~0.4, then seeds release outward.
+  const shed = clamp01((qS - 0.4) / 0.55);
+
+  ctx.save();
+  try {
+    // ── stem (slim, pale-green, fades with the overlay) ──
+    ctx.globalAlpha = 0.7 * env;
+    ctx.strokeStyle = "rgb(120,180,96)";
+    ctx.lineWidth = 1.3;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(baseX, baseY);
+    ctx.quadraticCurveTo(baseX - 1.5, (baseY + headY) / 2, headX, headY);
+    ctx.stroke();
+
+    // tiny receptacle where the seeds anchor
+    ctx.globalAlpha = 0.8 * env;
+    ctx.fillStyle = "rgb(196,206,150)";
+    ctx.beginPath();
+    ctx.arc(headX, headY, 1.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // ── soft fuzzy globe (the seed-head haze) — thins out as seeds shed ──
+    const globeA = (1 - 0.85 * shed) * env;
+    if (globeA > 0.01) {
+      const g = ctx.createRadialGradient(headX, headY, 0.5, headX, headY, 7);
+      g.addColorStop(0, `rgba(255,255,255,${clamp01(0.55 * globeA)})`);
+      g.addColorStop(0.6, `rgba(248,250,244,${clamp01(0.32 * globeA)})`);
+      g.addColorStop(1, "rgba(248,250,244,0)");
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(headX, headY, 7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // ── seeds: still attached early, then detach and drift up/out, fading ──
+    PUFF_SEEDS.forEach(([ang, rad, order]) => {
+      // each seed leaves once `shed` passes its release order
+      const fly = clamp01((shed - order * 0.55) / 0.45); // 0 attached → 1 gone
+      const dist = rad + fly * (10 + rad); // drifts outward as it flies
+      // bias drift upward and to the right (a breeze carrying them off)
+      const driftUp = fly * 9;
+      const driftRt = fly * 6;
+      const sx = headX + Math.cos(ang) * dist + driftRt;
+      const sy = headY + Math.sin(ang) * dist - driftUp;
+      // alpha: visible while attached, fades to 0 as it flies away
+      const seedA = clamp01((1 - 0.9 * fly)) * env;
+      if (seedA <= 0.01) return;
+
+      // pappus umbrella — a few fine radiating filaments
+      ctx.globalAlpha = clamp01(0.5 * seedA);
+      ctx.strokeStyle = "rgb(252,253,250)";
+      ctx.lineWidth = 0.5;
+      for (let k = -2; k <= 2; k++) {
+        const fa = ang + Math.PI + k * 0.32; // splay opposite the travel a touch
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.lineTo(sx + Math.cos(fa) * 2.6, sy + Math.sin(fa) * 2.6);
+        ctx.stroke();
+      }
+      // seed body — a tiny warm speck
+      ctx.globalAlpha = clamp01(0.85 * seedA);
+      ctx.fillStyle = "rgb(208,196,150)";
+      ctx.beginPath();
+      ctx.arc(sx, sy, 0.85, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.globalAlpha = clamp01(0.7 * seedA);
+      ctx.fillStyle = "rgb(255,255,255)";
+      ctx.beginPath();
+      ctx.arc(sx - 0.3, sy - 0.3, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+}
+
 function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
   return (ctx, t) => {
     const tt = Number.isFinite(t) ? t : 0;
     paint(ctx, SP[season], poseFromClock(tt));
 
+    // ── RARE beat (~18s): a dandelion seed-puff releases (additive overlay) ──
+    // Invisible at the window edges (and at t=0); the tuft's parting reaction is
+    // carried by the pose above. Shown in every season — a fresh-air moment.
+    drawDandelionRare(ctx, tt);
+
     // Light additive season micro-dressing (never the subject's own colour).
-    // Kept tiny so the wind WAVE + critter peek are the stars.
+    // Kept tiny so the wind WAVE + dandelion release are the stars.
     ctx.save();
     try {
       ctx.globalAlpha = 1;
