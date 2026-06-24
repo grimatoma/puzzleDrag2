@@ -254,9 +254,9 @@ const SP: Record<SeasonName, P> = {
   // a touch more contrast so they clearly read as a tuft; cool blue-grey light.
   // Frost dusts — it never whites the grass out.
   Winter: {
-    bladeLight: [160, 190, 156],
-    bladeMid: [94, 136, 106],
-    bladeDark: [56, 96, 78],
+    bladeLight: [150, 192, 150],
+    bladeMid: [84, 140, 100],
+    bladeDark: [46, 96, 72],
     tipTint: [214, 232, 232],
     padGrass: [184, 202, 220],
     padDark: [120, 146, 172],
@@ -595,14 +595,17 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     // with the blades rather than floating.
     if (p.springFlower > 0.02) {
       const a = p.springFlower;
-      const swayRef: Blade = { baseX: -0.4, tipX: -1.5, tipY: -24, ctrl: -1, width: 2.6, back: false, phase: 0.5 };
+      const swayRef: Blade = { baseX: -2.2, tipX: -8.5, tipY: -15, ctrl: -5.5, width: 2.4, back: false, phase: 0.28 };
       const drift = bladeSway(swayRef, pose.wind, pose.windPhase) + bladePart(swayRef, pose.part);
-      const baseX = -1.4;
-      const baseY = TUFT_BASE_Y - 1;
-      const headX = baseX - 4 + drift;
-      const headY = TUFT_BASE_Y - 17;
-      const cx = baseX - 3 + drift * 0.6;
-      const cy = lerp(baseY, headY, 0.5);
+      const baseX = -2.0;
+      const baseY = TUFT_BASE_Y;
+      // head stands proud on the front-left, leaning out of the tuft so the bloom
+      // clears the mid blades and reads as a hero flower standing in the grass.
+      // (absolute design-y: negative = up; the front-left blades here are short.)
+      const headX = -7.5 + drift;
+      const headY = -16;
+      const cx = -5.5 + drift * 0.6;
+      const cy = lerp(baseY, headY, 0.45);
       ctx.save();
       ctx.globalAlpha = clamp01(a);
       // stem (a slim green stalk that bends with the tuft)
@@ -813,9 +816,9 @@ function drawDandelionRare(ctx: CanvasRenderingContext2D, t: number): void {
 
   // The puff stands in the parted gap, just above the tuft. A gentle rise as it
   // forms; the stem bends a touch with the rare rustle (kept self-contained).
-  const headX = -1.4;
+  const headX = -1.0;
   const headY = TUFT_BASE_Y - 19 - 2 * env; // lifts slightly while present
-  const baseX = -1.0;
+  const baseX = -0.6;
   const baseY = TUFT_BASE_Y - 2;
 
   // How much of the globe has shed: 0 until ~0.4, then seeds release outward.
