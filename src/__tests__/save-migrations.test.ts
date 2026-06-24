@@ -144,3 +144,29 @@ describe("saveMigrations — 49 → 50 (Town Hall civic economy added)", () => {
     expect(result.save.coins).toBe(7);
   });
 });
+
+describe("saveMigrations — 50 → 51 (Lanternlit Caves gained a tier ladder)", () => {
+  test("a v50 save with no caves settlement is a clean version bump", () => {
+    const result = migrateSave({ version: 50, coins: 11, settlements: { home: { founded: true, tier: 2 } } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.save.version).toBe(SAVE_SCHEMA_VERSION);
+    expect(result.save.coins).toBe(11);
+    expect(result.save.settlements).toEqual({ home: { founded: true, tier: 2 } });
+  });
+
+  test("clamps a stray out-of-range caves tier into the new 0..3 ladder", () => {
+    const result = migrateSave({ version: 50, settlements: { caves: { founded: true, tier: 9 } } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.save.version).toBe(SAVE_SCHEMA_VERSION);
+    expect(result.save.settlements).toEqual({ caves: { founded: true, tier: 3 } });
+  });
+
+  test("defaults a caves settlement with no numeric tier to rung 0", () => {
+    const result = migrateSave({ version: 50, settlements: { caves: { founded: true } } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.save.settlements).toEqual({ caves: { founded: true, tier: 0 } });
+  });
+});
