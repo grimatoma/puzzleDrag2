@@ -51,6 +51,7 @@ const DYNAMIC_PREFIXES_CANVAS = [
   "player_",     // player tools — TOOL_CATALOG.iconKey (also covered below)
   "tile_",       // baked Phaser texture keys (tile_<resource>)
   "station_",    // crafting/index.tsx STATION_META[*].iconKey (station_bakery…station_decor)
+  "bld_",        // wiki buildings — EntityVisual.entityIconKey("buildings", id) → bld_<id> lookup
   "biome_",      // BiomeEntryModal.tsx + wiki entityIconKey("boardKinds")→biome_<k>; only
                  //   biome_farm/mine/fish are registered (biome_base/biome_rare are
                  //   tile-transform targets, not icons, so the prefix can't match them)
