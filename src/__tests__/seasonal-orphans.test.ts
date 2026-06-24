@@ -26,4 +26,16 @@ describe("Seasonal subjects never ship transitions without all four idles", () =
       expect(missing).toEqual([]);
     });
   }
+
+  // Same half-state guard for the optional special-gesture clips: a subject that
+  // ships ANY gesture-<season>.png must also ship all four season idles, so the
+  // gesture never plays over a missing-idle season.
+  for (const [key, files] of Object.entries(SEASONAL_MANIFEST)) {
+    const hasGesture = files.some((f) => f.startsWith("gesture-"));
+    if (!hasGesture) continue;
+    it(`${key} ships all four idles because it has a special gesture`, () => {
+      const missing = ALL_IDLES.filter((idle) => !files.includes(idle));
+      expect(missing).toEqual([]);
+    });
+  }
 });

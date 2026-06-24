@@ -12,7 +12,7 @@ import {
   seasonalTileHasTransitions,
   SEASONAL_TILE_KEYS,
 } from "./textures/seasonal/seasonalTiles.js";
-import { paintSeasonalArt, paintSeasonalIdleFrame, paintSeasonalTransFrame, seasonalBakedActive } from "./textures/seasonal/seasonalArt.js";
+import { paintSeasonalArt, paintSeasonalIdleFrame, paintSeasonalGestureFrame, paintSeasonalTransFrame, seasonalBakedActive } from "./textures/seasonal/seasonalArt.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import { conceptTileAnim } from "./textures/conceptTiles/index.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
@@ -83,6 +83,9 @@ export function canvasTexture(scene: Phaser.Scene, key: string, w: number, h: nu
 export interface SeasonalBake {
   /** Bake idle frame `idleFrame` of the current season (frame-bank slot). */
   idleFrame?: number;
+  /** Bake special-gesture frame `gestureFrame` of the current season (frame-bank slot,
+   *  placed after the idle frames in the strip). */
+  gestureFrame?: number;
   /** Bake `frame` of the `fromIdx → fromIdx+1` season transition clip (lockstep). */
   trans?: { fromIdx: number; frame: number };
   /** Draw the procedural VECTOR forward transition `fromIdx → fromIdx+1` at
@@ -153,6 +156,7 @@ export function paintTileCanvas(
     // Frame-bank baking: a specific idle frame (per-tile idle slot) or the lockstep
     // transition frame. Without a `bake` selector, fall back to the time-driven loop.
     if (bake?.trans) paintSeasonalTransFrame(ctx, res.key, bake.trans.fromIdx, bake.trans.frame);
+    else if (bake?.gestureFrame != null) paintSeasonalGestureFrame(ctx, res.key, season, bake.gestureFrame);
     else if (bake?.idleFrame != null) paintSeasonalIdleFrame(ctx, res.key, season, bake.idleFrame);
     else paintSeasonalArt(ctx, res.key, season, t ?? 0);
   } else if (conceptAnim) conceptAnim(ctx, t as number);

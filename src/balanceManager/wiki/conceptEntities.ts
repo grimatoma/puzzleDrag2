@@ -25,6 +25,7 @@ import { allBoons } from "../../features/boons/data.js";
 import { DAILY_REWARDS } from "../../constants.js";
 import { ACHIEVEMENTS } from "../../features/achievements/data.js";
 import { CONCEPTS } from "./concepts.js";
+import { SYSTEMS } from "./systems.js";
 import { iconColor } from "../../textures/iconRegistry.js";
 
 /** Coerce a value to Record<string, unknown> if it is a non-null object, else null. */
@@ -174,6 +175,14 @@ export function getEntity(conceptId: string, key: string): Record<string, unknow
 
     case "modals": {
       return KNOWN_MODALS.has(key) ? { id: key, name: key } : null;
+    }
+
+    // ── curated mechanics hub ────────────────────────────────────────────────
+    case "systems": {
+      const sys = SYSTEMS.find((s) => s.key === key);
+      return sys != null
+        ? { id: sys.key, name: sys.name, blurb: sys.blurb, look: { icon: sys.icon } }
+        : null;
     }
 
     // ── post-keeper progression concepts ─────────────────────────────────────

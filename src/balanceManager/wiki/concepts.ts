@@ -27,6 +27,7 @@ import { allBoons } from "../../features/boons/data.js";
 import { DAILY_REWARDS } from "../../constants.js";
 import { ACHIEVEMENTS } from "../../features/achievements/data.js";
 import { iconColor } from "../../textures/iconRegistry.js";
+import { SYSTEMS } from "./systems.js";
 
 function byName<T extends { name?: unknown }>(a: T, b: T): number {
   const an = String(a.name ?? "").toLowerCase();
@@ -338,6 +339,13 @@ function achievementEntries() {
   })).sort(byName);
 }
 
+function systemEntries() {
+  // The one curated, non-generated concept: cross-cutting mechanics with no
+  // catalog of their own. Sorted byName like every other concept (the shared
+  // wiki-concepts sort invariant); the reading order lives in systems/_index.html.
+  return SYSTEMS.map((s) => ({ key: s.key, name: s.name, emoji: s.icon })).sort(byName);
+}
+
 function viewEntries() {
   return [...KNOWN_VIEWS]
     .map((v) => ({ key: v, name: v }))
@@ -466,6 +474,12 @@ export const CONCEPTS = [
     label: "Modals",
     blurb: "Modal surfaces (hash routes in src/router.js).",
     getEntries: modalEntries,
+  },
+  {
+    id: "systems",
+    label: "Mechanics",
+    blurb: "How the game works — chaining, promotion, the spawn pool, crafting, trade and storage.",
+    getEntries: systemEntries,
   },
   // ── Appended at the END so their keys can't hijack resolution of existing
   //    concepts (conceptForKey iterates CONCEPTS in order). ──
