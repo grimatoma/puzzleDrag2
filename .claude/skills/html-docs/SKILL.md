@@ -42,7 +42,7 @@ This costs more tokens than Markdown and makes noisier git diffs — worth it fo
 | A 2000-word scroll | A **horizontal tab bar** grouping sections into ~3–6 logical tabs (one group shown at a time) — or a single scroll for shorter docs |
 | ASCII art or "see the attached diagram" | Inline **SVG** architecture maps, flowcharts, sequence/timeline diagrams (crisp, themeable, no asset files) |
 | Options/trade-offs written as paragraphs | A **comparison table** or a side-by-side **card grid** |
-| Repeated "Status: done / todo / blocked" prose | **Color-coded chips** + a status legend |
+| Repeated "Status: done / todo / blocked" prose | **Color-coded chips** + a status legend (in a *status* artifact — keep them out of the design body; see `design-doc`) |
 | One giant page with everything expanded | Collapsible **`<details>`** for appendices, raw data, long enumerations |
 | Callout buried mid-sentence | **Callout boxes** (note / warning / tip) with a left accent border |
 
@@ -59,6 +59,7 @@ Full detail in [`references/design.md`](references/design.md). The essentials:
 ## Common mistakes
 
 - **Markdown dressed as HTML** — `<p>` after `<p>` with no TOC, tables, diagrams, or color. If it reads like a `.md`, you paid the HTML cost for none of the benefit.
+- **Decision-journal in a spec** — one file doing four jobs (design + systems reference + build-status tracker + audit note), the same fact stated 4–6 times, inline `done/today/locked` tags, a Gaps/TODO tab. That's a *content* problem, not a form one — `html-docs` only governs how the page looks. Fix the content shape with the **`design-doc`** skill (split into artifacts, rewrite-don't-append, one-concept-one-home).
 - **Default fonts / purple-on-white gradient** — the generic-AI look. Retheme. ([`references/design.md`](references/design.md))
 - **External assets** — a linked image or stylesheet breaks single-file portability. Draw diagrams as inline SVG; inline the CSS.
 - **Skipping the edge cases** — no print styles, no mobile breakpoint, no reduced-motion fallback.
