@@ -418,3 +418,43 @@ describe("CategoryPage — Phase 3 per-concept accent wiring", () => {
     expect(styleTiles).not.toBe(styleNpcs);
   });
 });
+
+// ─── Power / attribute & ingredient fact chips on gallery cards ───────────────
+//
+// End-to-end check of the card pipeline (enrichEntry → infoboxFacts → EntryGrid
+// fact chips). Scoped to the gallery so the cost-matrix / rollup sections that
+// follow the grid can't satisfy the assertions.
+
+describe("CategoryPage — power/ingredient fact chips", () => {
+  function galleryFactTexts(container: HTMLElement): string[] {
+    const gallery = container.querySelector("[data-testid='wiki-entry-gallery']");
+    expect(gallery).not.toBeNull();
+    return Array.from(gallery!.querySelectorAll(".wiki-card-fact")).map(
+      (n) => n.textContent ?? "",
+    );
+  }
+
+  it("buildings — cards surface ability powers and a simplified Crafts list", () => {
+    const { container } = renderPage("buildings");
+    const facts = galleryFactTexts(container);
+    // Granary's turn_budget_bonus renders as "+1/session"; the Bakery (a
+    // crafting station) lists "Bread" under its Crafts chip.
+    expect(facts.some((t) => t.includes("/session"))).toBe(true);
+    expect(facts.some((t) => t.includes("Bread"))).toBe(true);
+  });
+
+  it("tiles — cards surface ability powers and omit the redundant 'Kind' chip", () => {
+    const { container } = renderPage("tiles");
+    const facts = galleryFactTexts(container);
+    // free_moves tiles (e.g. Turkey) render as "+N/season".
+    expect(facts.some((t) => t.includes("/season"))).toBe(true);
+    expect(facts.every((t) => !/Kind/i.test(t))).toBe(true);
+  });
+
+  it("recipes — cards surface a simplified ingredient list", () => {
+    const { container } = renderPage("recipes");
+    const facts = galleryFactTexts(container);
+    // Flour is an input to several recipes (bread, supplies, …).
+    expect(facts.some((t) => t.includes("Flour"))).toBe(true);
+  });
+});
