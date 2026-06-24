@@ -1,25 +1,44 @@
 // Animated farm crops & produce — same look as src/textures/categories/crops.ts, but alive.
-// Each fn redraws the WHOLE icon at time `t` (seconds). Loops are seamless via modulo / sin.
-// Pure, self-contained, no imports. Glints clip to the produce silhouette; sways loop seamlessly.
+// Each fn redraws the WHOLE icon at time `t` (seconds). Loops are seamless via
+// `loopPhase`/`pingPong`/`breathe` (drive position off `t`, never a sawtooth) and
+// shadows couple to vertical motion via `groundShadow`. The static geometry is the
+// strong part and is kept; the motion is rebuilt to lead with real deformation
+// (squash/stretch, eased nods, hinge opens) with glints demoted to a secondary
+// accent. This module is the reference for the per-icon idle rebuild.
+
+import {
+  TAU,
+  breathe,
+  loopPhase,
+  beat,
+  twinkle,
+  easeInOutSine,
+  easeOutBack,
+  easeOutElastic,
+  groundShadow,
+  glint,
+  sparkle,
+} from "./_anim.js";
 
 // ---------------------------------------------------------------------------
-// crop_sunflower — bloom sways on its stem and slowly turns toward the light,
-// petals shimmer, and a faint sparkle drifts by like a passing bee.
+// crop_sunflower — the whole plant sways from ONE pivot at the stem base (head
+// stays welded to the stem); the head adds a small follow-through nod + slow
+// heliotropic turn, the petals fan in a traveling wave, and a clean sparkle
+// drifts past like a bee.
 function animSunflower(ctx: CanvasRenderingContext2D, t: number): void {
-  // Shadow (anchored to the ground, follows sway gently)
-  const sway = Math.sin(t * 0.9) * 0.08; // radians, slow breeze
-  const turn = Math.sin(t * 0.35) * 0.06; // slow heliotropic turn of the head
-  ctx.fillStyle = "rgba(0,0,0,0.2)";
-  ctx.beginPath();
-  ctx.ellipse(sway * 8, 23, 12, 3.5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  const sway = Math.sin(t * 0.9) * 0.07; // primary breeze, one pivot
+  const nod = Math.sin(t * 0.9 - 0.6) * 0.03; // head follow-through (lags the stem)
+  const turn = Math.sin(t * 0.35) * 0.05; // slow heliotropic turn
 
-  // Stem — bends slightly with the breeze (base fixed, top leans)
+  groundShadow(ctx, sway * 10, 23, 12, 3.5, sway * 6, 0.2);
+
+  // Whole plant sways about the base.
   ctx.save();
-  // pivot near the base of the visible stem
   ctx.translate(0, 24);
-  ctx.rotate(sway * 0.4);
+  ctx.rotate(sway);
   ctx.translate(0, -24);
+
+  // Stem
   const stem = ctx.createLinearGradient(-3, 0, 3, 0);
   stem.addColorStop(0, "#7cb840");
   stem.addColorStop(1, "#3a6014");
@@ -34,9 +53,9 @@ function animSunflower(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#2e4810";
   ctx.lineWidth = 1.2;
   ctx.stroke();
-  // Leaves on stem — flutter a touch
+  // Leaves — flutter with their own phase (secondary motion).
   ([[-1, 10], [1, 16]] as Array<[number, number]>).forEach(([side, sy], li) => {
-    const flutter = 1 + Math.sin(t * 2.2 + li * 1.6) * 0.06;
+    const flutter = 1 + Math.sin(t * 2.2 + li * 1.6) * 0.07;
     const grad = ctx.createLinearGradient(0, sy, side * 12, sy + 2);
     grad.addColorStop(0, "#9ccc54");
     grad.addColorStop(1, "#3a6014");
@@ -51,32 +70,28 @@ function animSunflower(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.lineWidth = 1;
     ctx.stroke();
   });
-  ctx.restore();
 
-  // Head — sways with the stem and slowly turns toward the light.
-  const cy = -8;
-  ctx.save();
-  // sway the head about the stem base, then turn the bloom about its own center
-  ctx.translate(0, 24);
-  ctx.rotate(sway * 0.55);
-  ctx.translate(0, -24);
-  ctx.translate(0, cy);
+  // Head — nods about the neck (welded to the stem top) then turns about its own
+  // centre. Two nested pivots that BOTH sit on the stem, so the head never shears.
+  ctx.translate(0, 2); // neck, in plant-local space
+  ctx.rotate(nod);
+  ctx.translate(0, -10); // up to the head centre (cy ≈ -8)
   ctx.rotate(turn);
 
-  // Petals — ring of golden teardrops; each shimmers individually.
   const petalCount = 14;
   for (let i = 0; i < petalCount; i++) {
-    const a = (i / petalCount) * Math.PI * 2;
+    const a = (i / petalCount) * TAU;
     const ir = 9;
-    const or = 17 + Math.sin(t * 2.6 + i * 0.9) * 0.5; // gentle length shimmer
+    // Petal-fan: a traveling wave lengthens petals as it sweeps the ring.
+    const fan = Math.sin(t * 1.6 - a * 2);
+    const or = 17 + fan * 1.3;
     const ix = Math.cos(a) * ir;
     const iy = Math.sin(a) * ir;
     const ox = Math.cos(a) * or;
     const oy = Math.sin(a) * or;
     const px = Math.cos(a + Math.PI / 2) * 3;
     const py = Math.sin(a + Math.PI / 2) * 3;
-    // shimmer brightens petals as a slow wave sweeps around the ring
-    const shimmer = 0.5 + 0.5 * Math.sin(t * 1.8 - a * 2);
+    const shimmer = 0.5 + 0.5 * fan;
     const grad = ctx.createLinearGradient(ix, iy, ox, oy);
     grad.addColorStop(0, `rgb(255,${Math.round(210 + shimmer * 18)},${Math.round(74 + shimmer * 24)})`);
     grad.addColorStop(1, "#e89010");
@@ -91,79 +106,59 @@ function animSunflower(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.lineWidth = 0.8;
     ctx.stroke();
   }
-  // Dark seeded center
+  // Seeded centre
   const center = ctx.createRadialGradient(-3, -3, 2, 0, 0, 11);
   center.addColorStop(0, "#7a5418");
   center.addColorStop(0.6, "#4a3008");
   center.addColorStop(1, "#231804");
   ctx.fillStyle = center;
   ctx.beginPath();
-  ctx.arc(0, 0, 10, 0, Math.PI * 2);
+  ctx.arc(0, 0, 10, 0, TAU);
   ctx.fill();
   ctx.strokeStyle = "#1a1002";
   ctx.lineWidth = 1.6;
   ctx.stroke();
-  // Seed texture — small spiral dots
   ctx.fillStyle = "rgba(40,26,6,0.85)";
   for (let i = 0; i < 36; i++) {
     const a = i * 2.399;
     const r = Math.sqrt(i / 36) * 8.5;
     ctx.beginPath();
-    ctx.arc(Math.cos(a) * r, Math.sin(a) * r, 0.9, 0, Math.PI * 2);
+    ctx.arc(Math.cos(a) * r, Math.sin(a) * r, 0.9, 0, TAU);
     ctx.fill();
   }
-  // Center highlight
   ctx.fillStyle = "rgba(180,140,60,0.5)";
   ctx.beginPath();
-  ctx.arc(-3, -3, 2, 0, Math.PI * 2);
+  ctx.arc(-3, -3, 2, 0, TAU);
   ctx.fill();
   ctx.restore();
 
-  // A bee-like sparkle drifts past the bloom on a slow loop.
-  const bp = (t * 0.18) % 1; // 0..1 loop
+  // A bee-like sparkle drifts past on a slow loop (clean 4-point star, not a cross).
+  const bp = loopPhase(t, 5.6);
   const bx = -22 + bp * 44;
-  const by = cy - 14 + Math.sin(bp * Math.PI * 3) * 5;
-  const ba = Math.sin(bp * Math.PI); // fade in/out at the edges
-  if (ba > 0.02) {
-    ctx.fillStyle = `rgba(255,250,210,${0.7 * ba})`;
-    ctx.beginPath();
-    ctx.arc(bx, by, 1.5, 0, Math.PI * 2);
-    ctx.fill();
-    // tiny sparkle cross
-    ctx.strokeStyle = `rgba(255,255,235,${0.5 * ba})`;
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(bx - 3, by);
-    ctx.lineTo(bx + 3, by);
-    ctx.moveTo(bx, by - 3);
-    ctx.lineTo(bx, by + 3);
-    ctx.stroke();
-  }
+  const by = -22 + Math.sin(bp * Math.PI * 3) * 5;
+  const ba = Math.sin(bp * Math.PI);
+  sparkle(ctx, bx, by, 1.6 + ba * 0.6, 0.7 * ba, "255,250,210");
 }
 
 // ---------------------------------------------------------------------------
-// crop_wheat — the stalks sway side to side in a breeze; the grain heads lean
-// more than the bound base.
+// crop_wheat — re-centred up; each stalk bends on its own phase (a traveling
+// wave through the clump), the awns curve instead of starbursting.
 function animWheat(ctx: CanvasRenderingContext2D, t: number): void {
-  const breeze = Math.sin(t * 1.1); // -1..1 primary sway
-  const gust = Math.sin(t * 1.1 + 0.6) * 0.3; // slight phase-offset secondary motion
-  // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.2)";
-  ctx.beginPath();
-  ctx.ellipse(0, 23, 14, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.save();
+  ctx.translate(0, -4); // re-frame: was sitting ~4u low (off_y +4.2)
+
+  groundShadow(ctx, 0, 26, 14, 4, 0, 0.2);
 
   const stalks: Array<[number, number]> = [[-0.5, -0.32], [0, 0], [0.5, 0.32]];
-  // Per-stalk lean of the head: base barely moves (bound), tip leans with breeze.
-  // headBend is added to the tip x; scaled by breeze so it's seamless.
   stalks.forEach(([, lean], si) => {
-    const headBend = (breeze + gust) * (3.2 + si * 0.4) * 0.6;
-    const tipX = lean * 16 + headBend;
-    const tipY = -10 - Math.abs(headBend) * 0.15; // slight bob as it leans
-    const baseX = lean * 8 + headBend * 0.3;
+    // Per-stalk traveling wave: phase offset by stalk index so the clump ripples
+    // rather than swinging as one rigid block.
+    const bend = Math.sin(t * 1.2 - si * 0.9) * (3.2 + si * 0.4);
+    const tipX = lean * 16 + bend;
+    const tipY = -10 - Math.abs(bend) * 0.12;
+    const baseX = lean * 8 + bend * 0.3;
     const baseY = 0;
 
-    // Stem (behind head) — base fixed near the twine, curving to the leaned tip.
     ctx.strokeStyle = "#c89838";
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -171,7 +166,6 @@ function animWheat(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.quadraticCurveTo(baseX, baseY, tipX, tipY);
     ctx.stroke();
 
-    // Grain heads — paired grains up the stalk.
     for (let g = 0; g <= 1; g += 0.16) {
       const gx = baseX + (tipX - baseX) * g;
       const gy = baseY + (tipY - baseY) * g;
@@ -184,25 +178,26 @@ function animWheat(ctx: CanvasRenderingContext2D, t: number): void {
         grad.addColorStop(1, "#a8780c");
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.ellipse(ex, ey, 2.6, 1.7, -0.5 * sideDir + lean * 0.3, 0, Math.PI * 2);
+        ctx.ellipse(ex, ey, 2.6, 1.7, -0.5 * sideDir + lean * 0.3, 0, TAU);
         ctx.fill();
         ctx.strokeStyle = "rgba(110,74,8,0.6)";
         ctx.lineWidth = 0.7;
         ctx.stroke();
       });
     }
-    // awns (whiskers) at the tip
+    // Awns — curved whiskers (quadratic) that bend with the tip, not a starburst.
     ctx.strokeStyle = "rgba(232,200,90,0.8)";
     ctx.lineWidth = 0.8;
-    [-2, 0, 2].forEach((dx) => {
+    [-2.2, 0, 2.2].forEach((dx) => {
+      const cx = tipX + dx * 0.6 + bend * 0.3;
       ctx.beginPath();
       ctx.moveTo(tipX, tipY);
-      ctx.lineTo(tipX + dx + lean * 2 + headBend * 0.4, tipY - 8);
+      ctx.quadraticCurveTo(cx, tipY - 5, tipX + dx + bend * 0.5, tipY - 9);
       ctx.stroke();
     });
   });
 
-  // Binding twine around the base (fixed)
+  // Binding twine (fixed)
   ctx.strokeStyle = "#8a5a1e";
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -215,20 +210,21 @@ function animWheat(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.moveTo(-5, 12);
   ctx.quadraticCurveTo(0, 9, 5, 12);
   ctx.stroke();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// crop_corn — gentle sway; a soft glint travels over the kernels; husk leaves
-// flutter.
+// crop_corn — an eased nod (not a constant rigid lean) plus a fake axial roll:
+// the kernel grid + highlight scroll sideways as if the cob rotates. The hard
+// glint rectangle is replaced by the feathered shared glint.
 function animCorn(ctx: CanvasRenderingContext2D, t: number): void {
-  const sway = Math.sin(t * 1.0) * 0.05; // gentle whole-cob lean
-  // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
-  ctx.beginPath();
-  ctx.ellipse(0, 22, 14, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // Eased nod: dwell, then a soft tip to one side and back.
+  const nodPhase = loopPhase(t, 3.2);
+  const nod = Math.sin(nodPhase * TAU) * 0.06 * easeInOutSine(Math.abs(Math.sin(nodPhase * Math.PI)));
+  const roll = Math.sin(t * 0.8); // -1..1 fake axial roll
 
-  // Husk leaves flutter (drawn behind the cob), each with its own phase.
+  groundShadow(ctx, nod * 12, 22, 14, 4, 0, 0.22);
+
   const huskLeaves: Array<[number, number]> = [[-1, -0.55], [1, 0.55], [0, 0]];
   huskLeaves.forEach(([side, lean], hi) => {
     const flutter = 1 + Math.sin(t * 2.4 + hi * 1.9) * 0.08;
@@ -253,10 +249,9 @@ function animCorn(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.stroke();
   });
 
-  // Cob — swaying gently about its base.
   ctx.save();
   ctx.translate(0, 18);
-  ctx.rotate(sway);
+  ctx.rotate(nod);
   ctx.translate(0, -18);
 
   const cobPath = (c: CanvasRenderingContext2D): void => {
@@ -280,40 +275,36 @@ function animCorn(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Kernels — clipped grid of little rounded squares.
   ctx.save();
   cobPath(ctx);
   ctx.clip();
+  // Kernels scroll sideways with the roll → reads as the cob turning on its axis.
+  const scroll = roll * 1.6;
   for (let row = 0; row < 11; row++) {
     const ry = -20 + row * 3.6;
     const offset = row % 2 === 0 ? 0 : 1.6;
-    for (let col = -3; col <= 3; col++) {
-      const kx = col * 3.2 + offset;
+    for (let col = -4; col <= 4; col++) {
+      const kx = col * 3.2 + offset + scroll;
       const kr = 1.7;
-      const grad = ctx.createRadialGradient(kx - 0.6, ry - 0.6, 0.3, kx, ry, kr + 0.6);
+      // Foreshorten the highlight toward the lit side as it rolls.
+      const grad = ctx.createRadialGradient(kx - 0.6 - roll, ry - 0.6, 0.3, kx, ry, kr + 0.6);
       grad.addColorStop(0, "#fff4b8");
       grad.addColorStop(0.7, "#f0bc20");
       grad.addColorStop(1, "#c88c10");
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(kx, ry, kr, 0, Math.PI * 2);
+      ctx.arc(kx, ry, kr, 0, TAU);
       ctx.fill();
       ctx.strokeStyle = "rgba(110,74,8,0.45)";
       ctx.lineWidth = 0.6;
       ctx.stroke();
     }
   }
-  // Soft glint band travels down the cob over the kernels (clipped).
-  const glintY = -24 + ((t * 10) % 50); // sweeps top→bottom, loops
-  const gg = ctx.createLinearGradient(0, glintY - 7, 0, glintY + 7);
-  gg.addColorStop(0, "rgba(255,255,255,0)");
-  gg.addColorStop(0.5, "rgba(255,255,255,0.45)");
-  gg.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = gg;
-  ctx.fillRect(-10, glintY - 7, 20, 14);
+  // Demoted feathered sheen travelling with the roll (secondary accent).
+  glint(ctx, loopPhase(t, 3.4), { span: 12, width: 6, angle: Math.PI / 2, intensity: 0.28, length: 48, warm: true });
   ctx.restore();
 
-  // Silk tuft at the tip
+  // Silk tuft
   ctx.strokeStyle = "#d8a838";
   ctx.lineWidth = 1;
   [-3, 0, 3].forEach((dx) => {
@@ -323,30 +314,34 @@ function animCorn(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.quadraticCurveTo(dx + wig, -28, dx * 1.5 + wig, -26);
     ctx.stroke();
   });
-  // Static highlight
   ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.beginPath();
-  ctx.ellipse(-4, -6, 1.8, 8, -0.1, 0, Math.PI * 2);
+  ctx.ellipse(-4 - roll, -6, 1.8, 8, -0.1, 0, TAU);
   ctx.fill();
   ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// crop_peas — the pod gently bobs; the peas inside shimmer; the pod tip wiggles.
+// crop_peas — re-centred up; the pod's front lip swings OPEN at the hinge with
+// an overshoot, revealing the peas, then eases closed. Shadow couples to the bob.
 function animPeas(ctx: CanvasRenderingContext2D, t: number): void {
-  const bob = Math.sin(t * 1.4) * 1.6; // vertical bob
-  const tipWag = Math.sin(t * 2.6) * 1.4; // pod tip wiggle
-  // Shadow (steady on the ground)
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
-  ctx.beginPath();
-  ctx.ellipse(0, 22, 18, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.save();
+  ctx.translate(0, -7); // re-frame: was sitting ~8u low (off_y +8.4)
+
+  const bob = Math.sin(t * 1.4) * 1.4;
+  // Hinge open/close beat: dwell closed, then ease open past the mark (overshoot)
+  // and settle back.
+  const openPhase = loopPhase(t, 3.0);
+  const open = openPhase < 0.5 ? easeOutBack(openPhase * 2, 2.0) : easeInOutSine(1 - (openPhase - 0.5) * 2);
+  const lip = open * 0.5; // radians the front lip lifts
+
+  groundShadow(ctx, 0, 29, 18, 4, bob, 0.22);
 
   ctx.save();
   ctx.translate(0, bob);
   ctx.rotate(-0.25 + Math.sin(t * 1.2) * 0.03);
 
-  // Pod — back (lower) half
+  // Pod back (lower) half — fixed
   const podBack = ctx.createLinearGradient(0, -2, 0, 14);
   podBack.addColorStop(0, "#8aba40");
   podBack.addColorStop(1, "#3a6014");
@@ -361,7 +356,7 @@ function animPeas(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Peas — shimmer: highlight drifts and brightness pulses per pea.
+  // Peas — shimmer; more visible as the pod opens.
   const peas: Array<[number, number]> = [[-13, 2], [-6.5, 3], [0, 3.2], [6.5, 3], [13, 2]];
   peas.forEach(([px, py], pi) => {
     const shim = 0.5 + 0.5 * Math.sin(t * 2.4 + pi * 1.1);
@@ -371,21 +366,24 @@ function animPeas(ctx: CanvasRenderingContext2D, t: number): void {
     grad.addColorStop(1, "#3a6014");
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(px, py, 4.4, 0, Math.PI * 2);
+    ctx.arc(px, py, 4.4, 0, TAU);
     ctx.fill();
     ctx.strokeStyle = "#23400c";
     ctx.lineWidth = 1.2;
     ctx.stroke();
-    // highlight drifts subtly around the top-left
     const hx = px - 1.4 + Math.cos(t * 1.6 + pi) * 0.5;
     const hy = py - 1.6 + Math.sin(t * 1.6 + pi) * 0.4;
     ctx.fillStyle = `rgba(240,255,200,${0.55 + 0.3 * shim})`;
     ctx.beginPath();
-    ctx.arc(hx, hy, 1.3, 0, Math.PI * 2);
+    ctx.arc(hx, hy, 1.3, 0, TAU);
     ctx.fill();
   });
 
-  // Pod — front (upper) lip
+  // Pod front lip — hinged at the left seam (-22,2), swings open with `lip`.
+  ctx.save();
+  ctx.translate(-22, 2);
+  ctx.rotate(-lip);
+  ctx.translate(22, -2);
   const podFront = ctx.createLinearGradient(0, -10, 0, 2);
   podFront.addColorStop(0, "#9ccc54");
   podFront.addColorStop(1, "#4a8020");
@@ -399,33 +397,46 @@ function animPeas(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#23400c";
   ctx.lineWidth = 2;
   ctx.stroke();
-  // Front lip highlight
   ctx.strokeStyle = "rgba(220,245,170,0.6)";
   ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.moveTo(-16, -3);
   ctx.bezierCurveTo(-8, -7, 8, -7, 16, -3);
   ctx.stroke();
+  ctx.restore();
 
-  // Stem tip — wiggles.
+  // Stem tip — wags, lifts with the lip.
   ctx.strokeStyle = "#3a6014";
   ctx.lineWidth = 2.4;
   ctx.beginPath();
   ctx.moveTo(-22, 2);
-  ctx.lineTo(-27, -2 + tipWag);
+  ctx.lineTo(-27, -2 - lip * 4 + Math.sin(t * 2.6) * 1.0);
   ctx.stroke();
+  ctx.restore();
   ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// crop_watermelon — a glossy glint sweeps across the rind (clipped); the cut
-// wedge's flesh sparkles.
+// crop_watermelon — re-centred up; a springy wobble-and-plop (elastic squash on
+// a periodic beat) drives the whole fruit, with the glint demoted to a sheen.
 function animWatermelon(ctx: CanvasRenderingContext2D, t: number): void {
-  // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.beginPath();
-  ctx.ellipse(0, 23, 22, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.save();
+  ctx.translate(0, -6); // re-frame: was ~6u low (off_y +6.5)
+
+  // Plop beat: settle, then a quick squash that springs back (easeOutElastic).
+  const plopPhase = loopPhase(t, 2.8);
+  const plop = plopPhase < 0.35 ? 1 - easeOutElastic(plopPhase / 0.35) : 0;
+  const squash = 1 + plop * 0.12; // wider when squashed
+  const stretch = 1 - plop * 0.12; // shorter when squashed
+  const drop = plop * 2.2; // dips on impact
+
+  groundShadow(ctx, 0, 25, 22, 5, -drop * 0.5, 0.25);
+
+  ctx.save();
+  // Squash about the ground-contact point.
+  ctx.translate(0, 18 + drop);
+  ctx.scale(squash, stretch);
+  ctx.translate(0, -18);
 
   // Whole striped melon (back-left)
   ctx.save();
@@ -436,15 +447,14 @@ function animWatermelon(ctx: CanvasRenderingContext2D, t: number): void {
   body.addColorStop(1, "#10380c");
   ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.arc(0, 0, 16, 0, Math.PI * 2);
+  ctx.arc(0, 0, 16, 0, TAU);
   ctx.fill();
   ctx.strokeStyle = "#0a2606";
   ctx.lineWidth = 2;
   ctx.stroke();
-  // Dark green stripes (clipped)
   ctx.save();
   ctx.beginPath();
-  ctx.arc(0, 0, 16, 0, Math.PI * 2);
+  ctx.arc(0, 0, 16, 0, TAU);
   ctx.clip();
   ctx.strokeStyle = "rgba(14,56,12,0.85)";
   ctx.lineWidth = 3.2;
@@ -454,20 +464,12 @@ function animWatermelon(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.bezierCurveTo(x + 4, -6, x + 4, 6, x, 18);
     ctx.stroke();
   });
-  // Glossy glint sweeps across the rind (still clipped to the globe).
-  const gp = (t * 0.22) % 1; // 0..1 loop
-  const gx = -22 + gp * 44; // diagonal sweep position
-  const glint = ctx.createLinearGradient(gx - 8, -16, gx + 8, 16);
-  glint.addColorStop(0, "rgba(255,255,255,0)");
-  glint.addColorStop(0.5, "rgba(255,255,255,0.4)");
-  glint.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = glint;
-  ctx.fillRect(gx - 8, -18, 16, 36);
+  // Demoted feathered sheen (was a bright sliding rectangle).
+  glint(ctx, loopPhase(t, 4.0), { span: 18, width: 7, intensity: 0.26, length: 38 });
   ctx.restore();
-  // Static highlight
   ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.beginPath();
-  ctx.ellipse(-7, -7, 3, 6, -0.5, 0, Math.PI * 2);
+  ctx.ellipse(-7, -7, 3, 6, -0.5, 0, TAU);
   ctx.fill();
   ctx.restore();
 
@@ -486,14 +488,12 @@ function animWatermelon(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.bezierCurveTo(-13, 6, -11, -12, 0, -14);
   ctx.closePath();
   ctx.fill();
-  // White rind layer
   ctx.strokeStyle = "#e8f4c0";
   ctx.lineWidth = 2.4;
   ctx.beginPath();
   ctx.moveTo(0, 14);
   ctx.bezierCurveTo(-13, 6, -11, -12, 0, -14);
   ctx.stroke();
-  // Green rind outer edge
   ctx.strokeStyle = "#2e7a28";
   ctx.lineWidth = 2.6;
   ctx.beginPath();
@@ -503,14 +503,13 @@ function animWatermelon(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#0a2606";
   ctx.lineWidth = 1;
   ctx.stroke();
-  // Seeds
   ctx.fillStyle = "#2a0a10";
   ([[-3, -4], [3, -2], [-1, 3], [4, 6], [-4, 7], [1, -8]] as Array<[number, number]>).forEach(([sx, sy]) => {
     ctx.beginPath();
-    ctx.ellipse(sx, sy, 1.1, 1.8, 0.3, 0, Math.PI * 2);
+    ctx.ellipse(sx, sy, 1.1, 1.8, 0.3, 0, TAU);
     ctx.fill();
   });
-  // Flesh sparkles — clipped to the wedge so they stay on the fruit.
+  // A single clean sparkle pings on the flesh as the fruit settles.
   ctx.save();
   ctx.beginPath();
   ctx.moveTo(0, -14);
@@ -518,94 +517,82 @@ function animWatermelon(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.bezierCurveTo(-13, 6, -11, -12, 0, -14);
   ctx.closePath();
   ctx.clip();
-  const sparkPts: Array<[number, number, number]> = [[-4, -6, 0], [5, -1, 1.3], [-2, 6, 2.4], [3, 9, 3.6]];
-  sparkPts.forEach(([sx, sy, ph]) => {
-    const tw = 0.5 + 0.5 * Math.sin(t * 3.2 + ph);
-    if (tw < 0.15) return;
-    ctx.fillStyle = `rgba(255,210,210,${0.7 * tw})`;
-    ctx.beginPath();
-    ctx.arc(sx, sy, 0.8 + tw * 0.7, 0, Math.PI * 2);
-    ctx.fill();
-  });
+  sparkle(ctx, -2, -2, 1.6, twinkle(t, 2.8, 0.1), "255,210,210");
   ctx.restore();
-  // Flesh highlight
   ctx.fillStyle = "rgba(255,200,200,0.4)";
   ctx.beginPath();
-  ctx.ellipse(-3, -3, 2.4, 5, -0.4, 0, Math.PI * 2);
+  ctx.ellipse(-3, -3, 2.4, 5, -0.4, 0, TAU);
   ctx.fill();
+  ctx.restore();
+
+  ctx.restore();
   ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// crop_pumpkin — a soft specular glint sweeps the ribs (clipped); the stem/leaf
-// flutters slightly; gentle breathing scale.
+// crop_pumpkin — a heavy squash-settle that actually bulges the ribs (rib spread
+// scales with the squash) and drives the highlight; glint demoted to a sheen.
 function animPumpkin(ctx: CanvasRenderingContext2D, t: number): void {
-  const breathe = 1 + Math.sin(t * 1.2) * 0.02; // gentle breathing
-  // Shadow
-  ctx.fillStyle = "rgba(0,0,0,0.25)";
-  ctx.beginPath();
-  ctx.ellipse(0, 22, 22, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
+  // Heavy breathing settle: a slow inhale then an eased-back release.
+  const phase = loopPhase(t, 3.0);
+  const squashAmt = Math.sin(phase * TAU) * 0.08; // ±8% (was an invisible 2%)
+  const squash = 1 + squashAmt;
+  const stretch = 1 - squashAmt * 0.7;
+  const ribBulge = 1 + squashAmt * 0.9; // ribs splay wider on squash
+
+  groundShadow(ctx, 0, 22, 22, 5, -squashAmt * 8, 0.25);
 
   ctx.save();
-  // breathe about the body center (~0,6)
-  ctx.translate(0, 6);
-  ctx.scale(breathe, breathe);
-  ctx.translate(0, -6);
+  ctx.translate(0, 12);
+  ctx.scale(squash, stretch);
+  ctx.translate(0, -12);
 
-  // Body — wide squat orange globe
+  // Body
   const body = ctx.createRadialGradient(-5, -2, 3, 0, 4, 24);
   body.addColorStop(0, "#ffc070");
   body.addColorStop(0.5, "#e87818");
   body.addColorStop(1, "#8a3a08");
   ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.ellipse(0, 6, 22, 17, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 6, 22, 17, 0, 0, TAU);
   ctx.fill();
   ctx.strokeStyle = "#4a2008";
   ctx.lineWidth = 2;
   ctx.stroke();
 
-  // Ribs + glint (clipped to the body).
   ctx.save();
   ctx.beginPath();
-  ctx.ellipse(0, 6, 22, 17, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 6, 22, 17, 0, 0, TAU);
   ctx.clip();
   ctx.strokeStyle = "rgba(74,32,8,0.55)";
   ctx.lineWidth = 1.4;
   [-14, -7, 0, 7, 14].forEach((x) => {
+    const rx = x * ribBulge;
     ctx.beginPath();
-    ctx.moveTo(x, -11);
-    ctx.bezierCurveTo(x * 1.25, -2, x * 1.25, 14, x, 23);
+    ctx.moveTo(rx, -11);
+    ctx.bezierCurveTo(rx * 1.25, -2, rx * 1.25, 14, rx, 23);
     ctx.stroke();
   });
   ctx.strokeStyle = "rgba(255,210,150,0.4)";
   ctx.lineWidth = 1;
   [-10.5, -3.5, 3.5, 10.5].forEach((x) => {
+    const rx = x * ribBulge;
     ctx.beginPath();
-    ctx.moveTo(x, -9);
-    ctx.bezierCurveTo(x * 1.2, 0, x * 1.2, 12, x, 21);
+    ctx.moveTo(rx, -9);
+    ctx.bezierCurveTo(rx * 1.2, 0, rx * 1.2, 12, rx, 21);
     ctx.stroke();
   });
-  // Soft specular glint sweeps horizontally across the ribs.
-  const gp = (t * 0.2) % 1;
-  const gx = -26 + gp * 52;
-  const glint = ctx.createLinearGradient(gx - 9, 0, gx + 9, 0);
-  glint.addColorStop(0, "rgba(255,245,210,0)");
-  glint.addColorStop(0.5, "rgba(255,245,210,0.4)");
-  glint.addColorStop(1, "rgba(255,245,210,0)");
-  ctx.fillStyle = glint;
-  ctx.fillRect(gx - 9, -12, 18, 36);
+  glint(ctx, loopPhase(t, 3.6), { span: 22, width: 8, angle: Math.PI / 2, intensity: 0.3, length: 40, warm: true });
   ctx.restore();
 
-  // Specular highlight
-  ctx.fillStyle = "rgba(255,245,210,0.4)";
+  // Specular highlight — brightens at the top of the breath.
+  ctx.fillStyle = `rgba(255,245,210,${0.4 + Math.max(0, squashAmt) * 1.5})`;
   ctx.beginPath();
-  ctx.ellipse(-9, -2, 4, 8, -0.4, 0, Math.PI * 2);
+  ctx.ellipse(-9, -2, 4, 8, -0.4, 0, TAU);
   ctx.fill();
   ctx.restore();
 
-  // Stem / leaf — flutters slightly (drawn on top, outside the breathe scale).
+  // Stem / leaf — flutters (outside the squash).
   const lean = Math.sin(t * 1.8) * 0.06;
   ctx.save();
   ctx.translate(0, -10);

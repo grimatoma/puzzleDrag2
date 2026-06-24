@@ -1,17 +1,33 @@
-// Animated small town & village buildings.
+// Animated small town & village buildings — same storybook look as
+// ../categories/buildings.ts, but alive.
 //
-// Self-contained Canvas-2D animation fns (no imports / no shared exports).
 // Each fn redraws the COMPLETE icon at time `t` (elapsed seconds), centered at
-// origin (0,0) within a roughly -24..+24 box. The caller handles clear / save /
-// translate / scale / lineCap / restore. Motion is derived purely from `t` and
-// from indices (no Math.random) so frames are deterministic, and loops are made
-// seamless via Math.sin/cos and modulo.
+// origin (0,0) within a roughly -24..+24 box; the ground baseline sits ~y=22.
+// The caller handles clear / save / translate / scale / lineCap / restore.
 //
-// Each draw mirrors the static icon in ../categories/buildings.ts — same
-// colors and silhouette — but lived-in: rising smoke, turning wheels and sails,
-// waving flags, fluttering awnings, and flickering candle/window glow.
+// Motion is rebuilt to lead with real BODY deformation (a shared low-amplitude
+// "building breathing", articulated sails/bells/vanes on their own pivots,
+// hay-dust and sound rings) instead of one twitching ornament over a frozen
+// shell. Glints/glows are demoted to a secondary accent and the imperceptible
+// local flicker is replaced by the shared readable `flicker`. Loops tile
+// seamlessly because every position is driven off `t` via `loopPhase` /
+// `pingPong` / `breathe` (never a raw sawtooth), and contact shadows couple to
+// vertical motion via `groundShadow`. Deterministic: motion comes only from `t`
+// and indices (no Math.random / Date), stub-safe ctx methods only.
 
-const TAU = Math.PI * 2;
+import {
+  TAU,
+  clamp01,
+  lerp,
+  breathe,
+  loopPhase,
+  pingPong,
+  beat,
+  easeInOutSine,
+  groundShadow,
+  sparkle,
+  flicker,
+} from "./_anim.js";
 
 // Local rounded-rect helper (mirrors the source-icon convention).
 function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
@@ -24,27 +40,15 @@ function rr(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: n
   ctx.closePath();
 }
 
-function drawShadow(ctx: CanvasRenderingContext2D, w: number, h: number): void {
-  ctx.fillStyle = "rgba(0,0,0,0.22)";
-  ctx.beginPath();
-  ctx.ellipse(0, 22, w, h, 0, 0, TAU);
-  ctx.fill();
-}
-
-// Warm flicker factor in roughly 0.82..1.0, slow + cozy (candle/hearth feel).
-function flicker(t: number, phase: number): number {
-  const f = Math.sin(t * 3.1 + phase) * 0.5 + Math.sin(t * 5.7 + phase * 1.7) * 0.3 + Math.sin(t * 1.3 + phase * 0.5) * 0.2;
-  return 0.91 + f * 0.09;
-}
-
-// Warm glowing window pane (animated brightness via `lit`, 0..1).
+// Warm glowing window pane (brightness via `lit`, 0..1) — shared by several
+// buildings. Static geometry is preserved from the source icon.
 function drawWindow(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, lit: number): void {
   const glow = ctx.createLinearGradient(0, y, 0, y + h);
   glow.addColorStop(0, "#fff2b8");
   glow.addColorStop(0.5, "#ffd368");
   glow.addColorStop(1, "#e89a30");
   ctx.save();
-  ctx.globalAlpha = lit;
+  ctx.globalAlpha = clamp01(lit);
   ctx.fillStyle = glow;
   rr(ctx, x, y, w, h, 1.4);
   ctx.fill();
@@ -67,11 +71,30 @@ function drawWindow(ctx: CanvasRenderingContext2D, x: number, y: number, w: numb
   ctx.fill();
 }
 
+// Shared subtle "building breathing": a slow ±1–2% vertical squash about the
+// ground line, settling fully at the breath ends. Apply via ctx.scale around
+// (0, baseY) so the silhouette gently inhales without sliding. Returns the
+// vertical lift at the eaves for shadow coupling.
+function applyBreath(ctx: CanvasRenderingContext2D, t: number, baseY: number, amp = 0.02, period = 5.2, offset = 0): number {
+  const s = breathe(t, period, amp, 0, offset); // ±amp
+  ctx.translate(0, baseY);
+  ctx.scale(1 + s * 0.5, 1 - s);
+  ctx.translate(0, -baseY);
+  return s * 26; // approximate top-of-roof lift in design units (for shadow)
+}
+
 // ---------------------------------------------------------------------------
-// 1. Cottage — chimney smoke puffs rise & dissipate (seamless), window flickers.
+// 1. Cottage — best-built smoke loop kept; add a slow cozy-breath squash and a
+//    visibly flickering warm window. The hearth pulse also brightens the smoke.
 // ---------------------------------------------------------------------------
 function animCottage(ctx: CanvasRenderingContext2D, t: number): void {
-  drawShadow(ctx, 22, 4);
+  const hearth = flicker(t, 0.3, 0.62, 1); // readable warm hearth, drives window + smoke tint
+  const lift = breathe(t, 5.4, 0.018, 0, 0) * 26;
+  groundShadow(ctx, 0, 22, 22, 4, lift, 0.22);
+
+  ctx.save();
+  applyBreath(ctx, t, 22, 0.018, 5.4);
+
   // Chimney (behind roof)
   const chim = ctx.createLinearGradient(0, -22, 0, -8);
   chim.addColorStop(0, "#b86848");
@@ -84,24 +107,24 @@ function animCottage(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.stroke();
 
   // Rising smoke: each puff travels up over its lifetime, growing & fading.
-  // Stagger phases so a continuous column reads; loop is seamless via modulo.
+  // Phase-staggered so a continuous column reads; loop seamless via loopPhase.
   const baseX = 11, baseY = -24;
-  const period = 2.6; // seconds per puff cycle
+  const period = 2.6;
   const puffs = 4;
-  ctx.fillStyle = "rgba(220,220,224,0.55)";
   for (let i = 0; i < puffs; i++) {
-    const life = ((t / period) + i / puffs) % 1; // 0..1
-    const rise = life * 18;                       // travels up 18px
+    const life = loopPhase(t, period, i / puffs); // 0..1
+    const rise = life * 18;
     const drift = Math.sin(life * Math.PI * 2 + i) * 2.4;
     const r = 2.4 + life * 2.2;
-    // Fade in at birth, fade out near the top — both ends -> 0 for a seamless loop.
-    const fade = Math.sin(life * Math.PI);
-    ctx.globalAlpha = 0.5 * fade;
+    const fade = Math.sin(life * Math.PI); // 0 at both ends → seamless
+    // Smoke tints faintly warm when the hearth flares.
+    const warm = (hearth - 0.62) / 0.38; // 0..1
+    const g = Math.round(220 - warm * 18);
+    ctx.fillStyle = `rgba(${224},${g},${Math.round(g - 4)},${0.5 * fade})`;
     ctx.beginPath();
     ctx.arc(baseX + drift, baseY - rise, r, 0, TAU);
     ctx.fill();
   }
-  ctx.globalAlpha = 1;
 
   // Plaster walls
   const wall = ctx.createLinearGradient(-16, 0, 16, 0);
@@ -146,7 +169,7 @@ function animCottage(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineTo(-2, -18);
   ctx.stroke();
   // Glowing window — warm flicker
-  drawWindow(ctx, -13, 0, 9, 9, flicker(t, 0.3));
+  drawWindow(ctx, -13, 0, 9, 9, hearth);
   // Door
   const door = ctx.createLinearGradient(2, 0, 13, 0);
   door.addColorStop(0, "#8a5424");
@@ -167,13 +190,33 @@ function animCottage(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.beginPath();
   ctx.arc(10, 14, 1.2, 0, TAU);
   ctx.fill();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// 2. Windmill — the four sails rotate continuously about the hub.
+// 2. Windmill — was a constant-velocity rigid spin (strobed). Now the sails
+//    accelerate into gusts and ease back (eased angular velocity), each blade
+//    carries a leading motion-smear ghost, and the tower leans with the gust.
 // ---------------------------------------------------------------------------
 function animWindmill(ctx: CanvasRenderingContext2D, t: number): void {
-  drawShadow(ctx, 18, 4);
+  // Gust profile: a baseline drift plus eased surges, integrated into an angle
+  // so velocity is continuous (no strobe). speed(t) builds and relaxes.
+  const gust = 0.5 + 0.5 * easeInOutSine(pingPong(t, 4.4)); // 0..1 swelling gust
+  // Closed-form integral of (base + amp*sin) keeps the loop seamless & C1.
+  const base = 0.55, amp = 0.5, w = TAU / 4.4;
+  const spinAngle = 0.35 + base * t - (amp / w) * Math.cos(w * t);
+  const lean = (gust - 0.5) * 0.05; // tower sways into the wind
+
+  const lift = breathe(t, 5.6, 0.016, 0, 0.4) * 26;
+  groundShadow(ctx, lean * 14, 22, 18, 4, lift, 0.22);
+
+  ctx.save();
+  // Tower leans about its base, plus the shared breath.
+  ctx.translate(0, 22);
+  ctx.rotate(lean);
+  applyBreath(ctx, t, 0, 0.016, 5.6, 0.4);
+  ctx.translate(0, -22);
+
   // Tapered tower
   const tower = ctx.createLinearGradient(-12, 0, 12, 0);
   tower.addColorStop(0, "#e8dcc0");
@@ -199,7 +242,7 @@ function animWindmill(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.stroke();
   });
   // Glowing window
-  drawWindow(ctx, -4, 6, 8, 9, flicker(t, 1.1));
+  drawWindow(ctx, -4, 6, 8, 9, flicker(t, 1.1, 0.66, 1));
   // Conical cap
   const cap = ctx.createLinearGradient(0, -22, 0, -10);
   cap.addColorStop(0, "#9a4a30");
@@ -214,16 +257,13 @@ function animWindmill(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#3a1808";
   ctx.lineWidth = 1.8;
   ctx.stroke();
+
   // Sails hub
   const hubX = 0, hubY = -8;
-  // Continuous rotation: the static icon's 0.35 base tilt + time-based spin.
-  const spin = 0.35 + t * 0.7;
-  ctx.save();
-  ctx.translate(hubX, hubY);
-  ctx.rotate(spin);
-  for (let i = 0; i < 4; i++) {
-    ctx.save();
-    ctx.rotate((i / 4) * TAU);
+  const smear = 0.12 + gust * 0.22; // smear ghost grows in a strong gust
+
+  const drawBlade = (alpha: number): void => {
+    ctx.globalAlpha = alpha;
     // Spar
     ctx.strokeStyle = "#5a3414";
     ctx.lineWidth = 2;
@@ -251,9 +291,30 @@ function animWindmill(ctx: CanvasRenderingContext2D, t: number): void {
       ctx.moveTo(0.5, y); ctx.lineTo(5, y);
       ctx.stroke();
     });
+  };
+
+  ctx.save();
+  ctx.translate(hubX, hubY);
+  ctx.rotate(spinAngle);
+  for (let i = 0; i < 4; i++) {
+    ctx.save();
+    ctx.rotate((i / 4) * TAU);
+    // Motion-smear: faint trailing ghosts a few degrees behind the blade so a
+    // fast gust reads as blur instead of a strobing hard cross.
+    ctx.save();
+    ctx.rotate(smear);
+    drawBlade(0.18 * gust);
+    ctx.restore();
+    ctx.save();
+    ctx.rotate(smear * 0.5);
+    drawBlade(0.3 * gust);
+    ctx.restore();
+    drawBlade(1);
     ctx.restore();
   }
+  ctx.globalAlpha = 1;
   ctx.restore();
+
   // Hub cap
   ctx.fillStyle = "#3a2810";
   ctx.beginPath();
@@ -262,13 +323,22 @@ function animWindmill(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#1a0e04";
   ctx.lineWidth = 1;
   ctx.stroke();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// 3. Watermill — wheel turns, droplets fall off it, the stream ripples.
+// 3. Watermill — restore the wheel rim (an inner ring), scroll water down the
+//    race, and make paddles "catch" the flow: the wheel eases through each
+//    paddle pitch (cogging) instead of gliding, throwing a splash + droplets at
+//    the bottom of every catch.
 // ---------------------------------------------------------------------------
 function animWatermill(ctx: CanvasRenderingContext2D, t: number): void {
-  drawShadow(ctx, 22, 4);
+  const lift = breathe(t, 5.5, 0.015, 0, 1.1) * 26;
+  groundShadow(ctx, 0, 22, 22, 4, lift, 0.22);
+
+  ctx.save();
+  applyBreath(ctx, t, 22, 0.015, 5.5, 1.1);
+
   // Mill building
   const wall = ctx.createLinearGradient(-14, 0, 14, 0);
   wall.addColorStop(0, "#e4dcc4");
@@ -310,20 +380,38 @@ function animWatermill(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.moveTo(-10, -13); ctx.lineTo(2, -13);
   ctx.stroke();
   // Glowing window
-  drawWindow(ctx, -12, 2, 8, 8, flicker(t, 2.2));
-  // Mill race / water chute (right side)
-  ctx.fillStyle = "#5a82a0";
-  ctx.beginPath();
-  ctx.moveTo(8, 6);
-  ctx.lineTo(20, 6);
-  ctx.lineTo(20, 9);
-  ctx.lineTo(8, 9);
-  ctx.closePath();
-  ctx.fill();
+  drawWindow(ctx, -12, 2, 8, 8, flicker(t, 2.2, 0.66, 1));
 
-  // Water wheel on the side — rotating.
+  // Mill race / water chute (right side) — water scrolls down it.
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(8, 6); ctx.lineTo(20, 6); ctx.lineTo(20, 9); ctx.lineTo(8, 9);
+  ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = "#5a82a0";
+  ctx.fillRect(8, 6, 12, 3);
+  // Flowing streaks travelling toward the wheel.
+  ctx.strokeStyle = "rgba(190,228,240,0.7)";
+  ctx.lineWidth = 0.8;
+  for (let i = 0; i < 3; i++) {
+    const fx = 8 + ((t * 9 + i * 4.6) % 13);
+    ctx.beginPath();
+    ctx.moveTo(fx, 6.6); ctx.lineTo(fx + 2.4, 8.4);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // Water wheel — cogging rotation that catches per paddle pitch.
   const wcx = 16, wcy = 12, wr = 9;
-  const wheelSpin = t * 1.4;
+  const paddles = 8;
+  const pitch = TAU / paddles;
+  const catchPhase = loopPhase(t, 1.4); // one paddle-catch per cycle
+  const idx = Math.floor(catchPhase * paddles);
+  const frac = easeInOutSine(catchPhase * paddles - idx); // eased step within a pitch
+  const wheelSpin = (idx + frac) * pitch;
+  const splash = beat(catchPhase * paddles - idx, 1, 0.5); // splash as a paddle reaches the bottom
+
+  // Rim disc
   ctx.fillStyle = "#7a4a1e";
   ctx.beginPath();
   ctx.arc(wcx, wcy, wr, 0, TAU);
@@ -331,12 +419,18 @@ function animWatermill(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#3a1e08";
   ctx.lineWidth = 2;
   ctx.stroke();
+  // Crisp inner rim ring (restored).
+  ctx.strokeStyle = "#caa05a";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.arc(wcx, wcy, wr - 1.8, 0, TAU);
+  ctx.stroke();
+
   ctx.save();
   ctx.translate(wcx, wcy);
   ctx.rotate(wheelSpin);
-  // Spokes + paddles
-  for (let i = 0; i < 8; i++) {
-    const a = (i / 8) * TAU;
+  for (let i = 0; i < paddles; i++) {
+    const a = (i / paddles) * TAU;
     const ex = Math.cos(a) * wr;
     const ey = Math.sin(a) * wr;
     ctx.strokeStyle = "#3a1e08";
@@ -366,12 +460,24 @@ function animWatermill(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineWidth = 1;
   ctx.stroke();
 
-  // Falling water droplets — shed from the wheel's lifting side, looping.
+  // Splash burst at the wheel's bottom as a paddle catches (anticipation lull,
+  // then a quick eased pop).
+  if (splash > 0.01) {
+    ctx.fillStyle = `rgba(200,234,244,${0.7 * splash})`;
+    for (let i = 0; i < 4; i++) {
+      const sa = -1.9 + i * 0.5;
+      const sr = 2 + splash * 4;
+      ctx.beginPath();
+      ctx.arc(wcx + Math.cos(sa) * (wr + 1) + Math.cos(sa) * sr, wcy + 6 - Math.sin(sa) * sr * 0.6, 1 + splash, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  // Falling droplets shed from the lifting side, looping with the catch.
   ctx.fillStyle = "rgba(150,210,230,0.85)";
-  const dropPeriod = 1.0;
   for (let i = 0; i < 3; i++) {
-    const life = ((t / dropPeriod) + i / 3) % 1;
-    const dx = 22 + i * 1.0 - i * 0.0;
+    const life = loopPhase(t, 1.0, i / 3);
+    const dx = 22 + i;
     const dy = 14 + life * 9;
     const r = 1.4 - life * 0.5;
     ctx.globalAlpha = 0.85 * (1 - life * 0.7);
@@ -393,13 +499,23 @@ function animWatermill(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.quadraticCurveTo(cx, ry - 1.6 + Math.sin(ph) * 0.6, cx + 4, ry + Math.sin(ph) * 0.6);
     ctx.stroke();
   }
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// 4. Church — bell swings, bell opening + door glow, soft sound-wave on swing.
+// 4. Church — the bell now RINGS for real: anticipation wind-up then a ±25°
+//    swing that decays (easeOutBack), the clapper lags (follow-through), and
+//    each strike fires an expanding ring of sound that fades as it grows. The
+//    bell/door glows breathe gently apart instead of merging into a gold column.
+//    Re-framed slightly right+up (off (0.4,-3.0)).
 // ---------------------------------------------------------------------------
 function animChurch(ctx: CanvasRenderingContext2D, t: number): void {
-  drawShadow(ctx, 20, 4);
+  groundShadow(ctx, 0, 22, 20, 4, 0, 0.22);
+
+  ctx.save();
+  ctx.translate(-0.4, -1.4); // re-frame: nudge off dead air (off (0.4,-3.0))
+  applyBreath(ctx, t, 22, 0.014, 5.8);
+
   // Steeple tower (left)
   const tower = ctx.createLinearGradient(-18, 0, -4, 0);
   tower.addColorStop(0, "#e4dcc4");
@@ -453,8 +569,42 @@ function animChurch(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.moveTo(-14, -31); ctx.lineTo(-8, -31);
   ctx.stroke();
 
+  // Bell ring cycle: dwell, anticipation wind-up, then a decaying ±25° swing.
+  const period = 3.4;
+  const ph = loopPhase(t, period);
+  let swing: number;
+  let strikeAt = 0; // 0..1 envelope when the bell passes centre (rings)
+  if (ph < 0.18) {
+    // anticipation: ease slightly back the wrong way
+    swing = -easeInOutSine(ph / 0.18) * 0.12;
+  } else {
+    const u = (ph - 0.18) / 0.82;
+    // decaying oscillation: amplitude 0.44 rad (~25°) damping out
+    const env = (1 - u);
+    swing = Math.sin(u * TAU * 2.4) * 0.44 * env * env;
+    // strike beats each time |swing| is near a peak crossing centre
+    strikeAt = Math.max(0, Math.sin(u * Math.PI)) * Math.max(0, Math.abs(Math.cos(u * TAU * 2.4))) * env;
+  }
+
+  // Expanding sound rings from the bell mouth on the strike.
+  const bmx = -11, bmy = -4;
+  if (strikeAt > 0.02) {
+    for (let i = 0; i < 2; i++) {
+      const rp = loopPhase(t, period, i * 0.12);
+      const rr2 = 4 + rp * 16;
+      const a = strikeAt * (1 - rp) * 0.5;
+      if (a > 0.01) {
+        ctx.strokeStyle = `rgba(240,224,160,${a})`;
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        ctx.arc(bmx, bmy, rr2, -2.5, -0.6);
+        ctx.stroke();
+      }
+    }
+  }
+
   // Bell opening in tower (glowing) — warm flicker.
-  const lit = flicker(t, 0.7);
+  const lit = flicker(t, 0.7, 0.6, 1);
   const bellGlow = ctx.createLinearGradient(0, -6, 0, 2);
   bellGlow.addColorStop(0, "#fff2b8");
   bellGlow.addColorStop(1, "#cc7a20");
@@ -479,40 +629,40 @@ function animChurch(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.closePath();
   ctx.stroke();
 
-  // Swinging bell — pivots about its yoke at the top of the opening (-5).
-  const swing = Math.sin(t * 2.4) * 0.28;
+  // Swinging bell — pivots about its yoke at the top of the opening (-5). Scaled
+  // up from the static nub so the ±25° swing actually reads at preview size.
   ctx.save();
   ctx.translate(-11, -5);
   ctx.rotate(swing);
   ctx.fillStyle = "#caa238";
   ctx.beginPath();
-  ctx.moveTo(-2, 4);
-  ctx.bezierCurveTo(-2, 0, 2, 0, 2, 4);
+  ctx.moveTo(-3, 4.5);
+  ctx.bezierCurveTo(-3.2, -1, 3.2, -1, 3, 4.5);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#8a6818";
-  ctx.lineWidth = 0.8;
+  ctx.lineWidth = 0.9;
   ctx.stroke();
-  // Clapper dot
+  // Bright rim catches the light on the strike.
+  ctx.strokeStyle = `rgba(255,240,180,${0.4 + strikeAt * 0.5})`;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-3, 4.5); ctx.lineTo(3, 4.5);
+  ctx.stroke();
+  // Clapper — lags the bell (follow-through), swings a touch more.
+  const clap = swing * 1.25;
+  ctx.save();
+  ctx.rotate(clap - swing);
   ctx.fillStyle = "#6a4a10";
   ctx.beginPath();
-  ctx.arc(0, 4.2, 0.7, 0, TAU);
+  ctx.arc(0, 4.6, 0.9, 0, TAU);
   ctx.fill();
   ctx.restore();
+  ctx.restore();
 
-  // Sound-wave arc on the swing — fades with the bell at the extremes of motion.
-  const ring = Math.abs(Math.sin(t * 2.4)); // 0 at center, 1 at the swing extremes
-  ctx.strokeStyle = `rgba(240,220,150,${0.35 * ring})`;
-  ctx.lineWidth = 1.2;
-  for (let i = 0; i < 2; i++) {
-    const rad = 6 + i * 3 + ring * 2;
-    ctx.beginPath();
-    ctx.arc(-11, -4, rad, -2.4, -0.7);
-    ctx.stroke();
-  }
-
-  // Arched glowing door — flicker.
-  const dlit = flicker(t, 3.4);
+  // Arched glowing door — its own slower, dimmer flicker so it reads separately
+  // from the bell opening (no merged gold column).
+  const dlit = flicker(t, 3.4, 0.5, 0.82);
   const door = ctx.createLinearGradient(0, 8, 0, 22);
   door.addColorStop(0, "#fff0b0");
   door.addColorStop(1, "#c47820");
@@ -539,13 +689,21 @@ function animChurch(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.beginPath();
   ctx.moveTo(7, 8); ctx.lineTo(7, 22);
   ctx.stroke();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// 5. Castle — flag waves in the wind; tower windows flicker.
+// 5. Castle — the whole keep was frozen with only the flag moving. Now: a grand
+//    slow banner billow (traveling wave, no nervous flutter), the shared breath
+//    on the masonry, and LIVING glows — torch-lit gate flicker + windows that
+//    flare and dim on their own phases.
 // ---------------------------------------------------------------------------
 function animCastle(ctx: CanvasRenderingContext2D, t: number): void {
-  drawShadow(ctx, 22, 4);
+  groundShadow(ctx, 0, 22, 22, 4, 0, 0.22);
+
+  ctx.save();
+  applyBreath(ctx, t, 22, 0.012, 6.0);
+
   const stone = (x0: number, x1: number): CanvasGradient => {
     const g = ctx.createLinearGradient(x0, 0, x1, 0);
     g.addColorStop(0, "#b8bec6");
@@ -599,23 +757,30 @@ function animCastle(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.moveTo(-20, y); ctx.lineTo(20, y);
     ctx.stroke();
   });
-  // Flag on a pole atop the keep — waving banner built from segments.
+
+  // Flag pole + grand billowing banner. Slow traveling wave, amplitude growing
+  // toward the flying end; the pole sways a hair so the cloth has a root.
+  const poleSway = breathe(t, 4.8, 0.04, 0, 0);
+  ctx.save();
+  ctx.translate(0, -12);
+  ctx.rotate(poleSway);
+  ctx.translate(0, 12);
   ctx.strokeStyle = "#5a5e66";
   ctx.lineWidth = 1.4;
   ctx.beginPath();
   ctx.moveTo(0, -12); ctx.lineTo(0, -24);
   ctx.stroke();
-  // Build a wavy triangular pennant: top & bottom edges share a flutter offset
-  // that grows toward the flying end and drifts over time.
+
   const segs = 6;
-  const len = 10;
+  const len = 11;
   const topPts: Array<[number, number]> = [];
   const botPts: Array<[number, number]> = [];
   for (let i = 0; i <= segs; i++) {
     const f = i / segs;
     const x = f * len;
-    const wave = Math.sin(f * 4 - t * 5) * 1.6 * f; // amplitude grows toward tip
-    const half = 3 * (1 - f);                        // taper to a point
+    // Grand slow billow: low frequency, eased amplitude growth to the tip.
+    const wave = Math.sin(f * 3.0 - t * 2.0) * 2.0 * (f * f);
+    const half = 3 * (1 - f); // taper to a point
     topPts.push([x, -24 + wave - half]);
     botPts.push([x, -24 + wave + half]);
   }
@@ -629,7 +794,7 @@ function animCastle(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#7a1408";
   ctx.lineWidth = 1;
   ctx.stroke();
-  // Highlight band along the upper half of the banner.
+  // Highlight band along the upper half (catches the billow crest).
   ctx.fillStyle = "rgba(255,180,160,0.5)";
   ctx.beginPath();
   ctx.moveTo(topPts[0][0], topPts[0][1] + 0.6);
@@ -640,7 +805,22 @@ function animCastle(ctx: CanvasRenderingContext2D, t: number): void {
   }
   ctx.closePath();
   ctx.fill();
-  // Arched gate (dark portcullis)
+  ctx.restore();
+
+  // Arched gate (dark portcullis) with a warm torch glow flickering behind the
+  // bars — a sign of life inside the keep.
+  const torch = flicker(t, 1.7, 0.4, 0.9);
+  const gateGlow = ctx.createRadialGradient(0, 16, 1, 0, 16, 9);
+  gateGlow.addColorStop(0, `rgba(255,180,90,${0.5 * torch})`);
+  gateGlow.addColorStop(1, "rgba(255,180,90,0)");
+  ctx.fillStyle = gateGlow;
+  ctx.beginPath();
+  ctx.moveTo(-5, 22);
+  ctx.lineTo(-5, 8);
+  ctx.arc(0, 8, 5, Math.PI, 0, false);
+  ctx.lineTo(5, 22);
+  ctx.closePath();
+  ctx.fill();
   ctx.fillStyle = "#2a2e34";
   ctx.beginPath();
   ctx.moveTo(-5, 22);
@@ -652,7 +832,7 @@ function animCastle(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#16181c";
   ctx.lineWidth = 1.6;
   ctx.stroke();
-  // Portcullis grid
+  // Portcullis grid (lets the glow leak through between bars).
   ctx.strokeStyle = "rgba(120,124,132,0.7)";
   ctx.lineWidth = 0.8;
   [-2.5, 0, 2.5].forEach((x) => {
@@ -665,11 +845,21 @@ function animCastle(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.moveTo(-5, y); ctx.lineTo(5, y);
     ctx.stroke();
   });
-  // Glowing tower windows — flicker, each slightly out of phase.
+
+  // Glowing tower windows — each flares and dims on its own phase (occupied).
   const wins: Array<[number, number, number]> = [[-14.5, 8, 0.5], [13.5, 8, 2.0]];
-  wins.forEach(([x, y, ph]) => {
+  wins.forEach(([x, y, phw]) => {
+    const wlit = flicker(t, phw, 0.45, 1);
+    // Soft bloom around the pane on a flare.
+    const bloom = ctx.createRadialGradient(x, y + 2, 0.5, x, y + 2, 5);
+    bloom.addColorStop(0, `rgba(255,210,120,${0.4 * wlit})`);
+    bloom.addColorStop(1, "rgba(255,210,120,0)");
+    ctx.fillStyle = bloom;
+    ctx.beginPath();
+    ctx.arc(x, y + 2, 5, 0, TAU);
+    ctx.fill();
     ctx.save();
-    ctx.globalAlpha = flicker(t, ph);
+    ctx.globalAlpha = wlit;
     ctx.fillStyle = "#ffd368";
     rr(ctx, x - 1.6, y, 3.2, 4.5, 1);
     ctx.fill();
@@ -679,19 +869,31 @@ function animCastle(ctx: CanvasRenderingContext2D, t: number): void {
     rr(ctx, x - 1.6, y, 3.2, 4.5, 1);
     ctx.stroke();
   });
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// 6. Tent — pennant flutters, striped awning ripples, interior glow pulses.
+// 6. Tent — was only the hem rippling (apex pinned) + a nervous pennant. Now a
+//    full-canopy traveling wave that EASES to zero at the apex (the cloth is
+//    fixed at the peak), the interior glow breathes, and the pennant flies on a
+//    slow grand billow instead of buzzing.
 // ---------------------------------------------------------------------------
 function animTent(ctx: CanvasRenderingContext2D, t: number): void {
-  drawShadow(ctx, 22, 4);
+  groundShadow(ctx, 0, 22, 22, 4, 0, 0.22);
+
+  ctx.save();
+
   const apexX = 0, apexY = -22;
   const leftX = -20, rightX = 20, baseY = 18;
   const stripeColors = ["#e8e2d4", "#cc4a3a"];
   const segs = 8;
-  // Gentle breeze ripple along the canopy base — offsets the base points.
-  const ripple = (x: number): number => Math.sin(x * 0.32 - t * 2.6) * 1.1;
+  // Canopy traveling wave: sideways sway whose amplitude is 0 at the apex and
+  // grows toward the base — the whole sheet ripples, anchored at the peak.
+  const canopyX = (x: number, y: number): number => {
+    const v = (y - apexY) / (baseY - apexY); // 0 at apex → 1 at base
+    return x + Math.sin(x * 0.22 - t * 2.2) * 2.0 * easeInOutSine(v);
+  };
+  const ripple = (x: number): number => Math.sin(x * 0.32 - t * 2.6) * 1.1; // base hem dip
   for (let i = 0; i < segs; i++) {
     const f0 = i / segs;
     const f1 = (i + 1) / segs;
@@ -700,30 +902,30 @@ function animTent(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.fillStyle = stripeColors[i % 2];
     ctx.beginPath();
     ctx.moveTo(apexX, apexY);
-    ctx.lineTo(bx0, baseY + ripple(bx0));
-    ctx.lineTo(bx1, baseY + ripple(bx1));
+    ctx.lineTo(canopyX(bx0, baseY), baseY + ripple(bx0));
+    ctx.lineTo(canopyX(bx1, baseY), baseY + ripple(bx1));
     ctx.closePath();
     ctx.fill();
   }
-  // Canopy outline (follows the ripple at the base corners)
+  // Canopy outline (follows the wave at the base corners)
   ctx.strokeStyle = "#7a2418";
   ctx.lineWidth = 2;
   ctx.beginPath();
   ctx.moveTo(apexX, apexY);
-  ctx.lineTo(leftX, baseY + ripple(leftX));
-  ctx.lineTo(rightX, baseY + ripple(rightX));
+  ctx.lineTo(canopyX(leftX, baseY), baseY + ripple(leftX));
+  ctx.lineTo(canopyX(rightX, baseY), baseY + ripple(rightX));
   ctx.closePath();
   ctx.stroke();
-  // Scalloped lower trim — rippling.
+  // Scalloped lower trim — rides the same wave.
   ctx.fillStyle = "#cc4a3a";
   ctx.beginPath();
-  ctx.moveTo(leftX, baseY + ripple(leftX));
+  ctx.moveTo(canopyX(leftX, baseY), baseY + ripple(leftX));
   for (let x = leftX; x < rightX; x += 5) {
-    ctx.quadraticCurveTo(x + 2.5, baseY + 4 + ripple(x + 2.5), x + 5, baseY + ripple(x + 5));
+    ctx.quadraticCurveTo(canopyX(x + 2.5, baseY), baseY + 4 + ripple(x + 2.5), canopyX(x + 5, baseY), baseY + ripple(x + 5));
   }
-  ctx.lineTo(rightX, baseY + ripple(rightX));
-  ctx.lineTo(rightX, baseY - 2);
-  ctx.lineTo(leftX, baseY - 2);
+  ctx.lineTo(canopyX(rightX, baseY), baseY + ripple(rightX));
+  ctx.lineTo(canopyX(rightX, baseY), baseY - 2);
+  ctx.lineTo(canopyX(leftX, baseY), baseY - 2);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#7a2418";
@@ -737,8 +939,8 @@ function animTent(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineTo(-8, 18);
   ctx.closePath();
   ctx.fill();
-  // Warm glow inside the opening — pulses softly.
-  const pulse = 0.5 + (flicker(t, 1.5) - 0.91) / 0.09 * 0.3; // ~0.5..0.8
+  // Warm glow inside the opening — breathes softly (lantern being tended).
+  const pulse = flicker(t, 1.5, 0.45, 0.8);
   const glow = ctx.createRadialGradient(0, 8, 1, 0, 8, 10);
   glow.addColorStop(0, `rgba(255,205,100,${pulse})`);
   glow.addColorStop(1, "rgba(255,205,100,0)");
@@ -773,7 +975,7 @@ function animTent(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.beginPath();
   ctx.moveTo(0, -22); ctx.lineTo(0, -30);
   ctx.stroke();
-  // Fluttering pennant — wavy triangular flag.
+  // Fluttering pennant — slow grand billow (low frequency, eased amplitude).
   const plen = 8;
   const pseg = 5;
   const ptop: Array<[number, number]> = [];
@@ -781,7 +983,7 @@ function animTent(ctx: CanvasRenderingContext2D, t: number): void {
   for (let i = 0; i <= pseg; i++) {
     const f = i / pseg;
     const x = f * plen;
-    const wave = Math.sin(f * 4.5 - t * 6) * 1.4 * f;
+    const wave = Math.sin(f * 3.2 - t * 2.6) * 1.6 * (f * f);
     const half = 2 * (1 - f);
     ptop.push([x, -30 + wave - half]);
     pbot.push([x, -30 + wave + half]);
@@ -801,13 +1003,27 @@ function animTent(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.beginPath();
   ctx.arc(0, -22, 2, 0, TAU);
   ctx.fill();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// 7. Market stall — awning scallops ripple; a sparkle drifts over the goods.
+// 7. Market stall — was bottom-heavy/undersized with a teleporting sparkle.
+//    Re-centred up & scaled up a touch, the sparkle drifts on a clean fading
+//    loop (4-point star, no seam pop), and the goods settle: bread/apples bob
+//    with a tiny eased plop as if just set down.
 // ---------------------------------------------------------------------------
 function animMarketStall(ctx: CanvasRenderingContext2D, t: number): void {
-  drawShadow(ctx, 22, 4);
+  groundShadow(ctx, 0, 22, 22, 4, 0, 0.22);
+
+  ctx.save();
+  // Re-frame: was sitting low & small (off_y +6.1). Lift and upscale slightly
+  // about the ground line so it fills the box.
+  ctx.translate(0, -4);
+  ctx.translate(0, 22);
+  ctx.scale(1.08, 1.08);
+  ctx.translate(0, -22);
+  applyBreath(ctx, t, 22, 0.012, 5.6);
+
   // Back posts
   ctx.strokeStyle = "#5a3414";
   ctx.lineWidth = 2.4;
@@ -839,52 +1055,42 @@ function animMarketStall(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#3a1e08";
   ctx.lineWidth = 1;
   ctx.stroke();
-  // Apples in a crate
+  // Apples in a crate — a gentle staggered settle bob.
   ["#d23a2a", "#e85a3a", "#c82820"].forEach((c, i) => {
+    const apBob = breathe(t, 2.4, 0.4, 0, i * 0.22);
     ctx.fillStyle = c;
     ctx.beginPath();
-    ctx.arc(-12.5 + i * 3, 1, 2, 0, TAU);
+    ctx.arc(-12.5 + i * 3, 1 + apBob, 2, 0, TAU);
     ctx.fill();
   });
-  // Bread loaves
-  ctx.fillStyle = "#d8a860";
-  [[6, 4], [11, 4]].forEach(([x, y]) => {
+  // Bread loaves — a tiny eased plop as if just set down, on a long period.
+  ([[6, 4], [11, 4]] as Array<[number, number]>).forEach(([x, y], i) => {
+    const plop = beat(t, 4.2, 0.22, i * 0.18);
+    const by = y - plop * 1.2;
+    const sq = 1 + plop * 0.12;
+    ctx.fillStyle = "#d8a860";
     ctx.beginPath();
-    ctx.ellipse(x, y, 3.4, 2, 0, 0, TAU);
+    ctx.ellipse(x, by, 3.4 * sq, 2 / sq, 0, 0, TAU);
     ctx.fill();
     ctx.strokeStyle = "#8a5a20";
     ctx.lineWidth = 0.8;
     ctx.stroke();
   });
 
-  // Drifting sparkle over the goods — a tiny four-point star that travels across
-  // the counter, twinkling (size keyed to a faster sine).
-  const sx = -10 + ((t * 5) % 22);
-  const sTw = 0.5 + 0.5 * Math.sin(t * 9);
-  const sSize = 1.6 + sTw * 1.4;
-  ctx.save();
-  ctx.globalAlpha = 0.55 + sTw * 0.45;
-  ctx.fillStyle = "#fff6d0";
-  ctx.translate(sx, 2.4);
-  ctx.beginPath();
-  ctx.moveTo(0, -sSize);
-  ctx.lineTo(sSize * 0.28, -sSize * 0.28);
-  ctx.lineTo(sSize, 0);
-  ctx.lineTo(sSize * 0.28, sSize * 0.28);
-  ctx.lineTo(0, sSize);
-  ctx.lineTo(-sSize * 0.28, sSize * 0.28);
-  ctx.lineTo(-sSize, 0);
-  ctx.lineTo(-sSize * 0.28, -sSize * 0.28);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
+  // Drifting sparkle over the goods — clean 4-point star, fades in/out at the
+  // ends of its run so there is no teleport at the seam.
+  const sp = loopPhase(t, 4.6);
+  const sx = -10 + sp * 22;
+  const sFade = Math.sin(sp * Math.PI); // 0 at both ends
+  const sTw = 0.5 + 0.5 * Math.sin(t * 7);
+  sparkle(ctx, sx, 2.4, 1.4 + sTw * 1.0, 0.85 * sFade, "255,246,208");
 
   // Striped awning — scalloped lower edge ripples in the breeze.
   const stripes = ["#e8e2d4", "#d23a2a"];
   const segW = 6.4;
   for (let i = 0; i < 6; i++) {
     const x0 = -19 + i * segW;
-    const scallop = 1 + Math.sin(t * 3 + i * 0.9) * 1.4; // dip depth varies per segment
+    const scallop = 1 + Math.sin(t * 3 + i * 0.9) * 1.4;
     ctx.fillStyle = stripes[i % 2];
     ctx.beginPath();
     ctx.moveTo(x0, -10);
@@ -907,14 +1113,21 @@ function animMarketStall(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.beginPath();
   ctx.moveTo(-19, -10); ctx.lineTo(19, -10);
   ctx.stroke();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// 8. Barn — hayloft window glow flickers warmly; a slow weathervane turns.
-//    Restrained: just the glow + a tiny vane spin.
+// 8. Barn — was effectively dead (sub-pixel vane). Now it lives: a breathing
+//    loft glow, hay-dust motes drifting up in the warm light, a real readable
+//    weathervane that swings to shifting wind, and the big doors creak (a slow
+//    eased lean of the right leaf).
 // ---------------------------------------------------------------------------
 function animBarn(ctx: CanvasRenderingContext2D, t: number): void {
-  drawShadow(ctx, 22, 4);
+  groundShadow(ctx, 0, 22, 22, 4, 0, 0.22);
+
+  ctx.save();
+  applyBreath(ctx, t, 22, 0.013, 5.6, 0.9);
+
   // Red walls
   const wall = ctx.createLinearGradient(-18, 0, 18, 0);
   wall.addColorStop(0, "#d2503a");
@@ -950,36 +1163,51 @@ function animBarn(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.moveTo(-12, -13); ctx.lineTo(12, -13);
   ctx.stroke();
 
-  // Tiny weathervane atop the peak — slow, restrained turn.
-  const vAng = Math.sin(t * 0.5) * 0.5; // gentle back-and-forth, like shifting wind
+  // Weathervane atop the peak — a readable arrow that swings to the wind with
+  // overshoot then settles (shifting gusts), on a small mast.
+  const wind = pingPong(t, 5.2) * 2 - 1; // -1..1 shifting wind
+  const vAng = wind * 0.6 + Math.sin(t * 1.6) * 0.05; // bearing + a little jitter
   ctx.save();
   ctx.translate(0, -22);
   ctx.strokeStyle = "#3a0c04";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, 0); ctx.lineTo(0, -4);
-  ctx.stroke();
-  ctx.save();
-  ctx.translate(0, -4);
-  ctx.rotate(vAng);
-  ctx.strokeStyle = "#2a0a04";
   ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(-3, 0); ctx.lineTo(3, 0);
+  ctx.moveTo(0, 0); ctx.lineTo(0, -5);
   ctx.stroke();
-  // little arrow head
+  // Pivot bead
   ctx.fillStyle = "#2a0a04";
   ctx.beginPath();
-  ctx.moveTo(3, 0);
-  ctx.lineTo(1.4, -1.2);
-  ctx.lineTo(1.4, 1.2);
+  ctx.arc(0, -5, 1, 0, TAU);
+  ctx.fill();
+  ctx.save();
+  ctx.translate(0, -5);
+  ctx.rotate(vAng);
+  // Arrow shaft
+  ctx.strokeStyle = "#2a0a04";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-4, 0); ctx.lineTo(4, 0);
+  ctx.stroke();
+  // Arrow head
+  ctx.fillStyle = "#2a0a04";
+  ctx.beginPath();
+  ctx.moveTo(5, 0);
+  ctx.lineTo(2.6, -1.6);
+  ctx.lineTo(2.6, 1.6);
+  ctx.closePath();
+  ctx.fill();
+  // Tail fletching
+  ctx.beginPath();
+  ctx.moveTo(-4, 0);
+  ctx.lineTo(-2.2, -1.4);
+  ctx.lineTo(-2.2, 1.4);
   ctx.closePath();
   ctx.fill();
   ctx.restore();
   ctx.restore();
 
-  // Hayloft window (glowing, up under peak) — warm flicker.
-  const lit = flicker(t, 0.9);
+  // Hayloft window (glowing, up under peak) — breathing warm flicker.
+  const lit = flicker(t, 0.9, 0.6, 1);
   const loft = ctx.createRadialGradient(0, -9, 1, 0, -9, 5);
   loft.addColorStop(0, "#fff2b8");
   loft.addColorStop(1, "#e89a30");
@@ -1002,7 +1230,25 @@ function animBarn(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.closePath();
   ctx.stroke();
 
-  // Big double doors
+  // Hay-dust motes drifting up through the loft light — tiny, slow, fading.
+  for (let i = 0; i < 5; i++) {
+    const life = loopPhase(t, 4.0, i / 5);
+    const mx = -3 + i * 1.5 + Math.sin(life * Math.PI * 2 + i) * 1.2;
+    const my = -6 - life * 7;
+    const ma = Math.sin(life * Math.PI) * 0.5 * lit;
+    if (ma > 0.01) {
+      ctx.fillStyle = `rgba(255,236,170,${ma})`;
+      ctx.beginPath();
+      ctx.arc(mx, my, 0.6, 0, TAU);
+      ctx.fill();
+    }
+  }
+
+  // Big double doors — the right leaf creaks: a slow eased lean about its inner
+  // edge (hinge at center seam), opening a sliver then easing shut.
+  const creak = (pingPong(t, 7.0) - 0.5) * 0.06; // small angle
+  // Door base (left leaf static, right leaf hinged) — drawn as one panel but the
+  // right half shears slightly via a clipped transform for the creak read.
   const door = ctx.createLinearGradient(-11, 0, 11, 0);
   door.addColorStop(0, "#e6cda0");
   door.addColorStop(0.5, "#cbb280");
@@ -1013,23 +1259,48 @@ function animBarn(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#5a3a18";
   ctx.lineWidth = 1.8;
   ctx.stroke();
-  // Door split + X-trim
+  // Right leaf creak: a thin dark gap opens at the seam and the right edge lifts.
+  ctx.save();
+  ctx.beginPath();
+  rr(ctx, 0, 4, 11, 18, 1.5);
+  ctx.clip();
+  ctx.translate(0, 13);
+  ctx.rotate(creak);
+  ctx.translate(0, -13);
+  ctx.fillStyle = door;
+  rr(ctx, 0, 4, 11, 18, 1.5);
+  ctx.fill();
+  ctx.restore();
+  // Dark seam shadow where the leaf parts.
+  ctx.strokeStyle = `rgba(40,24,8,${0.5 + Math.abs(creak) * 6})`;
+  ctx.lineWidth = 1 + Math.abs(creak) * 14;
+  ctx.beginPath();
+  ctx.moveTo(0, 4); ctx.lineTo(0, 22);
+  ctx.stroke();
+  // X-trim
   ctx.strokeStyle = "#6a4420";
   ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.moveTo(0, 4); ctx.lineTo(0, 22);
   ctx.moveTo(-10, 5); ctx.lineTo(-1, 14);
   ctx.moveTo(-1, 5); ctx.lineTo(-10, 14);
   ctx.moveTo(1, 5); ctx.lineTo(10, 14);
   ctx.moveTo(10, 5); ctx.lineTo(1, 14);
   ctx.stroke();
+  ctx.restore();
 }
 
 // ---------------------------------------------------------------------------
-// 9. Tower — arched window glow flickers/pulses warmly (candle inside). Subtle.
+// 9. Tower — deadest icon. Now a real candle: a flame that flickers (height +
+//    brightness) and LEANS in a draught, a breathing halo, and a readable
+//    finial weathervane up top so the silhouette has motion against the sky.
 // ---------------------------------------------------------------------------
 function animTower(ctx: CanvasRenderingContext2D, t: number): void {
-  drawShadow(ctx, 14, 4);
+  groundShadow(ctx, 0, 22, 14, 4, 0, 0.22);
+
+  ctx.save();
+  ctx.translate(0, -1.4); // re-frame: trim a little dead air below (off_y -2.8)
+  applyBreath(ctx, t, 22, 0.012, 6.0);
+
   // Stone column
   const stone = ctx.createLinearGradient(-9, 0, 9, 0);
   stone.addColorStop(0, "#b6bcc2");
@@ -1068,14 +1339,15 @@ function animTower(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#16223e";
   ctx.lineWidth = 1.8;
   ctx.stroke();
-  // Roof highlight + tiles
+  // Roof highlight
   ctx.strokeStyle = "rgba(180,200,255,0.45)";
   ctx.lineWidth = 1.2;
   ctx.beginPath();
   ctx.moveTo(-8, -12);
   ctx.lineTo(-1, -24);
   ctx.stroke();
-  // Finial ball
+
+  // Finial ball + a small readable weathervane arrow swinging in the wind.
   ctx.fillStyle = "#f0d060";
   ctx.beginPath();
   ctx.arc(0, -29, 2, 0, TAU);
@@ -1083,23 +1355,50 @@ function animTower(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.strokeStyle = "#8a6818";
   ctx.lineWidth = 0.8;
   ctx.stroke();
+  const vane = (pingPong(t, 6.0) * 2 - 1) * 0.7 + Math.sin(t * 1.4) * 0.06;
+  ctx.save();
+  ctx.translate(0, -31);
+  ctx.rotate(vane);
+  ctx.strokeStyle = "#d8b840";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(-3.4, 0); ctx.lineTo(3.4, 0);
+  ctx.stroke();
+  ctx.fillStyle = "#d8b840";
+  ctx.beginPath();
+  ctx.moveTo(4.4, 0);
+  ctx.lineTo(2.2, -1.4);
+  ctx.lineTo(2.2, 1.4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(-3.4, 0);
+  ctx.lineTo(-1.8, -1.2);
+  ctx.lineTo(-1.8, 1.2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
 
-  // Small arched glowing window — candle inside, gentle warm pulse + soft halo.
-  const lit = flicker(t, 0.2);
+  // Candle behaviour: flicker drives flame height + brightness; a slow draught
+  // leans the flame. Halo breathes with the flame.
+  const flame = flicker(t, 0.2, 0.55, 1);
+  const draught = Math.sin(t * 2.3) * 0.18 + Math.sin(t * 5.1) * 0.08; // flame lean (rad)
+
   // Soft warm halo that breathes with the candle.
-  const halo = ctx.createRadialGradient(0, 3, 1, 0, 3, 9);
-  halo.addColorStop(0, `rgba(255,210,120,${0.28 * lit})`);
+  const halo = ctx.createRadialGradient(0, 3, 1, 0, 3, 9 + flame * 1.5);
+  halo.addColorStop(0, `rgba(255,210,120,${0.3 * flame})`);
   halo.addColorStop(1, "rgba(255,210,120,0)");
   ctx.fillStyle = halo;
   ctx.beginPath();
-  ctx.arc(0, 3, 9, 0, TAU);
+  ctx.arc(0, 3, 9 + flame * 1.5, 0, TAU);
   ctx.fill();
 
+  // Arched window glow (warm), behind the flame.
   const glow = ctx.createLinearGradient(0, -2, 0, 9);
   glow.addColorStop(0, "#fff2b8");
   glow.addColorStop(1, "#e89a30");
   ctx.save();
-  ctx.globalAlpha = lit;
+  ctx.globalAlpha = lerp(0.7, 1, flame);
   ctx.fillStyle = glow;
   ctx.beginPath();
   ctx.moveTo(-4, 9);
@@ -1109,6 +1408,47 @@ function animTower(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.closePath();
   ctx.fill();
   ctx.restore();
+
+  // The candle itself inside the arch — a little stick + a leaning, flickering
+  // teardrop flame (clipped to the window so it never spills onto the stone).
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(-4, 9);
+  ctx.lineTo(-4, 0);
+  ctx.arc(0, 0, 4, Math.PI, 0, false);
+  ctx.lineTo(4, 9);
+  ctx.closePath();
+  ctx.clip();
+  // Candle stick
+  ctx.fillStyle = "#f2ead2";
+  rr(ctx, -1.1, 4, 2.2, 5, 0.6);
+  ctx.fill();
+  // Flame — pivots at the wick, leans with the draught, height tracks flicker.
+  const wickY = 4;
+  const fh = 3.2 + flame * 1.6;
+  ctx.save();
+  ctx.translate(0, wickY);
+  ctx.rotate(draught);
+  const fg = ctx.createLinearGradient(0, 0, 0, -fh);
+  fg.addColorStop(0, "#ff9a30");
+  fg.addColorStop(0.5, "#ffd060");
+  fg.addColorStop(1, "#fff6c8");
+  ctx.fillStyle = fg;
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.bezierCurveTo(1.3, -fh * 0.4, 0.8, -fh * 0.8, 0, -fh);
+  ctx.bezierCurveTo(-0.8, -fh * 0.8, -1.3, -fh * 0.4, 0, 0);
+  ctx.closePath();
+  ctx.fill();
+  // Bright core
+  ctx.fillStyle = `rgba(255,250,210,${0.6 + flame * 0.4})`;
+  ctx.beginPath();
+  ctx.ellipse(0, -fh * 0.45, 0.5, fh * 0.3, 0, 0, TAU);
+  ctx.fill();
+  ctx.restore();
+  ctx.restore();
+
+  // Window frame (over the glow).
   ctx.strokeStyle = "#3a3e44";
   ctx.lineWidth = 1.4;
   ctx.beginPath();
@@ -1118,6 +1458,7 @@ function animTower(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineTo(4, 9);
   ctx.closePath();
   ctx.stroke();
+  ctx.restore();
 }
 
 export const ANIMATIONS: Record<string, (ctx: CanvasRenderingContext2D, t: number) => void> = {
