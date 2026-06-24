@@ -4,21 +4,36 @@
 // seasons read at a glance and the idle is a real, fun ACTION rather than a
 // subtle breath.
 //
-// PALETTE LOCK: it is ALWAYS the same big, heavy, coarse greyish-BROWN hog — a
-// bulky barrel body, a broad forward-jutting snout, small upright ears, stocky
-// legs, a couple of small lower tusks, and a bristly hairy back-crest. Seasons
-// change only its coat VOLUME (sleeker bristles in spring → a fluffier shaggy
-// winter coat), the pad colour, the light wash, and BOLD dressing — snow on the
-// back, a little winter SCARF, a breath-fog puff, a blossom, a fallen leaf,
-// frost, gloss. The animal's identity colours never change; the silhouette is
-// identical for every `P` (only coat volume scales the bristles).
+// DISTINCT from its neighbours (pig / boar / warthog): the hog is the HEAVY,
+// HUMP-BACKED domestic brute. Where the pig is a smooth round PINK ball and the
+// warthog is a lean grey body with a spiky tusked mohawk, the hog has:
+//   • a HUMPED RAZORBACK silhouette — a thick muscular shoulder hump rising at
+//     the front and a heavy low rump, NOT a plain symmetric ellipse;
+//   • a COARSE DARK-BRISTLE MANTLE blanketing the whole upper back (a dense
+//     shaggy ridge of coarse hair + a dark coat mantle), NOT bare pink skin and
+//     NOT a thin spiky mohawk;
+//   • a BLUNT, heavy, stubby SNOUT (a short broad muzzle), NOT the pig's flat
+//     little disc nor the warthog's long tusked muzzle.
+//
+// PALETTE LOCK: it is ALWAYS the same big, heavy, coarse greyish-BROWN hog —
+// the humped barrel body, the blunt broad snout, small upright ears, stocky
+// legs, a couple of small lower tusks, and the coarse bristly back-mantle.
+// Seasons change only its coat VOLUME (sleeker bristles in spring → a fluffier
+// shaggy winter coat), the pad colour, the light wash, and BOLD dressing — snow
+// on the back, a little winter SCARF, a breath-fog puff, a blossom, a fallen
+// leaf, frost, gloss. The animal's identity colours never change; the
+// silhouette is identical for every `P` (only coat volume scales the bristles).
 //
 // IDLE (two-tier occasional action, carried through a `pose` object):
 //   • COMMON ~6s (win ~0.9s): a CHEW / snort — head bobs ~8-12px as it chews and
 //     snorts, with an ear-flick, a tail wag, and a body squash.
-//   • RARE  ~18s (win ~1.2s, phase +3s): a heavy STAMP / head-toss — the hog
-//     tosses its head and stamps with a weighty bounce ~12-16px (anticipation →
-//     toss/stamp → settle). It may exit the design box at the apex.
+//   • RARE  ~18s (win ~1.4s, phase +3s): its OWN gesture — a hefty full-body
+//     SHAKE/shudder. Unlike the pig's vertical wallow-HOP or the warthog's
+//     head-TOSS/charge, the hog plants its trotters and shimmies its whole bulk
+//     side-to-side: the heavy body rocks and wobbles horizontally, the loose
+//     coat/jowls flop, the ears flap, and the tail flags — a brief settle-in,
+//     a rapid rattling shake that decays, then a final wobble to rest. Stays in
+//     the box (it is a sideways shudder, not a jump).
 // Both gestures return to REST with zero value AND zero velocity at the window
 // edges (raised-cosine windows), so `anim(…, t)` is seamless and `anim(…, 0)`
 // (and `draw`) sit exactly at rest.
@@ -78,45 +93,45 @@ function bump(q: number): number {
   return 0.5 - 0.5 * Math.cos(q * Math.PI * 2);
 }
 
-// Anticipation→action shape for the STAMP/head-toss: a brief crouch (negative)
-// before the heavy rise, then a clean weighty arc up and settle. q∈[0,1].
-// Returns a LIFT factor in roughly −0.22..+1 (negative = squash-down crouch,
-// positive = airborne). Heavier/weightier feel than the sheep hop.
-function stampShape(q: number): number {
+// Rattling-SHAKE waveform for the rare full-body shudder. q∈[0,1]. Returns a
+// SIGNED side-to-side factor in roughly −1..+1: a fast oscillation whose
+// amplitude grows in, holds, then decays — all under a raised-cosine envelope
+// so the value AND its slope are exactly 0 at q=0 and q=1 (seamless). The hog
+// shimmies its bulk horizontally rather than jumping or tossing its head.
+function shakeWave(q: number): number {
   if (q <= 0 || q >= 1) return 0;
-  const antiEnd = 0.26; // first slice = heavy crouch/anticipation
-  if (q < antiEnd) {
-    // dip down (anticipation), zero slope at q=0
-    const a = q / antiEnd;
-    return -0.22 * (0.5 - 0.5 * Math.cos(a * Math.PI));
-  }
-  // airborne arc, zero at the seam to the crouch and at q=1
-  const a = (q - antiEnd) / (1 - antiEnd);
-  return Math.sin(a * Math.PI);
+  const env = 0.5 - 0.5 * Math.cos(q * Math.PI * 2); // 0→1→0, zero slope at ends
+  // ~5 full sideways wobbles across the window, weighted toward the middle
+  const osc = Math.sin(q * Math.PI * 10);
+  return env * osc;
 }
 
 // ── The idle POSE (carries all action state into paint) ──────────────────────
 
 interface Pose {
-  lift: number; // whole-body vertical lift (design px, + = up). Stamp uses this.
+  sway: number; // whole-body horizontal shift (design px, signed) for the SHAKE
+  tilt: number; // whole-body roll/lean (radians, signed) for the SHAKE
   squashX: number; // body horizontal scale multiplier (squash/stretch)
   squashY: number; // body vertical scale multiplier
   headBob: number; // extra head dip (design px, + = down) for the chew
-  headToss: number; // head TOSS (design px, − = up) for the stamp gesture
+  headSway: number; // head horizontal wobble (design px, signed) for the SHAKE
   chew: number; // 0..1 jaw/snort open amount for the chew
   earFlick: number; // 0..1 near-ear flick amount
+  earFlap: number; // signed ear flap (added rotation) during the SHAKE
   tail: number; // signed tail wag (design px sideways)
   fogPuff: number; // 0..1 extra breath-fog reach (winter snort exhale)
 }
 
 const REST: Pose = {
-  lift: 0,
+  sway: 0,
+  tilt: 0,
   squashX: 1,
   squashY: 1,
   headBob: 0,
-  headToss: 0,
+  headSway: 0,
   chew: 0,
   earFlick: 0,
+  earFlap: 0,
   tail: 0,
   fogPuff: 0,
 };
@@ -127,13 +142,15 @@ const REST: Pose = {
 function poseFromClock(tIn: number): Pose {
   const t = safeNum(tIn, 0);
   const pose: Pose = {
-    lift: 0,
+    sway: 0,
+    tilt: 0,
     squashX: 1,
     squashY: 1,
     headBob: 0,
-    headToss: 0,
+    headSway: 0,
     chew: 0,
     earFlick: 0,
+    earFlap: 0,
     tail: 0,
     fogPuff: 0,
   };
@@ -156,28 +173,29 @@ function poseFromClock(tIn: number): Pose {
     pose.squashX = 1 + env * 0.04;
   }
 
-  // RARE ~18s: STAMP / head-toss (win ~1.2s, phase +3s). The hog tosses its head
-  // and stamps with a weighty bounce ~12-16px. May lift OUTSIDE the design box.
-  const hq = actionQ(t, 18, 1.2, 3.0);
+  // RARE ~18s: hefty full-body SHAKE / shudder (win ~1.4s, phase +3s). Its OWN
+  // gesture — the hog plants its trotters and shimmies its bulk SIDE-TO-SIDE
+  // (not a jump like the pig, not a head-toss like the warthog): the body rocks
+  // and wobbles horizontally, the loose coat/jowls flop, the ears flap, and the
+  // tail flags. Stays in the box. Returns to REST with zero value + velocity.
+  const hq = actionQ(t, 18, 1.4, 3.0);
   if (hq >= 0) {
-    const s = stampShape(hq); // −0.22..+1 (heavy crouch then arc)
-    pose.lift = Math.max(0, s) * 15; // up to ~15px airborne (weighty bounce)
-    if (s < 0) {
-      // anticipation crouch: squash down/wide (heavier than the sheep)
-      const c = -s; // 0..0.22
-      pose.squashY = 1 - c * 1.0;
-      pose.squashX = 1 + c * 0.8;
-    } else {
-      // airborne: stretch a touch tall/narrow at the apex
-      pose.squashY = 1 + s * 0.12;
-      pose.squashX = 1 - s * 0.08;
-    }
-    // the head TOSSES up during the rise (− = up), settling at the edges
-    pose.headToss = Math.max(0, s) * 7.0;
-    // a heavy tail flag + ear flick during the stamp
-    pose.tail += Math.sin(hq * Math.PI) * 1.6;
-    pose.earFlick = Math.max(pose.earFlick, bump(hq) * 0.8);
-    pose.fogPuff = Math.max(pose.fogPuff, bump(hq)); // a hard snort at the toss
+    const w = shakeWave(hq); // signed −1..+1 rattling wobble (enveloped)
+    const env = bump(hq); // 0→1→0, gates the slower bits to the edges
+    // the whole heavy body shifts and rolls with the shake
+    pose.sway = w * 4.2; // up to ~4px sideways shimmy of the bulk
+    pose.tilt = w * 0.07; // a small roll/lean with the wobble
+    // jiggle squash from the rapid shudder (a touch wider as it shakes)
+    pose.squashX = 1 + Math.abs(w) * 0.06;
+    pose.squashY = 1 - Math.abs(w) * 0.05;
+    // the head wobbles the opposite way (counter-shake), reads as a real shake
+    pose.headSway = -w * 5.0;
+    pose.headBob += env * Math.abs(w) * 1.6; // a little down-bob with the effort
+    // the loose ears flap and the tail flags hard through the shake
+    pose.earFlap = w * 0.55;
+    pose.earFlick = Math.max(pose.earFlick, env * 0.5);
+    pose.tail += w * 2.4;
+    pose.fogPuff = Math.max(pose.fogPuff, env * 0.7); // a snorty puff with effort
   }
 
   return pose;
@@ -473,51 +491,95 @@ function paintLeg(ctx: CanvasRenderingContext2D, p: P, x: number, topY: number, 
   ctx.lineCap = "butt";
 }
 
-// the heavy barrel body — the SAME silhouette every season; only fills + the
-// bristle crest change with coat volume.
-function bodyPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number, ry: number): void {
+// the heavy HUMP-BACKED razorback body — the SAME silhouette every season; only
+// fills + the bristle mantle change with coat volume. NOT a plain ellipse (that
+// read too close to the pig): a thick muscular shoulder HUMP rises over the
+// front shoulders (lower-left, toward the head) and the back slopes down to a
+// heavy low rump at the rear (right). `grow` uniformly inflates the path for the
+// outline halo. The front of the animal (head end) is to the LEFT (−x).
+function bodyPath(ctx: CanvasRenderingContext2D, cx: number, cy: number, rx: number, ry: number, grow = 0): void {
+  const ex = rx + grow;
+  const ey = ry + grow;
+  // anchor points around the silhouette, in body-local units of (ex, ey).
+  // top profile rises into a hump over the shoulders (left), then sags to the rump.
   ctx.beginPath();
-  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  // start at the rear (right), mid-height
+  ctx.moveTo(cx + ex * 1.0, cy + ey * 0.05);
+  // rear/rump — heavy, rounded, dropping low
+  ctx.bezierCurveTo(
+    cx + ex * 1.06, cy + ey * 0.55,
+    cx + ex * 0.7, cy + ey * 1.02,
+    cx + ex * 0.18, cy + ey * 1.0,
+  );
+  // belly — long and low under the body
+  ctx.bezierCurveTo(
+    cx - ex * 0.35, cy + ey * 0.98,
+    cx - ex * 0.85, cy + ey * 0.96,
+    cx - ex * 1.04, cy + ey * 0.5,
+  );
+  // front chest/brisket up to the shoulder (toward the head, left)
+  ctx.bezierCurveTo(
+    cx - ex * 1.12, cy + ey * 0.1,
+    cx - ex * 1.05, cy - ey * 0.55,
+    cx - ex * 0.7, cy - ey * 0.92,
+  );
+  // the muscular SHOULDER HUMP — a high rounded peak over the front
+  ctx.bezierCurveTo(
+    cx - ex * 0.5, cy - ey * 1.18,
+    cx - ex * 0.18, cy - ey * 1.16,
+    cx + ex * 0.05, cy - ey * 0.86,
+  );
+  // back-line sagging down from the hump toward the rump
+  ctx.bezierCurveTo(
+    cx + ex * 0.42, cy - ey * 0.5,
+    cx + ex * 0.86, cy - ey * 0.42,
+    cx + ex * 1.0, cy + ey * 0.05,
+  );
+  ctx.closePath();
 }
 
 // the whole hog, standing front-¾ turned toward lower-left, posed by `pose`
 function paintHog(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
-  // legs stay PLANTED on the pad (they stretch with the stamp, don't float).
+  // legs stay PLANTED on the pad (the SHAKE shimmies the bulk above them).
   const bx = 1;
-  const bodyY = 4 - pose.lift; // body centre lifts during the stamp
+  const bodyY = 4;
   const legTop = bodyY + 5.5; // where the legs meet the body
   const by = bodyY;
 
-  // the big barrel body dimensions
+  // the big HUMPED barrel body dimensions (heavier & taller than a pig's ball)
   const rx = 14.5;
   const ry = 9.6;
 
-  // legs first (behind the body). Two back, two front; contact on the pad.
+  // legs first (behind the body). Two back, two front; contact on the pad. The
+  // near legs lean slightly with the body sway so the shimmy reads as a whole.
+  const legLean = pose.sway * 0.28;
   ctx.save();
   ctx.globalAlpha = 0.9;
-  paintLeg(ctx, p, bx + 8.5, legTop, 18.6);
-  paintLeg(ctx, p, bx - 6.5, legTop, 18.9);
+  paintLeg(ctx, p, bx + 8.5 + legLean * 0.5, legTop, 18.6);
+  paintLeg(ctx, p, bx - 6.5 + legLean * 0.5, legTop, 18.9);
   ctx.restore();
   // front legs (nearer)
-  paintLeg(ctx, p, bx + 5, legTop + 0.5, 19.3);
-  paintLeg(ctx, p, bx - 3, legTop + 0.5, 19.5);
+  paintLeg(ctx, p, bx + 5 + legLean, legTop + 0.5, 19.3);
+  paintLeg(ctx, p, bx - 3 + legLean, legTop + 0.5, 19.5);
 
-  // The whole upper body (body + head + dressing) is drawn under a squash/stretch
-  // transform centred on the body, so the stamp reads with anticipation squash +
-  // airborne stretch.
+  // The whole upper body (body + head + dressing) is drawn under a
+  // SHAKE+squash transform centred on the body: a horizontal sway + a small
+  // roll/tilt + the squash jiggle, so the rare gesture reads as a hefty
+  // side-to-side shudder of the bulk (not a jump or a head-toss).
   ctx.save();
-  ctx.translate(bx, bodyY);
+  ctx.translate(bx + pose.sway, bodyY);
+  ctx.rotate(pose.tilt);
   ctx.scale(pose.squashX, pose.squashY);
   ctx.translate(-bx, -bodyY);
 
   // BODY — soft dark outline halo, then mid fill, then lit top (layered).
-  bodyPath(ctx, bx, by, rx + 1.2, ry + 1.2);
+  bodyPath(ctx, bx, by, rx, ry, 1.2);
   ctx.fillStyle = rgb(p.outline);
   ctx.fill();
   bodyPath(ctx, bx, by, rx, ry);
   ctx.fillStyle = rgb(p.hideMid);
   ctx.fill();
-  // belly shadow (lower band)
+  // belly shadow (lower band) + lit top, clipped to the body
   ctx.save();
   bodyPath(ctx, bx, by, rx, ry);
   ctx.clip();
@@ -525,30 +587,46 @@ function paintHog(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.beginPath();
   ctx.ellipse(bx, by + 5, rx, ry * 0.7, 0, 0, Math.PI * 2);
   ctx.fill();
-  // lit top offset up-left (light from upper-left)
+  // a dark COAT MANTLE blanketing the upper back/hump (the coarse-coat identity:
+  // a heavy dark cape over the shoulders & spine, deepening with coat volume).
+  ctx.fillStyle = rgb(p.bristle, 0.55 + 0.32 * p.coatVolume);
+  ctx.beginPath();
+  ctx.ellipse(bx - 2.5, by - 5.2, rx * 0.92, ry * 0.66, -0.16, 0, Math.PI * 2);
+  ctx.fill();
+  // lit top offset up-left over the hump (light from upper-left)
   ctx.fillStyle = rgb(p.hideLight);
   ctx.beginPath();
-  ctx.ellipse(bx - 2.5, by - 3.2, rx * 0.78, ry * 0.6, -0.08, 0, Math.PI * 2);
+  ctx.ellipse(bx - 4.5, by - 4.0, rx * 0.62, ry * 0.5, -0.16, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
 
-  // coarse bristly hair along the back — short dark strokes whose length and
-  // count grow BOLDLY with coat volume (sleek spring → shaggy fluffy winter).
-  const bristleLen = 2.0 + p.coatVolume * 5.2;
-  const bristleN = Math.round(9 + p.coatVolume * 8);
-  ctx.strokeStyle = rgb(p.bristle);
-  ctx.lineWidth = 1.1 + p.coatVolume * 0.5;
+  // COARSE DARK-BRISTLE MANTLE along the whole back — dense short ragged strokes
+  // following the humped ridge (high over the shoulder hump, sloping to the
+  // rump). Far denser & coarser than the warthog's thin spiky mohawk: this is a
+  // shaggy all-over crest. Length + density grow BOLDLY with coat volume.
+  const bristleLen = 2.6 + p.coatVolume * 5.6;
+  const bristleN = Math.round(16 + p.coatVolume * 12);
   ctx.lineCap = "round";
   for (let i = 0; i < bristleN; i++) {
-    const f = i / (bristleN - 1); // 0..1 along the back crest
-    const ang = lerp(-2.5, -0.55, f); // sweep over the top arc, left→right
-    const sx = bx + Math.cos(ang) * rx * 0.96;
-    const sy = by + Math.sin(ang) * ry * 0.96;
-    const jitter = (i % 2 === 0 ? 1 : 0.7) * bristleLen;
-    ctx.beginPath();
-    ctx.moveTo(sx, sy);
-    ctx.lineTo(sx + Math.cos(ang) * jitter * 0.4, sy - jitter);
-    ctx.stroke();
+    const f = i / (bristleN - 1); // 0..1 along the back, front(left)→rear(right)
+    // the ridge line traces the humped back: a high arch over the shoulders
+    // (left) sagging toward the rump (right). x runs −rx*0.95 → +rx*0.95.
+    const rxs = bx + lerp(-rx * 0.95, rx * 0.98, f);
+    const arch = Math.sin(Math.PI * Math.min(1, f * 1.18)); // peak toward the front
+    const hump = -ry * (0.62 + 0.46 * arch) - 1.2; // higher over the shoulder hump
+    const sy = by + hump;
+    // two staggered rows for density, alternating heights for a ragged coarse look
+    for (const row of [0, 1] as const) {
+      const len = ((i + row) % 2 === 0 ? 1 : 0.66) * bristleLen * (row === 0 ? 1 : 0.7);
+      const sx = rxs + (row === 0 ? 0 : 0.9);
+      const lean = -0.4 + (f - 0.5) * 0.9; // splay front-back
+      ctx.strokeStyle = rgb(p.bristle, row === 0 ? 1 : 0.7);
+      ctx.lineWidth = 1.2 + p.coatVolume * 0.6 - row * 0.3;
+      ctx.beginPath();
+      ctx.moveTo(sx, sy + 1.4 + row * 1.0);
+      ctx.lineTo(sx + lean, sy - len);
+      ctx.stroke();
+    }
   }
   ctx.lineCap = "butt";
 
@@ -560,19 +638,19 @@ function paintHog(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
     ctx.globalCompositeOperation = "soft-light";
     ctx.fillStyle = rgb([255, 240, 210], 0.42 * p.glossAmt);
     ctx.beginPath();
-    ctx.ellipse(bx - 2, by - 4, rx * 0.7, ry * 0.42, -0.1, 0, Math.PI * 2);
+    ctx.ellipse(bx - 4, by - 4.4, rx * 0.62, ry * 0.42, -0.16, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   }
 
-  // snow settled on the back (winter) — BOLD white cap over the hide
+  // snow settled on the back (winter) — BOLD white cap riding the humped ridge
   if (p.backSnowAmt > 0.001) {
     ctx.fillStyle = rgb([248, 252, 255], 0.95 * p.backSnowAmt);
     ctx.beginPath();
-    ctx.ellipse(bx - 1, by - 7.6, rx * 0.74, 3.4, -0.06, 0, Math.PI * 2);
+    ctx.ellipse(bx - 3, by - 8.0, rx * 0.7, 3.4, -0.16, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = rgb([255, 255, 255], 0.9 * p.backSnowAmt);
-    for (const [dx, dy] of [[-6, -8.2], [0, -8.8], [6, -8], [-2, -9.2]] as const) {
+    for (const [dx, dy] of [[-8, -8.4], [-3, -9.4], [3, -8.6], [-5, -9.6]] as const) {
       ctx.beginPath();
       ctx.arc(bx + dx, by + dy, 1.7 + p.coatVolume * 0.5, 0, Math.PI * 2);
       ctx.fill();
@@ -597,24 +675,24 @@ function paintHog(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.lineWidth = 1.6;
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(bx + rx - 0.5, by - 2);
-  ctx.quadraticCurveTo(bx + rx + 3.5 + pose.tail, by - 4, bx + rx + 2 + pose.tail, by - 0.5);
-  ctx.quadraticCurveTo(bx + rx + 0.5 + pose.tail, by + 0.8, bx + rx + 2.2 + pose.tail, by + 1.2);
+  ctx.moveTo(bx + rx - 0.5, by - 0.5);
+  ctx.quadraticCurveTo(bx + rx + 3.5 + pose.tail, by - 2.5, bx + rx + 2 + pose.tail, by + 1.0);
+  ctx.quadraticCurveTo(bx + rx + 0.5 + pose.tail, by + 2.3, bx + rx + 2.2 + pose.tail, by + 2.7);
   ctx.stroke();
   ctx.lineCap = "butt";
 
-  // ── HEAD (front-¾, lower-left) — broad snout that locks identity. Chews/tosses
-  //    via pose: headBob dips it down, headToss lifts it up. ─────────────────
-  const hx = bx - 13.5;
-  const hy = by + 2.5 + pose.headBob - pose.headToss;
+  // ── HEAD (front-¾, lower-left) — blunt heavy snout that locks identity.
+  //    headBob dips it (chew); headSway wobbles it sideways (the SHAKE). ─────
+  const hx = bx - 13.5 + pose.headSway;
+  const hy = by + 2.5 + pose.headBob;
 
   // ears (small, upright triangles), behind the head. The near (right) ear
-  // flicks with the chew/stamp.
+  // flicks with the chew; both ears FLAP through the body shake.
   for (const side of [-1, 1] as const) {
     ctx.save();
     ctx.translate(hx + side * 3.2, hy - 5.5);
     const flick = side === 1 ? pose.earFlick * 0.5 : 0;
-    ctx.rotate(side * 0.5 - 0.15 + side * flick);
+    ctx.rotate(side * 0.5 - 0.15 + side * flick + side * pose.earFlap);
     // outline
     ctx.fillStyle = rgb(p.outline);
     ctx.beginPath();
@@ -653,45 +731,48 @@ function paintHog(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.ellipse(hx - 1.4, hy - 2.4, 4, 3.4, -0.1, 0, Math.PI * 2);
   ctx.fill();
 
-  // broad snout — a wide forward-jutting muzzle ending in a flat disc
-  const snx = hx - 6;
-  const sny = hy + 2.6;
-  // muzzle bridge (hide) bridging head to snout disc
+  // BLUNT snout — a short, heavy, stubby muzzle ending in a big flat disc. Much
+  // stubbier than the warthog's long muzzle and far heftier than the pig's
+  // dainty disc: it barely juts, the disc is broad and tall, reads "brute".
+  const snx = hx - 4.4; // pulled in close to the head (blunt, not jutting)
+  const sny = hy + 2.7;
+  // short heavy muzzle bridge (hide) — broad where it meets the head, blunt nose
   ctx.fillStyle = rgb(p.hideMid);
   ctx.beginPath();
-  ctx.moveTo(hx - 1, hy - 1.5);
-  ctx.quadraticCurveTo(snx - 1, sny - 4, snx - 2.5, sny);
-  ctx.quadraticCurveTo(snx - 1, sny + 4.5, hx - 1, hy + 4.5);
+  ctx.moveTo(hx + 0.5, hy - 2.6);
+  ctx.quadraticCurveTo(snx + 0.4, sny - 4.6, snx - 1.6, sny - 1.0);
+  ctx.quadraticCurveTo(snx - 2.0, sny + 2.4, snx - 0.6, sny + 4.8);
+  ctx.quadraticCurveTo(hx, hy + 5.4, hx + 0.5, hy + 4.4);
   ctx.closePath();
   ctx.fill();
-  // the flat snout disc (broad), with a small chew/snort widen
+  // the flat snout disc (BIG, blunt), with a small chew/snort widen
   const snortW = 1 + pose.chew * 0.16;
   ctx.fillStyle = rgb(p.outline);
   ctx.beginPath();
-  ctx.ellipse(snx - 2, sny, 3.6 * snortW, 4.4, -0.15, 0, Math.PI * 2);
+  ctx.ellipse(snx - 1.4, sny, 4.0 * snortW, 4.9, -0.08, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = rgb(p.snout);
   ctx.beginPath();
-  ctx.ellipse(snx - 2, sny, 3 * snortW, 3.8, -0.15, 0, Math.PI * 2);
+  ctx.ellipse(snx - 1.4, sny, 3.4 * snortW, 4.3, -0.08, 0, Math.PI * 2);
   ctx.fill();
-  // two nostrils on the snout disc — flare a touch with the snort
+  // two big nostrils on the broad disc — flare a touch with the snort
   ctx.fillStyle = rgb([40, 24, 28]);
-  for (const ny of [-1.2, 1.4]) {
+  for (const ny of [-1.5, 1.7]) {
     ctx.beginPath();
-    ctx.ellipse(snx - 2.6, sny + ny, 0.7 + pose.chew * 0.3, 1.0, -0.15, 0, Math.PI * 2);
+    ctx.ellipse(snx - 2.0, sny + ny, 0.8 + pose.chew * 0.3, 1.2, -0.08, 0, Math.PI * 2);
     ctx.fill();
   }
   // snout-disc highlight (upper-left)
   ctx.fillStyle = rgb([255, 235, 232], 0.3);
   ctx.beginPath();
-  ctx.ellipse(snx - 3.4, sny - 1.6, 1.1, 1.4, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(snx - 2.8, sny - 1.9, 1.2, 1.5, -0.18, 0, Math.PI * 2);
   ctx.fill();
 
   // jaw / mouth — opens as it chews (a dark slit under the snout)
   if (pose.chew > 0.01) {
     ctx.fillStyle = rgb([26, 16, 18]);
     ctx.beginPath();
-    ctx.ellipse(snx + 0.4, sny + 3.0, 1.6, 0.5 + pose.chew * 1.3, -0.1, 0, Math.PI * 2);
+    ctx.ellipse(snx + 1.0, sny + 3.4, 1.7, 0.5 + pose.chew * 1.3, -0.08, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -700,8 +781,8 @@ function paintHog(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.lineWidth = 1.5;
   ctx.lineCap = "round";
   for (const side of [0, 1]) {
-    const tx = snx + 0.4 + side * 2.6;
-    const ty = sny + 3.4;
+    const tx = snx + 1.0 + side * 2.6;
+    const ty = sny + 3.6;
     ctx.beginPath();
     ctx.moveTo(tx, ty);
     ctx.quadraticCurveTo(tx - 0.6, ty - 2.2, tx - 0.2, ty - 3.4);
@@ -776,12 +857,12 @@ function paintHog(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
 
   // breath-fog puff at the snout (winter) — drawn OUTSIDE the squash transform so
   // it reads as air, not body. Static base puff + an exhale swell during the
-  // chew/snort. Tracks the posed head/snout position.
+  // chew/snort. Tracks the posed head/snout position (body sway + head wobble).
   if (p.breathFogAmt > 0.001) {
-    const fhx = bx - 13.5;
-    const fhy = by + 2.5 + pose.headBob - pose.headToss;
-    const fsnx = fhx - 6;
-    const fsny = fhy + 2.6;
+    const fhx = bx - 13.5 + pose.sway + pose.headSway;
+    const fhy = by + 2.5 + pose.headBob;
+    const fsnx = fhx - 4.4;
+    const fsny = fhy + 2.7;
     const reach = 6 + pose.fogPuff * 3.4;
     ctx.fillStyle = rgb([235, 244, 255], (0.34 + 0.28 * pose.fogPuff) * p.breathFogAmt);
     ctx.beginPath();
@@ -911,8 +992,8 @@ function makeTransition(fromIdx: 0 | 1 | 2) {
       if (fogGain > 0.01) {
         const hx = bx - 13.5;
         const hy = by + 2.5;
-        const snx = hx - 6;
-        const sny = hy + 2.6;
+        const snx = hx - 4.4;
+        const sny = hy + 2.7;
         ctx.fillStyle = rgb([235, 244, 255], 0.4 * trans * fogGain);
         ctx.beginPath();
         ctx.ellipse(snx - (5 + trans * 3), sny + 0.6, 2.6 + trans * 1.8, 1.8 + trans * 1.2, 0.1, 0, Math.PI * 2);
