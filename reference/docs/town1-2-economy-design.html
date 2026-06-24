@@ -152,7 +152,7 @@
 
   <header class="hero">
     <h1>puzzleDrag2 — How the Game Plays</h1>
-    <p class="sub">The whole game as one picture: the core loop, the stacked-board economy, the currency model, and — locked this pass — the <b>seven-town path</b> (each town's crux, win &amp; thematic buildings), the <b>materials + coins</b> economy (workers from Houses), building choice &amp; removal, and a monetization layer (rewarded ads, optional IAP &amp; paid expansion villages). Read top to bottom.</p>
+    <p class="sub">The whole game as one picture: the core loop, the stacked-board economy, the currency model, and — locked this pass — the <b>seven-town path</b> (each town's crux, win &amp; thematic buildings), the <b>Villager / materials / coins</b> split, building choice &amp; removal, and a monetization layer (rewarded ads, optional IAP &amp; paid expansion villages). Read top to bottom.</p>
     <p class="meta">Systems &amp; progression overview · 2026-06-24 · <span class="tag lock">locked</span> = decided this review · <span class="tag now">today</span> = in code now · <span class="tag des">design</span> = to build. Towns&nbsp;1–2 go to numbers; later towns are the full required path. Where code and this disagree, the <b>Gaps</b> tab says so.</p>
     <div class="chips">
       <span class="chip">match-merge farming</span>
@@ -250,7 +250,7 @@
     <section id="session">
       <h2>The shape of a session &amp; the long arc</h2>
       <p><b>A session</b> is one visit to a board: a small budget of <b>turns</b> (~10), each chain spends one, whatever you harvest banks into <em>that town's</em> stockpile, and the visit ends when turns run out. <b>Each town is a long <em>project</em>, not a handful of sessions</b> <span class="tag lock">locked</span> — finishing one takes real effort. But it's <b>effort-gated, not time-gated</b>: you're never stuck waiting on a clock. The time between sessions hands you <b>free tools</b> (timed depots, daily, civic) to go faster — or, if you'd rather not wait, you <b>craft those tools now by spending extra materials</b> (more farming). Wait for free, or pay in farming to push ahead.</p>
-      <p><b>The long arc</b> is a ladder of <b>seven towns, all required</b>. You found each by <b>caravan</b>, build it up, beat its <b>signature task</b>, and roll on. Difficulty is <b>cozy → ramps late</b> <span class="tag lock">locked</span>: the first towns are forgiving; hazards and scarcity bite in the back half. <b>Workers, coins and tools travel with you</b>; each town's <b>materials are its own</b>.</p>
+      <p><b>The long arc</b> is a ladder of <b>seven towns, all required</b>. You found each by <b>caravan</b>, build it up, beat its <b>signature task</b>, and roll on. Difficulty is <b>cozy → ramps late</b> <span class="tag lock">locked</span>: the first towns are forgiving; hazards and scarcity bite in the back half. <b>Workers, coins, tools and Villagers travel with you</b>; each town's <b>materials are its own</b>.</p>
     </section>
   </div>
 
@@ -293,14 +293,14 @@
     </section>
 
     <section id="workers">
-      <h2>Workers, Houses &amp; hiring</h2>
+      <h2>Workers, Villagers &amp; Houses</h2>
       <p>Workers are the multiplier: each hire <b>permanently buys down the chain knobs</b> (above) or adds an ability. They're <b>global</b> — they follow you to every town. But hiring is gated by two things now:</p>
       <div class="grid">
-        <div class="card g"><h3>Houses — the worker cap</h3><p><b>Houses</b> raise your <b>worker cap</b> (population) — there's no separate "Villager" currency. Your worker count is capped by how many Houses you've raised: population gates <em>how many</em>.</p></div>
+        <div class="card g"><h3>Villagers — the worker currency</h3><p>Your population, <b>produced by Houses</b>. <b>Hiring a worker spends a Villager</b> (plus coins + materials). So your worker count is capped by how many Houses you've raised — population gates <em>how many</em>.</p></div>
         <div class="card"><h3>Houses cost slots</h3><p>A House takes a building slot like anything else — so <b>more workers</b> means <b>fewer ability/yield buildings</b>. That tension (population vs. specialization) is a core build decision.</p></div>
-        <div class="card"><h3>Hire cost = coins + materials</h3><p><span class="tag lock">locked</span> Each hire costs <b>coins</b> (wages — coins' main sink) <b>and materials</b>, and the <b>material cost scales per profession</b>: the more workers already in a line (miners, farmers…), the costlier the next one. So over-stacking a single profession self-limits — late workers are a real investment.</p></div>
+        <div class="card"><h3>Hire cost = Villager + coins + materials</h3><p><span class="tag lock">locked</span> Each hire spends a <b>Villager</b> (from your Houses), <b>coins</b> (wages) <b>and materials</b> — with the <b>material cost scaling per profession</b>: the more workers already in a line (miners, farmers…), the costlier the next. So over-stacking a single profession self-limits — late workers are a real investment.</p></div>
       </div>
-      <div class="box"><b>Removing buildings</b> <span class="tag lock">locked</span> — tear down a <b>discretionary</b> building to re-plan a town. Two limits: <b>major buildings are permanent</b> (the Hearth, board-openers like Mine Head / Wharf, a town's signature, and anything that unlocked a new functionality can't be removed once built); and you <b>can't remove a House if it would drop the worker cap below the number in use</b> by hired workers — build one elsewhere first (the pool is global). <span class="tag des">design</span> <b>Building upgrades</b> (levelling a building for a stronger effect) are a parked, later concept.</div>
+      <div class="box"><b>Removing buildings</b> <span class="tag lock">locked</span> — tear down a <b>discretionary</b> building to re-plan a town. Two limits: <b>major buildings are permanent</b> (the Hearth, board-openers like Mine Head / Wharf, a town's signature, and anything that unlocked a new functionality can't be removed once built); and you <b>can't remove a House if it would drop Villagers below the number in use</b> by hired workers — build one elsewhere first (the pool is global). <span class="tag des">design</span> <b>Building upgrades</b> (levelling a building for a stronger effect) are a parked, later concept.</div>
     </section>
 
     <section id="tools-sys">
@@ -322,14 +322,14 @@
 
     <section id="currencies">
       <h2>The currency model <span class="tag lock">locked</span></h2>
-      <p class="lead">Two currencies, bridged by a costly Market — so your farming stays <b>targeted</b>, not just "earn a catch-all and buy anything." Workers aren't a currency: <b>Houses set a cap</b> you hire into.</p>
+      <p class="lead">Three currencies, deliberately unequal — so your farming stays <b>targeted</b>, not just "earn a catch-all and buy anything." Materials &amp; coins bridge through a costly Market; <b>Villagers come from Houses</b>.</p>
       <div class="grid">
         <div class="card g"><h3>Materials — the main currency</h3><p>Per-town, board-grown (crops, ore, fish &amp; their refined goods). They pay for <b>buildings, win-tasks, expedition rations, and refining.</b> They shift town to town, so each town's farming is purposeful — there's no super-currency that buys everything.</p></div>
         <div class="card b"><h3>Coins — the cash layer</h3><p><span class="tag lock">locked</span> The money economy: <b>worker wages (hiring), town-tier upgrades, tile unlocks, caravan founding,</b> and the <b>Market</b>. Earned by <b>selling surplus</b> at the Market, plus quests / daily / civic / bosses. You <em>can</em> buy materials with coins — but only at the Market, <b>deliberately expensive</b>, so it never replaces farming.</p></div>
-        <div class="card"><h3>Workers — hired, not a currency</h3><p>No third token: <b>Houses raise your worker cap</b> (population), and you hire into it with <b>coins + materials</b> (see Mechanics). Houses gate <em>how many</em>; coins + materials are <em>the cost</em>.</p></div>
+        <div class="card"><h3>Villagers — the worker currency</h3><p>Your population, <b>produced by Houses</b>. Spent (with coins + materials) to hire workers — see Mechanics. A constrained, valuable resource — and the one optional-IAP lever (below).</p></div>
         <div class="card b"><h3>The Market — the coin ↔ material bridge</h3><p><span class="tag lock">locked</span> <b>Sell surplus → coins</b> (an outlet for overflow &amp; lopsided builds) and <b>buy materials → coins</b> (pricey — brute-force a shortfall instead of farming it). The escape hatch that lets you run a <b>specialized "weird" build</b> and just buy what you chose to skip.</p></div>
       </div>
-      <div class="box"><b>Two economies, bridged by a costly Market.</b> Materials are what you <em>grow and spend to build</em>; coins are the <em>cash</em> for wages, unlocks &amp; flexibility. The Market connects them on purpose — but its buy prices are set <b>high</b> so coins can't cheaply replace farming: you still farm <em>for a reason</em>. The Market is a release valve (dump overflow, cover a gap, enable a focused build), not a bypass. Progression should feel like an accomplishment, not a wallet check.</div>
+      <div class="box"><b>Materials vs coins, bridged by a costly Market.</b> Materials are what you <em>grow and spend to build</em>; coins are the <em>cash</em> for wages, unlocks &amp; flexibility (Villagers are the third currency — population, from Houses). The Market connects them on purpose — but its buy prices are set <b>high</b> so coins can't cheaply replace farming: you still farm <em>for a reason</em>. The Market is a release valve (dump overflow, cover a gap, enable a focused build), not a bypass. Progression should feel like an accomplishment, not a wallet check.</div>
     </section>
 
     <section id="web">
@@ -351,7 +351,7 @@
               <text x="128" y="83" text-anchor="middle" font-weight="800" fill="var(--ink)">Board production</text>
               <text x="128" y="99" text-anchor="middle" fill="var(--muted)">chaining — the engine</text>
               <rect x="22" y="118" width="212" height="38" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="142" text-anchor="middle" fill="var(--ink)">Refining stations</text>
-              <rect x="22" y="166" width="212" height="38" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="190" text-anchor="middle" fill="var(--ink)">Houses → worker cap</text>
+              <rect x="22" y="166" width="212" height="38" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="190" text-anchor="middle" fill="var(--ink)">Houses → Villagers</text>
               <rect x="22" y="214" width="212" height="38" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="238" text-anchor="middle" fill="var(--ink)">Timed depots (idle)</text>
               <rect x="22" y="262" width="212" height="38" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="286" text-anchor="middle" fill="var(--ink)">Daily · civic tax</text>
               <rect x="22" y="310" width="212" height="38" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="334" text-anchor="middle" fill="var(--ink)">Quests · achievements</text>
@@ -362,14 +362,14 @@
             <rect x="402" y="120" width="196" height="372" rx="14" fill="color-mix(in srgb,var(--idle) 10%,#fff)" stroke="var(--muted)" stroke-width="1.6"/>
             <rect x="420" y="146" width="160" height="40" rx="8" fill="#fff" stroke="var(--accent2)"/><text x="500" y="166" text-anchor="middle" font-weight="700" fill="var(--ink)">Materials</text><text x="500" y="180" text-anchor="middle" fill="var(--muted)" font-size="10">per-town · the main one</text>
             <rect x="420" y="194" width="160" height="36" rx="8" fill="#fff" stroke="var(--info)"/><text x="500" y="217" text-anchor="middle" font-weight="700" fill="var(--ink)">Coins <tspan fill="var(--muted)" font-weight="400" font-size="10">· cash layer</tspan></text>
-            <rect x="420" y="238" width="160" height="36" rx="8" fill="#fff" stroke="var(--line)"/><text x="500" y="261" text-anchor="middle" font-weight="700" fill="var(--ink)">Workers</text>
+            <rect x="420" y="238" width="160" height="36" rx="8" fill="#fff" stroke="var(--line)"/><text x="500" y="261" text-anchor="middle" font-weight="700" fill="var(--ink)">Villagers</text>
             <rect x="420" y="282" width="160" height="36" rx="8" fill="#fff" stroke="var(--line)"/><text x="500" y="305" text-anchor="middle" font-weight="700" fill="var(--ink)">Tools <tspan fill="var(--muted)" font-weight="400" font-size="10">· global</tspan></text>
             <rect x="420" y="326" width="160" height="44" rx="8" fill="#fff" stroke="var(--line)"/><text x="500" y="346" text-anchor="middle" font-weight="700" fill="var(--ink)">Meta</text><text x="500" y="361" text-anchor="middle" fill="var(--muted)" font-size="10">XP · runes · tokens</text>
             <text x="500" y="410" text-anchor="middle" fill="var(--muted)" font-style="italic" font-size="10.5">everything flows</text><text x="500" y="425" text-anchor="middle" fill="var(--muted)" font-style="italic" font-size="10.5">through the pool</text>
 
             <g>
               <rect x="766" y="64" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="83" text-anchor="middle" fill="var(--ink)">Tile upgrades</text><text x="872" y="97" text-anchor="middle" fill="var(--muted)" font-size="10">(a chain)</text>
-              <rect x="766" y="116" width="212" height="44" rx="9" fill="color-mix(in srgb,var(--accent) 22%,#fff)" stroke="var(--accent)" stroke-width="1.8"/><text x="872" y="135" text-anchor="middle" font-weight="800" fill="var(--ink)">Worker hires</text><text x="872" y="151" text-anchor="middle" fill="var(--danger)" font-size="10.5">◆ coins + materials/prof</text>
+              <rect x="766" y="116" width="212" height="44" rx="9" fill="color-mix(in srgb,var(--accent) 22%,#fff)" stroke="var(--accent)" stroke-width="1.8"/><text x="872" y="135" text-anchor="middle" font-weight="800" fill="var(--ink)">Worker hires</text><text x="872" y="151" text-anchor="middle" fill="var(--danger)" font-size="10.5">◆ Villager + coins + mat</text>
               <rect x="766" y="172" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="191" text-anchor="middle" fill="var(--ink)">Buildings → unlock tools</text><text x="872" y="205" text-anchor="middle" fill="var(--muted)" font-size="10">(materials)</text>
               <rect x="766" y="224" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--info) 12%,#fff)" stroke="var(--info)"/><text x="872" y="243" text-anchor="middle" fill="var(--ink)">Town tiers · tile unlocks</text><text x="872" y="257" text-anchor="middle" fill="var(--muted)" font-size="10">(coins)</text>
               <rect x="766" y="276" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--info) 12%,#fff)" stroke="var(--info)"/><text x="872" y="300" text-anchor="middle" fill="var(--ink)">Caravan founding (coins)</text>
@@ -409,7 +409,7 @@
       <h2>The three loops that matter</h2>
       <div class="grid">
         <div class="card g"><h3>1 · Reinvestment (flywheel)</h3><p>Board → materials → <b>tile upgrades + workers</b> → the board yields more. The engine; it compounds. Steeper worker baskets + the chain-knob floors keep it from trivialising itself.</p></div>
-        <div class="card g"><h3>2 · Growth</h3><p>Materials → <b>buildings (+ Houses for worker cap)</b> → more plots, new tools, new families. How a town gets wider — and where the build-choice strategy lives.</p></div>
+        <div class="card g"><h3>2 · Growth</h3><p>Materials → <b>buildings (+ Houses for Villagers)</b> → more plots, new tools, new families. How a town gets wider — and where the build-choice strategy lives.</p></div>
         <div class="card"><h3>3 · Provisioning</h3><p>Food → <b>expedition turns</b> → ore/fish → refine → build. In Deepdelve, timed depots + shipping replace the farm under scarcity.</p></div>
       </div>
     </section>
@@ -508,7 +508,7 @@
         <ol class="play">
           <li><b>First chains.</b> Drag 3+ touching tiles; each banks crops and, if long, merges a tile up a tier.</li>
           <li><b>Refine.</b> Grain → Mill → flour → Bakery → <b>bread</b>; Field Kitchen turns grain into rations; Granary stores it.</li>
-          <li><b>People &amp; workers.</b> Raise a <b>House</b> to lift your worker cap, then hire your first <b>worker</b> with coins + materials (buys down a chain knob, travels with you).</li>
+          <li><b>People &amp; workers.</b> Raise a <b>House</b> for Villagers, then hire your first <b>worker</b> (spends a Villager + coins + materials; buys down a chain knob, travels with you).</li>
           <li><b>Build the caravan.</b> Gather the basket, assemble it at the Caravan Yard, roll out to Two Rivers.</li>
         </ol>
       </div>
@@ -525,7 +525,7 @@
           <dt>Win task</dt><dd><b>Fill a grand order</b> — a shipment needing both bread and iron, proving you can run both boards. Its signature <b>Quartermaster's Hall</b> (better food→ration packing) exports to later mines.</dd>
         </dl>
         <ol class="play g">
-          <li><b>Found &amp; bootstrap.</b> Caravan in; workers/tools came with you, materials start empty.</li>
+          <li><b>Found &amp; bootstrap.</b> Caravan in; workers/tools/Villagers came with you, materials start empty.</li>
           <li><b>Run the farm board.</b> Free turns: chain grain, build the Field Kitchen, make rations.</li>
           <li><b>Open the mine.</b> Spend rations to depart; chain stone/iron; keep everything mined when food runs out.</li>
           <li><b>Refine &amp; connect.</b> Smelter ore → metal; watch the farm refill the pantry while the mine empties it.</li>
@@ -596,7 +596,7 @@
         <li><b>Common</b> — the board's core chain (Mill, Bakery, Smelter, Wharf…), available in any town with that board. These are the must-builds.</li>
         <li><b>Specialized</b> — one thematic signature per town, tied to its core idea. Once that town is <b>complete</b>, its signature can be raised in your other towns for a cross-zone bonus — so <b>unlock order is strategy</b>.</li>
       </ul>
-      <div class="box"><b>Slots &lt; buildings — and tightening</b> <span class="tag lock">locked</span>. After the core chain, only a few discretionary slots remain, and <b>Houses compete for them too</b> (more workers vs. more abilities). The gap <b>widens as towns grow</b> — slots lag the building menu — so later towns force harder, sharper specialization. Because a building unlocks its tool globally &amp; permanently, the choice is about pacing &amp; per-town identity, not permanent loss. <b>Discretionary buildings can be removed</b> to re-plan — but <b>major / functionality-unlocking buildings are permanent</b> once built (and a House can't drop below workers in use). <span class="tag des">Naming pass &amp; new types are a build task</span> — the rename map is below.</div>
+      <div class="box"><b>Slots &lt; buildings — and tightening</b> <span class="tag lock">locked</span>. After the core chain, only a few discretionary slots remain, and <b>Houses compete for them too</b> (more Villagers vs. more abilities). The gap <b>widens as towns grow</b> — slots lag the building menu — so later towns force harder, sharper specialization. Because a building unlocks its tool globally &amp; permanently, the choice is about pacing &amp; per-town identity, not permanent loss. <b>Discretionary buildings can be removed</b> to re-plan — but <b>major / functionality-unlocking buildings are permanent</b> once built (and a House can't drop below workers in use). <span class="tag des">Naming pass &amp; new types are a build task</span> — the rename map is below.</div>
     </section>
 
     <section id="b-roster">
@@ -610,7 +610,7 @@
           <tr><td>Mill</td><td>grinds grain → flour</td><td>scythe (clear)</td></tr>
           <tr><td>Bakery</td><td>bakes flour → bread</td><td>—</td></tr>
           <tr><td>Field Kitchen</td><td>cooks grain → travel rations</td><td>—</td></tr>
-          <tr><td>House</td><td>raises the <b>worker cap</b></td><td>—</td></tr>
+          <tr><td>House</td><td>produces <b>Villagers</b> (worker currency)</td><td>—</td></tr>
           <tr><td rowspan="4"><span class="bd m">Mine</span></td><td>Mine Head</td><td>opens the shaft — run expeditions</td><td>—</td></tr>
           <tr><td>Ore Store</td><td>stores ore, raises the cap</td><td>—</td></tr>
           <tr><td>Smelter</td><td>melts ore → metal bars</td><td>—</td></tr>
@@ -653,11 +653,11 @@
     </section>
 
     <section id="b-houses">
-      <h2>Houses, the worker cap &amp; removal</h2>
+      <h2>Houses, Villagers &amp; removal</h2>
       <div class="grid">
-        <div class="card g"><h3>Houses → worker cap</h3><p>Each House raises your <b>worker cap</b> (a global pool). Hiring into it costs <b>coins + materials</b> (materials scale per profession) — so population gates <em>how many</em> workers you can run.</p></div>
+        <div class="card g"><h3>Houses → Villagers</h3><p>Each House produces <b>Villagers</b> (a global pool). Hiring spends a <b>Villager + coins + materials</b> (materials scale per profession) — so population gates <em>how many</em> workers you can run.</p></div>
         <div class="card"><h3>The slot tension</h3><p>A House costs a slot, so it competes with ability/yield buildings. Wide worker base, or rich abilities? — a real per-town call.</p></div>
-        <div class="card r"><h3>Removal rule</h3><p>Tear down <b>discretionary</b> buildings to re-plan — but <b>major / functionality-unlocking buildings are permanent</b>, and a House can't go if it would drop the <b>worker cap below the workers in use</b>.</p></div>
+        <div class="card r"><h3>Removal rule</h3><p>Tear down <b>discretionary</b> buildings to re-plan — but <b>major / functionality-unlocking buildings are permanent</b>, and a House can't go if it would push <b>Villagers below those in use</b>.</p></div>
       </div>
     </section>
   </div>
@@ -672,7 +672,7 @@
 
     <section id="meta-cards">
       <div class="grid">
-        <div class="card g"><h3>Workers &amp; Houses</h3><p>Houses set the worker cap; <b>coins + materials</b> hire workers into it (materials scale per profession); workers buy down the chain knobs. The flywheel's accelerator (see Mechanics).</p></div>
+        <div class="card g"><h3>Workers + Villagers</h3><p>Houses produce Villagers; spend a <b>Villager + coins + materials</b> to hire workers (materials scale per profession); workers buy down the chain knobs. The flywheel's accelerator (see Mechanics).</p></div>
         <div class="card g"><h3>Story — the sequencer</h3><p>Thresholds (a total, a building, a win task) unlock the next town, boss summons, rare materials. Decides <em>when</em> each part opens.</p></div>
         <div class="card"><h3>Achievements</h3><p>Passive counters → mostly coins, a few special tools. One-way faucet rewarding mastery &amp; breadth.</p></div>
         <div class="card"><h3>Quests</h3><p>Seasonal goals → coins + XP. A target beyond "play till turns end."</p></div>
@@ -698,7 +698,7 @@
 
       <p class="lead">IAP — convenience &amp; content</p>
       <div class="grid">
-        <div class="card b"><h3>Worker-cap boost</h3><p>An extra House / cap lift — raise how many workers you can hire without grinding House builds. Optional; building Houses stays the free path.</p></div>
+        <div class="card b"><h3>Buy Villagers</h3><p>Extra Villagers — jump your worker count without grinding Houses. Optional; building Houses stays the free path.</p></div>
         <div class="card b"><h3>Toolcrate / coin packs</h3><p>A bundle of tools or coins — a convenience boost, nothing you can't craft or earn.</p></div>
         <div class="card b"><h3>Remove forced ads</h3><p>One-time purchase. Clears any interstitials; <b>rewarded opt-ins stay available</b> for those who still want them.</p></div>
         <div class="card g"><h3>Expansion villages ★</h3><p>The big lever: <b>new zones/biomes beyond the free core</b> — new mechanics, signature buildings, tilesets &amp; story. <b>Hybrid unlock</b>: earn each in-game <em>or</em> buy-to-unlock-now, with room for a season-pass bundle later. Player-friendly ("more worlds"), reuses the zone-atlas pipeline; the core 7 stay complete.</p></div>
@@ -726,8 +726,8 @@
         <thead><tr><th>Seam</th><th>Kind</th><th>What's going on</th></tr></thead>
         <tbody>
           <tr data-status="build"><td><b>Additive board stacking</b></td><td><span class="pill warn">build</span></td><td>A town hosts multiple boards (farm+mine, +fish) sharing one stockpile; the fishery fed by farm + mine. Today zones are single-board.</td></tr>
-          <tr data-status="build"><td><b>Worker cap + House model</b></td><td><span class="pill warn">build</span></td><td>Houses raise the <b>worker cap</b>; hiring costs <b>coins + materials</b>, with <b>materials scaling per profession</b>; removal rule. No separate Villager currency.</td></tr>
-          <tr data-status="build"><td><b>Currency split</b></td><td><span class="pill warn">build</span></td><td>Two currencies: coins = the cash layer (wages, tiers, tile unlocks, founding, Market); materials = build, win-task &amp; hire costs. Drop "Villagers" as a currency.</td></tr>
+          <tr data-status="build"><td><b>Villagers + House model</b></td><td><span class="pill warn">build</span></td><td>Houses produce <b>Villagers</b> (the worker currency); hiring spends a <b>Villager + coins + materials</b>, with <b>materials scaling per profession</b>; removal rule on Houses.</td></tr>
+          <tr data-status="build"><td><b>Currency split</b></td><td><span class="pill warn">build</span></td><td>Three currencies: <b>materials</b> (build, win-task, hire), <b>coins</b> (cash layer: wages, tiers, tile unlocks, founding, Market), <b>Villagers</b> (from Houses, spent on hires). Hiring spends Villager + coins + materials.</td></tr>
           <tr data-status="wire"><td><b>The Market — buy side</b></td><td><span class="pill info">half-wired</span></td><td>Selling surplus → coins exists; add the <b>buy</b> side (coins → materials, priced <b>high</b>) so it's an excess outlet, a shortfall brute-force &amp; a flexibility valve — without undercutting farming.</td></tr>
           <tr data-status="build"><td><b>Chain-knob floors + buy-down</b></td><td><span class="pill warn">build</span></td><td>Floor the yield divisor + upgrade threshold (~3) and let workers buy both down. (Keep the depth.)</td></tr>
           <tr data-status="build"><td><b>New &amp; renamed buildings</b></td><td><span class="pill warn">build</span></td><td>Add the new types (Caravan Yard, Quartermaster's Hall, Pit Canteen, Bait Shack, Cattery, Supply Depot, Field Kitchen, Mine Head, Ore Store, Net Loft) and rename the unclear ones.</td></tr>
@@ -735,7 +735,7 @@
           <tr data-status="build"><td><b>Tile research &amp; acquisition</b></td><td><span class="pill warn">build</span></td><td>Research / buy / earn new tile types, each with a unique ability; one-time global unlocks via a research track + the coin sink + rewards.</td></tr>
           <tr data-status="build"><td><b>Building removal + permanence</b></td><td><span class="pill warn">build</span></td><td>Remove discretionary buildings; <b>major / functionality buildings permanent</b>; the House rule. Building <em>upgrades</em> parked for later.</td></tr>
           <tr data-status="build"><td><b>Building → tool unlock + timed grant</b></td><td><span class="pill warn">build</span></td><td>Make "build unlocks the recipe / generates on a timer" universal. (Also the <code>/b/</code> wiki update.)</td></tr>
-          <tr data-status="build"><td><b>Monetization hooks</b></td><td><span class="pill warn">build</span></td><td><b>Rewarded-ad</b> hooks (daily toolcrate, skip-cooldown, boost win-task, maybe run-yield); <b>IAP</b> (worker-cap boost, toolcrate, remove-ads); <b>hybrid expansion villages</b> (earn or buy). No banners.</td></tr>
+          <tr data-status="build"><td><b>Monetization hooks</b></td><td><span class="pill warn">build</span></td><td><b>Rewarded-ad</b> hooks (daily toolcrate, skip-cooldown, boost win-task, maybe run-yield); <b>IAP</b> (Buy Villagers, toolcrate, remove-ads); <b>hybrid expansion villages</b> (earn or buy). No banners.</td></tr>
           <tr data-status="build"><td><b>Caravan founding + Town 1 to ~6 slots</b></td><td><span class="pill warn">build</span></td><td>Founding-by-caravan act gated on each win; shrink the home map for real early scarcity.</td></tr>
           <tr data-status="wire"><td><b>Expedition enforcement</b></td><td><span class="pill info">half-wired</span></td><td>Food→turns + Kitchen exist; expeditions aren't fully turn-budgeted everywhere — needed for the stack.</td></tr>
           <tr data-status="wire"><td><b>Runes / hearth tokens</b></td><td><span class="pill info">half-wired</span></td><td>Earned but unspent; the portal is unfinished. With the finale gated on all towns, decide what they're for.</td></tr>
@@ -751,16 +751,16 @@
     <section id="next">
       <h2>What this unlocks</h2>
       <ol>
-        <li><b>Build the seams</b> (the <span class="pill warn">build</span> rows) so the code matches this model — additive boards, the two-currency split + worker cap, the building roster, and the chain-knob floors are the big ones.</li>
+        <li><b>Build the seams</b> (the <span class="pill warn">build</span> rows) so the code matches this model — additive boards, the Villager/currency split, the building roster, and the chain-knob floors are the big ones.</li>
         <li><b>Tune Towns 1–2 in the sim</b> — the <span class="pill idle">number</span> rows (pacing, exchange rate, baskets) against the playtest harness.</li>
         <li><b>Then extend outward</b> — fish specifics, later-town numbers, monetization balancing.</li>
       </ol>
-      <div class="box tip"><b>One-sentence summary.</b> puzzleDrag2 is a compounding loop — drag to harvest, spend <b>materials</b> to grow — played across a caravan-founded ladder of seven towns whose boards stack and whose signature buildings cross-pollinate; coins are the cash layer (wages, unlocks &amp; a costly Market), Houses raise a worker cap you hire into with coins + materials (scaling per profession), and a free-to-play core is wrapped by rewarded ads, optional IAP &amp; hybrid expansion villages — selling time &amp; new worlds, never wins.</div>
+      <div class="box tip"><b>One-sentence summary.</b> puzzleDrag2 is a compounding loop — drag to harvest, spend <b>materials</b> to grow — played across a caravan-founded ladder of seven towns whose boards stack and whose signature buildings cross-pollinate; coins are the cash layer (wages, unlocks &amp; a costly Market), Houses produce Villagers, and hiring spends a Villager + coins + materials (materials scaling per profession), and a free-to-play core is wrapped by rewarded ads, optional IAP &amp; hybrid expansion villages — selling time &amp; new worlds, never wins.</div>
     </section>
 
     <details>
       <summary>Note on grounding</summary>
-      <p style="font-size:.86rem;color:var(--muted);">Written for the game's <b>feel and structure</b>, checked against the source. Grounded in code: board/chain rules, production lines, the zones &amp; their ladders/plots/gating, the 27 buildings &amp; costs, the civic building→tool seed, global tools, worker curves, the 6 bosses, the hearth-token finale. <span class="tag lock">locked this review</span>: the two-currency split (materials &gt; coins) with a Houses-set worker cap, limited slots + removal, keep the chain-knob depth, idle pacing, cozy→ramp difficulty, the 7-town path with thematic/exportable signature buildings, and optional-only monetization. <span class="tag des">design / to build</span>: everything in the Gaps "build" rows. Hard numbers live in the balance docs / Dev Panel.</p>
+      <p style="font-size:.86rem;color:var(--muted);">Written for the game's <b>feel and structure</b>, checked against the source. Grounded in code: board/chain rules, production lines, the zones &amp; their ladders/plots/gating, the 27 buildings &amp; costs, the civic building→tool seed, global tools, worker curves, the 6 bosses, the hearth-token finale. <span class="tag lock">locked this review</span>: the currency split (materials &gt; coins), Villagers-from-Houses, limited slots + removal, keep the chain-knob depth, idle pacing, cozy→ramp difficulty, the 7-town path with thematic/exportable signature buildings, and optional-only monetization. <span class="tag des">design / to build</span>: everything in the Gaps "build" rows. Hard numbers live in the balance docs / Dev Panel.</p>
     </details>
   </div>
 
