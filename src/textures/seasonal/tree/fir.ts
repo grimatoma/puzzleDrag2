@@ -731,7 +731,9 @@ function paint(
 
 // A small bird (front-¾) used by the Spring/Summer/Autumn rare special. Drawn
 // at the given anchor; `hop` is vertical hop (≤0 = up), `look` rotates the head,
-// `wing` opens the wing for the flit-off. Colours locked (robin-ish).
+// `wing` opens the wing for the flit-off. Per-species palette: a CROSSBILL / red
+// finch — dull brick-red body with darker brown wings + tail. The warm red
+// stands out against the fir's dark evergreen green.
 function bird(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -746,43 +748,43 @@ function bird(
   try {
     ctx.globalAlpha = clamp01(alpha);
     ctx.translate(x, y + hop);
-    // body
-    ctx.fillStyle = "#5a4636";
+    // body — dull brick red
+    ctx.fillStyle = "#b14430";
     ctx.beginPath();
     ctx.ellipse(0, 0, 4.0, 3.0, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    // warm breast
-    ctx.fillStyle = "#d2693a";
+    // brighter red breast
+    ctx.fillStyle = "#cf5a3c";
     ctx.beginPath();
     ctx.ellipse(-1.4, 0.6, 2.2, 2.0, -0.2, 0, Math.PI * 2);
     ctx.fill();
-    // tail
-    ctx.fillStyle = "#46362a";
+    // tail — dark brown
+    ctx.fillStyle = "#3a2a1e";
     ctx.beginPath();
     ctx.moveTo(3.2, -0.4);
     ctx.lineTo(6.8, -1.7);
     ctx.lineTo(6.2, 1.1);
     ctx.closePath();
     ctx.fill();
-    // wing (opens during flit-off)
+    // wing (opens during flit-off) — dark brown crossbill wing
     ctx.save();
     ctx.translate(0.6, -0.4);
     ctx.rotate(-0.5 * wing);
-    ctx.fillStyle = "#3d2f24";
+    ctx.fillStyle = "#34251a";
     ctx.beginPath();
     ctx.ellipse(0, 0, 3.0 + wing * 2.0, 1.7 + wing * 1.2, 0.3, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
-    // head (looks around)
+    // head (looks around) — red, matching the body
     ctx.save();
     ctx.translate(-3.2, -2.3);
     ctx.rotate(look);
-    ctx.fillStyle = "#5a4636";
+    ctx.fillStyle = "#b14430";
     ctx.beginPath();
     ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
     ctx.fill();
-    // beak
-    ctx.fillStyle = "#e2b23a";
+    // beak — pale crossed finch bill
+    ctx.fillStyle = "#d8c39a";
     ctx.beginPath();
     ctx.moveTo(-2.0, 0.2);
     ctx.lineTo(-4.2, -0.2);

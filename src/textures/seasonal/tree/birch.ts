@@ -729,8 +729,10 @@ function lerpP(a: P, b: P, f: number): P {
 
 // ── The RARE special: a small bird hops onto a branch and flits off ───────────
 // Drawn at a left-branch anchor; lands, looks around twice, then opens its wing
-// and flits up-and-left, fully gone by the window edge (alpha → 0). Colors
-// locked (robin-ish). Paints outside the box during the flit-off — that's fine.
+// and flits up-and-left, fully gone by the window edge (alpha → 0). Per-species
+// palette: a GOLDFINCH / yellow finch (bright yellow body + pale belly, with a
+// dark cap + dark wings/tail) — reads loud against the birch's white bark and
+// pale crown. Paints outside the box during the flit-off — that's fine.
 function bird(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -744,43 +746,52 @@ function bird(
   ctx.save();
   ctx.globalAlpha = clamp01(alpha);
   ctx.translate(x, y + hop);
-  // body
-  ctx.fillStyle = "#5a4636";
+  // body — bright finch yellow
+  ctx.fillStyle = "#e9c12f";
   ctx.beginPath();
   ctx.ellipse(0, 0, 4.2, 3.2, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  // warm breast
-  ctx.fillStyle = "#d2693a";
+  // pale lemon belly
+  ctx.fillStyle = "#f6dc59";
   ctx.beginPath();
   ctx.ellipse(-1.4, 0.6, 2.4, 2.2, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  // tail
-  ctx.fillStyle = "#46362a";
+  // tail — dark
+  ctx.fillStyle = "#26241a";
   ctx.beginPath();
   ctx.moveTo(3.4, -0.4);
   ctx.lineTo(7.2, -1.8);
   ctx.lineTo(6.6, 1.2);
   ctx.closePath();
   ctx.fill();
-  // wing (opens during flit-off)
+  // wing (opens during flit-off) — dark goldfinch wing with a pale bar
   ctx.save();
   ctx.translate(0.6, -0.4);
   ctx.rotate(-0.5 * wing);
-  ctx.fillStyle = "#3d2f24";
+  ctx.fillStyle = "#1d1c14";
   ctx.beginPath();
   ctx.ellipse(0, 0, 3.2 + wing * 2.0, 1.8 + wing * 1.2, 0.3, 0, Math.PI * 2);
   ctx.fill();
+  ctx.fillStyle = "#f3e7b2";
+  ctx.beginPath();
+  ctx.ellipse(0.4, 0.5, 1.6 + wing * 0.9, 0.6 + wing * 0.4, 0.3, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
-  // head (looks around)
+  // head (looks around) — dark goldfinch cap over a yellow face
   ctx.save();
   ctx.translate(-3.4, -2.4);
   ctx.rotate(look);
-  ctx.fillStyle = "#5a4636";
+  ctx.fillStyle = "#e9c12f";
   ctx.beginPath();
   ctx.arc(0, 0, 2.4, 0, Math.PI * 2);
   ctx.fill();
-  // beak
-  ctx.fillStyle = "#e2b23a";
+  // black cap on the crown
+  ctx.fillStyle = "#1d1c14";
+  ctx.beginPath();
+  ctx.arc(0.2, -0.7, 2.4, Math.PI * 1.05, Math.PI * 2.05);
+  ctx.fill();
+  // beak — pale ivory finch cone
+  ctx.fillStyle = "#ecdcab";
   ctx.beginPath();
   ctx.moveTo(-2.2, 0.2);
   ctx.lineTo(-4.4, -0.2);
