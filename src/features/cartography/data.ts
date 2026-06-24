@@ -391,6 +391,39 @@ export const MAP_NODES: MapNode[] = [
     plotCount: 9,
     // Post-Town-2 branch: the deep mine opens once the quarry is established.
     requiresZoneTier: { zone: "quarry", tier: 1 },
+    // ── Caves ladder · 4 rungs (Lantern Camp → Deephold), the deep gem-mine's
+    // answer to the quarry's Dig Site → Foundry City climb. plotCount above is the
+    // top rung (9). The cumulative `unlocks` union MUST equal the flat buildings[]
+    // superset (test-enforced). Costs are resource-only (coins=0) and gate ONLY on
+    // mine-board-producible goods the Caves itself stocks (block/coke/iron_bar/
+    // silver_bar/cut_gem/gold_bar) — the per-zone inventory is siloed, so a deep
+    // mine can only ever bank mine goods. They skew toward gems/gold (the Caves'
+    // signature seam) where the quarry leaned on stone + iron, so the two mines
+    // climb on different currencies.
+    tiers: [
+      {
+        id: "lantern_camp", name: "Lantern Camp", plots: 3,
+        unlocks: [BuildingId.Hearth, BuildingId.Kitchen, BuildingId.Inn],
+      },
+      {
+        id: "tunnel_works", name: "Tunnel Works", plots: 5,
+        unlocks: [BuildingId.Workshop, BuildingId.Housing, BuildingId.Watchtower],
+        upgradeCost: { resources: { block: 14, coke: 4 } },
+      },
+      {
+        id: "gem_galleries", name: "Gem Galleries", plots: 7,
+        unlocks: [BuildingId.Forge, BuildingId.Barn, BuildingId.Apothecary, BuildingId.Chapel],
+        upgradeCost: { resources: { iron_bar: 12, coke: 8, cut_gem: 1 } },
+      },
+      {
+        id: "deephold", name: "Deephold", plots: 9,
+        unlocks: [
+          BuildingId.PowderStore, BuildingId.Observatory, BuildingId.CaravanPost,
+          BuildingId.Housing2, BuildingId.Housing3,
+        ],
+        upgradeCost: { resources: { iron_bar: 18, silver_bar: 6, cut_gem: 3, gold_bar: 2 } },
+      },
+    ],
   },
   {
     id: "fairground", name: "Drifter's Fairground", kind: "festival", icon: "🎪",

@@ -4,9 +4,9 @@
  * costs" section.
  *
  * Uses real catalog data (features/zones/data.js):
- *   - quarry: 6-rung mine ladder with a per-rung upgradeCost → full cost table
- *   - caves:  flat mine zone (no tiers)                       → "single-tier" note
- *   - crossroads: no board (event node)                       → renders nothing
+ *   - quarry / caves: mine ladders with per-rung upgradeCost  → full cost table
+ *   - forge:  flat mine zone (no tiers)                        → "single-tier" note
+ *   - crossroads: no board (event node)                        → renders nothing
  */
 
 import { describe, it, expect, afterEach } from "vitest";
@@ -61,9 +61,22 @@ describe("ZoneTierLadder — tiered zone (quarry)", () => {
   });
 });
 
-describe("ZoneTierLadder — flat settlement (caves)", () => {
-  it("renders a single-tier note instead of a cost table", () => {
+describe("ZoneTierLadder — tiered zone (caves)", () => {
+  it("renders the live ladder now that the deep mine has tiers", () => {
     const { container } = renderZone("caves");
+    expect(container.querySelector("#zone-tier-ladder")).not.toBeNull();
+    const body = container.textContent ?? "";
+    expect(body).toMatch(/settlement tiers/i);
+    expect(body).toMatch(/upgrade cost/i);
+    expect(body).toContain("Lantern Camp");
+    expect(body).toContain("Deephold");
+    expect(container.querySelector("table")).not.toBeNull();
+  });
+});
+
+describe("ZoneTierLadder — flat settlement (forge)", () => {
+  it("renders a single-tier note instead of a cost table", () => {
+    const { container } = renderZone("forge");
     expect(container.querySelector("#zone-tier-ladder")).not.toBeNull();
     const body = container.textContent ?? "";
     expect(body).toMatch(/single-tier/i);

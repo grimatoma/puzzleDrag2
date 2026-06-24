@@ -455,6 +455,21 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
         },
         "zone": "quarry",
       },
+      {
+        "wall": {
+          "missing": [
+            {
+              "key": "gold_bar",
+              "reason": "no source reachable from this settlement's board or stations",
+            },
+          ],
+          "reachedName": "Gem Galleries",
+          "reachedTier": 2,
+          "toName": "Deephold",
+          "toTier": 3,
+        },
+        "zone": "caves",
+      },
     ],
   },
   "zones": [
@@ -507,9 +522,14 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
         "zone": "quarry",
       },
       "id": "caves",
-      "maxSelfTier": 0,
+      "maxSelfTier": 2,
       "reachableFromFreshSave": true,
-      "wall": null,
+      "wall": {
+        "missing": [
+          "gold_bar",
+        ],
+        "toName": "Deephold",
+      },
     },
     {
       "gate": null,

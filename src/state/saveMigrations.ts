@@ -87,6 +87,33 @@ export const MIGRATIONS: Record<number, SaveMigrator> = {
     civicEconomy: { lastClaimedAt: null, pendingProvisions: {} },
     version: 50,
   }),
+  // 50 → 51: the Lanternlit Caves gained a 4-rung settlement-tier ladder
+  // (Lantern Camp → Tunnel Works → Gem Galleries → Deephold), turning the
+  // previously un-tiered deep mine into a zone you grow like the quarry. The
+  // caves were un-tiered before, so no old save can hold a meaningful caves tier
+  // (TIER_UP / DEV/SET_ZONE_TIER both no-op'd for un-tiered zones); defensively
+  // clamp any stray `settlements.caves.tier` into the new 0..3 range (default 0)
+  // so an old caves settlement opens at its first rung. Guards are by hand
+  // because the tests tsconfig runs with `strictNullChecks: false`.
+  50: (save) => {
+    const settlements = save.settlements;
+    if (settlements && typeof settlements === "object") {
+      const caves = (settlements as Record<string, unknown>).caves;
+      if (caves && typeof caves === "object") {
+        const t = (caves as Record<string, unknown>).tier;
+        const clamped = typeof t === "number" ? Math.max(0, Math.min(3, Math.floor(t))) : 0;
+        return {
+          ...save,
+          settlements: {
+            ...(settlements as Record<string, unknown>),
+            caves: { ...(caves as Record<string, unknown>), tier: clamped },
+          },
+          version: 51,
+        };
+      }
+    }
+    return { ...save, version: 51 };
+  },
 };
 
 export type MigrateFailReason = "no-version" | "forward-version" | "missing-migrator";

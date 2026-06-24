@@ -221,8 +221,12 @@ export const DEFAULT_HOME_BIOME = "prairie";
 // 48 → 49: home lots re-laid into clean aligned frontage rows (hand-rolled
 //          procedural ground); lots moved again, so discard 48-era saves to avoid
 //          a placed building rendering on a shifted lot.
+// 49 → 50: added the Town Hall "Tithes & Provisions" civic economy slice.
+// 50 → 51: the Lanternlit Caves gained a 4-rung settlement-tier ladder
+//          (Lantern Camp → Deephold), turning the previously un-tiered deep mine
+//          into a zone you grow; clamp any stray caves tier into the new 0..3 range.
 // Migrators live in src/state/saveMigrations.ts and upgrade old saves in place.
-export const SAVE_SCHEMA_VERSION = 50;
+export const SAVE_SCHEMA_VERSION = 51;
 
 // UPGRADE_THRESHOLDS lives in a standalone file so that tileCollection/data.ts
 // can import it without pulling in the rest of constants.ts (which would create
