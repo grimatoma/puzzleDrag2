@@ -452,7 +452,7 @@ const ARC_SVG = `      <div class="diagram">
               <line x1="694" y1="168" x2="712" y2="162" marker-end="url(#tw)"/>
               <line x1="834" y1="152" x2="852" y2="146" marker-end="url(#tw)"/>
             </g>
-            <text x="500" y="298" text-anchor="middle" fill="var(--muted)" font-size="10.5" font-style="italic">each step is a caravan expedition — found, build, win the signature task, roll on · the board-stack grows as you climb</text>
+            <text x="500" y="298" text-anchor="middle" fill="var(--muted)" font-size="10.5" font-style="italic">the frontier the map suggests as difficulty ramps — open any reachable site, develop several at once · all required for the finale</text>
           </g>
         </svg>
         <p class="cap">Sizes are the design target. Plot counts and costs are tuned in the Balance Profile and the playtest harness.</p>
@@ -463,8 +463,8 @@ const ARC_SVG = `      <div class="diagram">
 const overview = `  <main>
     <section id="what">
       <h2>What the game is</h2>
-      <p class="lead">puzzleDrag2 is a cozy <b>match-merge farming &amp; settlement</b> game. On a small board you <b>drag chains of matching tiles</b>; each chain harvests resources <em>and</em> merges tiles into better ones. You spend what you grow to build a settlement — and once it is thriving and you have completed its <b>signature task</b>, you load a <b>caravan</b> and roll out to found the next town. Each town stacks a new board on the last and grows bigger and harder, but the heart never changes: <b>drag, harvest, grow, complete, move on.</b></p>
-      <div class="box story"><b>The fantasy.</b> You arrive at a cold hearth in a forgotten vale and someone hands you the tongs. You re-light the farm, build a caravan, and head over the ridge to found the next town — a mining valley, a hazard-ridden quarry, a harbor, a rat-plagued meadow, a deep dark delve — each larger, until you raise the Old Capital and wake the kingdom.</div>
+      <p class="lead">puzzleDrag2 is a cozy <b>match-merge farming &amp; settlement</b> game. On a small board you <b>drag chains of matching tiles</b>; each chain harvests resources <em>and</em> merges tiles into better ones. You spend what you grow to build up a settlement — and you outfit a <b>caravan</b> to roll out and found new towns across the map, <b>opening and developing several at your own pace</b>. Each town stacks a new board on the last and grows bigger and harder, but the heart never changes: <b>drag, harvest, grow, complete, move on.</b></p>
+      <div class="box story"><b>The fantasy.</b> You arrive at a cold hearth in a forgotten vale and someone hands you the tongs. You re-light the farm, build a caravan, and head out across the map to found new towns — a mining valley, a hazard-ridden quarry, a harbor, a rat-plagued meadow, a deep dark delve — until you raise the Old Capital and wake the kingdom.</div>
     </section>
 
     <section id="loop">
@@ -482,7 +482,7 @@ ${STACK_SVG}
     <section id="shape">
       <h2>The shape of a session &amp; the long arc</h2>
       <p><b>A session</b> is one visit to a board: a small budget of <b>turns</b> (~10), each chain spends one, whatever you harvest banks into <em>that town's</em> stockpile, and the visit ends when turns run out. <b>Each town is a long project</b>, not a handful of sessions — finishing one takes real effort. But it is <b>effort-gated, not time-gated</b>: you are never stuck waiting on a clock. The time between sessions hands you <b>free tools</b> (timed depots, daily, civic) to go faster — or, if you would rather not wait, you <b>craft those tools now by spending extra materials</b>.</p>
-      <p><b>The long arc</b> is a ladder of <b>seven towns, all required</b>. You found each by caravan, build it up, beat its signature task, and roll on. Difficulty is <b>cozy early, ramping late</b>: the first towns are forgiving; hazards and scarcity bite in the back half. <b>Workers, coins, tools and Villagers travel with you</b>; each town's materials are its own.</p>
+      <p><b>The long arc</b> is a <b>map of seven towns</b>, all required for the finale but openable in any order the map allows. You found each by caravan, build it up, and beat its signature task — but you need not finish one before opening the next: <b>several towns can be in progress at once and you switch between them freely</b>. Difficulty is <b>cozy early, ramping late</b>: the early sites are forgiving, and the rising founding cost plus the map's outward-expanding reach keep the harder, farther sites for later — a cozy unfurling, not a forced order. <b>Workers, coins, tools and Villagers travel with you</b>; each town's materials are its own.</p>
     </section>
 
     <section id="map">
@@ -544,7 +544,7 @@ const systems = `  <div class="panel" id="board" role="tabpanel" aria-label="The
       <p class="lead">The economy runs on three currencies that are <b>not</b> interchangeable — so your farming stays targeted, rather than earning a catch-all that buys anything. Materials and coins bridge only through a costly Market; Villagers come only from Houses.</p>
       <div class="grid">
         <div class="card g"><h3>Materials — the main currency</h3><p>Per-town, board-grown (crops, ore, fish and their refined goods). They pay for <b>buildings, win-tasks, expedition rations, and refining.</b> They do not travel between towns, so each town's farming is purposeful — there is no super-currency that buys everything.</p></div>
-        <div class="card b"><h3>Coins — the cash layer</h3><p>The money economy: <b>worker wages, town-tier upgrades, tile unlocks, caravan founding,</b> and the <b>Market</b>. Earned by selling surplus at the Market, plus quests, daily, civic and bosses. Coins travel with you.</p></div>
+        <div class="card b"><h3>Coins — the cash layer</h3><p>The money economy: <b>worker wages, town-tier upgrades, tile unlocks, caravan founding,</b> and the <b>Market</b>. Earned by selling surplus at the Market, plus quests, daily, civic and bosses. Because coins are global and portable, they are what funds <a href="towns.html#founding">opening a new town</a> — so founding never depends on a town's own materials. Coins travel with you.</p></div>
         <div class="card"><h3>Villagers — the worker currency</h3><p>Your population, <b>produced by Houses</b>. Spent (with coins and materials) to hire workers — see <a href="#workers">Workers &amp; tools</a>. A constrained, valuable resource, and the one optional-IAP lever (see <a href="meta-money.html#money">Meta &amp; money</a>).</p></div>
         <div class="card b"><h3>The Market — the coin ↔ material bridge</h3><p><b>Sell surplus → coins</b> (an outlet for overflow and lopsided builds) and <b>buy materials → coins</b>, priced <b>deliberately high</b> so coins never cheaply replace farming. The escape hatch that lets you run a specialized build and just buy what you chose to skip — a release valve, not a bypass.</p></div>
       </div>
@@ -604,11 +604,12 @@ const townsTabs = [
 const towns = `  <div class="panel" id="path" role="tabpanel" aria-label="The path">
     <section id="founding">
       <h2>Founding by caravan</h2>
-      <p>You leave every town the same way: build a <b>caravan</b> and roll it out to found the next site. Town 1's whole win condition <em>is</em> building that first caravan; thereafter each town's signature task unlocks the caravan onward, and founding spends a (rising) coin cost for the journey. Home is where you start; every town after is caravan-founded.</p>
+      <p>You open a new town by <b>outfitting a caravan</b> and rolling it out to a site on the map. The caravan is paid in <b>coins — the global cash layer</b>, never a town's own materials, so founding can never depend on a place you have not opened yet. (The <b>Caravan Yard</b> you raise in Town 1 makes every later founding cheaper.)</p>
+      <p>Founding is <b>non-linear</b>, gated only by <b>reach and coins</b>. You can open any site the map lets you reach — one adjacent to a town you have already settled — as soon as you can afford it; you do <b>not</b> have to finish the town you are in first. Several towns can be <b>in progress at once</b>, and you <b>switch between them freely</b>; if a town is not grabbing you, leave it and develop another, then come back. The coin cost <b>rises with each town you open</b>, and the map's reach <b>expands outward</b> from where you have settled — so the harder, farther sites naturally come later. The order is a cozy unfurling, never a forced sequence. Home is where you start, auto-founded for free; every town after is caravan-founded.</p>
     </section>
     <section id="arc">
-      <h2>The seven-town path</h2>
-      <p class="lead">Seven towns, <b>all required</b>, each founded by caravan. Every town adds at most one new board (<span class="bd f">Farm</span> → <span class="bd m">Mine</span> → <span class="bd fi">Fish</span>), one <b>crux</b>, one <b>win task</b> (varied — not always a boss), and a <b>thematic signature building</b>.</p>
+      <h2>The seven-town map</h2>
+      <p class="lead">Seven towns, <b>all required for the finale</b> but openable in any order the map allows. Every town adds at most one new board (<span class="bd f">Farm</span> → <span class="bd m">Mine</span> → <span class="bd fi">Fish</span>), one <b>crux</b>, one <b>win task</b> (varied — not always a boss), and a <b>thematic signature building</b>. The left-to-right ordering below is the frontier the map <em>suggests</em> as difficulty ramps — not a forced sequence.</p>
 ${ARC_SVG}
       <table>
         <thead><tr><th>#</th><th>Town</th><th>Boards</th><th>Slots</th><th>Unique hook</th><th>Crux</th><th>Win task</th><th>Signature building</th></tr></thead>
@@ -635,13 +636,13 @@ ${ARC_SVG}
           <dt>Crux</dt><dd>The tutorial hub. Teaches every verb — chain, refine, fill orders, raise a House and hire a worker, tier up — with no pressure. Your home forever.</dd>
           <dt>Hook</dt><dd>None by design: the gentle teacher.</dd>
           <dt>Size</dt><dd><b>~6 slots</b> — so you already feel the build choice: Mill / Bakery / Kitchen / Granary fill most of it; one or two left for a House or a yield building.</dd>
-          <dt>Win task</dt><dd><b>Build the Caravan</b> (at the Caravan Yard) — and the moment it is built you found Town 2. The win is the bridge onward.</dd>
+          <dt>Win task</dt><dd><b>Build your first caravan</b> (at the Caravan Yard) — this opens the map, so you can roll out and found any reachable site. The win is the bridge onward.</dd>
         </dl>
         <ol class="play">
           <li><b>First chains.</b> Drag 3+ touching tiles; each banks crops and, if long, merges a tile up a tier.</li>
           <li><b>Refine.</b> Grain → Mill → flour → Bakery → <b>bread</b>; Field Kitchen turns grain into rations; Granary stores it.</li>
           <li><b>People &amp; workers.</b> Raise a <b>House</b> for Villagers, then hire your first <b>worker</b> (see <a href="systems.html#hiring">hiring</a>).</li>
-          <li><b>Build the caravan.</b> Gather the basket, assemble it at the Caravan Yard, roll out to Two Rivers.</li>
+          <li><b>Build the caravan.</b> Save up the coins, outfit your caravan at the Caravan Yard, and roll out to your first new site (Two Rivers sits just over the ridge).</li>
         </ol>
       </div>
     </section>
@@ -772,7 +773,7 @@ const buildings = `  <div class="panel" id="model" role="tabpanel" aria-label="T
       <table>
         <thead><tr><th>Town</th><th>Signature building</th><th>What it does</th><th>Export bonus elsewhere</th></tr></thead>
         <tbody>
-          <tr><td>1 Hearthwood</td><td><b>Caravan Yard</b></td><td>outfits the caravan that founds the next town (the win)</td><td>★ cheaper founding</td></tr>
+          <tr><td>1 Hearthwood</td><td><b>Caravan Yard</b></td><td>outfits the caravans that found new towns (Town 1's win)</td><td>★ cheaper founding</td></tr>
           <tr><td>2 Two Rivers</td><td><b>Quartermaster's Hall</b></td><td>packs farm food into mine rations efficiently</td><td>★ +ration packing in any mine</td></tr>
           <tr><td>3 Cracked Quarry</td><td><b>Pit Canteen</b></td><td>feeds miners underground: +2 free ration-turns / expedition</td><td>★ +2 ration-turns in any mine</td></tr>
           <tr><td>4 Saltspray</td><td><b>Bait Shack</b></td><td>breeds bait for richer catches</td><td>★ +fish yield in any harbor</td></tr>
@@ -875,7 +876,11 @@ const status = `  <main>
           <tr data-status="build"><td><b>Building removal + permanence</b></td><td><span class="pill warn">build</span></td><td>Remove discretionary buildings; major / functionality buildings permanent; the House rule. Building <em>upgrades</em> parked for later.</td></tr>
           <tr data-status="build"><td><b>Building → tool unlock + timed grant</b></td><td><span class="pill warn">build</span></td><td>Make "build unlocks the recipe / generates on a timer" universal. (Also the <code>/b/</code> wiki update.)</td></tr>
           <tr data-status="build"><td><b>Monetization hooks</b></td><td><span class="pill warn">build</span></td><td>Rewarded-ad hooks (daily toolcrate, skip-cooldown, boost win-task, maybe run-yield); IAP (Buy Villagers, toolcrate, remove-ads); hybrid expansion villages. No banners.</td></tr>
-          <tr data-status="build"><td><b>Caravan founding + Town 1 to ~6 slots</b></td><td><span class="pill warn">build</span></td><td>Founding-by-caravan act gated on each win; shrink the home map for real early scarcity.</td></tr>
+          <tr data-status="build"><td><b>Non-linear founding</b></td><td><span class="pill warn">build</span></td><td>Remove the hard "complete your first settlement before founding the next" gate (<code>src/state.ts:779</code>) so any map-adjacent, affordable site can be opened mid-progress. The code already does coin-founding, parallel settlements &amp; free fast-travel — this gate is the only blocker to opening/switching freely.</td></tr>
+          <tr data-status="build"><td><b>Reachability gate only</b></td><td><span class="pill warn">build</span></td><td>Remove the hard <code>requiresZoneTier</code> prereqs (<code>src/features/zones/data.ts:442</code>); gate founding on <b>map reachability + the rising coin cost only</b> — no completion prereq and no extra progress threshold. The expanding map reach is the ramp.</td></tr>
+          <tr data-status="wire"><td><b>Caravan = the founding act (coins only)</b></td><td><span class="pill info">half-wired</span></td><td>Founding is a coin dispatch today and <code>caravan_post</code> is the market/sell building. Surface founding as "outfit a caravan" paid in <b>coins only</b> — never a target town's own materials (the no-softlock rule); the Caravan Yard discounts it.</td></tr>
+          <tr data-status="build"><td><b>Finale = all zones complete</b></td><td><span class="pill warn">build</span></td><td>The Old Capital should require <b>every prior town complete</b>. Today it unlocks on 3 Hearth-Tokens (one per settlement <em>type</em>, <code>src/features/zones/data.ts:589</code>) — widen the gate so all required towns must be finished.</td></tr>
+          <tr data-status="build"><td><b>Town 1 to ~6 slots</b></td><td><span class="pill warn">build</span></td><td>Shrink the home map so the build-choice bites with real early scarcity.</td></tr>
           <tr data-status="wire"><td><b>Expedition enforcement</b></td><td><span class="pill info">half-wired</span></td><td>Food→turns + Kitchen exist; expeditions aren't fully turn-budgeted everywhere — needed for the stack.</td></tr>
           <tr data-status="wire"><td><b>Runes / hearth tokens</b></td><td><span class="pill info">half-wired</span></td><td>Earned but unspent; the portal is unfinished. With the finale gated on all towns, decide what they're for.</td></tr>
           <tr data-status="wire"><td><b>Castle / NPC orders</b></td><td><span class="pill info">half-wired</span></td><td>Order/donation sinks without reward gates — could become the Town 2 "grand order" win.</td></tr>
@@ -933,7 +938,7 @@ const FILES = [
     html: page({
       slug: "towns",
       title: "The seven towns",
-      sub: "A caravan-founded ladder of seven required towns, each adding one board, one crux, one win task and a thematic signature building that exports across zones.",
+      sub: "A caravan-founded map of seven towns — all required for the finale but openable in any order you can reach — each adding one board, one crux, one win task and a thematic signature building that exports across zones.",
       desc: "puzzleDrag2's seven-town path — founding by caravan, each town's crux, win task and signature building, and the cross-zone export mechanic.",
       chips: ["7 towns · all required", "founded by caravan", "varied win tasks", "exportable signatures"],
       tabs: townsTabs,
