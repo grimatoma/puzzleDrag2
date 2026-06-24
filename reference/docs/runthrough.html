@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>puzzleDrag2 — A Full Playthrough</title>
+<style>
+  :root{
+    --ink:#2b2118; --ink-soft:#5c4f40; --paper:#f6efe1; --paper-2:#efe5d2;
+    --gold:#c79a3e; --gold-deep:#9a6f24; --green:#6f8f43; --stone:#8a8174;
+    --tide:#4f7f93; --ember:#b4532a; --line:#e0d3ba; --shadow:rgba(60,40,15,.10);
+    --maxw:760px;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; background:
+      radial-gradient(1200px 600px at 50% -200px, #fff7e8 0%, transparent 60%),
+      var(--paper);
+    color:var(--ink);
+    font:17px/1.72 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:56px 22px 120px}
+  header.title{text-align:center; margin:24px 0 8px}
+  .kicker{font-family:ui-sans-serif,system-ui,sans-serif; text-transform:uppercase;
+    letter-spacing:.22em; font-size:12px; color:var(--gold-deep); font-weight:700}
+  h1{font-size:40px; line-height:1.1; margin:.3em 0 .15em; letter-spacing:-.01em}
+  .sub{color:var(--ink-soft); font-style:italic; font-size:18px; margin-top:4px}
+  .rule{height:1px; background:linear-gradient(90deg,transparent,var(--line),transparent);
+    margin:34px 0}
+  .lede{font-size:18.5px; color:#3c3225}
+  .lede strong{color:var(--ink)}
+  h2{font-size:15px; font-family:ui-sans-serif,system-ui,sans-serif; font-weight:800;
+    text-transform:uppercase; letter-spacing:.16em; color:var(--gold-deep);
+    margin:54px 0 2px; display:flex; align-items:center; gap:10px}
+  h2 .n{display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%;
+    background:var(--gold); color:#fff; font-size:13px; box-shadow:0 1px 0 var(--gold-deep)}
+  .scene{font-size:23px; font-family:"Iowan Old Style",Georgia,serif; font-weight:600;
+    margin:.15em 0 .5em; color:var(--ink); letter-spacing:-.01em}
+  p{margin:0 0 16px}
+  em.place{font-style:normal; font-weight:700; color:var(--gold-deep)}
+  em.npc{font-style:normal; font-weight:700; color:var(--ember)}
+  em.kw{font-style:italic; color:var(--ink)}
+  .pull{margin:26px 0; padding:14px 20px; border-left:3px solid var(--gold);
+    background:var(--paper-2); border-radius:0 10px 10px 0; color:#43382a}
+  .pull .h{font-family:ui-sans-serif,system-ui,sans-serif; font-size:11px; font-weight:800;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--gold-deep); margin-bottom:4px}
+  .pull p:last-child{margin:0}
+  .pull.tide{border-color:var(--tide)} .pull.tide .h{color:var(--tide)}
+  .pull.stone{border-color:var(--stone)} .pull.stone .h{color:#6c6457}
+  .pull.green{border-color:var(--green)} .pull.green .h{color:#567032}
+  .tokens{display:flex; gap:10px; flex-wrap:wrap; margin:22px 0}
+  .token{flex:1 1 200px; background:var(--paper-2); border:1px solid var(--line);
+    border-radius:12px; padding:12px 14px}
+  .token .t{font-family:ui-sans-serif,system-ui,sans-serif; font-weight:800; font-size:14px}
+  .token .d{font-size:14.5px; color:var(--ink-soft); margin-top:2px}
+  .token.farm{border-top:4px solid var(--green)}
+  .token.mine{border-top:4px solid var(--stone)}
+  .token.fish{border-top:4px solid var(--tide)}
+  .end{text-align:center; margin-top:60px; color:var(--ink-soft); font-style:italic}
+  .end .star{color:var(--gold); font-style:normal; letter-spacing:.4em; font-size:14px}
+  footer.note{margin-top:46px; padding-top:18px; border-top:1px solid var(--line);
+    font:13px/1.6 ui-sans-serif,system-ui,sans-serif; color:#8a7d68}
+  a{color:var(--gold-deep)}
+  @media (max-width:520px){ h1{font-size:32px} .wrap{padding:36px 16px 90px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="title">
+    <div class="kicker">puzzleDrag2 · a readthrough</div>
+    <h1>From a Cold Hearth to the Old Capital</h1>
+    <div class="sub">one full playthrough, told as a story</div>
+  </header>
+
+  <div class="rule"></div>
+
+  <p class="lede">This is a single, start-to-finish walk through the game — not a
+  manual and not a wiki, just the <strong>shape of one complete run</strong>: what
+  you see, what you do, and how a dead little settlement grows back into a living
+  kingdom. Read it top to bottom the way you'd play it.</p>
+
+  <!-- 1 -->
+  <h2><span class="n">1</span> The opening</h2>
+  <div class="scene">A cold hearth</div>
+  <p>You arrive at <em class="place">Hearthwood Vale</em> — your home — and it is
+  quiet and cold. The hearth at its center has gone out. An old caretaker,
+  <em class="npc">Wren</em>, presses a pair of iron tongs into your hands, asks you
+  to name the place, and tells you the truth of it plainly: light the hearth, and
+  the Vale begins to wake. Everything else follows from that first warmth.</p>
+  <p>You name your settlement. The board slides up in front of you. You make your
+  first drag — and the game has begun.</p>
+
+  <!-- 2 -->
+  <h2><span class="n">2</span> How the board plays</h2>
+  <div class="scene">Drag, chain, collect</div>
+  <p>The board is a small grid of living tiles — tufts of grass, stalks of grain,
+  trees, birds. You play by <em class="kw">pressing on a tile and dragging across
+  its neighbors</em>: every tile of the <em>same kind</em> that you touch joins a
+  chain behind your finger, snaking in any of the eight directions. Drag through
+  three or more and the chain lights up; let go, and it <em class="kw">collects</em>.</p>
+  <p>Collecting does three things at once. The tiles you gathered turn into a
+  <em class="kw">resource</em> dropped into your stores — grass becomes hay, grain
+  becomes flour, trees become planks, birds become eggs, fruit becomes pie. If the
+  chain was long enough to cross a threshold, a higher <em class="kw">upgrade
+  tile</em> blooms where you finished, so good chains seed better boards. And any
+  partner tiles sitting right beside your chain get swept up too — a
+  <em class="kw">cross-collect</em> bonus that rewards reading the whole board, not
+  just one line. Then everything above slides down to fill the gaps and fresh tiles
+  drop in from the top.</p>
+  <div class="pull">
+    <div class="h">The rhythm of a session</div>
+    <p>Each visit to a board is a handful of turns — roughly ten. As your turns
+    burn down, the <em class="kw">seasons drift</em> across the board behind your
+    play: spring greens into summer, ambers into autumn, then settles toward
+    winter. It's the visual heartbeat of a run. When the turns are gone, a harvest
+    summary tallies what you made and you head back to town. What you're really
+    chasing the whole time: longer chains, clever cross-collect adjacencies, and not
+    wasting turns.</p>
+  </div>
+
+  <!-- 3 -->
+  <h2><span class="n">3</span> Lighting the hearth</h2>
+  <div class="scene">The first harvest, and a town that grows</div>
+  <p>Your first goal is small and warm: gather enough hay to light the hearth.
+  You harvest your first tile, then twenty bundles of hay, and the fire catches —
+  <em class="npc">Mira</em> arrives to keep you company, and soon <em class="npc">Old
+  Tomas</em> too. Now the loop opens up. Neighbors post <em class="kw">orders</em>
+  — bring me bread, bring me soup — and filling them pays <em class="kw">coins</em>,
+  the one currency that follows you everywhere. You <em class="kw">craft</em> raw
+  resources into finished goods at your stations (the mill grinds flour, the bakery
+  bakes bread), and you raise your first real building: the granary, room for
+  tomorrow.</p>
+  <div class="pull green">
+    <div class="h">Spend coins on hands that ease the work</div>
+    <p>Those coins go furthest on <em class="kw">workers</em>. Some are paid to make a
+    crop <em class="kw">need a shorter chain</em> — hire a grain hand and a run of
+    wheat that used to demand six tiles to pay off now rewards you at five, so every
+    drag does more and the board feels looser. Others <em class="kw">cut your crafting
+    costs</em>, so the same bread takes less flour. Hiring takes a coin and a
+    villager (your housing decides how many hands you can keep), and it's one of the
+    main ways an early grind softens into an easy, generous rhythm — you're quietly
+    buying the work down.</p>
+  </div>
+  <p>As you raise buildings, the town itself <em class="kw">levels up</em> beneath
+  you — from a bare <em class="place">Outpost</em> to a <em class="place">Hamlet</em>,
+  then a <em class="place">Village</em>, then a full <em class="place">City</em>.
+  Each tier-up costs a basket of goods you've been making, and each one widens the
+  town: more <em class="kw">plots</em> to build on, and a longer list of buildings
+  you're allowed to raise. By the time Hearthwood Vale is a City it sprawls across
+  twenty plots, loud and lived-in — the cold ruin you started in, grown all the way
+  up.</p>
+  <div class="pull">
+    <div class="h">You can't build everything — so choose</div>
+    <p>Here's the catch that gives the town its character: at every tier you
+    <em class="kw">unlock far more buildings than you have plots for</em>. The little
+    Outpost lets you pick three buildings from five; the City unlocks close to thirty
+    buildings but only ever has twenty plots. So you're always <em class="kw">choosing
+    what your town is for</em> — lean into baking and brewing, or sawmills and a
+    forge, or housing and workshops? Plots are precious, and what you leave out
+    matters as much as what you build. Later you can knock things down and re-plan,
+    but the squeeze never fully goes away, and that's the point: the town is a series
+    of small, real decisions, not a checklist.</p>
+  </div>
+
+  <!-- 4 -->
+  <h2><span class="n">4</span> The Keeper at the fence</h2>
+  <div class="scene">The first reckoning</div>
+  <p>Every settlement has a <em class="kw">Keeper</em> — an old guardian spirit of
+  the land — and once your home has grown enough, yours comes to the fence to be
+  reckoned with. This is the first real choice of the game: <em class="kw">coexist</em>
+  with the Keeper or <em class="kw">drive it out</em>. Either way, you settle the
+  question, and in doing so you <em class="kw">complete</em> your home settlement and
+  are handed your first <em class="kw">Hearth Token</em> — a heirloom seed, proof
+  that one corner of the old kingdom lives again. Wren tells you the road beyond has
+  opened. Act one is done.</p>
+
+  <!-- 5 -->
+  <h2><span class="n">5</span> The world opens</h2>
+  <div class="scene">The caravan and the map</div>
+  <p>To leave the Vale you <em class="kw">outfit a caravan</em>, paid for in coins,
+  and roll it out onto the <em class="place">map</em> — a hand-drawn world of regions
+  beyond your own: the <em class="place">Greenfields</em>, the <em class="place">Wilds</em>,
+  the <em class="place">Stoneholds</em>, the <em class="place">Coast</em>, and far off,
+  the <em class="place">Old Capital</em>. Founding a new town here is
+  <em class="kw">non-linear</em>: you can settle any site the map lets you
+  <em>reach</em> and that you can <em>afford</em>, and the cost climbs with each town
+  you open. You never have to finish one town before starting the next — you can have
+  <em class="kw">several in progress at once</em> and switch between them freely,
+  leaving a place that isn't grabbing you and coming back later.</p>
+  <p>The smith <em class="npc">Bram</em> arrives, asking for a forge; once you build
+  it and craft your first iron, the Vale has metal, and harder country becomes worth
+  visiting. <em class="npc">Sister Liss</em> follows, a healer for the road ahead.</p>
+  <div class="pull green">
+    <div class="h">Two farms to learn the rhythm</div>
+    <p>Your first steps out are gentle: <em class="place">Greenmeadow</em> and the
+    <em class="place">Wild Orchard</em> are farm towns like home — same green logic
+    of grass and grain and fruit — so you find your feet before the world gets
+    stranger.</p>
+  </div>
+
+  <!-- 6 -->
+  <h2><span class="n">6</span> Three realms, three tokens</h2>
+  <div class="scene">Every land grows differently</div>
+  <p>The heart of the long game is that each <em class="kw">kind</em> of settlement
+  plays by its own rules, and the old kingdom needs one of each restored. Each is its
+  own board, its own resources kept in its own stores, its own Keeper, and its own
+  token at the end.</p>
+  <div class="pull stone">
+    <div class="h">The Stoneholds — mining</div>
+    <p>At the <em class="place">Cracked Quarry</em> and the
+    <em class="place">Lanternlit Caves</em> you work stone and ore instead of
+    grass: blocks, iron and copper bars, coke, cut gems, silver and gold. The boards
+    are deeper and slower to tame, and the tier ladder runs long — Dig Site, Prospect
+    Camp, Mining Camp, Boomtown, Smeltworks, all the way to a roaring Foundry City.</p>
+  </div>
+  <div class="pull tide">
+    <div class="h">The Coast — fishing</div>
+    <p>At <em class="place">Saltspray Harbor</em> and <em class="place">Mirefen
+    Hollow</em> the water itself moves: tides roll in and out across your turns,
+    changing what the board offers. You pull fish, shellfish, pearls and oil from a
+    stilt-village that grows out over the marsh — Fishing Stilt to Bogwalk Hamlet to
+    Mire Village to Fen Town.</p>
+  </div>
+  <p>Around all this sits the warm machinery of a settled world: the worker economy,
+  daily quests and an almanac that tracks your mastery, decorations to make a town
+  yours, market stalls, and small personal story arcs with the people who've joined
+  you. You move between <em class="kw">Town</em>, <em class="kw">Inventory</em>,
+  <em class="kw">Craft</em>, <em class="kw">Map</em>, and <em class="kw">Townsfolk</em>
+  as the mood takes you. But the spine of it is always the same: grow a settlement of
+  each kind until its Keeper is reckoned with and its token is yours.</p>
+  <div class="tokens">
+    <div class="token farm"><div class="t">Heirloom Seed</div><div class="d">earned by completing a farm settlement</div></div>
+    <div class="token mine"><div class="t">Pact Iron</div><div class="d">earned by completing a mining settlement</div></div>
+    <div class="token fish"><div class="t">Tidesinger Pearl</div><div class="d">earned by completing a fishing settlement</div></div>
+  </div>
+
+  <!-- 7 -->
+  <h2><span class="n">7</span> The Harvest Festival</h2>
+  <div class="scene">The Vale lives again</div>
+  <p>Back home, the work pays off in the warmest beat of the game. With every
+  building raised and the festival larder filled — fifty each of the staples that
+  carried you here, the grass and wheat and flour and berries and oak — Hearthwood
+  Vale throws a <em class="kw">Harvest Festival</em>. The place you found cold and
+  silent is now loud with people and full of food. This is the emotional summit of
+  the settled world: not a number going up, but a home that is unmistakably,
+  finally, <em>alive</em>.</p>
+
+  <!-- 8 -->
+  <h2><span class="n">8</span> The Old Capital</h2>
+  <div class="scene">The road the whole journey pointed at</div>
+  <p>With every settlement restored and all <em class="kw">three Hearth Tokens</em>
+  in hand — seed, iron, and pearl, the farm, the mountain, and the sea — the last
+  road on the map opens. The <em class="place">Old Capital</em> has stood locked and
+  waiting at the far edge of the world this entire time, and only a kingdom made
+  whole again can reach it. You take the caravan out one final time, past every town
+  you raised from nothing, to the seat of the old realm — and there the journey that
+  began at one cold hearth comes to its rest. The Vale, the fields, the stoneholds,
+  the coast, and the capital: lit again, together. That is the run.</p>
+
+  <div class="end">
+    <div class="star">✦ ✦ ✦</div>
+    <p>And then, if you like, you simply keep tending the world you brought back —
+    a cozy place to return to, season after season.</p>
+  </div>
+
+  <footer class="note">
+    A narrative readthrough of the intended full experience. Place, character,
+    resource, and progression names are drawn from the game's source
+    (<code>src/features/cartography/data.ts</code>, <code>src/features/zones/data.ts</code>,
+    <code>src/story.ts</code>, <code>src/constants.ts</code>, <code>src/GameScene.ts</code>).
+    The board loop, settlement tiers, Keeper trials, and Hearth-Token finale are how
+    the game is built; the arc is told as the complete, intended journey end to end.
+  </footer>
+
+</div>
+</body>
+</html>
