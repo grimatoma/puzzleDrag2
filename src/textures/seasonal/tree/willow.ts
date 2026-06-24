@@ -230,7 +230,7 @@ const SP: Record<"Spring" | "Summer" | "Autumn" | "Winter", P> = {
     soil: [120, 126, 136],
     outlineTint: [46, 52, 60],
     lightTint: [208, 224, 242], // cool blue-grey
-    leafDensity: 0.2, // sparse bare drooping strands (still reads as a willow)
+    leafDensity: 0.55, // keep the weeping curtain (frosted/snow-capped), not a bare post
     catkinAmt: 0,
     blossomCrownAmt: 0,
     frostAmt: 0.85,

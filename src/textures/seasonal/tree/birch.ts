@@ -127,6 +127,7 @@ interface P {
   bark: RGB; // white-ish birch bark body
   barkShade: RGB; // shaded right side of the trunk
   lenticel: RGB; // dark horizontal bark dashes / branch marks
+  branchTone: RGB; // bare twig/limb colour — dark in winter so it reads against snow
   padGrass: RGB;
   soil: RGB;
   outlineTint: RGB; // soft dark outline colour
@@ -155,6 +156,7 @@ const SP: Record<SeasonName, P> = {
     bark: [240, 242, 238],
     barkShade: [196, 202, 200],
     lenticel: [70, 70, 66],
+    branchTone: [150, 138, 116],
     padGrass: [128, 200, 88],
     soil: [104, 78, 44],
     outlineTint: [44, 50, 38],
@@ -179,6 +181,7 @@ const SP: Record<SeasonName, P> = {
     bark: [242, 244, 240],
     barkShade: [194, 200, 196],
     lenticel: [64, 64, 60],
+    branchTone: [142, 130, 108],
     padGrass: [70, 158, 64],
     soil: [96, 70, 40],
     outlineTint: [36, 48, 30],
@@ -203,6 +206,7 @@ const SP: Record<SeasonName, P> = {
     bark: [234, 232, 222],
     barkShade: [188, 184, 172],
     lenticel: [72, 60, 44],
+    branchTone: [150, 120, 82],
     padGrass: [156, 142, 78],
     soil: [110, 80, 44],
     outlineTint: [60, 46, 22],
@@ -227,6 +231,7 @@ const SP: Record<SeasonName, P> = {
     bark: [238, 242, 246],
     barkShade: [190, 200, 208],
     lenticel: [58, 60, 64],
+    branchTone: [84, 80, 76], // dark wet twigs — must read against the white snow
     padGrass: [198, 212, 226],
     soil: [120, 126, 136],
     outlineTint: [46, 52, 62],
@@ -236,7 +241,7 @@ const SP: Record<SeasonName, P> = {
     airy: 1.0,
     catkinAmt: 0,
     frostAmt: 0.85,
-    branchSnowAmt: 1.0, // HEAVY snow load
+    branchSnowAmt: 0.6, // lighter snow ridge so the dark twigs read (not a white fan)
     padSnowAmt: 1.0, // deep snow blanket
     icicleAmt: 1.0, // hanging icicle
     blossomAmt: 0,
@@ -465,8 +470,9 @@ function branches(ctx: CanvasRenderingContext2D, p: P, sway: number): void {
   ctx.lineCap = "round";
   BRANCHES.forEach(([cx, cy, tx, ty, w]) => {
     const s = sway * (0.4 + Math.abs(tx) / 24);
-    // Branch limb (bark-coloured, thinner than oak — birch is slender).
-    ctx.strokeStyle = rgb(scale3(p.bark, 0.9), 1);
+    // Branch limb — its own twig tone (dark in winter so the bare limbs read
+    // against the snow instead of vanishing white-on-white).
+    ctx.strokeStyle = rgb(p.branchTone, 1);
     ctx.lineWidth = w;
     ctx.beginPath();
     ctx.moveTo(0, -3);
@@ -480,7 +486,7 @@ function branches(ctx: CanvasRenderingContext2D, p: P, sway: number): void {
     ctx.quadraticCurveTo(cx + s * 0.5 + 0.5, cy + 0.6, tx + s + 0.4, ty + 0.6);
     ctx.stroke();
     // Forking twig near the tip.
-    ctx.strokeStyle = rgb(scale3(p.bark, 0.85), 1);
+    ctx.strokeStyle = rgb(scale3(p.branchTone, 0.92), 1);
     ctx.lineWidth = w * 0.5;
     ctx.beginPath();
     ctx.moveTo(cx + s * 0.5, cy);
@@ -498,28 +504,29 @@ function branchSnow(ctx: CanvasRenderingContext2D, p: P, sway: number): void {
   ctx.lineCap = "round";
   BRANCHES.forEach(([cx, cy, tx, ty, w], idx) => {
     const s = sway * (0.4 + Math.abs(tx) / 24);
-    // fat snow base sitting on the upper side of the limb (offset up a touch)
+    // a SLIM snow ridge on the upper side of the limb (offset up a touch) — half
+    // the old width so the dark twig reads beneath it
     ctx.strokeStyle = `rgba(223,233,246,${load})`;
-    ctx.lineWidth = (w + 3.0) * load;
+    ctx.lineWidth = (w + 1.2) * load;
     ctx.beginPath();
     ctx.moveTo(0, -4.0);
     ctx.quadraticCurveTo(cx + s * 0.5, cy - 1.6, tx + s, ty - 1.4);
     ctx.stroke();
     // bright crown on top of the snow
     ctx.strokeStyle = `rgba(255,255,255,${load})`;
-    ctx.lineWidth = (w + 0.8) * load;
+    ctx.lineWidth = (w + 0.3) * load;
     ctx.beginPath();
     ctx.moveTo(0, -4.4);
     ctx.quadraticCurveTo(cx + s * 0.5, cy - 2.2, tx + s, ty - 2.0);
     ctx.stroke();
-    // plump snow clump on the limb tip
+    // a small snow clump on the limb tip
     ctx.fillStyle = `rgba(255,255,255,${load})`;
     ctx.beginPath();
     ctx.ellipse(
       tx + s,
       ty - 1.6,
-      (2.6 + (idx % 2) * 0.8) * load,
-      (1.8 + (idx % 2) * 0.4) * load,
+      (1.5 + (idx % 2) * 0.5) * load,
+      (1.1 + (idx % 2) * 0.3) * load,
       tx < 0 ? -0.5 : 0.5,
       0,
       Math.PI * 2,
@@ -700,6 +707,7 @@ function lerpP(a: P, b: P, f: number): P {
     bark: lerp3(a.bark, b.bark, f),
     barkShade: lerp3(a.barkShade, b.barkShade, f),
     lenticel: lerp3(a.lenticel, b.lenticel, f),
+    branchTone: lerp3(a.branchTone, b.branchTone, f),
     padGrass: lerp3(a.padGrass, b.padGrass, f),
     soil: lerp3(a.soil, b.soil, f),
     outlineTint: lerp3(a.outlineTint, b.outlineTint, f),
