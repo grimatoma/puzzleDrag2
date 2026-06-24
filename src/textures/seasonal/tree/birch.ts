@@ -885,23 +885,28 @@ function animAutumn(ctx: CanvasRenderingContext2D, t: number): void {
   // Steady ambient leaf-fall on a seamless loop — drawn after the tree.
   ctx.save();
   try {
+    // [startX, fallRate, hueBlend] — distinct rates desync the leaves while every
+    // one starts at prog 0 (alpha 0) at t=0, so anim(0) matches the leaf-free
+    // still and the loop wraps with no visible pop.
     const leaves: Array<[number, number, number]> = [
-      [-6, 0.0, 0.55], // [startX, phase, hueBlend]
-      [9, 0.5, 0.35],
-      [2, 0.78, 0.7],
+      [-6, 0.280, 0.55],
+      [9, 0.245, 0.35],
+      [2, 0.310, 0.7],
     ];
-    leaves.forEach(([sx, phase, hb]) => {
-      const prog = ((t * 0.28 + phase) % 1 + 1) % 1;
+    leaves.forEach(([sx, rate, hb]) => {
+      const prog = (t * rate) % 1;
       const ly = -8 + prog * 28; // canopy base to pad
-      const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * 6;
+      const lx = sx + Math.sin(prog * Math.PI * 2 + sx) * 6;
       const col = lerp3(p.foliageMid, p.foliageLight, hb);
-      ctx.fillStyle = rgb(col, 1 - prog * 0.4);
+      ctx.save();
+      ctx.globalAlpha = Math.sin(Math.PI * prog); // fade in at the canopy, out at the pad
+      ctx.fillStyle = rgb(col, 1);
       ctx.translate(lx, ly);
-      ctx.rotate(prog * Math.PI * 3 + phase * 4);
+      ctx.rotate(prog * Math.PI * 3 + sx);
       ctx.beginPath();
       ctx.ellipse(0, 0, 1.7, 3.0, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.restore();
     });
     // RARE: leaf-gust special.
     autumnGust(ctx, p, actionQ(t, SPECIAL_PERIOD, SPECIAL_WIN, SPECIAL_PERIOD / 2));

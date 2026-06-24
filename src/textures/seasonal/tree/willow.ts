@@ -981,19 +981,23 @@ function animAutumn(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.save();
   try {
     const p = SP.Autumn;
+    // [startX, fallRate, hueBlend] — distinct rates desync the strands while
+    // every one starts at prog 0 (alpha 0) at t=0, so anim(0) matches the
+    // leaf-free still and the loop wraps with no visible pop.
     const leaves: Array<[number, number, number]> = [
-      [-6, 0.0, 0.55], // [startX, phase, hueBlend]
-      [9, 0.5, 0.35],
+      [-6, 0.240, 0.55],
+      [9, 0.205, 0.35],
     ];
-    leaves.forEach(([sx, phase, hb]) => {
-      const prog = ((t * 0.24 + phase) % 1 + 1) % 1;
+    leaves.forEach(([sx, rate, hb]) => {
+      const prog = (t * rate) % 1;
       const ly = -6 + prog * 28; // crown fringe down to the pad
-      const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * 6;
+      const lx = sx + Math.sin(prog * Math.PI * 2 + sx) * 6;
       const col = lerp3(p.frondMid, p.frondLight, hb);
       ctx.save();
-      ctx.fillStyle = rgb(col, 1 - prog * 0.4);
+      ctx.globalAlpha = Math.sin(Math.PI * prog); // fade in at the crown, out at the pad
+      ctx.fillStyle = rgb(col, 1);
       ctx.translate(lx, ly);
-      ctx.rotate(prog * Math.PI * 2.5 + phase * 4);
+      ctx.rotate(prog * Math.PI * 2.5 + sx);
       ctx.beginPath();
       ctx.ellipse(0, 0, 1.1, 3.0, 0, 0, Math.PI * 2);
       ctx.fill();

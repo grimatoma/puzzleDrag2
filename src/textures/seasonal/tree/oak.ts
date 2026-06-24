@@ -512,6 +512,9 @@ function autumnOak(
     const ly = -8 + prog * 28;
     const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * amp;
     ctx.save();
+    // Fade in at the canopy, out as it nears the pad, so the drift loop wraps
+    // with zero visible leaf (seamless — no pop on loop entry).
+    ctx.globalAlpha = Math.sin(Math.PI * prog);
     ctx.fillStyle = autumnColors(hue)[1];
     ctx.translate(lx, ly);
     ctx.rotate(prog * Math.PI * 3 + phase * 4);
@@ -692,7 +695,9 @@ function drawOakAutumn(ctx: CanvasRenderingContext2D): void {
   autumnOak(ctx, 0, 0, 0.25, 0);
 }
 function animOakAutumn(ctx: CanvasRenderingContext2D, t: number): void {
-  const fall = (t * 0.22) % 1; // steady ambient drift
+  // Seed the drift at the still's t=0 phase (0.25) so anim(0) ≡ drawOakAutumn —
+  // no leaf-jump when the idle loop (re)enters at rest.
+  const fall = (t * 0.22 + 0.25) % 1;
   const gust = actionQ(t, SPECIAL_PERIOD, SPECIAL_WIN, SPECIAL_PERIOD / 2);
   autumnOak(ctx, swayAt(t), bobAt(t), fall, gust < 0 ? 0 : gust);
 }
