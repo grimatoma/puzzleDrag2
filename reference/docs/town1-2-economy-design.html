@@ -245,6 +245,7 @@
         <p class="cap">So every town with a mine also has a farm; every town with a fishery has a farm <em>and</em> a mine. The puzzles stack, and earlier boards never idle — later boards keep buying from them.</p>
       </div>
       <p>Each town in the path adds at most one new board on top of the stack it inherited. The whole game is that stack growing — farm, then farm+mine, then farm+mine+fish — across a ladder of towns.</p>
+      <div class="box"><b>One deliberate exception.</b> <b>Deepdelve</b> (Town 6) is a <b>mine with no farm</b> — the stacking rule switched off on purpose. With no local food engine it forces a different game: you ration supplies that trickle in from <b>timed depots</b> and arrive by <b>caravan shipment</b> from your farm towns. It's the rule's exception precisely so the rule is felt.</div>
     </section>
 
     <section id="session">
@@ -396,7 +397,7 @@
         <div class="card g"><h3>The Market</h3><p>Spend coins to buy resources or tools you're short on. The <b>always-available</b> outlet that keeps surplus coins meaningful — the cleanest answer to "what are coins for?"</p></div>
         <div class="card"><h3>Conveniences</h3><p>Reroll a quest, restock supplies, expand a cap — small optional spends.</p></div>
       </div>
-      <div class="box warn"><b>On "coins to start a farm round" — careful.</b> The farm is your main coin <em>source</em>, so charging coins to play it risks a <b>soft-lock / death-spiral</b>: bottom out, can't pay to play, can't play to earn. If you want a per-play stake, put it on <b>expeditions</b> (mine/fishery), where the free farm is always the fallback to recover — or guarantee a free farm fallback. Gating the farm itself behind coins is the one place "pay to play" becomes game-locking. <b>Recommendation:</b> keep the farm free; make coins matter through the Market + tiers + workers + founding instead.</div>
+      <div class="box warn"><b>On "coins to start a farm round" — careful.</b> The farm is your main coin <em>source</em>, so charging coins to play it risks a <b>soft-lock / death-spiral</b>: bottom out, can't pay to play, can't play to earn. If you want a per-play stake, put it on <b>expeditions</b> (mine/fishery), where the free farm is always the fallback to recover — or guarantee a free farm fallback. Gating the farm itself behind coins is the one place "pay to play" becomes game-locking. <b>Decided (per review):</b> the farm stays free — no coin cost to start a round. Coins matter through the Market + town tiers + workers + caravan founding instead.</div>
     </section>
 
     <section id="asymmetry">
@@ -445,11 +446,11 @@
             <text x="634" y="189" text-anchor="middle" fill="var(--muted)">win: great build</text>
             <text x="634" y="202" text-anchor="middle" fill="var(--danger)" font-size="9.5">rats · ~17</text>
 
-            <rect x="714" y="122" width="120" height="150" rx="9" fill="color-mix(in srgb,var(--info) 13%,#fff)" stroke="var(--info)"/>
-            <text x="774" y="142" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="12" fill="var(--ink)">6 Mirefen</text>
-            <text x="774" y="158" text-anchor="middle" fill="var(--info)" font-weight="700">Farm+Mine+Fish</text>
-            <text x="774" y="173" text-anchor="middle" fill="var(--muted)">win: sea boss</text>
-            <text x="774" y="186" text-anchor="middle" fill="var(--danger)" font-size="9.5">combined · ~19</text>
+            <rect x="714" y="122" width="120" height="150" rx="9" fill="color-mix(in srgb,#8a6d3b 16%,#fff)" stroke="#8a6d3b"/>
+            <text x="774" y="142" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="12" fill="var(--ink)">6 Deepdelve</text>
+            <text x="774" y="158" text-anchor="middle" fill="#8a6d3b" font-weight="700">Mine only</text>
+            <text x="774" y="173" text-anchor="middle" fill="var(--muted)">win: shipment</text>
+            <text x="774" y="186" text-anchor="middle" fill="var(--danger)" font-size="9.5">no farm · ~16</text>
 
             <rect x="854" y="104" width="132" height="168" rx="9" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)"/>
             <text x="920" y="126" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="12" fill="var(--ink)">7 Old Capital</text>
@@ -478,7 +479,7 @@
           <tr><td class="c">3</td><td><b>Cracked Quarry</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~13</td><td>cave hazards</td><td>mine hazard mgmt</td><td>capstone boss</td></tr>
           <tr><td class="c">4</td><td><b>Saltspray Harbor</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">~15</td><td>tides</td><td>the full stack</td><td>the Regatta</td></tr>
           <tr><td class="c">5</td><td><b>Greenmeadow</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~17</td><td>rats</td><td>farm hazard at scale</td><td>raise a great building</td></tr>
-          <tr><td class="c">6</td><td><b>Mirefen Hollow</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">~19</td><td>combined hazards</td><td>master the stack</td><td>sea boss / shipment</td></tr>
+          <tr><td class="c">6</td><td><b>Deepdelve</b></td><td><span class="bd m">M</span> <span style="font-size:.7rem;color:var(--muted)">(no farm!)</span></td><td class="num">~16</td><td>no farm — ship/generate supplies</td><td>provision under scarcity</td><td>fill the great shipment</td></tr>
           <tr><td class="c">7</td><td><b>The Old Capital</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">biggest</td><td>everything</td><td>the capstone</td><td>build the monument</td></tr>
         </tbody>
       </table>
@@ -560,13 +561,14 @@
         </dl>
       </div>
 
-      <div class="town fish">
-        <h3><span class="tn">Town 6</span> Mirefen Hollow — the master stack <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(kept light for now)</span></h3>
+      <div class="town mine">
+        <h3><span class="tn">Town 6</span> Deepdelve — the mine with no farm <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(the exception)</span></h3>
         <dl>
-          <dt>Boards</dt><dd><span class="bd f">Farm</span> <span class="bd m">Mine</span> <span class="bd fi">Fish</span> — the full stack under combined pressure.</dd>
-          <dt>Crux</dt><dd>The wringer before the finale: all three boards, hazards layered (a sea hazard plus a returning one), demanding you juggle the whole supply chain at once.</dd>
-          <dt>Size</dt><dd>~19 plots.</dd>
-          <dt>Win task</dt><dd><b>A sea boss or a great shipment</b> — the hardest non-finale task. (Details deferred with the fish biome.)</dd>
+          <dt>Boards</dt><dd><span class="bd m">Mine</span> only — the one town that breaks the stacking rule on purpose.</dd>
+          <dt>Crux</dt><dd>The planning town. With <b>no farm board</b>, you can't freely make food — so every expedition is rationed against a scarce, capped supply income. Progress is sequencing, not grinding.</dd>
+          <dt>Hook</dt><dd>The <b>supply system</b>: Supply Depots generate a small capped batch every few real-time hours, and you <b>ship</b> baskets in by caravan from your farm towns. Both deliberately scarce — the unique challenge.</dd>
+          <dt>Size</dt><dd>~16 plots.</dd>
+          <dt>Win task</dt><dd><b>Fill the great shipment</b> — accumulate and dispatch a large ore order under that scarcity. A "big task" that's neither boss nor festival.</dd>
         </dl>
       </div>
 
@@ -623,18 +625,19 @@
       <h2>Buildings by town (scope)</h2>
       <p>Roughly which buildings come online where — each town a distinct, growing roster on top of the last:</p>
       <table>
-        <thead><tr><th>Town</th><th>Boards</th><th>Plots</th><th>New building arrivals</th></tr></thead>
+        <thead><tr><th>Town</th><th>Boards</th><th>Slots</th><th>Core — must-build for the chain</th><th>Pick — compete for the rest</th></tr></thead>
         <tbody>
-          <tr><td><b>1 · Hearthwood</b></td><td><span class="bd f">F</span></td><td class="num">~6</td><td>Hearth, Mill, Bakery, Granary, Kitchen, Inn/Larder — bread + supplies + storage. Tools: clear, shuffle, a couple of hand tools.</td></tr>
-          <tr><td><b>2 · Two Rivers</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~10</td><td>+ Mining Camp, Workshop, Forge, Powder Store, Sawmill, Stable, Barn — the whole tool economy (metal tools, bomb, axe). The kit's center of gravity.</td></tr>
-          <tr><td><b>3 · Cracked Quarry</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~13</td><td>+ Observatory, Watchtower, deeper Forge tiers — deep-ore + hazard-clearing tools.</td></tr>
-          <tr><td><b>4 · Saltspray</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">~15</td><td>+ Harbor Dock, Smokehouse, Fishmonger, Lighthouse — fish refine &amp; ration-stretch.</td></tr>
-          <tr><td><b>5 · Greenmeadow</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~17</td><td>+ Ratcatcher, Master Ratcatcher, the great building — hazard counters at scale.</td></tr>
-          <tr><td><b>6 · Mirefen</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">~19</td><td>+ combined-hazard counters, timed-generation depots.</td></tr>
-          <tr><td><b>7 · Old Capital</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">biggest</td><td>+ civic/monument builds drawing on every prior good.</td></tr>
+          <tr><td><b>1 · Hearthwood</b></td><td><span class="bd f">F</span></td><td class="num">~6</td><td>Hearth*, Mill, Bakery, Kitchen, Granary</td><td>Apiary, Silo, Inn, Larder</td></tr>
+          <tr><td><b>2 · Two Rivers</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~10</td><td>+ Mining Camp, Workshop, Forge</td><td>Sawmill, Stable, Powder Store, Barn, Housing, Apiary</td></tr>
+          <tr><td><b>3 · Cracked Quarry</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~13</td><td>+ Powder Store (clears cave-ins)</td><td>Observatory, Watchtower, Chapel, Housing, Sawmill, Stable</td></tr>
+          <tr><td><b>4 · Saltspray</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">~15</td><td>+ Harbor Dock, Fishmonger</td><td>Smokehouse, Lighthouse, Brewery, Apothecary</td></tr>
+          <tr><td><b>5 · Greenmeadow</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~17</td><td>+ Ratcatcher, the great building <span style="font-size:.7rem;color:var(--muted)">(win)</span></td><td>Master Ratcatcher, Watchtower, Chapel, yield buildings</td></tr>
+          <tr><td><b>6 · Deepdelve</b></td><td><span class="bd m">M</span></td><td class="num">~16</td><td>Mining Camp, Workshop, Forge, Supply Depot, Shipping Office <span style="font-size:.7rem;color:var(--muted)">(no farm)</span></td><td>Powder Store, Observatory, Barn, extra Depots, Housing</td></tr>
+          <tr><td><b>7 · Old Capital</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">biggest</td><td>farm+mine+fish core + the Monument <span style="font-size:.7rem;color:var(--muted)">(win)</span></td><td>civic, decor, extra yield/ability</td></tr>
         </tbody>
       </table>
-      <div class="box tip"><b>The point of small early plots.</b> With ~6 plots in Town 1, you can't have everything — so unlocking the Granary (shuffle) instead of a yield building is a felt choice. As towns widen, the roster fills out and the kit deepens. Plot scarcity is the early game's main strategic texture.</div>
+      <p style="font-size:.78rem;color:var(--muted);">* Hearth is prebuilt and doesn't cost a slot. Building names are the real in-code roster (<code>src/constants.ts</code>, 27 buildings); a few (Supply Depot, Shipping Office, Ratcatcher) are <span class="tag des">design</span> additions.</p>
+      <div class="box tip"><b>Slots &lt; buildings — choose your abilities.</b> The recommendation: a town's <b>slots are fewer than the buildings on offer</b>. After the <b>core chain</b> (the buildings the boards literally need — Mill/Bakery/Kitchen, Forge/Workshop, Harbor Dock) you have only a few discretionary slots and must <b>pick which ability / yield / tool buildings to run</b>. That choice — which tools to bring online, which yields to boost — is the early game's main strategy, and it's why Town 1 is tiny. Because building a building unlocks its tool <em>globally and permanently</em>, the choice is about <b>pacing and per-town board identity</b>, not permanent loss — you'll unlock most tools eventually, but <em>when</em> and <em>where</em> is yours. <span class="tag des">design</span> open question: should slots instead equal the building count (build everything, no choice)? See Gaps.</div>
     </section>
   </div>
 
@@ -681,7 +684,7 @@
           <tr data-status="build"><td><b>Building → tool unlock</b></td><td><span class="pill warn">build</span></td><td>Only Powder Store grants a tool; recipes aren't gated by building. Make "build unlocks the recipe / timed grant" universal. (Also the wiki update.)</td></tr>
           <tr data-status="build"><td><b>Worker cost scaling</b></td><td><span class="pill warn">build</span></td><td>Raise base + step and ramp the material every hire (today: flat 2 every 3rd). Tune for T1–T2.</td></tr>
           <tr data-status="build"><td><b>The Market (coin sink)</b></td><td><span class="pill warn">build</span></td><td>Spend coins to buy resources/tools — the always-available outlet. Market exists but is sell-only today.</td></tr>
-          <tr data-status="build"><td><b>Timed-generation buildings</b></td><td><span class="pill warn">build</span></td><td>Generalise grant_tool / civic provisions into an "every X hours" capped generator (supplies or a tool).</td></tr>
+          <tr data-status="build"><td><b>Timed generation + shipping</b></td><td><span class="pill warn">build</span></td><td>Generalise grant_tool / civic provisions into an "every X hours" capped generator (supplies or a tool), plus inter-zone caravan shipping — the spine of the mine-only town (Deepdelve).</td></tr>
           <tr data-status="build"><td><b>Caravan founding</b></td><td><span class="pill warn">build</span></td><td>Wrap founding cost + travel in the caravan act, gated on each town's win task; T1's win = build the caravan.</td></tr>
           <tr data-status="build"><td><b>Town 1 down to ~6 plots</b></td><td><span class="pill warn">build</span></td><td>Re-size the authored 20-plot home map so early plots are scarce.</td></tr>
           <tr data-status="build"><td><b>Per-town win tasks + finale gate</b></td><td><span class="pill warn">build</span></td><td>Caravan / order / boss / regatta / great-build as completion triggers; finale requires all six towns (not just 3 tokens).</td></tr>
@@ -689,9 +692,10 @@
           <tr data-status="wire"><td><b>Runes / hearth tokens spend</b></td><td><span class="pill info">half-wired</span></td><td>Earned, but the portal summon they feed is unfinished. With the finale now gated on all towns, decide what tokens are <em>for</em>.</td></tr>
           <tr data-status="wire"><td><b>Castle / NPC orders</b></td><td><span class="pill info">half-wired</span></td><td>Donation/order sinks exist without reward gates or auto-spawn — could become the Town 2 "grand order" win.</td></tr>
           <tr data-status="wire"><td><b>Expedition enforcement</b></td><td><span class="pill info">half-wired</span></td><td>Food→turns + Kitchen exist; expeditions aren't fully enforced as turn-budgeted sessions everywhere — needed for the stack.</td></tr>
-          <tr data-status="ask"><td><b>Town 6 identity</b></td><td><span class="pill idle">question</span></td><td>Mirefen as the "master stack" full-stack town before the finale — right call, or should T6 be something else?</td></tr>
-          <tr data-status="ask"><td><b>Fish-town specifics</b></td><td><span class="pill idle">question</span></td><td>Deferred for now (T4 &amp; T6). When ready: how does fishing read differently from mining, and what's the bait/tackle exchange?</td></tr>
-          <tr data-status="ask"><td><b>Per-play stake?</b></td><td><span class="pill idle">question</span></td><td>If you want a "pay to play" feel, put it on expeditions (free farm fallback), not the farm. Want one at all, or keep play free?</td></tr>
+          <tr data-status="ask"><td><b>Building slots model</b></td><td><span class="pill idle">question</span></td><td>Limited slots so you must CHOOSE which ability buildings to run (core chain protected) — recommended — vs. slots = all buildings (build everything). And does the choice tighten or ease as towns grow?</td></tr>
+          <tr data-status="ask"><td><b>Pacing / game length</b></td><td><span class="pill idle">question</span></td><td>How long should a town take to complete, and the whole 7-town run? Sets turn budgets, win-task basket sizes, worker curves, and idle-grant rates.</td></tr>
+          <tr data-status="ask"><td><b>Fish-town specifics</b></td><td><span class="pill idle">question</span></td><td>Deferred for now (T4 only). When ready: how does fishing read differently from mining, and what's the bait/tackle exchange?</td></tr>
+          <tr data-status="ask"><td><b>Chain knobs</b></td><td><span class="pill idle">question</span></td><td>Keep the earlier "yield divisor + upgrade-threshold floors, bought down by workers" depth, or simplify to flat per-line tuning?</td></tr>
         </tbody>
       </table>
     </section>
