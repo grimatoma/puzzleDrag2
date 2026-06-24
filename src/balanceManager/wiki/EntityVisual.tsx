@@ -98,9 +98,17 @@ export function entityIconKey(
     case "zones":
       return zoneMapIconKey(entityKey);
 
+    case "buildings": {
+      // Each town building links to its generic registry icon (`bld_<id>`), so
+      // inline wikilinks and compact refs render an icon. Falls back to null for
+      // any building without a registered icon (then the placeholder shows).
+      const key = `bld_${entityKey}`;
+      return iconColor(key) != null ? key : null;
+    }
+
     default:
-      // buildings, views, modals, toolPowers,
-      // settlementBiomes, tileDiscoveryMethods, … have no per-entity procedural icon.
+      // views, modals, toolPowers, settlementBiomes, tileDiscoveryMethods, …
+      // have no per-entity procedural icon.
       return null;
   }
 }

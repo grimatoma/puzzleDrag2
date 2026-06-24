@@ -63,9 +63,16 @@ describe("entityIconKey", () => {
   });
 
   it("returns null for concepts without per-entity icons", () => {
-    expect(entityIconKey("buildings", "hearth", null)).toBeNull();
     expect(entityIconKey("views", "town", null)).toBeNull();
     expect(entityIconKey("toolPowers", "clear_all", null)).toBeNull();
+  });
+
+  it("returns bld_<id> for buildings with a registered generic icon (null otherwise)", () => {
+    expect(entityIconKey("buildings", "hearth", null)).toBe("bld_hearth");
+    expect(entityIconKey("buildings", "forge", null)).toBe("bld_forge");
+    // `barn` reuses the existing generic bld_barn entry.
+    expect(entityIconKey("buildings", "barn", null)).toBe("bld_barn");
+    expect(entityIconKey("buildings", "not_a_building", null)).toBeNull();
   });
 
   it("uses entity.look.icon for achievements (and null when absent)", () => {
