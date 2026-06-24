@@ -12,6 +12,10 @@ export const BALANCE_VISUAL_SCENARIOS = [
   { id: 'balance-bosses-category', hash: '#/bosses', diff: domDiff },
   { id: 'balance-ability-article', hash: '#/abilities/abilities:threshold_reduce', diff: domDiff },
   { id: 'balance-building-powder-store', hash: '#/buildings/buildings:powder_store', diff: domDiff },
+  // Cost matrix — exercises the wide editable grid (desktop) and the ≤640px
+  // card reflow (iphone-portrait). Cleared storage defaults to developer view,
+  // so the grids render editable.
+  { id: 'balance-cost-matrix', hash: '#/costMatrix', diff: domDiff },
 ];
 
 export const BALANCE_VISUAL_SMOKE_SCENARIO_IDS = [

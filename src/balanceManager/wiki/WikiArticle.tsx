@@ -11,9 +11,8 @@
  *
  * Navigation via wikiNavTarget so Phase 5 can swap routing in one place.
  *
- * TODO (Phase 5): Add a "Browse all <concept>" section once per-concept
- * category routing lands. Relations + backlinks already provide cross-links
- * in the interim.
+ * A "Browse all <concept>" footer link jumps from this entity to its full
+ * concept gallery; relations + backlinks provide the lateral cross-links.
  */
 
 import React from "react";
@@ -277,9 +276,9 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           </button>
           <span style={{ color: COLORS.inkSubtle }}>›</span>
           {/* Entity title — display serif, big */}
-          <span className="wiki-title wiki-title--article">
+          <h1 className="wiki-title wiki-title--article">
             {title}
-          </span>
+          </h1>
           {/* Entity key — mono (developer view only) */}
           {view === "developer" && (
             <code
@@ -333,7 +332,7 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
           {/* At-a-glance visual summary (recipes/buildings/zones/workers) */}
           {atAGlance != null && (
             <section id="at-a-glance">
-              <div className="wiki-section-heading mb-2">{atAGlance.heading}</div>
+              <h2 className="wiki-section-heading mb-2">{atAGlance.heading}</h2>
               {atAGlance.node}
             </section>
           )}
@@ -413,11 +412,11 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
 
           {/* Properties section — always rendered */}
           <section id="properties">
-            <div
+            <h2
               className="wiki-section-heading mb-2"
             >
               Properties
-            </div>
+            </h2>
 
             {/* Raw schema table — hidden in player view via ReferenceSection */}
             <ReferenceSection heading="Schema reference (developer)">
@@ -485,6 +484,18 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
               </RelationalFooter>
             </section>
           )}
+
+          {/* Browse-all footer — jump from this entity to its full gallery. */}
+          <div className="pt-1">
+            <button
+              type="button"
+              className="wiki-relation-link"
+              onClick={() => navigate({ tab: conceptId })}
+              aria-label={`Browse all ${conceptLabel}`}
+            >
+              Browse all {conceptLabel} →
+            </button>
+          </div>
         </div>
 
         {/* RIGHT: Infobox rail */}

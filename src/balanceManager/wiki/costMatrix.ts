@@ -469,3 +469,22 @@ export function buildAllCostMatrices(
 ): CostMatrix[] {
   return COST_MATRIX_IDS.map((id) => buildCostMatrix(id, overrides, extraColumns[id] ?? []));
 }
+
+/**
+ * Narrow a matrix's rows to those whose name or id contains `query`
+ * (case-insensitive). A blank query returns the matrix unchanged (same
+ * reference). Columns and context headers are preserved; CostMatrixTable
+ * recomputes grouping bands from the surviving rows, so empty groups simply
+ * vanish.
+ *
+ * PURE — drives the Cost Matrix page's search box and is unit-tested directly.
+ */
+export function filterMatrixRows(matrix: CostMatrix, query: string): CostMatrix {
+  const q = String(query ?? "").trim().toLowerCase();
+  if (!q) return matrix;
+  const rows = matrix.rows.filter(
+    (r) => r.name.toLowerCase().includes(q) || r.id.toLowerCase().includes(q),
+  );
+  if (rows.length === matrix.rows.length) return matrix;
+  return { ...matrix, rows };
+}

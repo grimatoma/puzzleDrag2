@@ -11,7 +11,6 @@
 // `wikiNavTarget` so each concept owns its own tab.
 
 import React, { useState, useEffect, useCallback, Suspense, lazy } from "react";
-import { BALANCE_OVERRIDES } from "../../constants.js";
 import Icon from "../../ui/Icon.jsx";
 import { COLORS } from "../shared.jsx";
 import { parseHash, initialWikiRoute, useBalanceRouter } from "../router.js";
@@ -19,14 +18,12 @@ import "./wikiTheme.css";
 import CommandPalette from "../CommandPalette.jsx";
 import { BalanceNavProvider } from "../balanceNav.jsx";
 import type { CommandEntry } from "../commandPalette.js";
-import type { BalanceDraft, TabProps } from "../tabProps.js";
 import { CONCEPTS } from "./concepts.js";
 import { WIKI_SECTIONS, NARRATIVE_PAGES, PARKED_PAGES, UTILITIES, DEV_ONLY_SECTION_IDS } from "./wikiNav.js";
 import { parseWikiFocus } from "./conceptEntities.js";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import { WikiViewProvider, useWikiView } from "./wikiView.js";
-
-type TabComponent = React.ComponentType<TabProps>;
+import { pushRecent } from "./recents.js";
 
 // Lazy-load the heavy article/category/narrative renderers and the two
 // surviving developer utility tabs so they stay out of the shell chunk.
@@ -46,8 +43,8 @@ const ProgressionPageLazy = lazy(() =>
 const CostMatrixPageLazy = lazy(() =>
   import("./sections/CostMatrixPage.jsx").then((m) => ({ default: m.CostMatrixPage })),
 );
-const IconsTab = lazy(() => import("../tabs/IconsTab.jsx")) as unknown as TabComponent;
-const AnimationsDemoTab = lazy(() => import("../tabs/AnimationsDemoTab.jsx")) as unknown as TabComponent;
+const IconsTab = lazy(() => import("../tabs/IconsTab.jsx"));
+const AnimationsDemoTab = lazy(() => import("../tabs/AnimationsDemoTab.jsx"));
 
 // Concept id → human label, for sidebar links.
 const CONCEPT_LABELS: Record<string, string> = Object.fromEntries(
@@ -342,14 +339,6 @@ export default function WikiShell() {
     setMobileNavOpen(false);
   }, []);
 
-  // Read-only: the panel renders the effective config the constants module
-  // already merged (committed balance.json over defaults). The two surviving
-  // utility tabs still take a `draft` + inert `updateDraft` via TabProps.
-  const draft = BALANCE_OVERRIDES as BalanceDraft;
-  const noop = useCallback((_updater: (draft: BalanceDraft) => void) => {
-    /* read-only: edits are ignored */
-  }, []);
-
   const toggleSidebar = useCallback(() => {
     setSidebarCollapsed((v) => {
       const next = !v;
@@ -384,6 +373,14 @@ export default function WikiShell() {
   // landing rather than rendering one concept's key against another's schema.
   const articleFocus = isConceptTab && parsedFocus?.conceptId === tab ? parsedFocus : null;
 
+  // Record entity-article views as "recents" — surfaced by the command
+  // palette's empty-query state and WikiHome's "Jump back in" row. This covers
+  // every path to an article (palette, sidebar, cross-link). Storage-only side
+  // effect (no React state), so it's safe in an effect.
+  useEffect(() => {
+    if (articleFocus?.entityKey) pushRecent(tab, articleFocus.entityKey);
+  }, [tab, articleFocus?.entityKey]);
+
   // On the narrative-page tab, an absent focus means the Overview page. This
   // keeps `#/page` (the canonical empty-hash landing, which the router
   // normalises focus → null) and `#/page/overview` resolving to the same page
@@ -409,9 +406,9 @@ export default function WikiShell() {
   } else if (tab === "costMatrix") {
     mainContent = <CostMatrixPageLazy />;
   } else if (tab === "icons") {
-    mainContent = <IconsTab draft={draft} updateDraft={noop} focus={focus} />;
+    mainContent = <IconsTab />;
   } else if (tab === "animationsDemo") {
-    mainContent = <AnimationsDemoTab draft={draft} updateDraft={noop} focus={focus} />;
+    mainContent = <AnimationsDemoTab />;
   } else if (articleFocus != null) {
     mainContent = (
       <WikiArticle

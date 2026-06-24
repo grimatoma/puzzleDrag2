@@ -4,6 +4,20 @@
 // Both apps share an origin and therefore share localStorage — drafts saved
 // here are picked up by the game on its next load.
 
+// Self-hosted fonts (same-origin, bundled by Vite) — replaces the
+// render-blocking Google Fonts <link> the Dev Panel used to load. The family
+// names registered here match wikiTheme.css's --wiki-font-display/-body/-mono
+// stacks ("Fraunces" / "IBM Plex Sans" / "JetBrains Mono"), so the wiki looks
+// identical with no external network dependency.
+import "@fontsource/fraunces/400.css";
+import "@fontsource/fraunces/700.css";
+import "@fontsource/fraunces/800.css";
+import "@fontsource/fraunces/400-italic.css";
+import "@fontsource/ibm-plex-sans/400.css";
+import "@fontsource/ibm-plex-sans/600.css";
+import "@fontsource/ibm-plex-sans/700.css";
+import "@fontsource/jetbrains-mono/400.css";
+import "@fontsource/jetbrains-mono/700.css";
 import "./index.css";
 import React from "react";
 import { createRoot } from "react-dom/client";

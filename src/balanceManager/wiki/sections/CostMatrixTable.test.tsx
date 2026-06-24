@@ -35,6 +35,18 @@ describe("CostMatrixTable", () => {
     expect(container.querySelectorAll("input").length).toBe(0);
   });
 
+  it("labels context and cost cells with data-label for the mobile card reflow", () => {
+    const { container } = render(
+      <CostMatrixTable matrix={buildBuildingCostMatrix()} editable={false} />,
+    );
+    // The ≤640px reflow shows each column name via td::before { content:
+    // attr(data-label) }, so every context/cost cell must carry data-label.
+    const ctx = container.querySelector(".wiki-cost-ctx");
+    expect(ctx?.getAttribute("data-label")).toBeTruthy();
+    const cell = container.querySelector(".wiki-cost-cell");
+    expect(cell?.getAttribute("data-label")).toBeTruthy();
+  });
+
   it("stages an edit into the store when a cell changes", () => {
     const { container } = render(
       <CostMatrixTable matrix={buildBuildingCostMatrix()} editable />,
