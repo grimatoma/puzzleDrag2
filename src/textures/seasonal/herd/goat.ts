@@ -9,7 +9,8 @@
 // silhouette + identity colours never change across seasons; the only seasonal
 // changes are coat VOLUME (sleeker spring/summer → shaggier thick winter coat),
 // the pad colour, the light wash, gloss, and BOLD dressing — snow on the back,
-// a little winter SCARF, a breath-fog puff, blossom, a fallen leaf, frost. The
+// a little winter SCARF (a deep BERRY knit), a breath-fog puff, blossom, a
+// fallen leaf, frost. The
 // goat is never morphed into another animal; the signature horns + beard stay.
 //
 // IDLE (two-tier occasional action, carried through a `pose` object):
@@ -187,7 +188,7 @@ interface P {
   fallenLeafAmt: number; // 0..1 a fallen leaf on the pad
   breathFogAmt: number; // 0..1 breath puff at the muzzle
   scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked, fades in via alpha)
+  scarfColor: RGB; // scarf colour (locked berry, fades in via alpha)
 }
 
 // Four BOLD season presets. The goat stays the SAME white-and-tan horned,
@@ -216,7 +217,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 36, 70],
   },
   // Summer — glossy coat (PEAK); saturated mid-green pad; bright warm light.
   Summer: {
@@ -240,7 +241,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 36, 70],
   },
   // Autumn — warm-tinted fuller coat; olive-tan pad + a fallen leaf; amber light.
   Autumn: {
@@ -264,7 +265,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.92,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 36, 70],
   },
   // Winter — SHAGGY thick coat + back snow + scarf + breath-fog; snowy pad;
   // cool blue-grey light.
@@ -289,7 +290,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 36, 70],
   },
 };
 

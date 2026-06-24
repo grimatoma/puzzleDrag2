@@ -4,15 +4,21 @@
 // carrot every season (identity-safe) — one bright-orange root lying at a
 // natural diagonal slant with a feathery green leafy top — but the seasons swing
 // HARD on colour + a real seasonal prop (blossom / fallen leaf / snow cap + base
-// snow), and the idle is loud rather than subtle:
+// snow). The idle is a DISTINCT, in-character beat for a root vegetable — NOT the
+// generic produce bounce — built entirely from the idle Pose:
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the carrot rocks about
-//       its resting tip, the top travelling ~10–12 design-px, with a squash at
-//       the base. Anticipation → peak → settle, zero velocity at the window edges
-//       (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger SHAKE/BOUNCE — a squash-stretch hop
-//       ~12–14 design-px up, with anticipation crouch, stretch on the way up, and
-//       a squash landing that overshoots then settles (may exit the box).
+//   IDLE COMMON  (~6s, win ~1.0s): a TOP-FLICK — the feathery green top rustles
+//       in a breeze. A small lean sway about the resting tip (lower-left): because
+//       the pivot is at the tip and the leaves are at the far upper-right end, a
+//       tiny lean moves the TOP the most while the root barely stirs — the sway is
+//       concentrated at the top. Two soft flicks left/right, then calm. Zero value
+//       AND velocity at the window edges (seamless).
+//   IDLE RARE    (~18s, win ~2.0s): a PULL-UP-FROM-THE-SOIL — the carrot is tugged
+//       UP out of the ground a little (bob up), HANGS for a beat, then settles
+//       back down with a small squash + soil-shift on landing and a faint lean
+//       wiggle while it hangs. A couple of soil flecks kick up at the base as it
+//       lifts (additive overlay in anim(), enveloped to 0 at the window edges).
+//       Pose-driven; clearly distinct from the common rustle. Phased clear of it.
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized `paint(ctx, p,
 // pose)` where `interface P` holds tweenable season params (colours + prop
@@ -664,51 +670,92 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+// A sin² bump confined to the sub-window [lo,hi]: 0 (with zero velocity) at lo
+// and hi, peaking at the middle. Used to place a squash precisely at lift-off
+// and at landing while staying exactly 0 at the action-window edges.
+function subHump(q: number, lo: number, hi: number): number {
+  if (!(q > lo) || q >= hi) return 0;
+  const u = (q - lo) / (hi - lo);
+  const s = Math.sin(Math.PI * u);
+  return s * s;
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+// The pull-up envelope, 0..1: smootherstep UP over the first `LIFT_RAMP`, a flat
+// HANG at 1, then smootherstep DOWN over the last `LIFT_RAMP`. Smootherstep has
+// zero slope at its endpoints, so this is 0 with zero velocity at q=0 and q=1
+// (and reaches a clean held plateau in between — the "hang").
+const LIFT_RAMP = 0.34;
+function lift(q: number): number {
+  if (!(q > 0) || q >= 1) return 0;
+  if (q < LIFT_RAMP) return smoother(q / LIFT_RAMP); // 0→1, flat at q=0
+  if (q > 1 - LIFT_RAMP) return smoother((1 - q) / LIFT_RAMP); // 1→0, flat at q=1
+  return 1; // hang
+}
+
+// ── Shared RARE-window clock — the PULL-UP-FROM-THE-SOIL event ───────────────
+// COMMON fires every 6s at phase 0 (win 1.0s) → windows t mod 6 ∈ [0,1), i.e.
+// t mod 18 ∈ {[0,1),[6,7),[12,13)} since 18 = 3·6. The RARE pull-up uses
+// actionQ(t,18,2,3): with phase 3 the window is where (t+3) mod 18 < 2, i.e.
+// t mod 18 ∈ [15,17) — a 2s window that lands cleanly BETWEEN the COMMON beats
+// (verified: never overlaps any [.,.+1) common window) and finishes before the
+// 18≡0 seam where COMMON restarts from REST. One source of truth so the carrot's
+// pose (poseFromClock) and the soil-fleck overlay (anim) stay in lockstep.
+const PULL_PERIOD = 18.0;
+const PULL_WIN = 2.0;
+const PULL_PHASE = 3.0;
+const PULL_LIFT_PX = 6.5; // how far (design-px) the carrot rises out of the soil
+
+/** Progress 0..1 through the pull-up window, else −1 (carrot fully seated). */
+function pullQ(t: number): number {
+  return actionQ(t, PULL_PERIOD, PULL_WIN, PULL_PHASE);
+}
+
+/** Build the idle pose from the wall clock. Two in-character root-veg beats,
+ *  NEITHER a bounce:
+ *    COMMON — a TOP-FLICK: a small lean sway that (pivoting at the tip) rustles
+ *             the feathery top in a breeze every ~6s.
+ *    RARE   — a PULL-UP-FROM-THE-SOIL: the carrot is tugged up, hangs, and
+ *             settles with a soil-shift squash on landing every ~18s.
+ *  Each factor is 0 with zero velocity at its window edges → seamless loop. */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // Rocks the carrot ~0.17 rad about the resting tip → the upper-right top
-  // travels ~10–12 design-px.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: TOP-FLICK — the feathery top rustles in a breeze (~6s, win 1.0s) ──
+  // A tiny lean about the resting tip; since the leaves are at the far end the
+  // SWAY IS CONCENTRATED AT THE TOP. `env=sin(πq)` and the oscillation `sin(4πq)`
+  // BOTH vanish at q=0 and q=1, so their product is 0 with zero velocity at the
+  // edges — two soft flicks (left/right) that fade calmly to rest.
+  const qC = actionQ(t, 6.0, 1.0, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.17 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
-    // a faint windup tilt (still 0 at edges)
-    pose.lean += 0.02 * anticipate(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0 envelope, zero at edges
+    pose.lean += 0.058 * env * Math.sin(qC * Math.PI * 4); // two gentle flicks
+    // a whisper of settle at the base so the top, not the root, reads as moving
+    pose.squashX += 0.012 * hump(qC);
+    pose.squashY += -0.012 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12–14px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
-  if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
+  // ── RARE: PULL-UP-FROM-THE-SOIL (~18s, win 2.0s) — NOT a hop ──
+  // The carrot lifts up out of the ground, hangs, then settles. `lift` rises,
+  // holds, and lowers (0 + zero velocity at both edges). A small stretch as it is
+  // tugged free (lift-off sub-window) and a soil-shift squash when it sets back
+  // down (landing sub-window) — both pinned to 0 at the window edges.
+  const qP = pullQ(t);
+  if (qP >= 0) {
+    const up = lift(qP); // 0..1..(hang)..0 pull-up envelope
+    pose.bob += -PULL_LIFT_PX * up; // rise up out of the soil and settle back
 
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air; // 0..1 in the air
-    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+    // tugged-free stretch as it breaks loose (first third) — taller + narrower
+    const off = subHump(qP, 0.0, LIFT_RAMP);
+    pose.squashY += 0.06 * off;
+    pose.squashX += -0.045 * off;
+
+    // soil-shift squash on landing (last third) — squat + spread as it reseats
+    const landWin = subHump(qP, 1 - LIFT_RAMP, 1.0);
+    pose.squashY += -0.07 * landWin;
+    pose.squashX += 0.06 * landWin;
+
+    // a faint lean wiggle while it hangs (gated to 0 + zero velocity at edges)
+    pose.lean += 0.03 * Math.sin(Math.PI * qP) * Math.sin(qP * Math.PI * 4);
   }
 
   return pose;
@@ -724,6 +771,40 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   return (ctx, t) => {
     const tt = Number.isFinite(t) ? t : 0;
     paint(ctx, SP[season], poseFromClock(tt));
+
+    // RARE PULL-UP soil flecks (all seasons) — a couple of little soil crumbs
+    // kick up at the base as the carrot is tugged free, then fall back. Additive
+    // overlay only; gated by the SAME `lift` envelope as the pose, so the flecks
+    // are exactly 0 at the window edges (and therefore at t=0) and peak with the
+    // hang. Soil-coloured (from P), enveloped in alpha — never touches the root.
+    const up = lift(pullQ(tt));
+    if (up > 0.001) {
+      const soil = SP[season].soil;
+      ctx.save();
+      try {
+        ctx.globalAlpha = 1;
+        // Each fleck: a base point near the resting tip, a small upward arc whose
+        // height scales with the pull, and an alpha that fades in and back out.
+        const flecks: Array<[number, number, number, number]> = [
+          // [baseX, baseY, sideways drift, arc height]
+          [TIP[0] + 1, TIP[1] + 1, -3.2, 5.5],
+          [TIP[0] + 5, TIP[1] + 2, 2.6, 4.2],
+          [TIP[0] - 2, TIP[1] + 2.5, -1.0, 6.4],
+        ];
+        flecks.forEach(([fx, fy, drift, arc], i) => {
+          const a = clamp01(up) * (0.7 - i * 0.12);
+          const x = fx + drift * up;
+          const y = fy - arc * up; // rides up with the lift, settles back down
+          ctx.fillStyle = rgba(soil, a);
+          ctx.beginPath();
+          ctx.arc(x, y, 1.0 - i * 0.18, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      } finally {
+        ctx.globalAlpha = 1;
+        ctx.restore();
+      }
+    }
 
     // Light additive season micro-sparkle (dressing only — never the subject's
     // own colour/brightness). Kept tiny so the POSE action is the star.

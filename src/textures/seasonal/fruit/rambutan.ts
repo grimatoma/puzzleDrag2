@@ -8,17 +8,21 @@
 // amounts change. Ripeness = colour, never an identity change.
 //
 // This is the APPROVED "bold & fun" direction (mirrors veg/pepper.bold.ts):
-// seasons swing HARD on colour + a real seasonal prop, and the idle is loud
-// rather than subtle:
+// seasons swing HARD on colour + a real seasonal prop, and the idle is a
+// distinct, in-character beat for THIS hairy fruit (NOT the generic shared
+// bounce) — the hairs are the signature, so the hairs do the acting:
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a soft WOBBLE — the whole hairy cluster
-//       rocks/leans side-to-side with the soft hairs jiggling, a squash at the
-//       base. Anticipation → peak → settle, zero velocity at the window edges
-//       (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger BOUNCE — a squash-stretch hop
-//       ~12–13 design-px up, anticipation crouch, stretch on the way up, and a
-//       squash landing that overshoots then settles (the cluster may briefly
-//       exit the box).
+//   IDLE COMMON  (~6s, win ~0.9s): a gentle HAIR-QUIVER — a small, slightly
+//       fast side-shiver so the soft spines visibly tremble (the hairs read as
+//       alive). The body barely moves; it is the per-spine jiggle this drives
+//       that sells it. Zero value AND velocity at the window edges (seamless).
+//   IDLE RARE    (~18s, win ~1.6s): a BRISTLE — the fruit TENSES (it narrows
+//       and stands up) and its soft hairs FLARE & STIFFEN outward (the spines
+//       extend and straighten toward radial spikes, and a couple of extra stiff
+//       spikes flick out past them as an additive overlay in anim()), then it
+//       relaxes. The spine flare, the body tension and the flick overlay are
+//       all gated by one shared bristle amount that is exactly 0 at the window
+//       edges → the still (t=0) is unchanged and the loop is seamless.
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized
 // `paint(ctx, p, pose)` where `interface P` holds tweenable season params
@@ -72,9 +76,10 @@ interface Pose {
   lean: number;    // top-of-cluster sway, radians (rock side to side)
   squashX: number; // additive horizontal scale (+0.18 = 18% wider)
   squashY: number; // additive vertical scale (+0.18 = 18% taller)
+  bristle: number; // 0..1 the hairs FLARE/STIFFEN outward (the rare bristle)
 }
 
-const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, bristle: 0 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
 
@@ -284,7 +289,11 @@ function jit(i: number): number {
 /** Draw the soft curved spines (hairs) radiating from one fruit. The spine
  *  LAYOUT is identical every season (same silhouette); only colours / frost
  *  change. `seed` offsets the deterministic jitter so each fruit differs.
- *  `jiggle` (radians) adds a tiny per-spine wobble for the idle hairs-jiggle. */
+ *  `jiggle` (radians) adds a tiny per-spine wobble for the idle hairs-quiver.
+ *  `bristle` (0..1) makes the soft hairs FLARE & STIFFEN: each spine reaches
+ *  further out, its soft curl straightens toward a radial spike, and a couple
+ *  of normally-tucked hairs near the base are revealed — all 0 at bristle=0 so
+ *  the still (bristle=0) is byte-identical to today. */
 function drawSpines(
   ctx: CanvasRenderingContext2D,
   f: FruitDef,
@@ -292,23 +301,29 @@ function drawSpines(
   p: P,
   pass: "outline" | "fill",
   jiggle: number,
+  bristle: number,
 ): void {
   const cx = f.cx;
   const cy = f.cy;
   const n = f.spines;
+  const br = clamp01(bristle);
+  // At full bristle a few more low hairs lift into view (the cluster "puffs").
+  const cull = 0.55 + br * 0.14;
   for (let i = 0; i < n; i++) {
     const base = (i / n) * Math.PI * 2 + f.rot;
     // bias spines outward; skip the very bottom (sits in the cluster)
     const wob = jiggle * (jit(i * 2 + seed) - 0.5);
     const ang = base + (jit(i + seed) - 0.5) * 0.18 + wob;
     const downness = Math.cos(ang); // +1 = downward
-    if (downness > 0.55) continue; // hide hairs tucked under the fruit
-    const len = 3.4 + jit(i * 3 + seed) * 2.2;
+    if (downness > cull) continue; // hide hairs tucked under the fruit
+    // spines reach further out as they bristle (per-spine varied so it splays)
+    const len = (3.4 + jit(i * 3 + seed) * 2.2) + br * (2.6 + jit(i * 4 + seed) * 1.8);
     // root just outside the rind
     const rx0 = cx + Math.sin(ang) * f.rx * 0.92;
     const ry0 = cy - Math.cos(ang) * f.ry * 0.92;
-    // tips curve (the soft curved hook) — sideways nudge for the curl
-    const curl = (jit(i * 5 + seed) - 0.5) * 1.8 - 0.6;
+    // tips curve (the soft curved hook) — sideways nudge for the curl; bristling
+    // straightens that curl toward 0 so the hair stands out as a stiff spike.
+    const curl = ((jit(i * 5 + seed) - 0.5) * 1.8 - 0.6) * (1 - 0.85 * br);
     const tipX = cx + Math.sin(ang) * (f.rx + len);
     const tipY = cy - Math.cos(ang) * (f.ry + len);
     const ctrlX = cx + Math.sin(ang) * (f.rx + len * 0.5) + Math.cos(ang) * curl;
@@ -336,6 +351,65 @@ function drawSpines(
 function fruitPath(ctx: CanvasRenderingContext2D, f: FruitDef, grow = 0): void {
   ctx.beginPath();
   ctx.ellipse(f.cx, f.cy, f.rx + grow, f.ry + grow, f.rot, 0, Math.PI * 2);
+}
+
+/** Additive BRISTLE overlay: a few EXTRA long, stiff spike-flicks that shoot
+ *  out past the soft hairs at the peak of the rare bristle, then snap back —
+ *  the "a spike flicks" beat. Drawn over the painted cluster (in the same
+ *  pose-transformed space so it tracks the flare). `flare` (0..1) is the shared
+ *  bristle amount, so at the window edges (and t=0) `flare<=0` and NOTHING is
+ *  drawn — the still is untouched. Deterministic; clamps; never throws. */
+function drawFlicks(ctx: CanvasRenderingContext2D, p: P, pose: Pose, flare: number): void {
+  const fl = clamp01(flare);
+  if (fl <= 0.001) return;
+
+  ctx.save();
+  try {
+    ctx.globalAlpha = 1;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    // Match the cluster's pose transform so the flicks sit on the bristled fruit.
+    ctx.translate(0, CLUSTER_PIVOT_Y + safeNum(pose.bob));
+    ctx.rotate(safeNum(pose.lean));
+    ctx.scale(1 + safeNum(pose.squashX), 1 + safeNum(pose.squashY));
+    ctx.translate(0, -CLUSTER_PIVOT_Y);
+
+    // A handful of stiff spikes per fruit, biased upward/outward, reaching well
+    // past the resting hairs. Length grows with `fl` so they shoot out and back.
+    const litCol = lerpRGB(p.spineDark, p.spineLight, 0.7);
+    const greened = lerpRGB(litCol, [120, 180, 70], p.spineTipGreen * 0.6);
+    FRUIT.forEach((f, fi) => {
+      const picks = 3;
+      for (let k = 0; k < picks; k++) {
+        // spread the flicks across the lit upper arc (−1.4..+1.4 rad from up)
+        const ang = f.rot + (-1.4 + (k + 0.5) * (2.8 / picks)) + (jit(k * 3 + fi * 9) - 0.5) * 0.3;
+        const downness = Math.cos(ang);
+        if (downness > 0.4) continue; // only the visible upper/side spikes flick
+        const extra = (5.5 + jit(k * 7 + fi * 5) * 3.0) * fl; // extension past the rind
+        const rx0 = f.cx + Math.sin(ang) * f.rx * 0.96;
+        const ry0 = f.cy - Math.cos(ang) * f.ry * 0.96;
+        const tipX = f.cx + Math.sin(ang) * (f.rx + 3.4 + extra);
+        const tipY = f.cy - Math.cos(ang) * (f.ry + 3.4 + extra);
+        // dark backing then lit tip — a stiff, near-straight spike.
+        ctx.strokeStyle = rgb(p.outline);
+        ctx.lineWidth = 2.0;
+        ctx.beginPath();
+        ctx.moveTo(rx0, ry0);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+        ctx.strokeStyle = rgba(greened, 0.55 + 0.45 * fl);
+        ctx.lineWidth = 1.3;
+        ctx.beginPath();
+        ctx.moveTo(rx0, ry0);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+      }
+    });
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
 /** Draw a single fruit body (cel-shaded rind, no spines). */
@@ -394,6 +468,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     lean: safeNum(rawPose.lean),
     squashX: safeNum(rawPose.squashX),
     squashY: safeNum(rawPose.squashY),
+    bristle: clamp01(safeNum(rawPose.bristle)),
   };
 
   ctx.save();
@@ -552,8 +627,9 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     // ── The hairy cluster (SAME silhouette every season) ────────────────────
     // Draw back fruit first (the tucked-up one), then the two front fruit, so
     // the front overlaps. For each: spine OUTLINE pass, body, then spine FILL.
-    // hairsJiggle is 0 at REST (seamless); the idle adds a tiny per-spine wobble.
-    const hairsJiggle = clamp01(Math.abs(pose.lean) / 0.17 + Math.abs(pose.bob) / 13) * 0.12;
+    // hairsJiggle is 0 at REST (seamless): the COMMON quiver trembles the hairs
+    // via pose.lean, and while bristling they shiver a touch more.
+    const hairsJiggle = clamp01(Math.abs(pose.lean) / 0.14 + pose.bristle * 0.6) * 0.14;
     const order = [2, 0, 1]; // back, front-left, front-right
     order.forEach((idx) => {
       const f = FRUIT[idx];
@@ -562,9 +638,9 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
       ctx.fillStyle = rgb(p.outline);
       ctx.fill();
       // spine outline pass (dark, fat) then body, then lit spine pass over
-      drawSpines(ctx, f, idx * 7 + 1, p, "outline", hairsJiggle);
+      drawSpines(ctx, f, idx * 7 + 1, p, "outline", hairsJiggle, pose.bristle);
       drawFruitBody(ctx, f, p);
-      drawSpines(ctx, f, idx * 7 + 1, p, "fill", hairsJiggle);
+      drawSpines(ctx, f, idx * 7 + 1, p, "fill", hairsJiggle, pose.bristle);
     });
 
     // snow caps on the shoulders of the cluster (winter) — over the spines
@@ -643,59 +719,68 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-// Dips slightly negative early (anticipation) then a strong positive peak.
-function anticipate(q: number): number {
-  // windup wave: a small negative lobe then a big positive lobe, both returning
-  // to zero at the edges. (1-cos) envelope keeps velocity zero at q=0,1.
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+// ── Shared RARE-window clock — the BRISTLE event ─────────────────────────────
+// COMMON and RARE never overlap: the COMMON hair-quiver fires every 6s at phase
+// 0 (win 0.9s) → windows [0,0.9),[6,6.9),[12,12.9) (18≡0). The RARE bristle
+// fires every 18s at phase 3.0s (win 1.6s) → window [3.0,4.6), clear of every
+// COMMON window. One source of truth so the pose tension (poseFromClock) and
+// the extra spine-flick overlay (anim) stay in lockstep.
+const BRISTLE_PERIOD = 18.0;
+const BRISTLE_WIN = 1.6;
+const BRISTLE_PHASE = 3.0;
+
+/** Progress 0..1 through the bristle window, else −1 (hairs fully relaxed). */
+function bristleQ(t: number): number {
+  return actionQ(t, BRISTLE_PERIOD, BRISTLE_WIN, BRISTLE_PHASE);
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
-function poseFromClock(t: number): Pose {
-  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+/** How flared the hairs are, 0..1 — tense up fast, HOLD bristled a beat, then
+ *  relax. Exactly 0 with zero velocity at q=0 and q=1 (the whole event fades in
+ *  and out of REST), so at the window edges (and therefore t=0) the spines are
+ *  in their resting soft state and the still is unchanged. */
+function bristleAmt(q: number): number {
+  if (!(q >= 0) || q >= 1) return 0;
+  const up = 0.32; // fraction of the window spent tensing / relaxing
+  if (q < up) return smoother(q / up); // 0→1, zero slope at q=0
+  if (q > 1 - up) return smoother((1 - q) / up); // 1→0, zero slope at q=1
+  return 1; // held fully bristled (the "stiffened" beat)
+}
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // Two rocks left→right→left, ~0.17 rad lean → the soft hairs jiggle and the
-  // whole cluster rocks ~ pivotArm*0.17 at the top.
+/** Build the idle pose from the wall clock. Two tiers, neither a bounce:
+ *   COMMON — a gentle HAIR-QUIVER (~6s): a small, slightly fast side-shiver so
+ *            the soft spines visibly tremble (the hairs read as alive).
+ *   RARE   — a BRISTLE (~18s): the cluster TENSES (narrows + lifts) and the
+ *            hairs FLARE/STIFFEN outward, then relax. The tension is enveloped
+ *            by `bristleAmt`, which is 0 at the window edges → exactly REST
+ *            there, and is fully synced to the spine-flare in paint() and the
+ *            extra-flick overlay in anim() via the shared bristle clock. */
+function poseFromClock(t: number): Pose {
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, bristle: 0 };
+
+  // ── COMMON: a gentle, slightly-fast HAIR-QUIVER (~6s, win 0.9s) ──
+  // A small fast shiver (several tiny oscillations) under a soft 0..1..0
+  // envelope. The lean stays tiny — it is the hairsJiggle this drives (via
+  // pose.lean magnitude) that sells the soft spines shivering, not body sway.
   const qC = actionQ(t, 6.0, 0.9, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.17 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0 envelope, zero at edges
+    const shiver = Math.sin(qC * Math.PI * 6); // ~3 quick trembles within the win
+    pose.lean += 0.045 * env * shiver; // tiny — just enough to quiver the hairs
+    pose.squashX += 0.02 * hump(qC); // a faint live breath, 0 at edges
+    pose.squashY += -0.015 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12–13px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
-  if (qS >= 0) {
-    // Hop height profile: brief crouch (q<0.18), launch arc, squash landing.
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 12.5;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air; // 0..1 in the air
-    pose.squashY += apex * 0.18 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.13 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-  }
-
-  // Reference anticipate() so it stays part of the seamless-curve toolkit and
-  // contributes a faint windup tilt to the common wobble (still 0 at edges).
-  if (qC >= 0) {
-    pose.lean += 0.02 * anticipate(qC);
+  // ── RARE: a BRISTLE — hairs flare & stiffen, the body tenses (~18s) ──
+  // The signature beat: the fruit tenses (squashX in + squashY up = it draws
+  // itself taut) while the soft hairs straighten and reach outward. Every term
+  // is gated by `b` (the shared bristle amount), which is 0 at the window edges.
+  const b = bristleAmt(bristleQ(t));
+  if (b > 0) {
+    pose.bristle += b; // drives the spine flare in paint() + the overlay in anim()
+    // body tension: narrow a touch and stand up (NOT a hop) as the hairs flare.
+    pose.squashX += -0.05 * b;
+    pose.squashY += 0.07 * b;
+    pose.bob += -1.0 * b; // a small, slow lift as it tenses (settles back to 0)
   }
 
   return pose;
@@ -710,7 +795,17 @@ function draw(season: SeasonName): (ctx: CanvasRenderingContext2D) => void {
 function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) => void {
   return (ctx, t) => {
     const tt = Number.isFinite(t) ? t : 0;
-    paint(ctx, SP[season], poseFromClock(tt));
+    const pose = poseFromClock(tt);
+    paint(ctx, SP[season], pose);
+
+    // RARE BRISTLE overlay (all seasons) — a few extra stiff spikes flick out
+    // past the soft hairs at the bristle peak, fully synced to the spine flare
+    // in paint() and the body tension in poseFromClock via the shared bristle
+    // clock. `flare` is 0 at the window edges (and so at t=0) → nothing at rest.
+    const flare = bristleAmt(bristleQ(tt));
+    if (flare > 0) {
+      drawFlicks(ctx, SP[season], pose, flare);
+    }
 
     // Light additive season micro-sparkle (dressing only — never the subject's
     // own colour/brightness). Kept tiny so the POSE action is the star.

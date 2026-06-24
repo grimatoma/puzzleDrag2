@@ -684,6 +684,9 @@ function lerpP(a: P, b: P, f: number): P {
 // ── Rare specials (deterministic, seamless) ──────────────────────────────────
 
 // A single small bird (front-¾) used by the rare special on the green seasons.
+// Per-species palette: a BLUE TIT / bluebird — vivid blue back + blue cap over a
+// pale lemon belly. The bright blue reads clearly against the cypress's dark
+// evergreen green.
 function bird(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -697,43 +700,49 @@ function bird(
   ctx.save();
   ctx.globalAlpha = clamp01(alpha);
   ctx.translate(x, y + hop);
-  // body
-  ctx.fillStyle = "#5a4636";
+  // body — vivid blue back
+  ctx.fillStyle = "#2f6fc4";
   ctx.beginPath();
   ctx.ellipse(0, 0, 3.8, 2.9, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  // warm breast
-  ctx.fillStyle = "#d2693a";
+  // pale lemon belly
+  ctx.fillStyle = "#f2e08c";
   ctx.beginPath();
   ctx.ellipse(-1.2, 0.5, 2.1, 2.0, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  // tail
-  ctx.fillStyle = "#46362a";
+  // tail — deeper blue
+  ctx.fillStyle = "#1f4a8c";
   ctx.beginPath();
   ctx.moveTo(3.0, -0.4);
   ctx.lineTo(6.4, -1.6);
   ctx.lineTo(5.9, 1.1);
   ctx.closePath();
   ctx.fill();
-  // wing (opens during flit-off)
+  // wing (opens during flit-off) — deep blue
   ctx.save();
   ctx.translate(0.5, -0.4);
   ctx.rotate(-0.5 * wing);
-  ctx.fillStyle = "#3d2f24";
+  ctx.fillStyle = "#1f4a8c";
   ctx.beginPath();
   ctx.ellipse(0, 0, 2.9 + wing * 1.9, 1.6 + wing * 1.1, 0.3, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
-  // head (looks around)
+  // head (looks around) — blue cap over a pale cheek
   ctx.save();
   ctx.translate(-3.0, -2.2);
   ctx.rotate(look);
-  ctx.fillStyle = "#5a4636";
+  // pale cheek base
+  ctx.fillStyle = "#f4eecf";
   ctx.beginPath();
   ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
   ctx.fill();
-  // beak
-  ctx.fillStyle = "#e2b23a";
+  // blue cap on the crown
+  ctx.fillStyle = "#2f6fc4";
+  ctx.beginPath();
+  ctx.arc(0.1, -0.6, 2.2, Math.PI * 1.04, Math.PI * 2.06);
+  ctx.fill();
+  // beak — small dark tit bill
+  ctx.fillStyle = "#3a3326";
   ctx.beginPath();
   ctx.moveTo(-2.0, 0.2);
   ctx.lineTo(-4.0, -0.2);

@@ -8,8 +8,9 @@
 // spiralling CURLED HORNS on the sides of its head. Seasons change only its
 // fleece VOLUME (recently-shorn thin in spring → thick fluffy winter fleece),
 // the pad colour, the light wash, and BOLD dressing — snow on the back, a little
-// winter SCARF, a breath-fog puff, blossoms, a fallen leaf, frost (which also
-// dusts the horns). The ram's identity colours and curled-horn silhouette never
+// winter SCARF (a chunky CREAM-KNIT band), a breath-fog puff, blossoms, a
+// fallen leaf, frost (which also dusts the horns). The ram's identity colours
+// and curled-horn silhouette never
 // change for any `P` (only fleece volume scales the wool).
 //
 // IDLE (two-tier occasional action, carried through a `pose` object):
@@ -188,7 +189,7 @@ interface P {
   breathFogAmt: number; // 0..1 breath puff at the muzzle
   glossAmt: number; // 0..1 healthy fleece gloss / sheen
   scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked deep teal, fades in via alpha)
+  scarfColor: RGB; // scarf colour (locked cream-knit, fades in via alpha)
 }
 
 // Four BOLD season presets. The ram stays the SAME cream woolly dark-faced ram
@@ -217,7 +218,7 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     glossAmt: 0.18, // cool-bright but not peak gloss
     scarfAmt: 0,
-    scarfColor: [38, 132, 138],
+    scarfColor: [224, 210, 176],
   },
   Summer: {
     fleeceLight: [250, 248, 234], // cream, richest
@@ -241,7 +242,7 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     glossAmt: 0.95, // BOLD glossy peak
     scarfAmt: 0,
-    scarfColor: [38, 132, 138],
+    scarfColor: [224, 210, 176],
   },
   Autumn: {
     fleeceLight: [244, 234, 214], // cream warming
@@ -265,7 +266,7 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     glossAmt: 0.28, // dulled gloss
     scarfAmt: 0,
-    scarfColor: [38, 132, 138],
+    scarfColor: [224, 210, 176],
   },
   Winter: {
     fleeceLight: [250, 251, 252], // cream cooled toward white by the cold light
@@ -289,7 +290,7 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0.85,
     glossAmt: 0.12, // matte under cold overcast
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [38, 132, 138],
+    scarfColor: [224, 210, 176],
   },
 };
 

@@ -1,28 +1,31 @@
 // Production seasonal art for the HEATHER flower board tile — the approved bold
-// direction. The SAME heather-mound silhouette in every season (identity rule
-// §36: same low flowering-shrub mound all four seasons — never a bare stub,
-// never morphing into something else): a bushy mound of fine needle-like
-// foliage densely covered in tiny bell/spike flowers, on a small pad. Seasonal
-// change is bold COLOUR + frost/snow/light PROPS only; the dense flower-spike
-// texture stays recognizable every season.
+// direction, redrawn to commit the silhouette UNMISTAKABLY to heather. The SAME
+// heather-clump silhouette in every season (identity rule §36: same low
+// woody-sprig clump all four seasons — never a bare stub, never morphing into
+// something else): several upright WOODY SPRIGS rising from a small pad, each
+// stem lined with fine needle foliage and densely stacked tiny BELL-SHAPED
+// florets up its length (the signature dense little purple-pink bells of a
+// heath). Seasonal change is bold COLOUR + frost/snow/light PROPS only; the
+// upright woody-sprig + bell-floret structure stays recognizable every season.
 //
 //   • SEASONS read at a glance — colour pushed HARD plus a real seasonal cue:
-//       Spring — fresh green heather foliage with the FIRST pink-purple flower
-//                spikes opening, a few stray blossoms on the pad; cool-bright.
-//       Summer — PEAK bloom: the mound blazing with saturated PURPLE-PINK
-//                heather flowers (its signature), high gloss, warm bright light.
-//       Autumn — flowers fading to rusty mauve/bronze, foliage bronzing, a
-//                fallen leaf on the pad, dulled gloss, amber light.
-//       Winter — snow-capped heather: a bold snow cap/blanket over the mound +
-//                frost on the spikes, the dried purple-tinted flowers beneath,
-//                cool blue-grey light. Clearly snowy, still reads as heather.
+//       Spring — fresh GREEN woody sprigs with the FIRST pink-purple bell buds
+//                opening up the stems, a few stray blossoms on the pad; cool-bright.
+//       Summer — PEAK bloom: the sprigs blazing with saturated PURPLE-MAGENTA
+//                bell florets (its signature), high gloss, warm bright light.
+//       Autumn — bells fading to rusty mauve/bronze, foliage bronzing, a fallen
+//                leaf on the pad, dulled gloss, amber light.
+//       Winter — frost-dusted heather: a light snow cap on the upright tips +
+//                frost on the bells, the woody sprig STRUCTURE clearly visible
+//                beneath with its dried purple-tinted bells, cool blue-grey light.
+//                Frosted, never a bare stub or a white-out — still reads as heather.
 //
 //   • IDLE is mostly at rest, then a clearly-noticeable fun ACTION on a timer:
-//       COMMON  (~6s, ~0.9s window): a BREEZE SWAY — the whole mound leans and
-//                nods ~11–14px off the base with anticipation + follow-through,
-//                spikes shimmer, then returns to rest with zero velocity.
-//       RARE    (~18s, ~1.3s window, +3s phase): a VISITING BEE flies in from
-//                one side, hovers at the flowers (fast wing-flap, animBee idiom),
+//       COMMON  (~6s, ~0.95s window): a BREEZE SWAY — the whole clump leans and
+//                nods ~13px off the base with anticipation + follow-through,
+//                bells shimmer, then returns to rest with zero velocity (seamless).
+//       RARE    (~18s, ~1.25s window, +3s phase): a VISITING BEE flies in from
+//                one side, hovers at the bells (fast wing-flap, animBee idiom),
 //                then flies off — a charming once-in-a-while moment. Off-screen
 //                and at zero offset at the window edges (seamless).
 //
@@ -44,13 +47,14 @@ type RGB = [number, number, number];
 
 interface P {
   // colours (pushed HARD per season for a glance-different read)
-  flowerLow: RGB; // flower spikes low on the mound (lightest pink-purple)
-  flowerMid: RGB; // flower spikes mid mound (the signature purple-pink)
-  flowerTop: RGB; // flower spikes near the crown (deepest)
+  flowerLow: RGB; // bell florets low on each sprig (lightest pink-purple)
+  flowerMid: RGB; // bell florets mid sprig (the signature purple-magenta)
+  flowerTop: RGB; // bell florets near the sprig tip (deepest)
   flowerHi: RGB; // tiny bell highlight
   foliage: RGB; // fine needle foliage (lit)
-  foliageDark: RGB; // needle foliage shade / mound underside
-  stem: RGB; // woody base / lower twigs
+  foliageDark: RGB; // needle foliage shade / sprig underside
+  stem: RGB; // woody stem / lower twigs
+  stemDark: RGB; // woody stem shade
   pad: RGB; // grass pad top
   padDark: RGB; // pad underside / shaded grass
   soil: RGB; // soil rim under the pad
@@ -59,23 +63,23 @@ interface P {
   // scalars 0..1 (props + filter amounts; all interpolate)
   lightAmt: number; // strength of the light overlay
   shadowAmt: number; // contact-shadow strength
-  bloomAmt: number; // how open/dense the flower spikes read (never a stub)
-  foliageShow: number; // how much bare foliage peeks through (autumn/winter up)
+  bloomAmt: number; // how open/dense the bell florets read (never a stub)
+  foliageShow: number; // how much bare needle foliage peeks through (autumn/winter up)
   glossAmt: number; // dewy/glossy highlight strength (spring/summer)
-  frostAmt: number; // frost flecks on the spikes (winter)
-  snowCapAmt: number; // chunky snow cap over the mound crown (winter)
+  frostAmt: number; // frost flecks on the bells + tips (winter)
+  snowCapAmt: number; // snow caps on the upright sprig tips (winter)
   padSnowAmt: number; // snow blanket on the pad (winter)
   blossomAmt: number; // pink/white blossoms ON the pad (spring)
   fallenLeafAmt: number; // fallen leaves ON the pad (autumn)
-  edgeBrownAmt: number; // bronzing/fading on the flowers + foliage (autumn)
+  edgeBrownAmt: number; // bronzing/fading on the bells + foliage (autumn)
 }
 
 // ── Per-season parameter sets (silhouette constant; only these change) ────────
-// Colour is pushed harder than a subtle base: a punchy saturated purple-pink at
-// peak, a clearly rusty bronzed autumn, a distinctly cool snow-blued winter.
+// Colour is pushed harder than a subtle base: a punchy saturated purple-magenta
+// at peak, a clearly rusty bronzed autumn, a distinctly cool snow-blued winter.
 
 const SP: Record<SeasonName, P> = {
-  // Spring — fresh green foliage, FIRST pink-purple spikes opening; cool-bright.
+  // Spring — fresh green sprigs, FIRST pink-purple bell buds opening; cool-bright.
   Spring: {
     flowerLow: [236, 176, 222],
     flowerMid: [214, 122, 196],
@@ -83,7 +87,8 @@ const SP: Record<SeasonName, P> = {
     flowerHi: [252, 222, 244],
     foliage: [104, 184, 70],
     foliageDark: [50, 104, 40],
-    stem: [120, 100, 66],
+    stem: [128, 104, 66],
+    stemDark: [80, 62, 38],
     pad: [132, 222, 100],
     padDark: [70, 150, 60],
     soil: [96, 66, 36],
@@ -92,7 +97,7 @@ const SP: Record<SeasonName, P> = {
     lightAmt: 0.18,
     shadowAmt: 0.2,
     bloomAmt: 0.5,
-    foliageShow: 0.55,
+    foliageShow: 0.6,
     glossAmt: 0.5,
     frostAmt: 0,
     snowCapAmt: 0,
@@ -101,15 +106,16 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     edgeBrownAmt: 0,
   },
-  // Summer — PEAK bloom: saturated PURPLE-PINK signature, high gloss, warm light.
+  // Summer — PEAK bloom: saturated PURPLE-MAGENTA signature, high gloss, warm light.
   Summer: {
     flowerLow: [240, 150, 220],
-    flowerMid: [216, 64, 188], // signature saturated purple-pink
+    flowerMid: [216, 64, 188], // signature saturated purple-magenta
     flowerTop: [156, 40, 168],
     flowerHi: [255, 206, 242],
     foliage: [70, 150, 52],
     foliageDark: [34, 86, 30],
-    stem: [110, 92, 56],
+    stem: [118, 96, 58],
+    stemDark: [72, 56, 32],
     pad: [80, 184, 74],
     padDark: [44, 122, 48],
     soil: [88, 58, 30],
@@ -118,7 +124,7 @@ const SP: Record<SeasonName, P> = {
     lightAmt: 0.16,
     shadowAmt: 0.38,
     bloomAmt: 1,
-    foliageShow: 0.22,
+    foliageShow: 0.28,
     glossAmt: 0.55,
     frostAmt: 0,
     snowCapAmt: 0,
@@ -127,7 +133,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     edgeBrownAmt: 0,
   },
-  // Autumn — flowers fading to rusty mauve/bronze, foliage bronzing; amber light.
+  // Autumn — bells fading to rusty mauve/bronze, foliage bronzing; amber light.
   Autumn: {
     flowerLow: [200, 142, 150],
     flowerMid: [176, 104, 118], // faded rusty mauve
@@ -135,7 +141,8 @@ const SP: Record<SeasonName, P> = {
     flowerHi: [212, 168, 150],
     foliage: [140, 130, 60], // bronzing olive
     foliageDark: [92, 76, 32],
-    stem: [98, 76, 46],
+    stem: [104, 78, 46],
+    stemDark: [66, 48, 26],
     pad: [148, 156, 82],
     padDark: [100, 104, 52],
     soil: [92, 60, 30],
@@ -144,7 +151,7 @@ const SP: Record<SeasonName, P> = {
     lightAmt: 0.24,
     shadowAmt: 0.28,
     bloomAmt: 0.82,
-    foliageShow: 0.5,
+    foliageShow: 0.55,
     glossAmt: 0.12,
     frostAmt: 0,
     snowCapAmt: 0,
@@ -153,8 +160,9 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.85,
     edgeBrownAmt: 0.9,
   },
-  // Winter — snow-capped heather: chunky snow cap + frost on the spikes, dried
-  // purple-tinted flowers beneath, snow-blued pad. Still clearly heather.
+  // Winter — frost-dusted heather: light snow caps on the upright tips + frost on
+  // the bells, dried purple-tinted florets and the woody sprig STRUCTURE clearly
+  // visible beneath, snow-blued pad. Still clearly heather, never a white-out.
   Winter: {
     flowerLow: [196, 176, 208],
     flowerMid: [160, 130, 184], // dried, still purple-tinted
@@ -162,7 +170,8 @@ const SP: Record<SeasonName, P> = {
     flowerHi: [224, 214, 232],
     foliage: [120, 134, 116], // greyed sage
     foliageDark: [70, 84, 74],
-    stem: [104, 96, 86],
+    stem: [110, 98, 86],
+    stemDark: [72, 62, 54],
     pad: [212, 226, 240], // snow-blued grass
     padDark: [150, 170, 192],
     soil: [110, 104, 96],
@@ -171,10 +180,10 @@ const SP: Record<SeasonName, P> = {
     lightAmt: 0.24,
     shadowAmt: 0.16,
     bloomAmt: 0.6,
-    foliageShow: 0.45,
+    foliageShow: 0.5,
     glossAmt: 0,
     frostAmt: 0.9,
-    snowCapAmt: 0.9,
+    snowCapAmt: 0.85,
     padSnowAmt: 0.9,
     blossomAmt: 0,
     fallenLeafAmt: 0,
@@ -218,6 +227,7 @@ function lerpP(a: P, b: P, k: number): P {
     foliage: mixRGB(a.foliage, b.foliage, k),
     foliageDark: mixRGB(a.foliageDark, b.foliageDark, k),
     stem: mixRGB(a.stem, b.stem, k),
+    stemDark: mixRGB(a.stemDark, b.stemDark, k),
     pad: mixRGB(a.pad, b.pad, k),
     padDark: mixRGB(a.padDark, b.padDark, k),
     soil: mixRGB(a.soil, b.soil, k),
@@ -271,10 +281,10 @@ interface BeeState {
 }
 
 interface Pose {
-  bob: number; // vertical breathing/idle offset of the mound (design px)
-  swayLean: number; // breeze nod: radians the mound leans off the base
-  swayShift: number; // breeze nod: horizontal travel of the mound (design px)
-  shimmer: number; // 0..1 spike-shimmer swell (spring/summer)
+  bob: number; // vertical breathing/idle offset of the clump (design px)
+  swayLean: number; // breeze nod: radians the clump leans off the base
+  swayShift: number; // breeze nod: horizontal travel of the clump (design px)
+  shimmer: number; // 0..1 bell-shimmer swell (spring/summer)
   bee: BeeState;
 }
 
@@ -286,222 +296,234 @@ const REST: Pose = {
   bee: { on: false, x: 0, y: 0, flap: 0.5, t: 0, alpha: 0 },
 };
 
-// ── Constant mound geometry (silhouette identical every season) ───────────────
+// ── Constant clump geometry (silhouette identical every season) ───────────────
 //
-// The mound pivots around its base so a sway leaves the base planted. Spikes and
-// foliage tufts are placed once into stable lists; only how each is rendered
-// changes with `p`.
+// Heather reads as several UPRIGHT WOODY SPRIGS rising from a planted base and
+// fanning out a touch, each lined with tiny stacked bell florets up its top
+// two-thirds and short needle foliage along it. The clump pivots around its base
+// so a sway leaves the base planted. Sprigs and their florets are placed once
+// into stable lists; only how each is rendered changes with `p`.
 
-const MOUND_BASE: [number, number] = [0, 16]; // pivot (planted base)
-const MOUND_CX = 0;
-const MOUND_CY = 4; // mound centre
-const MOUND_RX = 15; // mound half-width
-const MOUND_RY = 12; // mound half-height
+const CLUMP_BASE: [number, number] = [0, 16]; // pivot (planted base)
 
-// One flower spike: an anchor at the mound surface, an outward angle, a length,
-// and a colour tier (0 low .. 1 top). Built once for a dense, lined texture.
-interface Spike {
-  x: number; // anchor x on the mound
-  y: number; // anchor y on the mound
-  ang: number; // outward direction (radians, 0 = up/−y)
-  len: number; // spike length
-  tier: number; // 0..1 vertical tier → colour
-  seed: number; // per-spike phase for shimmer/jitter
+// One upright sprig: a slightly-bowed woody stem from a base offset, leaning by
+// `lean` (radians off vertical, + = toward +x), reaching height `h`. Florets
+// stack along its upper portion; needles line its lower/mid portion.
+interface Sprig {
+  bx: number; // base x at the clump foot
+  lean: number; // lean off vertical (radians; + = toward +x)
+  h: number; // stem length (design px)
+  bow: number; // sideways bow of the stem midpoint (design px)
+  seed: number; // per-sprig phase for shimmer / bell jitter
 }
 
-function buildSpikes(): Spike[] {
-  const list: Spike[] = [];
-  // A pseudo-random but fixed scatter over the upper mound dome, dense, with
-  // spikes pointing radially outward from the mound centre.
-  const N = 30;
-  for (let i = 0; i < N; i++) {
-    // golden-angle spiral mapped onto the dome for an even, organic spread
-    const a = i * 2.399963; // golden angle
-    const r = Math.sqrt((i + 0.5) / N); // 0..1 from centre out
-    const ux = Math.cos(a) * r;
-    const uy = Math.sin(a) * r;
-    // bias to the upper dome (heather flowers crown the mound)
-    const x = MOUND_CX + ux * MOUND_RX * 0.92;
-    const y = MOUND_CY - Math.abs(uy) * MOUND_RY * 0.95 - 1.5;
-    // outward angle from mound centre
-    const ang = Math.atan2(x - MOUND_CX, -(y - MOUND_CY)) + (i % 2 ? 0.12 : -0.12);
-    const tier = clamp01((MOUND_CY - y) / (MOUND_RY + 2)); // higher = nearer crown
-    const len = 3.0 + tier * 2.2;
-    list.push({ x, y, ang, len, tier, seed: (i * 0.618) % 1 });
-  }
-  return list;
+// A fixed fan of upright sprigs — taller in the middle, shorter + more splayed
+// at the sides, so the clump silhouette reads as a heath tuft, not a dome.
+const SPRIGS: Sprig[] = [
+  { bx: -5.2, lean: -0.5, h: 19, bow: -1.6, seed: 0.11 },
+  { bx: -2.6, lean: -0.26, h: 24, bow: -0.8, seed: 0.42 },
+  { bx: 0.2, lean: -0.04, h: 27, bow: 0.0, seed: 0.73 },
+  { bx: 2.4, lean: 0.2, h: 25, bow: 0.7, seed: 0.27 },
+  { bx: 5.0, lean: 0.46, h: 20, bow: 1.5, seed: 0.58 },
+  { bx: 1.0, lean: 0.08, h: 22, bow: -0.4, seed: 0.9 }, // a fill sprig behind centre
+];
+
+/** A point along a sprig's bowed stem at parameter f (0 = base, 1 = tip), in the
+ *  clump's local frame (base of the clump at origin, growing upward into −y). */
+function sprigPoint(s: Sprig, f: number): [number, number] {
+  const g = clamp01(f);
+  // straight axis from base, leaning off vertical
+  const ax = s.bx + Math.sin(s.lean) * s.h * g;
+  const ay = -Math.cos(s.lean) * s.h * g;
+  // add a gentle sideways bow that peaks mid-stem (sin), 0 at both ends
+  const bend = Math.sin(Math.PI * g) * s.bow;
+  return [ax + bend, ay];
 }
 
-const SPIKES: Spike[] = buildSpikes();
+// ── Drawing the heather clump (silhouette constant; colour/props from p) ───────
 
-// Fine needle-foliage tufts that fill the mound body (constant silhouette).
-const FOLIAGE: Array<[number, number, number]> = (() => {
-  const arr: Array<[number, number, number]> = [];
-  const N = 22;
-  for (let i = 0; i < N; i++) {
-    const a = i * 2.399963;
-    const r = Math.sqrt((i + 0.5) / N);
-    const x = MOUND_CX + Math.cos(a) * r * MOUND_RX * 0.95;
-    const y = MOUND_CY + (Math.sin(a) * 0.45 - 0.45) * MOUND_RY; // fill lower/mid
-    const side = i % 2 === 0 ? 1 : -1;
-    arr.push([x, y, side]);
-  }
-  return arr;
-})();
-
-// ── Drawing the heather mound (silhouette constant; colour/props from p) ───────
-
-/** The fine needle-foliage mound body + the dense flower spikes, centered at
- *  the mound origin. `shimmer` is the live spike-shimmer swell (0 at rest). */
-function drawMound(ctx: CanvasRenderingContext2D, p: P, shimmer: number): void {
-  // — mound body: a rounded foliage dome (dark base, lit top) —
-  ctx.fillStyle = rgba(p.foliageDark);
-  ctx.beginPath();
-  ctx.ellipse(MOUND_CX, MOUND_CY + 1.4, MOUND_RX, MOUND_RY, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.fillStyle = rgba(p.foliage);
-  ctx.beginPath();
-  ctx.ellipse(MOUND_CX - 1, MOUND_CY, MOUND_RX - 1.5, MOUND_RY - 1.5, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // — fine needle foliage tufts peeking out of the mound surface —
-  const fShow = clamp01(p.foliageShow);
-  ctx.lineCap = "round";
-  FOLIAGE.forEach(([fx, fy, side], i) => {
-    if (i / FOLIAGE.length > fShow + 0.45) return;
-    const tx = fx + side * 3.2;
-    const ty = fy - 3.0;
-    ctx.strokeStyle = rgba(p.foliageDark, 0.9);
-    ctx.lineWidth = 1.8;
-    ctx.beginPath();
-    ctx.moveTo(fx, fy);
-    ctx.lineTo(tx, ty);
-    ctx.stroke();
-    ctx.strokeStyle = rgba(p.foliage, 0.95);
-    ctx.lineWidth = 0.9;
-    ctx.beginPath();
-    ctx.moveTo(fx, fy);
-    ctx.lineTo(tx, ty);
-    ctx.stroke();
-  });
-
-  // — the dense flower spikes (the signature) — tiny stacked bells up each
-  //   spike. Openness/density from bloomAmt; colour tier from p. —
+/** A single upright sprig: woody stem + needle foliage + a dense run of tiny
+ *  bell florets up its top two-thirds. Drawn in the clump's local frame (base at
+ *  origin). `shimmer` nudges bell angles a touch (spring/summer liveliness). */
+function drawSprig(ctx: CanvasRenderingContext2D, p: P, s: Sprig, shimmer: number): void {
   const open = clamp01(p.bloomAmt);
   const brown = clamp01(p.edgeBrownAmt);
-  SPIKES.forEach((sp) => {
-    const tierCol =
-      sp.tier > 0.62 ? p.flowerTop : sp.tier > 0.3 ? p.flowerMid : p.flowerLow;
+  const fShow = clamp01(p.foliageShow);
+
+  // — woody stem: a dark base stroke then a lit thinner one (layered for depth) —
+  const segs = 8;
+  const pts: Array<[number, number]> = [];
+  for (let i = 0; i <= segs; i++) pts.push(sprigPoint(s, i / segs));
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.strokeStyle = rgba(p.stemDark);
+  ctx.lineWidth = 2.4;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+  ctx.strokeStyle = rgba(p.stem);
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(pts[0][0], pts[0][1]);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i][0], pts[i][1]);
+  ctx.stroke();
+
+  // — fine needle foliage: short paired needles along the lower/mid stem —
+  const needleN = 5;
+  for (let i = 0; i < needleN; i++) {
+    const f = 0.12 + (i / needleN) * 0.6; // lower/mid stem only
+    if (i / needleN > fShow + 0.5) continue;
+    const [nx, ny] = sprigPoint(s, f);
+    // tangent direction along the stem (for outward needle angle)
+    const [nx2, ny2] = sprigPoint(s, Math.min(1, f + 0.06));
+    const tx = nx2 - nx;
+    const ty = ny2 - ny;
+    const tl = Math.hypot(tx, ty) || 1;
+    const ux = tx / tl;
+    const uy = ty / tl;
+    // perpendicular (rotate tangent 90°), needles splay both sides
+    for (const side of [-1, 1] as const) {
+      const px = -uy * side;
+      const py = ux * side;
+      const nl = 2.6;
+      ctx.strokeStyle = rgba(p.foliageDark, 0.9);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(nx, ny);
+      ctx.lineTo(nx + px * nl - ux * 0.8, ny + py * nl - uy * 0.8);
+      ctx.stroke();
+      ctx.strokeStyle = rgba(p.foliage, 0.95);
+      ctx.lineWidth = 0.7;
+      ctx.beginPath();
+      ctx.moveTo(nx, ny);
+      ctx.lineTo(nx + px * nl - ux * 0.8, ny + py * nl - uy * 0.8);
+      ctx.stroke();
+    }
+  }
+
+  // — the dense run of tiny BELL florets up the top two-thirds of the sprig —
+  //   each a little nodding bell; colour tier from height; openness from bloom. —
+  const bellN = 7;
+  for (let i = 0; i < bellN; i++) {
+    const f = 0.4 + (i / (bellN - 1)) * 0.6; // top two-thirds
+    const tier = clamp01(f); // higher up = deeper tier
+    const [bx, by] = sprigPoint(s, f);
+    // tangent for the bell's hang direction (bells nod outward/down off the stem)
+    const [bx2, by2] = sprigPoint(s, Math.min(1, f + 0.05));
+    const tx = bx2 - bx;
+    const ty = by2 - by;
+    const tl = Math.hypot(tx, ty) || 1;
+    const ux = tx / tl;
+    const uy = ty / tl;
+    const side = i % 2 === 0 ? 1 : -1; // alternate sides up the stem
+    // outward perpendicular offset so bells line the stem, not sit on its axis
+    const ox = -uy * side;
+    const oy = ux * side;
+
+    const tierCol = tier > 0.66 ? p.flowerTop : tier > 0.34 ? p.flowerMid : p.flowerLow;
     const col = brown > 0.01 ? mixRGB(tierCol, [148, 96, 56], 0.45 * brown) : tierCol;
-    const len = sp.len * (0.62 + 0.38 * open);
-    // shimmer nudges the spike tip a touch (spring/summer liveliness)
-    const sh = clamp01(shimmer) * Math.sin((sp.seed + shimmer) * Math.PI * 2) * 0.12;
-    const ang = sp.ang + sh;
-    const dx = Math.sin(ang);
-    const dy = -Math.cos(ang);
+    // shimmer adds a tiny live wobble (spring/summer); 0 at rest
+    const sh = clamp01(shimmer) * Math.sin((s.seed + i * 0.21 + shimmer) * Math.PI * 2) * 0.5;
+    const bw = (0.85 + open * 0.7) * (0.92 + tier * 0.12); // bell half-width
+    const bh = (1.15 + open * 0.6) * (0.92 + tier * 0.12); // bell half-height
+    const cx = bx + ox * (1.0 + open * 0.5) + sh;
+    const cy = by + oy * (1.0 + open * 0.5);
+    // the bell hangs roughly along the outward perpendicular
+    const ang = Math.atan2(oy, ox) + Math.PI / 2;
 
     ctx.save();
-    ctx.translate(sp.x, sp.y);
-    // spike stalk (a short woody twiglet)
+    ctx.translate(cx, cy);
+    ctx.rotate(ang);
+    // bell body (a small rounded urn)
+    ctx.fillStyle = rgba(col);
     ctx.strokeStyle = rgba(p.outline, 0.5);
-    ctx.lineWidth = 1.1;
+    ctx.lineWidth = 0.4;
     ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(dx * len, dy * len);
+    ctx.ellipse(0, 0, bw, bh, 0, 0, Math.PI * 2);
+    ctx.fill();
     ctx.stroke();
-
-    // 3 tiny bells stacked along the spike (denser when open)
-    const bellN = open > 0.45 ? 3 : 2;
-    for (let k = 0; k < bellN; k++) {
-      const f = 0.42 + (k / Math.max(1, bellN - 1)) * 0.56;
-      const bx = dx * len * f;
-      const by = dy * len * f;
-      const bw = (0.95 + open * 0.65) * (1 - k * 0.12);
-      const bh = (1.25 + open * 0.5) * (1 - k * 0.1);
-      ctx.fillStyle = rgba(col);
-      ctx.strokeStyle = rgba(p.outline, 0.55);
-      ctx.lineWidth = 0.45;
-      ctx.beginPath();
-      ctx.ellipse(bx, by, bw, bh, ang, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-      // tiny highlight on the upper-left of the topmost bells
-      if (k >= bellN - 1) {
-        ctx.fillStyle = rgba(p.flowerHi, 0.8);
-        ctx.beginPath();
-        ctx.arc(bx - bw * 0.4, by - bh * 0.4, bw * 0.42, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
+    // tiny highlight on the upper-left of the bell
+    ctx.fillStyle = rgba(p.flowerHi, 0.8);
+    ctx.beginPath();
+    ctx.arc(-bw * 0.38, -bh * 0.38, bw * 0.4, 0, Math.PI * 2);
+    ctx.fill();
     ctx.restore();
-  });
+  }
   ctx.lineCap = "butt";
+}
+
+/** The whole heather clump: the upright sprigs in back-to-front order, plus the
+ *  seasonal gloss / frost / snow-cap dressing on the upright tips. `shimmer` is
+ *  the live bell-shimmer swell (0 at rest). Drawn in the clump's local frame. */
+function drawClump(ctx: CanvasRenderingContext2D, p: P, shimmer: number): void {
+  // Draw the fill sprig first (behind), then the fan front-to-back by lean so
+  // the silhouette layers cleanly. Order is fixed → constant silhouette.
+  const order = [5, 0, 4, 1, 3, 2]; // back fill, outer sides, inner, centre last
+  for (const idx of order) drawSprig(ctx, p, SPRIGS[idx], shimmer);
 
   // — dewy / glossy sheen over the bloom crown (spring/summer) — static seed
   //   from glossAmt plus the live shimmer swell. —
-  const gl = clamp01(p.glossAmt) * 0.55 + clamp01(shimmer) * 0.45;
+  const gl = clamp01(p.glossAmt) * 0.5 + clamp01(shimmer) * 0.45;
   if (gl > 0.01) {
-    ctx.fillStyle = rgba([255, 255, 255], 0.16 + gl * 0.4);
+    ctx.fillStyle = rgba([255, 255, 255], 0.14 + gl * 0.36);
+    const [tx, ty] = sprigPoint(SPRIGS[2], 0.82);
     ctx.beginPath();
-    ctx.ellipse(MOUND_CX - 4, MOUND_CY - 6, 4.2, 2.0, -0.4, 0, Math.PI * 2);
+    ctx.ellipse(tx - 2, ty - 1, 3.6, 1.8, -0.4, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // — frost flecks scattered over the spikes (winter) —
+  // — frost flecks scattered over the bells + tips (winter) —
   if (p.frostAmt > 0.01) {
     ctx.fillStyle = rgba([236, 244, 255], 0.6 * p.frostAmt);
-    SPIKES.forEach((sp, i) => {
-      if (i % 2) return;
-      ctx.beginPath();
-      ctx.arc(sp.x - 0.5, sp.y - 0.8, 0.8 + sp.tier * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-    });
+    for (const s of SPRIGS) {
+      for (const f of [0.55, 0.78, 0.96] as const) {
+        const [fx, fy] = sprigPoint(s, f);
+        ctx.beginPath();
+        ctx.arc(fx - 0.4, fy - 0.6, 0.7 + f * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
   }
 
-  // — CHUNKY snow cap over the mound crown (winter) — dusts the upward dome; the
-  //   flowers below stay clearly visible. —
+  // — light SNOW CAPS resting on the upright sprig TIPS (winter) — a soft cap on
+  //   each tip; the sprig structure + bells below stay clearly visible (no
+  //   white-out, no bare stub). —
   if (p.snowCapAmt > 0.01) {
     const s = clamp01(p.snowCapAmt);
-    ctx.fillStyle = rgba([250, 253, 255], 0.95 * s);
-    ctx.beginPath();
-    ctx.moveTo(MOUND_CX - MOUND_RX * 0.78, MOUND_CY - MOUND_RY * 0.42);
-    ctx.quadraticCurveTo(MOUND_CX - 4, MOUND_CY - MOUND_RY - 2, MOUND_CX + 2, MOUND_CY - MOUND_RY * 0.9);
-    ctx.quadraticCurveTo(
-      MOUND_CX + MOUND_RX * 0.4,
-      MOUND_CY - MOUND_RY - 1,
-      MOUND_CX + MOUND_RX * 0.78,
-      MOUND_CY - MOUND_RY * 0.36,
-    );
-    ctx.quadraticCurveTo(MOUND_CX + 4, MOUND_CY - MOUND_RY * 0.62, MOUND_CX, MOUND_CY - MOUND_RY * 0.56);
-    ctx.quadraticCurveTo(MOUND_CX - 4, MOUND_CY - MOUND_RY * 0.62, MOUND_CX - MOUND_RX * 0.78, MOUND_CY - MOUND_RY * 0.42);
-    ctx.closePath();
-    ctx.fill();
-    // a couple of rounded clumps on top for weight
-    ctx.fillStyle = rgba([255, 255, 255], 0.92 * s);
-    for (const [cx, cy, r] of [[-3.5, -MOUND_RY * 0.9 + 4, 2.4], [3.5, -MOUND_RY * 0.78 + 4, 2.0]] as const) {
+    for (const sp of SPRIGS) {
+      const [tx, ty] = sprigPoint(sp, 1);
+      // a little mounded cap sitting on the tip
+      ctx.fillStyle = rgba([250, 253, 255], 0.95 * s);
       ctx.beginPath();
-      ctx.arc(MOUND_CX + cx, MOUND_CY + cy, r * s + 0.5, 0, Math.PI * 2);
+      ctx.ellipse(tx, ty - 1.2, 2.6 * (0.7 + 0.3 * s), 1.8 * (0.7 + 0.3 * s), 0, 0, Math.PI * 2);
+      ctx.fill();
+      // cool underside shade of the cap
+      ctx.fillStyle = rgba([206, 222, 240], 0.45 * s);
+      ctx.beginPath();
+      ctx.ellipse(tx, ty - 0.2, 2.2 * (0.7 + 0.3 * s), 0.8, 0, 0, Math.PI * 2);
       ctx.fill();
     }
-    // cool underside shadow of the cap
-    ctx.fillStyle = rgba([206, 222, 240], 0.45 * s);
-    ctx.beginPath();
-    ctx.ellipse(MOUND_CX, MOUND_CY - MOUND_RY * 0.4, MOUND_RX * 0.74, 1.4, 0, 0, Math.PI * 2);
-    ctx.fill();
   }
 }
 
-/** Short woody twigs at the base of the mound — anchors the shrub to the pad. */
+/** Short woody twigs + a little leaf litter at the foot of the clump — anchors
+ *  the sprigs to the pad. Drawn in the clump's local frame (base at origin). */
 function drawBase(ctx: CanvasRenderingContext2D, p: P): void {
-  ctx.strokeStyle = rgba(p.stem);
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = rgba(p.stemDark);
+  ctx.lineWidth = 2.2;
   ctx.lineCap = "round";
-  for (const [dx, dy] of [[-4, 8], [0, 9], [4, 8]] as const) {
+  for (const [dx, dy] of [[-4, 2.5], [0, 3], [4, 2.5]] as const) {
     ctx.beginPath();
-    ctx.moveTo(MOUND_BASE[0], MOUND_BASE[1] - 1);
-    ctx.quadraticCurveTo(dx * 0.5, MOUND_CY + 8, MOUND_CX + dx, MOUND_CY + dy);
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(dx * 0.5, 1.5, dx, dy);
     ctx.stroke();
   }
+  // a small woody knot where the sprigs meet
+  ctx.fillStyle = rgba(p.stem);
+  ctx.beginPath();
+  ctx.ellipse(0, 0.4, 3.2, 1.8, 0, 0, Math.PI * 2);
+  ctx.fill();
   ctx.lineCap = "butt";
 }
 
@@ -620,15 +642,16 @@ function paint(ctx: CanvasRenderingContext2D, pIn: P, pose: Pose): void {
 
     drawPad(ctx, p);
 
-    // The mound rides the idle bob + the breeze sway nod. The nod pivots around
-    // the planted base so the base stays put while the mound leans/travels.
+    // The clump rides the idle bob + the breeze sway nod. The nod pivots around
+    // the planted base so the base stays put while the clump leans/travels. The
+    // sprigs are drawn in the clump's local frame (base at origin), so translate
+    // to the base before drawing.
     ctx.save();
     ctx.translate(pose.swayShift, pose.bob);
-    ctx.translate(MOUND_BASE[0], MOUND_BASE[1]);
+    ctx.translate(CLUMP_BASE[0], CLUMP_BASE[1]);
     ctx.rotate(pose.swayLean);
-    ctx.translate(-MOUND_BASE[0], -MOUND_BASE[1]);
     drawBase(ctx, p);
-    drawMound(ctx, p, pose.shimmer);
+    drawClump(ctx, p, pose.shimmer);
     ctx.restore();
 
     drawPadDressing(ctx, p);
@@ -813,7 +836,7 @@ function poseFromClock(t: number, season: SeasonName): Pose {
   const tt = safeNum(t);
   const p = SP[season];
 
-  // — COMMON: breeze sway (~6s). The mound leans + travels ~11–14px off base. —
+  // — COMMON: breeze sway (~6s). The clump leans + travels ~11–14px off base. —
   let swayLean = 0;
   let swayShift = 0;
   let bob = 0;
@@ -821,21 +844,21 @@ function poseFromClock(t: number, season: SeasonName): Pose {
   const qs = actionQ(tt, SWAY_PERIOD, SWAY_WIN, 0);
   if (qs >= 0) {
     const s = swayShape(qs); // ~ -0.18 .. 1 .. 0
-    // The bloom crown sits ~12px above the base; lean ≈ 0.34 rad → ~13px of
-    // crown travel. A clearly-bold nod, not a nudge.
-    swayLean = s * 0.34; // up to ~19.5°
-    swayShift = s * 5.0; // extra horizontal travel of the whole mound
+    // The tallest sprig tips sit ~27px above the base; a lean of ~0.32 rad gives
+    // ~9px of tip travel plus the shift → a clearly-bold nod, not a nudge.
+    swayLean = s * 0.3; // up to ~17°
+    swayShift = s * 4.6; // extra horizontal travel of the whole clump
     bob = -Math.abs(s) * 1.4; // a little lift as it leans (follow-through)
-    shimmer = Math.max(shimmer, Math.sin(Math.PI * qs)); // spikes shimmer with the gust
+    shimmer = Math.max(shimmer, Math.sin(Math.PI * qs)); // bells shimmer with the gust
   }
 
-  // — spike shimmer also rides the common cadence on spring/summer —
+  // — bell shimmer also rides the common cadence on spring/summer —
   if (p.glossAmt > 0.01) {
     const qg = actionQ(tt, SWAY_PERIOD, SWAY_WIN, 0);
     shimmer = Math.max(shimmer, qg >= 0 ? Math.sin(Math.PI * qg) : 0);
   }
 
-  // — RARE: visiting bee (~18s). Flies in from the right, hovers at the flowers,
+  // — RARE: visiting bee (~18s). Flies in from the right, hovers at the bells,
   //   flies off to the left. Off-screen + alpha 0 at the window edges. —
   const bee: BeeState = { on: false, x: 0, y: 0, flap: 0.5, t: 0, alpha: 0 };
   const qb = actionQ(tt, BEE_PERIOD, BEE_WIN, BEE_PHASE);
@@ -845,20 +868,20 @@ function poseFromClock(t: number, season: SeasonName): Pose {
     // Fast wing-flap (animBee idiom).
     bee.flap = 0.45 + Math.abs(Math.sin(tt * 22)) * 0.75;
 
-    // Flight path: enter from the right (x≈+34), ease to a hover at the flowers
-    // (x≈+8, y≈-2), linger, then exit to the left (x≈-34). Endpoints are well
+    // Flight path: enter from the right (x≈+34), ease to a hover at the bells
+    // (x≈+6, y≈-10), linger, then exit to the left (x≈-34). Endpoints are well
     // off the −24..+24 box so it reads as flying in and away.
     const ENTER_X = 34;
-    const HOVER_X = 8;
+    const HOVER_X = 6;
     const EXIT_X = -34;
-    const HOVER_Y = MOUND_CY - 6;
+    const HOVER_Y = -10; // up among the upright bell florets
     if (qb < 0.42) {
       // fly in (ease-out toward hover)
       const k = smoother(qb / 0.42);
       bee.x = ENTER_X + (HOVER_X - ENTER_X) * k;
-      bee.y = -16 + (HOVER_Y - -16) * k + Math.sin(qb * 18) * 1.2;
+      bee.y = -18 + (HOVER_Y - -18) * k + Math.sin(qb * 18) * 1.2;
     } else if (qb < 0.62) {
-      // hover at the flowers (gentle bob/drift, animBee idiom)
+      // hover at the bells (gentle bob/drift, animBee idiom)
       const h = (qb - 0.42) / 0.2;
       bee.x = HOVER_X + Math.sin(h * Math.PI * 2) * 1.6;
       bee.y = HOVER_Y + Math.sin(tt * 3.0) * 1.8;
@@ -866,7 +889,7 @@ function poseFromClock(t: number, season: SeasonName): Pose {
       // fly off to the left (ease-in)
       const k = smoother((qb - 0.62) / 0.38);
       bee.x = HOVER_X + (EXIT_X - HOVER_X) * k;
-      bee.y = HOVER_Y + (-18 - HOVER_Y) * k - Math.sin(k * 6) * 1.4;
+      bee.y = HOVER_Y + (-20 - HOVER_Y) * k - Math.sin(k * 6) * 1.4;
     }
     // Fade fully at the very window edges so it's invisible at the seams.
     bee.alpha = Math.min(1, Math.sin(Math.PI * qb) * 3);
@@ -925,29 +948,32 @@ function makeTransition(from: SeasonName, to: SeasonName) {
       // — per-morph transient overlays — all ∝ trans so 0 at both ends —
       ctx.save();
       ctx.translate(pose.swayShift, pose.bob);
+      // anchor overlays near the clump crown (in tile space, above the base)
+      const CROWN_X = 0;
+      const CROWN_Y = -8;
       if (to === "Summer") {
-        // Spring→Summer: a brief saturating bloom-glow as the colour deepens.
+        // Spring→Summer: a brief saturating bloom-glow as the bells deepen.
         ctx.globalAlpha = 0.2 * trans;
         ctx.fillStyle = "rgba(255,210,244,1)";
         ctx.beginPath();
-        ctx.ellipse(MOUND_CX, MOUND_CY - 1, MOUND_RX * 0.7, MOUND_RY * 0.7, 0, 0, Math.PI * 2);
+        ctx.ellipse(CROWN_X, CROWN_Y, 11, 12, 0, 0, Math.PI * 2);
         ctx.fill();
       } else if (to === "Autumn") {
-        // Summer→Autumn: a few mauve-rust motes lift off the bloom crown.
+        // Summer→Autumn: a few mauve-rust motes lift off the bell crown.
         ctx.fillStyle = `rgba(150,96,60,${0.55 * trans})`;
         for (const [mx, my, ph] of [[-5, -6, 0], [4, -7, 1.7], [6, -1, 3.1]] as const) {
           const rise = trans * 3;
           ctx.beginPath();
-          ctx.arc(MOUND_CX + mx + Math.sin(ph) * 1.5, MOUND_CY + my - rise, 0.8, 0, Math.PI * 2);
+          ctx.arc(CROWN_X + mx + Math.sin(ph) * 1.5, CROWN_Y + my - rise, 0.8, 0, Math.PI * 2);
           ctx.fill();
         }
       } else {
-        // Autumn→Winter: frost dusts in + a few flakes settle. The snow cap
-        // itself rides the lerped snowCapAmt/padSnowAmt in `lp` (exact at p=1).
+        // Autumn→Winter: frost dusts in + a few flakes settle. The snow caps
+        // themselves ride the lerped snowCapAmt/padSnowAmt in `lp` (exact at p=1).
         ctx.fillStyle = `rgba(236,246,255,${0.7 * trans})`;
         for (const [fx, fy] of [[-5, -7], [-0.5, -9], [4, -7.5], [-7, -3], [6, -3.5]] as const) {
           ctx.beginPath();
-          ctx.arc(MOUND_CX + fx, MOUND_CY + fy, 0.9, 0, Math.PI * 2);
+          ctx.arc(CROWN_X + fx, CROWN_Y + fy, 0.9, 0, Math.PI * 2);
           ctx.fill();
         }
         ctx.fillStyle = `rgba(255,255,255,${0.8 * trans})`;

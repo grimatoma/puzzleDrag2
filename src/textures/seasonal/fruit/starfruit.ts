@@ -3,16 +3,21 @@
 // One CARAMBOLA / starfruit — an oblong fruit with 5 prominent raised
 // longitudinal ridges, so its profile edges read as the points of a star. The
 // SAME ridged silhouette is drawn every season; identity is constant. Seasons
-// swing HARD on colour + a real seasonal prop, and the idle is LOUD (WC3-style
-// two-tier occasional action) rather than a faint bob:
+// swing HARD on colour + a real seasonal prop. The idle is in-character for a
+// translucent star-sectioned fruit — a turn-to-reveal-the-star + a light
+// shimmer, NOT the generic squash-stretch hop the other produce share:
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a gentle WOBBLE — the star rocks/leans about
-//       its base with a tiny spin-tease, ~10–12 design-px sway at the top tip,
-//       squashing slightly at the base. Anticipation → peak → settle, zero
-//       velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger BOUNCE — a squash-stretch hop
-//       ~12–14 design-px up, with anticipation crouch, stretch on the way up,
-//       and a squash landing that overshoots then settles.
+//   IDLE COMMON  (~6s, win ~1.0s): a CALM gentle tilt/sway — the star leans a
+//       few px to one side and rights itself, paired with a faint translucent
+//       SHIMMER (a soft light glint drifting across the body). The quiet beat;
+//       zero value AND velocity at the window edges (seamless), invisible at t=0.
+//   IDLE RARE    (~18s, win ~3.0s, phased clear of common): a SLOW TURN that
+//       reveals the star cross-section — the body compresses narrow (squashX →
+//       ~−0.55, as if turning edge-on), then expands back wide (face-on, the
+//       five points fanning toward the viewer) with a gentle lean, while a
+//       brighter translucent SHIMMER sweeps across. The whole turn returns the
+//       squashX to 0 at both window edges (seamless); the shimmer is enveloped
+//       to 0 at the edges so the rare beat is exactly absent at rest.
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized
 // `paint(ctx, p, pose)` where `interface P` holds tweenable season params
@@ -626,62 +631,113 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-// Dips slightly negative early (anticipation) then a strong positive peak.
-function anticipate(q: number): number {
-  // windup wave: a small negative lobe then a big positive lobe, both returning
-  // to zero at the edges. (1-cos) envelope keeps velocity zero at q=0,1.
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, but velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+// ── Shared RARE-window clock — the SLOW TURN-to-reveal-the-star event ─────────
+// COMMON and RARE never overlap: COMMON fires every 6s at phase 0 (win 1.0s →
+// windows at t=0,6,12); the RARE turn fires every 18s at phase 3.0s (win 3.0s →
+// window [3,6), clear of every COMMON window). One source of truth so the turn
+// pose (poseFromClock) and the brighter shimmer sweep (anim) stay in lockstep.
+const TURN_PERIOD = 18.0;
+const TURN_WIN = 3.0;
+const TURN_PHASE = 3.0;
+
+/** Progress 0..1 through the rare turn window, else −1 (fully at rest). */
+function turnQ(t: number): number {
+  return actionQ(t, TURN_PERIOD, TURN_WIN, TURN_PHASE);
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** Signed turn profile over the window: −1 (edge-on, narrow) through 0 (mid) to
+ *  +1 (face-on, wide), multiplied by `hump` so the value AND velocity are both
+ *  zero at q=0 and q=1 (seamless return to REST at the window edges). `hump` and
+ *  `hump'` are both 0 at the edges, so any bounded factor stays seamless. */
+function turnReveal(q: number): number {
+  if (!(q >= 0) || q >= 1) return 0;
+  return hump(q) * -Math.cos(q * Math.PI); // narrow first half, wide second half
+}
+
+/** Build the idle pose from the wall clock. Two tiers, neither a bounce:
+ *   COMMON — a small, calm side-to-side tilt/sway every ~6s.
+ *   RARE   — a slow TURN that reveals the star: squashX compresses narrow
+ *            (edge-on) then expands wide (face-on) with a gentle lean, every
+ *            ~18s, fully synced to the brighter shimmer sweep in anim(). */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: side-to-side wobble / spin-tease (~6s, win 0.9s) ──
-  // Two rocks left→right→left, ~0.16 rad lean → top tip travels ~ pivotArm*0.16.
-  // Tip arm ≈ (SF_PIVOT_Y - SF_TOP) ≈ 31 px → ~10–12 px sway at the top tip.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: a small, calm tilt/sway (~6s, win 1.0s) ──
+  // One gentle lean out and back with a faint squash — the quiet resting beat,
+  // NOT a nervous wobble. Each factor is a product of edge-zero terms, so the
+  // pose has zero value AND zero velocity at the window edges.
+  const qC = actionQ(t, 6.0, 1.0, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.155 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0 envelope, zero at edges
+    const sway = Math.sin(qC * Math.PI * 2); // one gentle L→centre→R→centre
+    pose.lean += 0.05 * env * sway; // ~3px top sway — calm
+    pose.squashY += -0.02 * hump(qC); // a soft breath settling
+    pose.squashX += 0.018 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12–14px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  // ── RARE: a SLOW TURN that reveals the star (~18s, win 3.0s) ──
+  // squashX swings narrow (≈−0.55, edge-on) → wide (≈+0.55, face-on, the five
+  // points fanning toward the viewer). A gentle lean leads the turn and settles,
+  // and the body stretches a touch taller while edge-on (narrow) then relaxes.
+  // Every factor is `hump`-gated, so the whole turn is exactly 0 (value AND
+  // velocity) at both window edges → squashX returns to 0 with no snap.
+  const qS = turnQ(t);
   if (qS >= 0) {
-    // Hop height profile: brief crouch (q<0.18), launch arc, squash landing.
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air; // 0..1 in the air
-    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-  }
-
-  // Reference anticipate() so it stays part of the seamless-curve toolkit and
-  // contributes a faint windup tilt to the common wobble (still 0 at edges).
-  if (qC >= 0) {
-    pose.lean += 0.02 * anticipate(qC);
+    const reveal = turnReveal(qS); // −1..+1 across the turn, 0 at edges
+    pose.squashX += 1.55 * reveal; // narrow ≈ −0.55, then wide ≈ +0.55
+    // a faint vertical counter-stretch: taller when edge-on (reveal<0), relaxing
+    // as it goes face-on — keeps volume reading like a real turn. hump-gated.
+    pose.squashY += -0.12 * reveal;
+    // a gentle lean that rises and settles with the reveal (one soft tip).
+    pose.lean += 0.05 * hump(qS);
   }
 
   return pose;
+}
+
+// ── The translucent SHIMMER overlay — additive, drawn over the painted fruit ──
+// A soft light glint/band that sweeps horizontally across the translucent star
+// body. Clipped to the (un-posed) body silhouette so it only lights the fruit,
+// never the pad. Driven ONLY by t via the envelopes below; both envelopes are 0
+// at t=0 and at their window edges, so the still (and t=0) shows no shimmer.
+
+/** Draw one soft shimmer band centred at design-x `cx` across the body, at the
+ *  given intensity (0..1) tinted toward the translucent edge colour. At
+ *  intensity≈0 nothing is drawn. Never throws; clamps; resets alpha. */
+function drawShimmer(ctx: CanvasRenderingContext2D, cx: number, intensity: number, edgeCol: RGB): void {
+  const a = clamp01(intensity);
+  if (a <= 0.001) return;
+  const x = Number.isFinite(cx) ? cx : 0;
+
+  ctx.save();
+  try {
+    ctx.globalAlpha = 1;
+    // Clip to the fruit silhouette so the glint lives on the translucent body.
+    starfruitBodyPath(ctx);
+    ctx.clip();
+
+    // A soft vertical glint band: a gradient ellipse whose centre is brightest
+    // and fades to transparent at its edges, travelling left→right with `cx`.
+    const cy = lerp(SF_TOP, SF_BOT, 0.5);
+    const bandR = 4.6; // horizontal soft-radius of the band
+    const g = ctx.createRadialGradient(x, cy, 0.5, x, cy, bandR);
+    g.addColorStop(0, rgba([255, 255, 255], 0.55 * a));
+    g.addColorStop(0.45, rgba(edgeCol, 0.4 * a));
+    g.addColorStop(1, rgba(edgeCol, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(x, cy, bandR, (SF_BOT - SF_TOP) * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // a tiny bright core sparkle riding the band centre for a glassy catch
+    ctx.fillStyle = rgba([255, 255, 255], 0.5 * a);
+    ctx.beginPath();
+    ctx.ellipse(x, cy - (SF_BOT - SF_TOP) * 0.12, 1.0, 2.4, -0.08, 0, Math.PI * 2);
+    ctx.fill();
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
@@ -694,6 +750,31 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   return (ctx, t) => {
     const tt = Number.isFinite(t) ? t : 0;
     paint(ctx, SP[season], poseFromClock(tt));
+
+    // ── Translucent SHIMMER overlay (additive light over the body) ───────────
+    // A soft light glint sweeps L→R across the translucent star. Two intensities
+    // share one band: a FAINT glint during the COMMON calm beat, and a BRIGHTER
+    // sweep synced to the RARE turn-reveal. Both envelopes are 0 at their window
+    // edges (`hump`) → the band is exactly absent at t=0 and at rest.
+    const edgeCol = SP[season].edge;
+
+    // COMMON faint glint (~6s, win 1.0s) — fades in/out via hump, sweeps once.
+    const qC = actionQ(tt, 6.0, 1.0, 0.0);
+    if (qC >= 0) {
+      const cx = lerp(-SF_HALF - 2, SF_HALF + 2, qC); // L→R sweep
+      drawShimmer(ctx, cx, 0.2 * hump(qC), edgeCol);
+    }
+
+    // RARE brighter sweep — synced to the turn-reveal window, brightest as the
+    // star swings face-on (second half). hump() keeps it 0 at the window edges.
+    const qS = turnQ(tt);
+    if (qS >= 0) {
+      const cx = lerp(-SF_HALF - 3, SF_HALF + 3, qS); // a single slow sweep across
+      // bias intensity toward the face-on reveal (q>0.5) without breaking the
+      // edge-zero envelope: hump(qS) is 0 at both edges; the (0.6+0.4·qS) factor
+      // only re-weights the middle, so the band still vanishes at q=0 and q=1.
+      drawShimmer(ctx, cx, 0.42 * hump(qS) * (0.6 + 0.4 * qS), edgeCol);
+    }
 
     // Light additive season micro-sparkle (dressing only — never the subject's
     // own colour/brightness). Kept tiny so the POSE action is the star.
@@ -744,7 +825,8 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the bounce + glossy vivid yellow is the show.
+      // Summer: no extra dressing — the turn-reveal + shimmer on the glossy
+      // vivid-yellow star is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

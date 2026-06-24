@@ -12,12 +12,14 @@
 //   Winter : a bold SNOW CAP on the neck + snow at the base + frost; the golden
 //            gourd still clearly reads through the cold.
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a heavy side-to-side WOBBLE — the plump gourd
-//       rocks/leans about its base with a weighty squash, ~10–12 design-px sway
-//       at the neck. Anticipation → peak → settle, zero velocity at the window
-//       edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger BOUNCE — an anticipation crouch,
-//       a stretch hop ~12px up, then a squash landing that settles.
+//   IDLE COMMON  (~6s, win ~1.5s): a HEAVY SLOW WOBBLE — a low-frequency, weighty
+//       rock about the base (one slow lean out and back) with a DEEP base squat,
+//       reading the gourd's mass. Zero value AND velocity at the window edges
+//       (seamless).
+//   IDLE SPECIAL (~18s, win ~2.4s): a bigger, slower HEAVE — the heavy gourd
+//       leans FAR to one side, HOLDS at the apex, then settles back through
+//       centre with a momentum OVERSHOOT and a squash landing. Pose-only (no hop),
+//       heavier and bolder than the common wobble. Zero at the window edges.
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized
 // `paint(ctx, p, pose)` where `interface P` holds tweenable season params
@@ -242,9 +244,10 @@ const NECK_HALF = 5.4;  // half-width of the thicker neck
 const GOURD_BOT = BULB_CY + BULB_RY;     // contact line on the pad
 const GOURD_PIVOT_Y = GOURD_BOT - 1;     // rock/lean about a point near the base
 
-// Rib x-offsets (as a fraction of the local half-width) for the soft vertical
-// ribbing that runs the whole gourd.
-const RIB_FRACS: number[] = [-0.62, -0.2, 0.2, 0.62];
+// Rib x-offsets (as a fraction of the local half-width) for the vertical ribbing
+// that runs the whole gourd. Five lobes/grooves (added a centre groove + pushed
+// the outer pair wider) to sell the gourd's faceted 3D form more strongly.
+const RIB_FRACS: number[] = [-0.74, -0.4, 0.0, 0.4, 0.74];
 
 /** Trace the butternut-gourd body path (fat base → waist → thicker neck),
  *  origin-local and unposed. */
@@ -467,25 +470,39 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     const yTop = nty - 1;
     const yBot = bcy + BULB_RY - 1;
     RIB_FRACS.forEach((frac) => {
-      ctx.strokeStyle = rgba(p.skinDark, 0.62);
-      ctx.lineWidth = 1.7;
+      // deeper, darker groove — a two-pass stroke (broad soft shade under a
+      // tighter dark core) so each rib reads as a real recess in the form.
+      ctx.strokeStyle = rgba(p.skinDark, 0.45);
+      ctx.lineWidth = 3.0;
       ctx.beginPath();
       let first = true;
-      for (let y = yTop; y <= yBot; y += 1.6) {
+      for (let y = yTop; y <= yBot; y += 1.5) {
         const hw = halfWidthAt(y);
         const x = frac * hw;
         if (first) { ctx.moveTo(x, y); first = false; }
         else ctx.lineTo(x, y);
       }
       ctx.stroke();
-      // bright rib catch-light just left of each dark groove
-      ctx.strokeStyle = rgba(p.skinLight, 0.4);
-      ctx.lineWidth = 1.0;
+      ctx.strokeStyle = rgba(p.skinDark, 0.82);
+      ctx.lineWidth = 1.6;
       ctx.beginPath();
       first = true;
-      for (let y = yTop; y <= yBot; y += 1.6) {
+      for (let y = yTop; y <= yBot; y += 1.5) {
         const hw = halfWidthAt(y);
-        const x = frac * hw - 1.3;
+        const x = frac * hw;
+        if (first) { ctx.moveTo(x, y); first = false; }
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      // bright rib catch-light just left of each dark groove (the lit edge of the
+      // adjacent lobe) — brighter now to make the ribbing pop.
+      ctx.strokeStyle = rgba(p.skinLight, 0.6);
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      first = true;
+      for (let y = yTop; y <= yBot; y += 1.5) {
+        const hw = halfWidthAt(y);
+        const x = frac * hw - 1.5;
         if (first) { ctx.moveTo(x, y); first = false; }
         else ctx.lineTo(x, y);
       }
@@ -498,15 +515,33 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     ctx.ellipse(5, bcy + 2.5, BULB_RX * 0.7, BULB_RY * 0.9, -0.2, 0, Math.PI * 2);
     ctx.fill();
 
-    // smooth sheen across the ribs (gloss strength from P)
+    // smooth sheen across the ribs (gloss strength from P) — an elongated soft
+    // sheen running the lit upper-left of the body...
     if (p.gloss > 0.02) {
-      ctx.fillStyle = rgba([255, 255, 255], 0.12 + 0.55 * p.gloss);
+      ctx.fillStyle = rgba([255, 255, 255], 0.12 + 0.5 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(-4.5, lerp(nty, bcy, 0.4), 2.2, (bcy - nty) * 0.5, -0.1, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgba([255, 255, 255], 0.08 + 0.36 * p.gloss);
+      ctx.fillStyle = rgba([255, 255, 255], 0.08 + 0.34 * p.gloss);
       ctx.beginPath();
       ctx.ellipse(-6, bcy + 1, 1.8, 3.4, -0.1, 0, Math.PI * 2);
+      ctx.fill();
+      // ...plus a BRIGHTER, tighter specular hotspot on the upper-left shoulder of
+      // the bulb — a hard little glint that reads the surface as glossy & rounded.
+      const hx = -5.5;
+      const hy = lerp(nty, bcy, 0.62);
+      const hg = ctx.createRadialGradient(hx, hy, 0, hx, hy, 4.2);
+      hg.addColorStop(0, rgba([255, 255, 255], Math.min(1, 0.5 + 0.5 * p.gloss)));
+      hg.addColorStop(0.5, rgba([255, 255, 255], 0.18 + 0.3 * p.gloss));
+      hg.addColorStop(1, rgba([255, 255, 255], 0));
+      ctx.fillStyle = hg;
+      ctx.beginPath();
+      ctx.ellipse(hx, hy, 3.0, 4.2, -0.22, 0, Math.PI * 2);
+      ctx.fill();
+      // a crisp core dot for the glossiest seasons
+      ctx.fillStyle = rgba([255, 255, 255], Math.min(1, 0.35 + 0.55 * p.gloss));
+      ctx.beginPath();
+      ctx.ellipse(hx - 0.3, hy - 1.0, 1.1, 1.7, -0.22, 0, Math.PI * 2);
       ctx.fill();
     }
 
@@ -610,56 +645,63 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+/** RARE heave lean profile over q∈[0,1]: ramp FAR to one side, HOLD at the apex,
+ *  then swing back through centre with a momentum OVERSHOOT past it before
+ *  settling. Returns roughly −0.3..+1 (×amplitude). Built from smootherstep /
+ *  hump pieces so it is exactly 0 with ZERO velocity at q=0 and q=1:
+ *    up   = smoother(q/0.30)        → 0→1 over [0,0.30]      (flat slope at both ends)
+ *    down = smoother((q−0.55)/0.45) → 0→1 over [0.55,1]      (flat slope at both ends)
+ *    base = up − down               → 0 →1→ hold →0          (apex held over [0.30,0.55])
+ *    os   = −0.34·hump(osWin)       → a dip past centre on the return (0 at its ends)
+ *  At q=0: up=down=os=0 → 0. At q=1: up=1, down=1, osWin=1→hump=0 → 0. */
+function heaveLean(q: number): number {
+  const up = smoother(clamp01(q / 0.3));
+  const down = smoother(clamp01((q - 0.55) / 0.45));
+  const osWin = clamp01((q - 0.55) / 0.45);
+  const os = -0.34 * hump(osWin);
+  return up - down + os;
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common heavy WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s).
- *   It's a plump gourd, so the wobble carries real weight (squash at the base). */
+/** Build the idle pose from the wall clock. Two tiers, neither a bounce — both
+ *  read the gourd's MASS:
+ *   COMMON — a HEAVY SLOW WOBBLE every ~6s (win 1.5s): one low-frequency lean out
+ *            and back with a deep weighty base squat.
+ *   RARE   — a bigger, slower HEAVE every ~18s (win 2.4s): lean FAR, HOLD, settle
+ *            back through centre with a momentum overshoot + squash landing.
+ *  Every factor is 0 with zero velocity at its window edges → seamless loop. */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: heavy side-to-side wobble (~6s, win 0.9s) ──
-  // Tip arm ≈ (GOURD_PIVOT_Y - NECK_TOP_Y) ≈ 34 px → ~0.16 rad → ~10–12 px sway
-  // at the neck. The plump base squashes weightily as it rocks.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: heavy SLOW wobble (~6s, win 1.5s) ──
+  // Low frequency: a single slow lean out → through → back (one cycle), not a
+  // nervous flutter. Tip arm ≈ (GOURD_PIVOT_Y − NECK_TOP_Y) ≈ 34 px, so ~0.16 rad
+  // reads as a weighty ~5–6 px sway at the neck. Deep squat sells the mass.
+  const qC = actionQ(t, 6.0, 1.5, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.15 * env * rock;
-    // weighty squat at the base as it rocks (it's plump)
-    pose.squashY += -0.09 * hump(qC);
-    pose.squashX += 0.08 * hump(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0 envelope, zero at edges
+    const rock = Math.sin(qC * Math.PI * 2); // ONE slow L→centre→R→centre cycle
+    pose.lean += 0.16 * env * rock;
+    // a deep, weighty squat at the base as it rocks (it's plump and heavy)
+    pose.squashY += -0.11 * hump(qC);
+    pose.squashX += 0.1 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  // ── RARE: a bigger, slower HEAVE (~18s, win 2.4s) — pose-only, no hop ──
+  // The heavy gourd leans FAR to one side, holds at the apex under its own weight,
+  // then settles back through centre with a momentum overshoot and a squash
+  // landing. Heavier + bolder + slower than the common wobble. Phase 3s so it
+  // lands clear of the common beat.
+  const qS = actionQ(t, 18.0, 2.4, 3.0);
   if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~12px.
-    pose.bob += crouch * 1.8 - air * 12.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air;
-    pose.squashY += apex * 0.18 - crouch * 0.14 - land * 0.18;
-    pose.squashX += -apex * 0.12 + crouch * 0.12 + land * 0.16;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.04 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-  }
-
-  // Reference anticipate() so it stays part of the seamless-curve toolkit and
-  // contributes a faint windup tilt to the common wobble (still 0 at edges).
-  if (qC >= 0) {
-    pose.lean += 0.02 * anticipate(qC);
+    const hv = heaveLean(qS); // ~0 →1→ hold → overshoot(−) → 0
+    pose.lean += 0.27 * hv; // a far, weighty lean (bolder than the common 0.16)
+    // Deep base squat held through the lean (mass settling into the base) plus an
+    // extra squash thump on the return/overshoot (the landing momentum).
+    const settle = hump(qS); // 0..1..0 over the whole window
+    const osWin = clamp01((qS - 0.55) / 0.45);
+    const landing = hump(osWin); // 0 at q=0.55 and q=1 — the settle thump
+    pose.squashY += -0.1 * settle - 0.07 * landing;
+    pose.squashX += 0.09 * settle + 0.08 * landing;
   }
 
   return pose;
@@ -725,7 +767,7 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the bounce + glossy golden gourd is the show.
+      // Summer: no extra dressing — the heavy wobble + glossy golden gourd is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

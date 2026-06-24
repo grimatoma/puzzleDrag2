@@ -10,20 +10,28 @@
 //   Autumn:  full ripe BROWN fibrous coconut + a fallen frond/leaf on the pad.
 //   Winter:  brown coconut clearly under a white SNOW CAP + base snow + frost.
 //
-// The idle is LOUD, two-tier WC3-style, mirroring pepper.bold.ts:
-//   IDLE COMMON  (~6s, win ~0.9s): a slow HEAVY ROCK — the coconut wobbles
-//       side-to-side ~0.16 rad with a base squash. Zero velocity at the window
-//       edges → seamless.
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger BOUNCE hop — anticipation crouch →
-//       stretch up ~12px → squash landing that settles. May exit the box.
+// The idle is a distinct, in-character two-tier beat (NOT a generic bounce):
+//   IDLE COMMON  (~6s, win ~1.0s): a slow HEAVY ROCK — the bottom-heavy coconut
+//       rocks side-to-side like a palm-weighted nut, ~0.16 rad, with a base
+//       squash + a faint sprout sway. The calm, characterful resting beat. Zero
+//       value AND velocity at the window edges → seamless.
+//   IDLE RARE    (~18s, win ~3.0s): the coconut CRACKS — a jagged split snaps
+//       open across the husk and a few drops of coconut WATER well up and fall
+//       from the seam, then it settles and the crack fades. Drawn as an additive
+//       overlay in anim() (the crack/water are NEVER in the still). The coconut
+//       gives a tiny JOLT (a small squash) at the instant it cracks. The crack,
+//       the drips, and the jolt are exactly 0 — and the seam absent — at the
+//       window edges (and therefore at t=0).
 //
-// Architecture mirrors pepper.bold.ts: a single parameterized
+// Architecture mirrors apple.bold.ts: a single parameterized
 // `paint(ctx, p, pose)` where `interface P` holds tweenable season params
 // (colours + prop amounts) and `pose` holds the idle gesture (bob / lean /
-// squash). Because every season is the same paint with tweened P, transitions
-// are seamless: transition(0) ≡ draw(from), transition(1) ≡ draw(to). REST pose
-// is all zeros, so draw(season) = paint(ctx, SP[season], REST) and the idle's
-// pose is 0 at every action-window edge → seamless loop.
+// squash); the RARE crack + water ride along in anim() as an additive overlay
+// driven by a shared clock that also gates the jolt. Because every season is the
+// same paint with tweened P, transitions are seamless: transition(0) ≡
+// draw(from), transition(1) ≡ draw(to). REST pose is all zeros, so
+// draw(season) = paint(ctx, SP[season], REST) and the idle's pose is 0 at every
+// action-window edge → seamless loop.
 //
 // PALETTE LOCK: the coconut stays BROWN-ish (greener when young) with a GREEN
 // sprout-tuft all year. Ripeness is shown ONLY as husk colour green→brown; it
@@ -661,21 +669,49 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+// ── Shared RARE-window clock — the CRACK event ───────────────────────────────
+// COMMON and RARE never overlap: COMMON fires every 6s at phase 0 (win 1.0s) so
+// its windows are t mod 6 ∈ [0,1) (i.e. 0,6,12,18…). The RARE crack uses period
+// 18s, phase 3.0s, win 3.0s; because actionQ ADVANCES the clock by `phase`, its
+// open window is t mod 18 ∈ [15,18) — a 3s beat that ends right before each 18s
+// mark and is fully clear of every COMMON window. One source of truth so the
+// coconut JOLT (in poseFromClock) and the crack+water overlay (in anim) stay in
+// lockstep.
+const CRACK_PERIOD = 18.0;
+const CRACK_WIN = 3.0;
+const CRACK_PHASE = 3.0;
+
+/** Progress 0..1 through the crack window, else −1 (crack fully hidden). */
+function crackQ(t: number): number {
+  return actionQ(t, CRACK_PERIOD, CRACK_WIN, CRACK_PHASE);
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common slow HEAVY ROCK every ~6s (win 0.9s), rare BOUNCE every ~18s. */
+/** How OPEN the crack is, 0..1 — it SNAPS open fast (first ~14%), holds open
+ *  while the water wells and drips, then seals back. Exactly 0 with zero slope
+ *  at q=0 and q=1 (the whole event fades in and out of REST), so the seam is
+ *  absent on the still and at every window edge. `sin(π·q)` would peak instead
+ *  of hold, so we shape it explicitly: a smootherstep snap up, a flat hold, and
+ *  a mirrored smootherstep seal. */
+function crackOpen(q: number): number {
+  if (!(q >= 0) || q >= 1) return 0;
+  const up = 0.14; // fast SNAP open
+  const down = 0.3; // slower seal
+  if (q < up) return smoother(q / up); // 0→1, zero slope at q=0
+  if (q > 1 - down) return smoother((1 - q) / down); // 1→0, zero slope at q=1
+  return 1; // held open while the water drips
+}
+
+/** Build the idle pose from the wall clock. Two tiers, neither a bounce:
+ *   COMMON — a slow HEAVY palm-like ROCK side-to-side every ~6s (win 1.0s).
+ *   RARE   — a tiny JOLT (a quick squash) at the instant the coconut cracks,
+ *            every ~18s, fully synced to the crack+water overlay in anim(). */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: slow heavy side-to-side rock (~6s, win 0.9s) ──
+  // ── COMMON: slow heavy side-to-side rock (~6s, win 1.0s) ──
   // Crown arm ≈ (COCO_BASE_Y - TUFT_Y) ≈ 28 px → ~0.16 rad gives a hefty sway.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // The bottom-heavy nut leans out, through centre, to the other side, settles.
+  const qC = actionQ(t, 6.0, 1.0, 0.0);
   if (qC >= 0) {
     const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
     const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
@@ -685,33 +721,142 @@ function poseFromClock(t: number): Pose {
     pose.squashX += 0.05 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ rock
-  if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~12px.
-    pose.bob += crouch * 1.6 - air * 12.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air;
-    pose.squashY += apex * 0.18 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.13 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-  }
-
-  // Reference anticipate() so it stays part of the seamless-curve toolkit and
-  // contributes a faint windup tilt to the common rock (still 0 at edges).
-  if (qC >= 0) {
-    pose.lean += 0.02 * anticipate(qC);
+  // ── RARE: a tiny JOLT as the coconut CRACKS (~18s) ──
+  // A quick squash recoil at the instant the seam snaps open. Enveloped by the
+  // crack's own open-amount (0 at the window edges) AND a hump that peaks with
+  // the snap, so the jolt is exactly 0 at q=0 and q=1 and reads as the impact of
+  // the crack rather than a drift.
+  const q = crackQ(t);
+  const open = crackOpen(q);
+  if (open > 0) {
+    // a sharp snap pulse concentrated near the moment the crack opens (~q=0.1):
+    // 0 at q=0, rises fast, decays back to ~0 over the rest of the window.
+    const snap = q < 0.4 ? Math.sin((q / 0.4) * Math.PI) : 0; // 0..1..0 within the snap
+    const jolt = snap * open; // gated by open → 0 at the edges
+    pose.squashY += -0.08 * jolt; // squat down on the crack
+    pose.squashX += 0.07 * jolt; // and bulge wide
+    // a faint side recoil that settles, 0 at the edges via `open`
+    pose.lean += 0.03 * Math.sin(q * Math.PI * 2) * open;
   }
 
   return pose;
+}
+
+// ── The CRACK + WATER overlay — additive, drawn over the painted coconut ──────
+// A jagged split snaps open across the husk's lit upper-left face, beads of
+// coconut water well at the seam, and a few droplets fall away and fade. Driven
+// ONLY by t through the shared crack clock. Invisible when `open` (from
+// crackOpen) is 0, so it is exactly absent at the window edges (and at t=0) and
+// NEVER on the still.
+
+// The seam runs from the upper-left shoulder down across toward the centre of
+// the body. A fixed jagged polyline (design-local, unposed) traced over the husk.
+const CRACK_PTS: Array<[number, number]> = [
+  [-9.5, COCO_CY - 9.5],
+  [-6.2, COCO_CY - 6.0],
+  [-7.4, COCO_CY - 3.0],
+  [-3.6, COCO_CY - 0.4],
+  [-4.6, COCO_CY + 2.8],
+  [-1.0, COCO_CY + 4.6],
+];
+
+const WATER: RGB = [206, 236, 244]; // cool coconut-water highlight
+const WATER_MID: RGB = [150, 206, 222]; // body of a droplet
+const WATER_LO: RGB = [96, 162, 188]; // shaded underside of a droplet
+
+/** Draw the crack seam + welling/falling coconut water. `open` (0..1) snaps the
+ *  seam wide and gates ALL alpha; `drip` (0..1) advances the falling droplets
+ *  within the window. At open<=0 nothing is drawn (the husk is intact). */
+function drawCrack(ctx: CanvasRenderingContext2D, open: number, drip: number): void {
+  const o = clamp01(open);
+  if (o <= 0.001) return;
+  const d = clamp01(drip);
+
+  ctx.save();
+  try {
+    ctx.globalAlpha = 1;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    // 1) The dark inner gap — a slightly fattened dark stroke that widens with
+    //    `open`, so the seam reads as splitting APART (only while open).
+    ctx.strokeStyle = rgba([26, 16, 10], 0.85 * o);
+    ctx.lineWidth = 0.8 + 2.6 * o;
+    ctx.beginPath();
+    ctx.moveTo(CRACK_PTS[0][0], CRACK_PTS[0][1]);
+    for (let i = 1; i < CRACK_PTS.length; i++) {
+      ctx.lineTo(CRACK_PTS[i][0], CRACK_PTS[i][1]);
+    }
+    ctx.stroke();
+
+    // 2) A thin lit lip along the upper edge of the seam (catches the light).
+    ctx.strokeStyle = rgba([240, 224, 196], 0.5 * o);
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(CRACK_PTS[0][0] - 0.5, CRACK_PTS[0][1] - 0.6);
+    for (let i = 1; i < CRACK_PTS.length; i++) {
+      ctx.lineTo(CRACK_PTS[i][0] - 0.5, CRACK_PTS[i][1] - 0.6);
+    }
+    ctx.stroke();
+
+    // 3) Beads of water welling along the seam (a few fixed spots, alpha by open).
+    const beads: Array<[number, number, number]> = [
+      [-6.6, COCO_CY - 4.8, 1.2],
+      [-4.1, COCO_CY + 0.2, 1.5],
+      [-3.0, COCO_CY + 3.4, 1.3],
+    ];
+    beads.forEach(([bx, by, br]) => {
+      ctx.fillStyle = rgba(WATER_MID, 0.85 * o);
+      ctx.beginPath();
+      ctx.arc(bx, by, br, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba(WATER, 0.9 * o);
+      ctx.beginPath();
+      ctx.arc(bx - br * 0.3, by - br * 0.35, br * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // 4) Falling droplets — each spawns at a seam point and falls under a simple
+    //    accelerating arc, fading near the bottom. The set is phase-staggered so
+    //    a little stream trickles out while the seam holds open. Everything is
+    //    gated by `o`, so droplets vanish as the crack seals (and at the edges).
+    const drops: Array<[number, number, number]> = [
+      [-4.1, COCO_CY + 0.6, 0.0],
+      [-3.0, COCO_CY + 3.8, 0.35],
+      [-5.2, COCO_CY - 2.0, 0.7],
+    ];
+    drops.forEach(([sx, sy, phase]) => {
+      // per-drop progress 0..1, wrapping within the window
+      const f = (d + phase) % 1;
+      // fall distance accelerates (gravity), out to ~16px below the seam
+      const fall = 16 * f * f;
+      const dx = sx + Math.sin(phase * 6.2) * 0.6; // slight horizontal offset
+      const dy = sy + 2 + fall;
+      // fade in as it leaves the seam, fade out as it nears the ground
+      const life = Math.sin(Math.min(1, f / 0.9) * Math.PI);
+      const a = 0.9 * o * clamp01(life);
+      if (a <= 0.01) return;
+      // a small teardrop: round bottom, tapered top, with a highlight
+      const r = 1.5 - 0.4 * f;
+      ctx.fillStyle = rgba(WATER_LO, a);
+      ctx.beginPath();
+      ctx.moveTo(dx, dy - r * 2.0);
+      ctx.quadraticCurveTo(dx + r, dy - r * 0.2, dx, dy + r);
+      ctx.quadraticCurveTo(dx - r, dy - r * 0.2, dx, dy - r * 2.0);
+      ctx.fill();
+      ctx.fillStyle = rgba(WATER_MID, a);
+      ctx.beginPath();
+      ctx.arc(dx, dy, r * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba(WATER, a);
+      ctx.beginPath();
+      ctx.arc(dx - r * 0.3, dy - r * 0.3, r * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
@@ -726,6 +871,19 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
     // the green tuft sways gently every season (additive, subtle)
     const tuftSway = Math.sin(tt * 1.7) * 1.0 + Math.sin(tt * 1.7 + 1) * 0.4;
     paint(ctx, SP[season], poseFromClock(tt), tuftSway);
+
+    // RARE CRACK event (all seasons) — the husk splits, coconut water wells at
+    // the seam and a few droplets fall, then it seals. Additive overlay only;
+    // fully synced to the JOLT in poseFromClock via the shared crack clock.
+    // `open` is 0 at the window edges (and so at t=0), so nothing is drawn at
+    // rest and the seam is never on the still.
+    const cq = crackQ(tt);
+    const open = crackOpen(cq);
+    if (open > 0) {
+      // `drip` advances the falling droplets across the open window; tied to cq
+      // so the stream only trickles while the seam is actually split.
+      drawCrack(ctx, open, cq);
+    }
 
     // Light additive season micro-sparkle (dressing only — never the subject's
     // own colour/brightness). Kept tiny so the POSE action is the star.

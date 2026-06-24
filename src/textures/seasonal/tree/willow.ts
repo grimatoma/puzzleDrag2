@@ -230,7 +230,7 @@ const SP: Record<"Spring" | "Summer" | "Autumn" | "Winter", P> = {
     soil: [120, 126, 136],
     outlineTint: [46, 52, 60],
     lightTint: [208, 224, 242], // cool blue-grey
-    leafDensity: 0.2, // sparse bare drooping strands (still reads as a willow)
+    leafDensity: 0.55, // keep the weeping curtain (frosted/snow-capped), not a bare post
     catkinAmt: 0,
     blossomCrownAmt: 0,
     frostAmt: 0.85,
@@ -793,7 +793,9 @@ function lerpP(a: P, b: P, f: number): P {
 
 // ── A small bird (front-¾) used by the RARE flit special ─────────────────────
 // `hop` is its vertical hop offset (px, ≤0 = up), `look` rotates the head, `wing`
-// opens the wing for the flit-off. Colours locked (robin-ish). Never throws.
+// opens the wing for the flit-off. Per-species palette: a WREN / warbler — warm
+// olive-brown body with a pale buff breast and a perky pale eyebrow stripe. The
+// warm olive-buff reads against the willow's green/gold fronds. Never throws.
 function bird(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -807,43 +809,48 @@ function bird(
   ctx.save();
   ctx.globalAlpha = clamp01(alpha);
   ctx.translate(x, y + hop);
-  // body
-  ctx.fillStyle = "#5a4636";
+  // body — warm olive-brown
+  ctx.fillStyle = "#7a5d34";
   ctx.beginPath();
   ctx.ellipse(0, 0, 3.8, 2.9, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  // warm breast
-  ctx.fillStyle = "#d2693a";
+  // pale buff breast
+  ctx.fillStyle = "#d8c290";
   ctx.beginPath();
   ctx.ellipse(-1.3, 0.6, 2.2, 2.0, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  // tail
-  ctx.fillStyle = "#46362a";
+  // tail — dark warm brown (the wren's perky cocked tail)
+  ctx.fillStyle = "#4a3420";
   ctx.beginPath();
   ctx.moveTo(3.0, -0.4);
   ctx.lineTo(6.6, -1.6);
   ctx.lineTo(6.0, 1.1);
   ctx.closePath();
   ctx.fill();
-  // wing (opens during flit-off)
+  // wing (opens during flit-off) — barred warm brown
   ctx.save();
   ctx.translate(0.6, -0.4);
   ctx.rotate(-0.5 * wing);
-  ctx.fillStyle = "#3d2f24";
+  ctx.fillStyle = "#5a3f24";
   ctx.beginPath();
   ctx.ellipse(0, 0, 2.9 + wing * 1.9, 1.6 + wing * 1.1, 0.3, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
-  // head (looks around)
+  // head (looks around) — olive-brown with a pale buff eyebrow stripe
   ctx.save();
   ctx.translate(-3.0, -2.2);
   ctx.rotate(look);
-  ctx.fillStyle = "#5a4636";
+  ctx.fillStyle = "#7a5d34";
   ctx.beginPath();
   ctx.arc(0, 0, 2.2, 0, Math.PI * 2);
   ctx.fill();
-  // beak
-  ctx.fillStyle = "#e2b23a";
+  // pale supercilium (eyebrow) — the wren's signature
+  ctx.fillStyle = "#e3d3a6";
+  ctx.beginPath();
+  ctx.ellipse(-0.7, -0.9, 1.6, 0.5, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  // beak — fine warbler bill
+  ctx.fillStyle = "#5a4326";
   ctx.beginPath();
   ctx.moveTo(-2.0, 0.2);
   ctx.lineTo(-4.0, -0.2);
@@ -981,19 +988,23 @@ function animAutumn(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.save();
   try {
     const p = SP.Autumn;
+    // [startX, fallRate, hueBlend] — distinct rates desync the strands while
+    // every one starts at prog 0 (alpha 0) at t=0, so anim(0) matches the
+    // leaf-free still and the loop wraps with no visible pop.
     const leaves: Array<[number, number, number]> = [
-      [-6, 0.0, 0.55], // [startX, phase, hueBlend]
-      [9, 0.5, 0.35],
+      [-6, 0.240, 0.55],
+      [9, 0.205, 0.35],
     ];
-    leaves.forEach(([sx, phase, hb]) => {
-      const prog = ((t * 0.24 + phase) % 1 + 1) % 1;
+    leaves.forEach(([sx, rate, hb]) => {
+      const prog = (t * rate) % 1;
       const ly = -6 + prog * 28; // crown fringe down to the pad
-      const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * 6;
+      const lx = sx + Math.sin(prog * Math.PI * 2 + sx) * 6;
       const col = lerp3(p.frondMid, p.frondLight, hb);
       ctx.save();
-      ctx.fillStyle = rgb(col, 1 - prog * 0.4);
+      ctx.globalAlpha = Math.sin(Math.PI * prog); // fade in at the crown, out at the pad
+      ctx.fillStyle = rgb(col, 1);
       ctx.translate(lx, ly);
-      ctx.rotate(prog * Math.PI * 2.5 + phase * 4);
+      ctx.rotate(prog * Math.PI * 2.5 + sx);
       ctx.beginPath();
       ctx.ellipse(0, 0, 1.1, 3.0, 0, 0, Math.PI * 2);
       ctx.fill();

@@ -207,7 +207,7 @@ interface P {
   fallenLeafAmt: number; // 0..1 a fallen leaf on the pad (autumn)
   breathFogAmt: number; // 0..1 breath puff at the snout (winter)
   scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
+  scarfColor: RGB; // scarf colour (locked teal, fades in via alpha)
 }
 
 // Four BOLD season presets. The cow stays the SAME white, black-spotted,
@@ -235,7 +235,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [44, 150, 150],
   },
   // Summer — glossy coat (PEAK), saturated mid-green pad, bright warm light.
   Summer: {
@@ -258,7 +258,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [44, 150, 150],
   },
   // Autumn — warm-tinted fuller coat, a fallen leaf on the pad, dulled gloss.
   Autumn: {
@@ -281,7 +281,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.95,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [44, 150, 150],
   },
   // Winter — FURRIER thick coat + back-snow + a little SCARF + breath fog,
   // snowy pad, cool blue-grey light.
@@ -305,7 +305,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [44, 150, 150],
   },
 };
 

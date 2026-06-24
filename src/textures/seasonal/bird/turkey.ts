@@ -247,7 +247,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [210, 158, 44], // mustard knit (per-species winter accessory)
   },
   // Summer — richest iridescent bronze (PEAK), fan proud, saturated mid-green
   // pad, bright warm light.
@@ -276,7 +276,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [210, 158, 44], // mustard knit (per-species winter accessory)
   },
   // Autumn — warm bronze-tinted plumage (turkeys read very autumnal — lean in),
   // olive-tan browning pad, a fallen leaf, dulled gloss, low amber light.
@@ -305,7 +305,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.95,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [210, 158, 44], // mustard knit (per-species winter accessory)
   },
   // Winter — FLUFFED puffy plumage, snow on back + tail, a little winter SCARF,
   // breath-fog, frost; snowy pad, cool blue-grey light. The bronze stays
@@ -335,7 +335,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [210, 158, 44], // mustard knit (per-species winter accessory)
   },
 };
 

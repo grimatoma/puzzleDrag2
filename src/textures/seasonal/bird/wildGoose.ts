@@ -12,17 +12,22 @@
 // fluffed winter), snow/frost/leaves, and light props. Never morphs into another
 // animal.
 //
-// IDLE (two-tier occasional action, carried through a `pose` object):
-//   • COMMON ~6s (win ~0.95s): a NECK-DIP PECK — the neck dips the head ~12–16px
-//     down toward the pad then arcs back up ALERT, with a small body squash and a
-//     tail flick.
-//   • RARE  ~18s (win ~1.2s, phase +3s): a HONK + WING-SPREAD / take-off feint —
-//     the neck stretches UP and forward (~14–18px), the wings spread as if about
-//     to fly, then fold back and settle. Anticipation → spread → settle. May
-//     exit the box at the apex (fine).
-// Both gestures return to REST with zero value AND zero velocity at the window
-// edges (raised-cosine windows), so `anim(…, t)` is seamless and `anim(…, 0)`
-// (and `draw`) sit exactly at rest.
+// IDLE (two TIERS clearly separated, carried through a `pose` object):
+//   • COMMON — a CALM CONTINUOUS CRUISE FLAP: a steady, gentle wing-beat (small
+//     amplitude) with a soft breathing bob and a lazy tail sway, always present.
+//     Built from (1−cos)-style terms so it is 0 at t=0 with zero velocity yet
+//     loops forever — the baseline "cruising goose in flight" read.
+//   • RARE  ~18s (win ~1.6s, phase +4s): a DISCRETE BOLD BEAT well above the
+//     cruise — a STEEP BANKING TURN combined with a CALL-AND-HONK. The goose
+//     ROLLS/BANKS to one side (body + wings tilt), the neck stretches UP, the
+//     head TIPS BACK and the bill OPENS for a honk, the wings spread wide, then
+//     it levels out and the call fades back into the cruise. May exit the box
+//     at the apex (fine).
+// The rare beat is ENVELOPED by a raised-cosine window (`bump`), so its value
+// AND velocity are exactly 0 at both window edges — it grows in and settles out
+// seamlessly back to the cruise. The cruise itself is independently seamless
+// everywhere, so `anim(…, t)` is seamless and `anim(…, 0)` (and `draw`) sit
+// exactly at rest.
 //
 // Origin-centered in the −24..+24 design box, light from upper-left. Never
 // throws; clamps every scalar; save/restore + globalAlpha reset in `finally`.
@@ -83,20 +88,6 @@ function bump(q: number): number {
   return 0.5 - 0.5 * Math.cos(q * Math.PI * 2);
 }
 
-// Anticipation→action shape for the PECK / HONK: a brief wind-up (negative)
-// before the main move, then a clean arc and settle. q∈[0,1]. Returns a factor
-// in roughly −0.18..+1 (negative = wind-up, positive = the main reach).
-function reachShape(q: number): number {
-  if (q <= 0 || q >= 1) return 0;
-  const antiEnd = 0.24; // first slice = wind-up / anticipation
-  if (q < antiEnd) {
-    const a = q / antiEnd;
-    return -0.18 * (0.5 - 0.5 * Math.cos(a * Math.PI));
-  }
-  const a = (q - antiEnd) / (1 - antiEnd);
-  return Math.sin(a * Math.PI);
-}
-
 // ── The idle POSE (carries all action state into paint) ──────────────────────
 
 interface Pose {
@@ -104,64 +95,105 @@ interface Pose {
   lean: number; // body lean toward the head (design px sideways, − = forward/left)
   squashX: number; // body horizontal scale multiplier (squash/stretch)
   squashY: number; // body vertical scale multiplier
-  neckDip: number; // head/neck DOWN toward the pad (design px, + = down) — the peck
-  neckRise: number; // head/neck UP + forward (design px, + = up reach) — the honk
-  peck: number; // 0..1 bill-open / alert head-turn amount
-  wing: number; // 0..1 wing-spread amount (0 folded → 1 spread for the honk feint)
+  bank: number; // signed body ROLL for the banking turn (radians, − = roll left)
+  neckRise: number; // head/neck UP + forward (design px, + = up reach) — the call
+  headTip: number; // head TIPS BACK for the honk (radians, + = beak skyward)
+  honk: number; // 0..1 bill-open honk amount
+  wing: number; // 0..1 wing-spread amount (0 folded → 1 spread)
+  wingTilt: number; // signed extra wing fan tilt during the bank (radians)
   tail: number; // signed tail flick (design px)
 }
 
-const REST: Pose = { bob: 0, lean: 0, squashX: 1, squashY: 1, neckDip: 0, neckRise: 0, peck: 0, wing: 0, tail: 0 };
+const REST: Pose = {
+  bob: 0,
+  lean: 0,
+  squashX: 1,
+  squashY: 1,
+  bank: 0,
+  neckRise: 0,
+  headTip: 0,
+  honk: 0,
+  wing: 0,
+  wingTilt: 0,
+  tail: 0,
+};
 
-// Build a pose from the wall clock: a common NECK-DIP PECK every ~6s and a rare
-// HONK + WING-SPREAD every ~18s. Returns to REST (all zeros / unit scales) at
-// every window edge.
+// Build a pose from the wall clock: a CALM CONTINUOUS CRUISE FLAP (always on)
+// plus a rare DISCRETE BOLD BEAT — a steep banking turn + call-and-honk — every
+// ~18s. The cruise is 0 at t=0 with zero velocity (so anim(0) === REST); the
+// rare is enveloped by a raised-cosine window so its value AND velocity are 0 at
+// both window edges (it grows in and settles back into the cruise seamlessly).
 function poseFromClock(t: number): Pose {
-  const pose: Pose = { bob: 0, lean: 0, squashX: 1, squashY: 1, neckDip: 0, neckRise: 0, peck: 0, wing: 0, tail: 0 };
+  const pose: Pose = {
+    bob: 0,
+    lean: 0,
+    squashX: 1,
+    squashY: 1,
+    bank: 0,
+    neckRise: 0,
+    headTip: 0,
+    honk: 0,
+    wing: 0,
+    wingTilt: 0,
+    tail: 0,
+  };
   const tt = safeNum(t, 0);
 
-  // COMMON ~6s: NECK-DIP PECK (win ~0.95s). The neck dips the head ~12–16px down
-  // toward the pad then arcs back up ALERT, small body squash + tail flick.
-  // Built from raised-cosine windows → seamless. Phase 3.0 opens the window at
-  // t≈3.0 (well clear of t=0, so anim(0) sits exactly at REST).
-  const cq = actionQ(tt, 6, 0.95, 3.0);
-  if (cq >= 0) {
-    const env = bump(cq); // 0→1→0 over the window
-    const r = reachShape(cq); // −0.18..+1 (wind-up then dip-and-recover)
-    // head dips down (~14px at the peak), then snaps back up alert
-    pose.neckDip = Math.max(0, r) * 15;
-    pose.peck = env; // bill opens / alert turn through the dip
-    // body squashes down a touch as the neck drives down, recovers on the way up
-    pose.squashY = 1 - env * 0.07;
-    pose.squashX = 1 + env * 0.05;
-    pose.bob = env * 1.2; // tiny settle into the pad
-    pose.tail = Math.sin(cq * Math.PI * 4) * env * 3.0; // a couple of tail flicks
+  // ── COMMON: calm CONTINUOUS CRUISE FLAP ────────────────────────────────────
+  // A steady gentle wing-beat with a soft breathing bob and a lazy tail sway.
+  // Every term uses a (1−cos)-style factor that is 0 with zero slope at t=0, so
+  // anim(0) sits exactly at REST while the motion loops forever. Amplitudes are
+  // deliberately SMALL — this is the baseline the rare beat must clearly exceed.
+  const wCruise = 2 * Math.PI * 0.55; // cruise wing-beat ~0.55 Hz
+  const startGate = 1 - Math.cos(Math.min(tt, 1.0) * Math.PI * 0.5); // 0→1 ease-in over ~1s, 0 at t=0
+  // wing rises from folded (0) toward a small open flap and back, continuously
+  pose.wing = startGate * (0.16 * (1 - Math.cos(wCruise * tt)) * 0.5);
+  // gentle breathing bob (subject rises a touch then settles), 0 at t=0
+  pose.bob = startGate * (0.8 * (1 - Math.cos(2 * Math.PI * 0.32 * tt)) * 0.5);
+  // a lazy tail sway riding the same cruise; 0 at t=0 via (1−cos) gate
+  pose.tail = startGate * Math.sin(wCruise * tt) * 1.0;
+  // a whisper of body squash breathing with the flap (stays near 1)
+  const breathe = startGate * (1 - Math.cos(wCruise * tt)) * 0.5; // 0..1, 0 at t=0
+  pose.squashY = 1 - breathe * 0.02;
+  pose.squashX = 1 + breathe * 0.015;
+
+  // ── RARE ~18s: STEEP BANKING TURN + CALL-AND-HONK (win ~1.6s, phase +4s) ────
+  // The goose rolls/banks to one side, the neck stretches UP, the head tips back
+  // and the bill opens for a honk, the wings spread wide — then it levels out.
+  // EVERY contribution below is multiplied by `env = bump(hq)`, which is 0 with
+  // ZERO SLOPE at both window edges — so the whole beat's value AND velocity
+  // vanish at the edges and it blends seamlessly into the cruise (all rare
+  // contributions ADD to the cruise; nothing overrides it discontinuously).
+  const hq = actionQ(tt, 18, 1.6, 4.0);
+  if (hq >= 0) {
+    const env = bump(hq); // 0→1→0 over the window, zero value & slope at both ends
+    // a brief anticipation weight, peaking early (hq≈0.25). It is multiplied by
+    // `env` everywhere it is used, so it can never break the edge seamlessness.
+    const anti = env * Math.max(0, Math.sin(hq * Math.PI * 2)) * (hq < 0.5 ? 1 : 0);
+
+    // BANKING TURN: a single clean roll to the left and back, peaking once.
+    pose.bank = -env * 0.42; // up to ~0.42 rad (~24°) roll, levels out by the edge
+    pose.wingTilt = -env * 0.55; // the spread wings tilt with the bank
+
+    // CALL: the neck surges UP well above the cruise, head tips back, bill opens.
+    pose.neckRise += env * 18; // up to ~18px taller/forward reach (bold)
+    pose.headTip += env * 0.5; // head tips back for the skyward honk (~0.5 rad)
+    pose.honk += env; // bill opens through the call (clamped in the bill draw)
+
+    // WINGS spread WIDE — ADDED on top of the small cruise flap, so the beat is
+    // unmistakably bigger than the cruise yet seamless at the edges.
+    pose.wing += env * 0.9;
+
+    // body mechanics: a small anticipation crouch, then stretch tall into the lift
+    pose.squashY += env * 0.10 - anti * 0.10; // stretch up; brief crouch first
+    pose.squashX += -env * 0.06 + anti * 0.07;
+    pose.bob += -env * 2.5 + anti * 2.0; // lifts into the call; settles first
+    pose.lean -= env * 2.4; // lean forward into the banking call
+    pose.tail += env * 2.2; // tail flags up during the beat
   }
 
-  // RARE ~18s: HONK + WING-SPREAD / take-off feint (win ~1.2s, phase +3s). The
-  // neck stretches UP + forward (~16px), the wings spread as if about to fly,
-  // then fold back and settle. May exit the box at the apex.
-  const hq = actionQ(tt, 18, 1.2, 4.0);
-  if (hq >= 0) {
-    const env = bump(hq);
-    const r = reachShape(hq); // −0.18..+1 (crouch then reach up)
-    pose.neckRise = Math.max(0, r) * 17; // up to ~17px taller/forward reach
-    pose.wing = env; // wings spread through the gesture
-    if (r < 0) {
-      // anticipation: a brief crouch/squash before the lift
-      const c = -r; // 0..0.18
-      pose.squashY = 1 - c * 0.8;
-      pose.squashX = 1 + c * 0.5;
-      pose.bob += c * 4; // settle down before the surge
-    } else {
-      // surge: stretch tall as it rises for the take-off feint
-      pose.squashY = 1 + r * 0.1;
-      pose.squashX = 1 - r * 0.06;
-      pose.bob -= r * 2.5; // whole body lifts a touch with the feint
-    }
-    pose.lean -= env * 2.4; // lean forward toward the lift
-    pose.tail += Math.sin(hq * Math.PI) * 2.0; // tail flags up during the feint
-  }
+  // clamp the wing so a bold beat layered on the cruise stays in a sane range
+  pose.wing = clamp01(pose.wing);
 
   return pose;
 }
@@ -401,8 +433,8 @@ const BODY_RY = 9; // body half-height (≈18 tall — a plump egg body)
 const TAIL_X = 13.5; // tail tip (tapers to the lower-right)
 const TAIL_Y = 5.5;
 
-// Neck path control points (rest). The pose's neckDip/neckRise/lean nudge the
-// upper control points + head so the neck bends, dips, and stretches.
+// Neck path control points (rest). The pose's neckRise/headTip/lean nudge the
+// upper control points + head so the neck stretches up and the head tips back.
 const NECK_BASE_X = -3.5; // neck root, front/upper of the body
 const NECK_BASE_Y = 1.5;
 const NECK_LOW_X = -7.5; // lower S-bend bulges forward (left)
@@ -429,18 +461,26 @@ interface NeckGeom {
 }
 
 function neckGeom(pose: Pose): NeckGeom {
-  // The peck drives the head DOWN toward the pad (and the upper neck bows down);
-  // the honk drives it UP + forward (left). lean nudges everything sideways.
-  const dipY = pose.neckDip; // + = down
+  // The call drives the head UP + forward (left); the head also TIPS BACK so the
+  // beak points skyward for the honk. lean nudges everything sideways.
   const riseY = pose.neckRise; // + = up reach
-  const dx = pose.lean - pose.neckRise * 0.35; // forward reach on the honk
+  const dx = pose.lean - pose.neckRise * 0.35; // forward reach on the call
+  // headTip rotates the bill tip up-and-back about the head centre (skyward honk)
+  const tip = pose.headTip; // radians, + = beak swings up/back
+  const headX = HEAD_X + dx;
+  const headY = HEAD_Y - riseY;
+  // bill tip at rest relative to the head, then rotated up by the head tip
+  const relX = BILL_TIP_X - HEAD_X - pose.neckRise * 0.15;
+  const relY = BILL_TIP_Y - HEAD_Y;
+  const cos = Math.cos(-tip); // rotate "back/up": negative angle lifts the lower-left tip
+  const sin = Math.sin(-tip);
   return {
-    headX: HEAD_X + dx,
-    headY: HEAD_Y + dipY - riseY,
-    billX: BILL_TIP_X + dx - pose.neckRise * 0.15,
-    billY: BILL_TIP_Y + dipY * 1.1 - riseY,
+    headX,
+    headY,
+    billX: headX + (relX * cos - relY * sin),
+    billY: headY + (relX * sin + relY * cos),
     midX: NECK_MID_X + dx * 0.6,
-    midY: NECK_MID_Y + dipY * 0.45 - riseY * 0.55,
+    midY: NECK_MID_Y - riseY * 0.55,
     baseDX: pose.lean * 0.4,
   };
 }
@@ -620,8 +660,16 @@ function paintFeet(ctx: CanvasRenderingContext2D, p: P, bob: number): void {
   ctx.lineCap = "butt";
 }
 
-// a spread wing fan behind the body (the take-off feint) — strength from pose.wing
-function paintWing(ctx: CanvasRenderingContext2D, p: P, bob: number, side: -1 | 1, amt: number): void {
+// a spread wing fan behind the body — strength from pose.wing, extra `tilt`
+// rotates the whole fan during the banking turn.
+function paintWing(
+  ctx: CanvasRenderingContext2D,
+  p: P,
+  bob: number,
+  side: -1 | 1,
+  amt: number,
+  tilt = 0,
+): void {
   if (amt <= 0.01) return;
   const baseX = BODY_CX + side * 2;
   const baseY = BODY_CY - 4 + bob;
@@ -630,6 +678,7 @@ function paintWing(ctx: CanvasRenderingContext2D, p: P, bob: number, side: -1 | 
   const reach = 9 + amt * 9;
   ctx.save();
   ctx.translate(baseX, baseY);
+  if (tilt) ctx.rotate(tilt);
   // primaries: a few tapering feather blades
   for (let i = 0; i < 4; i++) {
     const f = i / 3;
@@ -663,8 +712,20 @@ function paintGoose(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   // feet stay planted on the pad; legs/body bob a touch
   paintFeet(ctx, p, bob);
 
-  // spread wings BEHIND the body (the honk feint) — far wing first
-  paintWing(ctx, p, bob, 1, pose.wing);
+  // ── BANKING ROLL: rotate the whole airborne bird (body + wings + neck + head)
+  // about a low pivot near the contact, so the goose visibly banks to one side
+  // during the rare beat while its feet stay planted. bank = 0 at rest. ─────────
+  const bankPivotX = BODY_CX + pose.lean;
+  const bankPivotY = BODY_CY + BODY_RY + bob;
+  ctx.save();
+  if (pose.bank) {
+    ctx.translate(bankPivotX, bankPivotY);
+    ctx.rotate(pose.bank);
+    ctx.translate(-bankPivotX, -bankPivotY);
+  }
+
+  // spread wings BEHIND the body — far wing first (tilts with the bank)
+  paintWing(ctx, p, bob, 1, pose.wing, pose.wingTilt);
 
   // The body (+ tail + barring) is drawn under a squash/stretch transform
   // centred on the body, so the peck/honk read with squash + stretch.
@@ -829,8 +890,8 @@ function paintGoose(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
 
   ctx.restore(); // end body squash/stretch transform
 
-  // near wing IN FRONT of the body during the spread feint
-  paintWing(ctx, p, bob, -1, pose.wing);
+  // near wing IN FRONT of the body during the spread (tilts with the bank)
+  paintWing(ctx, p, bob, -1, pose.wing, pose.wingTilt);
 
   // ── Neck: dark outline pass then dark-feather fill (long S-curve, posed) ──
   neckStroke(ctx, bob, g, 8.0, rgb(p.outline)); // outline rim
@@ -913,10 +974,10 @@ function paintGoose(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.fill();
   ctx.restore();
 
-  // stout bill pointing lower-left (opens with the peck/honk)
+  // stout bill pointing lower-left (opens for the call/honk)
   const btx = g.billX;
   const bty = g.billY + bob;
-  const gape = pose.peck * 1.8 + pose.wing * 1.2; // bill opens during the peck / honk
+  const gape = pose.honk * 3.0; // bill opens for the honk during the rare beat
   ctx.fillStyle = rgb(p.bill);
   ctx.beginPath();
   ctx.moveTo(hx - 2.0, hy - 1.4);
@@ -925,6 +986,16 @@ function paintGoose(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.quadraticCurveTo(hx - 3.4, hy + 2.4 + gape * 0.5, hx - 2.0, hy - 1.4);
   ctx.closePath();
   ctx.fill();
+  // dark open-mouth interior when honking (sells the call; gone at rest)
+  if (gape > 0.25) {
+    ctx.fillStyle = rgb([120, 40, 36]);
+    ctx.beginPath();
+    ctx.moveTo(hx - 2.4, hy + 0.2);
+    ctx.lineTo(btx + 1.2, bty + 0.6);
+    ctx.lineTo(btx + 1.6, bty + 2.0 + gape);
+    ctx.closePath();
+    ctx.fill();
+  }
   // bill shade (under) + nostril
   ctx.fillStyle = rgb(p.billDark);
   ctx.beginPath();
@@ -957,9 +1028,9 @@ function paintGoose(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.fill();
 
   // ── Breath-fog puff at the bill (winter) — drawn last so it reads as air ──
-  // Static base puff + an exhale swell during the peck / honk.
+  // Static base puff + a big exhale swell during the honk call.
   if (p.breathFogAmt > 0.01) {
-    const extra = 0.5 * pose.peck + 0.7 * pose.wing;
+    const extra = 0.85 * pose.honk; // the call drives a strong exhale
     const reach = 3.4 + extra * 3.2;
     ctx.fillStyle = rgba([236, 244, 255], (0.34 + 0.3 * extra) * p.breathFogAmt);
     ctx.beginPath();
@@ -970,6 +1041,8 @@ function paintGoose(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
     ctx.arc(btx - reach - 1.4, bty + 1.0, 1.4 + extra * 1.2, 0, Math.PI * 2);
     ctx.fill();
   }
+
+  ctx.restore(); // end BANKING ROLL transform
 }
 
 // the overall colour-of-light wash, painted last over the whole tile

@@ -20,12 +20,19 @@
 // REST pose has all zeros, so draw(season) = paint(ctx, SP[season], REST) and the
 // idle's pose is 0 with zero velocity at every action-window edge → seamless loop.
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the bulb rocks/leans
-//       with a squash at the base. Anticipation → peak → settle, zero velocity
-//       at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger SHAKE/BOUNCE — a squash-stretch hop
-//       up, with anticipation crouch, stretch on the way up, and a squash landing
-//       that overshoots then settles. May exit the −24..+24 box at the apex.
+// The idle is a distinct, in-character ROOT-VEG beat (NOT a generic bounce):
+//
+//   IDLE COMMON  (~6s, win ~1.4s): a gentle GREENS SWAY — the leafy top drifts
+//       slowly to one side, through centre, to the other, and rights itself. The
+//       bulb stays calm (a barely-there lean). The quiet beat. Zero value AND
+//       velocity at the window edges (seamless).
+//   IDLE RARE    (~18s, win ~1.6s): a ROOT-WIGGLE + GREENS-FLICK — the turnip
+//       wiggles quickly side to side in place, as if working itself loose in the
+//       soil (a fast damped lean wiggle + a little base squash), while its leafy
+//       top FLICKS along, leading the bulb. A few soil flecks kick up at the base
+//       (an additive overlay in anim(), enveloped to 0 at the window edges). The
+//       whole event ramps up from and settles back to REST. Phased clear of the
+//       COMMON beat. Everything is exactly 0 with zero velocity at the edges.
 //
 // Origin-centered in the −24..+24 design box (actions may paint outside it),
 // light from upper-left, flat cel-shaded with a soft dark outline. Pure
@@ -68,13 +75,15 @@ interface P {
 
 /** The idle gesture, separate from season identity. All zero = REST. */
 interface Pose {
-  bob: number;     // vertical offset in design px (negative = up)
-  lean: number;    // top-of-turnip sway, radians (rock side to side)
-  squashX: number; // additive horizontal scale (+0.18 = 18% wider)
-  squashY: number; // additive vertical scale (+0.18 = 18% taller)
+  bob: number;      // vertical offset in design px (negative = up)
+  lean: number;     // bulb sway, radians (rock the whole turnip side to side)
+  squashX: number;  // additive horizontal scale (+0.18 = 18% wider)
+  squashY: number;  // additive vertical scale (+0.18 = 18% taller)
+  leafSway: number; // EXTRA lean of the leafy top only, radians (greens drift /
+                    // flick on top of the bulb lean). 0 = leaves upright.
 }
 
-const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, leafSway: 0 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
 
@@ -307,6 +316,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     lean: safeNum(rawPose.lean),
     squashX: safeNum(rawPose.squashX),
     squashY: safeNum(rawPose.squashY),
+    leafSway: safeNum(rawPose.leafSway),
   };
 
   const { rx, ry } = bulbRadii(p.ripeness);
@@ -575,7 +585,8 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     }
 
     // ── Leafy top: a small tuft of green leaves (SAME placement every season) ─
-    drawLeaves(ctx, p, top, 0);
+    // `pose.leafSway` drifts/flicks the greens on TOP of the bulb lean (0 = rest).
+    drawLeaves(ctx, p, top, pose.leafSway);
 
     ctx.restore(); // end pose transform
 
@@ -656,64 +667,123 @@ function actionQ(t: number, period: number, win: number, phase: number): number 
 }
 
 // A bump shape that is 0 with zero velocity at q=0 and q=1 (single hump).
-// sin^2(pi q) → smooth in/out, peak at q=0.5.
+// sin^2(pi q) → smooth in/out, peak at q=0.5. Because BOTH its value and its
+// derivative vanish at q=0,1, `hump(q) * g(q)` is also 0 with zero velocity at
+// the edges for ANY bounded g — that is what enveloping the fast root-wiggle.
 function hump(q: number): number {
   const s = Math.sin(Math.PI * q);
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-// Dips slightly negative early (anticipation) then a strong positive peak.
-function anticipate(q: number): number {
-  // windup wave: a small negative lobe then a big positive lobe, both returning
-  // to zero at the edges. (1-cos) envelope keeps velocity zero at q=0,1.
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, but velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+// ── Shared RARE-window clock — the ROOT-WIGGLE event ─────────────────────────
+// COMMON fires every 6s at phase 0 (win 1.4s) → windows [0,1.4),[6,7.4),
+// [12,13.4) within each 18s span. The RARE root-wiggle uses actionQ(t,18,1.6,3):
+// with phase 3 the window is where (t+3) mod 18 < 1.6, i.e. t mod 18 ∈ [15,16.6)
+// — a 1.6s window that lands cleanly BETWEEN the COMMON beats (after [12,13.4)
+// and before the 18≡0 restart), so the two never overlap. One source of truth
+// so the bulb wiggle (poseFromClock) and the soil-fleck overlay (anim) stay in
+// lockstep.
+const WIGGLE_PERIOD = 18.0;
+const WIGGLE_WIN = 1.6;
+const WIGGLE_PHASE = 3.0;
+
+/** Progress 0..1 through the root-wiggle window, else −1 (fully at rest). */
+function wiggleQ(t: number): number {
+  return actionQ(t, WIGGLE_PERIOD, WIGGLE_WIN, WIGGLE_PHASE);
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** Build the idle pose from the wall clock. Two tiers, neither a bounce:
+ *   COMMON — a gentle greens sway (the leafy top drifts) every ~6s; bulb calm.
+ *   RARE   — a fast damped ROOT-WIGGLE + GREENS-FLICK every ~18s: the turnip
+ *            wiggles side to side in place while its top whips along, then
+ *            settles. Synced to the soil-fleck overlay in anim() via wiggleQ. */
 function poseFromClock(t: number): Pose {
-  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, leafSway: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // Two rocks left→right→left; the bulb leans about its base, with a small base
-  // squat as it rocks weight side to side.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: a gentle GREENS SWAY (~6s, win 1.4s) ──
+  // The leafy top drifts L→centre→R→centre and rights itself; the bulb only
+  // breathes a hair. Both factors of the drift are zero (with zero velocity) at
+  // the window edges → seamless. Most of the motion is in the greens.
+  const qC = actionQ(t, 6.0, 1.4, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.16 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
-    // a faint windup tilt (still 0 with zero velocity at the edges)
-    pose.lean += 0.02 * anticipate(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0 envelope, zero (and 0-slope) at edges
+    const drift = Math.sin(qC * Math.PI * 2); // one slow L→centre→R→centre drift
+    pose.leafSway += 0.16 * env * drift; // the greens lead — a calm top-only sway
+    pose.lean += 0.012 * env * drift; // a barely-there bulb lean so the root is calm
+    pose.squashY += -0.012 * hump(qC); // a soft breath settling (tiny)
+    pose.squashX += 0.01 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
-  if (qS >= 0) {
-    // Hop height profile: brief crouch (q<0.18), launch arc, squash landing.
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air; // 0..1 in the air
-    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+  // ── RARE: a fast damped ROOT-WIGGLE + GREENS-FLICK (~18s, win 1.6s) ──
+  // The turnip works itself loose: a quick side-to-side lean wiggle (a few
+  // oscillations) under a hump() envelope, plus a small base squash, while the
+  // leafy top FLICKS along — leading the bulb by a small phase so the greens
+  // whip. `hump(qR)` is 0 with zero velocity at q=0 and q=1, so the WHOLE fast
+  // wiggle (× any bounded sinusoid) ramps up from and settles back to REST with
+  // zero slope at both edges — fully seamless.
+  const qR = wiggleQ(t);
+  if (qR >= 0) {
+    const env = hump(qR); // damping envelope: 0 → peak at q=0.5 → 0, 0-slope edges
+    const wig = Math.sin(qR * Math.PI * 6); // ~3 quick side-to-side wiggles
+    pose.lean += 0.17 * env * wig; // the root works loose, rocking in place
+    // the greens flick harder and lead the bulb a touch (a small phase lead)
+    pose.leafSway += 0.24 * env * Math.sin(qR * Math.PI * 6 + 0.6);
+    // a little base squash as it shimmies + a tiny pop loose at the peak
+    pose.squashY += -0.05 * env;
+    pose.squashX += 0.05 * env;
+    pose.bob += -0.6 * env; // a small rise as if easing up out of the soil
   }
 
   return pose;
+}
+
+// ── Soil-fleck overlay — additive, drawn over the painted turnip in anim() ───
+// A few little earth specks kicked up at the base while the root works itself
+// loose. Driven ONLY by the shared wiggle clock and enveloped by hump(qR), so
+// they fade in with the wiggle and are EXACTLY absent at the window edges (and
+// therefore at t=0). Deterministic positions; never throws.
+//
+// Base of the bulb at full ripeness sits around y = BULB_CY + BULB_RY; the
+// flecks hop just above the pad to either side of the taproot.
+const FLECK_BASE_Y = BULB_CY + BULB_RY - 1; // ≈ pad contact line under the bulb
+// [side x, peak rise px, horizontal drift px, local phase 0..1, radius]
+const SOIL_FLECKS: ReadonlyArray<readonly [number, number, number, number, number]> = [
+  [-6.5, 5.5, -3.0, 0.04, 1.1],
+  [5.5, 6.5, 3.2, 0.16, 1.0],
+  [-3.0, 4.5, -1.6, 0.30, 0.85],
+  [7.5, 4.0, 2.2, 0.42, 0.8],
+  [-8.0, 3.5, -2.4, 0.52, 0.75],
+];
+const FLECK_DARK: RGB = [120, 84, 48]; // earthy soil brown
+const FLECK_LITE: RGB = [156, 116, 72]; // lit speck
+
+/** Draw the soil flecks at root-wiggle progress `qR` (0..1). `env` (= hump(qR))
+ *  gates visibility so nothing shows at the window edges. */
+function drawSoilFlecks(ctx: CanvasRenderingContext2D, qR: number, env: number): void {
+  const e = clamp01(env);
+  if (e <= 0.001) return;
+  const q = clamp01(qR);
+  ctx.save();
+  try {
+    ctx.globalAlpha = 1;
+    SOIL_FLECKS.forEach(([sx, rise, drift, phase, r], i) => {
+      // each fleck arcs up then back down over a sub-window of the wiggle
+      const local = ((q - phase) / 0.45);
+      if (local < 0 || local > 1) return;
+      const arc = Math.sin(local * Math.PI); // 0..1..0 little hop
+      const fx = sx + drift * local;
+      const fy = FLECK_BASE_Y - rise * arc + 1.5; // up = negative
+      const a = e * arc * 0.85;
+      if (a <= 0.001) return;
+      ctx.fillStyle = rgba(i % 2 === 0 ? FLECK_DARK : FLECK_LITE, a);
+      ctx.beginPath();
+      ctx.arc(fx, fy, r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
@@ -726,6 +796,12 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   return (ctx, t) => {
     const tt = Number.isFinite(t) ? t : 0;
     paint(ctx, SP[season], poseFromClock(tt));
+
+    // RARE root-wiggle dressing (all seasons): a few soil flecks kicked up at
+    // the base, fully synced to the bulb wiggle via the shared wiggle clock.
+    // `hump(qR)` is 0 at the window edges, so nothing is drawn at rest / t=0.
+    const qR = wiggleQ(tt);
+    if (qR >= 0) drawSoilFlecks(ctx, qR, hump(qR));
 
     // Light additive season micro-sparkle (dressing only — never the subject's
     // own colour/brightness). Kept tiny so the POSE action is the star.
@@ -776,7 +852,8 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the bounce + glossy magenta is the show.
+      // Summer: no extra falling dressing — the root-wiggle + glossy magenta is
+      // the show (the soil flecks above still play during the rare wiggle).
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

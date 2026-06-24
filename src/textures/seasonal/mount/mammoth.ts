@@ -196,8 +196,8 @@ interface P {
   blossomAmt: number; // 0..1 a blossom on the pad (spring)
   fallenLeafAmt: number; // 0..1 a fallen leaf on the pad / caught in fur (autumn)
   breathFogAmt: number; // 0..1 breath puff at the trunk (winter)
-  scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
+  scarfAmt: number; // 0..1 a little winter BOBBLE CAP (tweened alpha)
+  scarfColor: RGB; // wool-cap colour (locked navy, fades in via alpha)
 }
 
 // Four BOLD season presets. The mammoth stays the SAME shaggy reddish-brown,
@@ -228,7 +228,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [48, 70, 140],
   },
   // Summer — full healthy fur (an ice-age beast in summer — a touch warm/panting),
   // glossy highlights, bright warm light — PEAK.
@@ -254,7 +254,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [48, 70, 140],
   },
   // Autumn — warm reddish-tinted fur, a fallen leaf, dulled gloss, amber light.
   Autumn: {
@@ -279,7 +279,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.95,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [48, 70, 140],
   },
   // Winter — PEAK shaggiest fur + snow on the back AND tusks + a winter SCARF + a
   // big breath-fog puff, heavy frost, deep snowy pad, cool blue-grey light. Its
@@ -306,7 +306,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [48, 70, 140],
   },
 };
 
@@ -842,53 +842,84 @@ function paintMammoth(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
     ctx.lineCap = "butt";
   }
 
-  // ── SCARF (winter) — a little knitted band around the neck, below the head ──
+  // ── BOBBLE CAP (winter) — instead of a scarf, a chunky knitted WOOL CAP with
+  //    a pom-pom, pulled down over the high domed head. Gated by the SAME winter
+  //    `scarfAmt` tween, so it fades in seamlessly in winter and is absent every
+  //    other season. `scarfColor` drives the wool.
   if (p.scarfAmt > 0.001) {
-    const sx = hx + 3.4;
-    const sy = hy + 6.2;
+    const cx = hx - 0.6; // cap sits centred on the dome crown
+    const cy = hy - 6.6; // up near the top of the dome
+    const wool = p.scarfColor;
+    const woolDark: RGB = [
+      Math.max(0, wool[0] - 50),
+      Math.max(0, wool[1] - 30),
+      Math.max(0, wool[2] - 30),
+    ];
+    const woolDeep: RGB = [
+      Math.max(0, wool[0] - 70),
+      Math.max(0, wool[1] - 45),
+      Math.max(0, wool[2] - 45),
+    ];
     ctx.save();
     ctx.globalAlpha = clamp01(p.scarfAmt);
-    // wrap band
-    ctx.fillStyle = rgba(p.scarfColor);
+    // rounded cap dome covering the crown
+    ctx.fillStyle = rgba(wool);
     ctx.beginPath();
-    ctx.ellipse(sx, sy, 6.0, 3.2, 0.18, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, 7.0, 5.6, -0.05, Math.PI, Math.PI * 2);
     ctx.fill();
-    // darker underside for depth
-    ctx.fillStyle = rgba([
-      Math.max(0, p.scarfColor[0] - 50),
-      Math.max(0, p.scarfColor[1] - 30),
-      Math.max(0, p.scarfColor[2] - 30),
-    ]);
     ctx.beginPath();
-    ctx.ellipse(sx + 0.6, sy + 1.6, 5.4, 1.7, 0.18, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, 7.0, 3.0, -0.05, 0, Math.PI);
     ctx.fill();
-    // hanging tail of the scarf, with a knitted notch + fringe
-    ctx.fillStyle = rgba(p.scarfColor);
+    // shaded lower-right of the cap dome for roundness
+    ctx.fillStyle = rgba(woolDark);
     ctx.beginPath();
-    ctx.moveTo(sx - 3.0, sy + 2.0);
-    ctx.lineTo(sx + 0.6, sy + 2.6);
-    ctx.lineTo(sx - 0.2, sy + 8.6);
-    ctx.lineTo(sx - 3.6, sy + 7.8);
-    ctx.closePath();
+    ctx.ellipse(cx + 2.2, cy + 0.4, 4.0, 4.2, -0.05, -0.4, Math.PI * 0.9);
     ctx.fill();
-    ctx.strokeStyle = rgba([
-      Math.max(0, p.scarfColor[0] - 60),
-      Math.max(0, p.scarfColor[1] - 40),
-      Math.max(0, p.scarfColor[2] - 40),
-    ]);
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(sx - 1.8, sy + 3.4);
-    ctx.lineTo(sx - 2.2, sy + 8.0);
-    ctx.stroke();
-    // fringe at the bottom
-    ctx.strokeStyle = rgba(p.scarfColor);
-    ctx.lineWidth = 0.9;
-    ctx.lineCap = "round";
-    for (const fx of [-3.4, -2.2, -1.0]) {
+    // knit ribbing lines up the cap
+    ctx.strokeStyle = rgba(woolDeep, 0.7);
+    ctx.lineWidth = 0.7;
+    for (const rx of [-4.6, -2.4, 0, 2.4, 4.6]) {
       ctx.beginPath();
-      ctx.moveTo(sx + fx, sy + 8.0);
-      ctx.lineTo(sx + fx - 0.2, sy + 9.6);
+      ctx.moveTo(cx + rx * 0.5, cy - 4.4);
+      ctx.lineTo(cx + rx, cy + 2.2);
+      ctx.stroke();
+    }
+    // chunky folded brim band across the bottom of the cap
+    ctx.fillStyle = rgba(woolDark);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 2.6, 7.4, 2.4, -0.05, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba(wool);
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 2.0, 7.2, 1.7, -0.05, 0, Math.PI * 2);
+    ctx.fill();
+    // a few brim ribs
+    ctx.strokeStyle = rgba(woolDeep, 0.6);
+    ctx.lineWidth = 0.6;
+    for (const rx of [-5, -3, -1, 1, 3, 5]) {
+      ctx.beginPath();
+      ctx.moveTo(cx + rx, cy + 1.4);
+      ctx.lineTo(cx + rx, cy + 3.6);
+      ctx.stroke();
+    }
+    // pom-pom bobble on top
+    ctx.fillStyle = rgba(woolDark);
+    ctx.beginPath();
+    ctx.arc(cx - 1.2, cy - 5.6, 2.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba(wool);
+    ctx.beginPath();
+    ctx.arc(cx - 1.2, cy - 5.8, 1.9, 0, Math.PI * 2);
+    ctx.fill();
+    // fluffy bobble strands
+    ctx.strokeStyle = rgba(woolDeep, 0.7);
+    ctx.lineWidth = 0.5;
+    ctx.lineCap = "round";
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - 1.2 + Math.cos(a) * 1.0, cy - 5.8 + Math.sin(a) * 1.0);
+      ctx.lineTo(cx - 1.2 + Math.cos(a) * 2.3, cy - 5.8 + Math.sin(a) * 2.3);
       ctx.stroke();
     }
     ctx.lineCap = "butt";

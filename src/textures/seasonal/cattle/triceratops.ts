@@ -205,7 +205,7 @@ interface P {
   fallenLeafAmt: number; // 0..1 a fallen leaf on the pad + on the frill (autumn)
   breathFogAmt: number; // 0..1 breath-fog puff at the beak (winter)
   scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
+  scarfColor: RGB; // scarf colour (locked berry, fades in via alpha)
 }
 
 // Four BOLD season presets. The triceratops stays the SAME green, three-horned,
@@ -235,7 +235,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 42, 86],
   },
   // Summer — glossy vivid green hide (PEAK), saturated mid-green pad, warm light.
   Summer: {
@@ -260,7 +260,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 42, 86],
   },
   // Autumn — warm-tinted olive-green hide; olive-tan pad; a fallen leaf; dulled
   // gloss; amber light.
@@ -286,7 +286,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.95,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 42, 86],
   },
   // Winter — green hide still clearly visible; snow on frill + back + horns; a
   // little scarf; a big breath-fog puff; frost dusting; snowy pad; cool light.
@@ -312,7 +312,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 42, 86],
   },
 };
 

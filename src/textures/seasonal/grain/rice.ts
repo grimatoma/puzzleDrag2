@@ -7,13 +7,16 @@
 // hard on COLOUR plus a real seasonal prop (blossom / fallen leaf / snow cap +
 // base snow drift), and the idle is a lively WC3-style two-tier sway:
 //
-//   IDLE COMMON  (~6s, win ~0.95s): a RUSTLE traveling-wave — wind passes
-//       through; the arching stalks and drooping panicles bend ~10–14 design-px
-//       with a base squash, the drooping heads swaying most. Pivot near the
-//       base. Zero pose + zero velocity at the window edges (seamless).
-//   IDLE RARE    (~18s, win ~1.2s, phase +3s): a STRONG GUST BEND — the whole
-//       plant leans hard ~16–20 design-px at the tips (anticipation → big bend →
-//       overshoot → settle), may exit the box at apex (no clip needed).
+//   IDLE COMMON  (~6s, win ~0.95s): a CALM RUSTLE traveling-wave — a gentle
+//       breeze passes through; the arching stalks and drooping panicles bend
+//       only ~9–10 design-px with a soft base squash, the drooping heads
+//       swaying most. Pivot near the base. Zero pose + zero velocity at the
+//       window edges (seamless).
+//   IDLE RARE    (~18s, win ~1.2s, phase +3s): a BOLD GUST BEND, clearly bigger
+//       than the rustle — the whole plant heels over ~0.30 rad and the tips
+//       whip ~26–28 design-px (anticipation → hard bend → overshoot → settle),
+//       may exit the box at apex (no clip needed). ~2.7× the common rustle, so
+//       the rare event plainly reads above the idle.
 //
 // The architecture is a single parameterized `paint(ctx, p, pose)` where
 // `interface P` holds tweenable season params (colours + 0..1 prop amounts) and
@@ -681,51 +684,61 @@ function anticipate(q: number): number {
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, wave: 0, wavePhase: 0 };
 
-  // ── COMMON: RUSTLE traveling-wave sway (~6s, win 0.95s) ──
-  // Wind passes through; stalks bend ~10–14px with a base squash, the drooping
-  // heads (tips) swaying most. wave amplitude in design px; wavePhase advances
-  // through the window so the ripple travels up the stalks.
+  // ── COMMON: RUSTLE traveling-wave sway (~6s, win 0.95s) — kept CALM ──
+  // A gentle ripple of wind: stalks bend only ~9–10px with a soft base squash,
+  // the drooping heads (tips) swaying most. Deliberately understated so the rare
+  // gust below clearly reads as a bigger event. wave amplitude in design px;
+  // wavePhase advances through the window so the ripple travels up the stalks.
   const qC = actionQ(t, 6.0, 0.95, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero (and zero-velocity-ish) at edges
-    // wave amplitude ~13px at peak; the per-stalk Math.sin gives the rustle.
-    pose.wave += 13.0 * env;
-    // phase rolls ~1.5 cycles across the window → ripple travels through
+    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
+    // wave amplitude ~9.5px at peak. hump() (sin^2) has zero value AND zero
+    // slope at q=0/1, so even with each stalk's phase offset the per-stalk bend
+    // velocity is exactly 0 at the window edges (seamless).
+    pose.wave += 9.5 * hump(qC);
+    // phase rolls ~1.5 cycles across the window (endpoints at 0 and 3π, sin=0)
     pose.wavePhase = qC * Math.PI * 3;
     // a small whole-plant lean rides along, biased to one side (wind direction)
-    pose.lean += 0.05 * env * Math.sin(qC * Math.PI * 2);
-    // base squash as the plant takes the wind
-    pose.squashY += -0.05 * hump(qC);
-    pose.squashX += 0.04 * hump(qC);
+    pose.lean += 0.035 * env * Math.sin(qC * Math.PI * 2);
+    // light base squash as the plant takes the breeze
+    pose.squashY += -0.035 * hump(qC);
+    pose.squashX += 0.028 * hump(qC);
     // a faint windup tilt keeps anticipate() in the seamless-curve toolkit
-    pose.lean += 0.015 * anticipate(qC);
+    pose.lean += 0.012 * anticipate(qC);
   }
 
-  // ── RARE: STRONG GUST BEND (~18s, win 1.2s, phase +3s) ──
-  // Anticipation (lean slightly INTO the wind) → big bend ~16–20px at the tips →
-  // overshoot the other way → settle. May exit the box at apex (fine, no clip).
+  // ── RARE: STRONG GUST BEND (~18s, win 1.2s, phase +3s) — pushed BOLD ──
+  // A clearly bigger event than the rustle: anticipation (lean slightly INTO the
+  // wind) → a hard bend ~26–28px at the tips with the whole plant heeling over
+  // ~0.30 rad → overshoot the other way → settle. May exit the box at the apex
+  // (fine, no clip). Every contribution is multiplied by `env = sin(π·qS)` so
+  // the whole gust has zero value AND zero velocity at the window edges — and,
+  // because env→0 with zero slope there, the wave's per-stalk phase offsets stay
+  // seamless too (mirrors corn.ts's env-wrapped gust idiom).
   const qS = actionQ(t, 18.0, 1.2, 3.0);
   if (qS >= 0) {
+    const env = Math.sin(Math.PI * qS); // 0..1..0, wraps every term → clean edges
     // Anticipation lobe: a small reverse lean early (q<0.2).
     const anti = qS < 0.2 ? Math.sin((qS / 0.2) * Math.PI) : 0; // 0..1..0
     // Main bend: a strong forward sweep peaking ~q=0.5.
     const bendWin = qS >= 0.12 && qS < 0.82 ? (qS - 0.12) / 0.7 : -1;
     const bend = bendWin >= 0 ? Math.sin(bendWin * Math.PI) : 0; // 0..1..0
-    // Overshoot/settle: a smaller spring-back the other way late in the window.
+    // Overshoot/settle: a spring-back the other way late in the window.
     const overWin = qS >= 0.66 ? Math.min(1, (qS - 0.66) / 0.34) : -1;
     const over = overWin >= 0 ? Math.sin(overWin * Math.PI) : 0; // 0..1..0
 
-    // Big traveling-wave bend at the tips (~18–20px) plus whole-plant lean.
-    pose.wave += bend * 19.0 - anti * 5.0;
+    // Big traveling-wave bend at the tips (~26–28px) plus a hard whole-plant
+    // lean — roughly 2.7× the common rustle so the gust is unmistakable.
+    pose.wave += env * (bend * 28.0 - anti * 7.0 + over * 9.0);
     // run more wave cycles for a richer gust ripple up the plant
     pose.wavePhase = qS * Math.PI * 2.2;
-    // whole-plant lean: anticipate against the wind, then bend hard with it,
+    // whole-plant lean: anticipate against the wind, then heel hard with it,
     // then overshoot the opposite way and settle.
-    pose.lean += -anti * 0.06 + bend * 0.20 - over * 0.07;
+    pose.lean += env * (-anti * 0.09 + bend * 0.30 - over * 0.12);
     // squash: crouch into the gust, stretch slightly at peak bend
-    pose.squashY += anti * 0.04 + bend * 0.06 - over * 0.03;
-    pose.squashX += -anti * 0.03 - bend * 0.05 + over * 0.03;
-    pose.bob += -bend * 1.4;
+    pose.squashY += env * (anti * 0.05 + bend * 0.08 - over * 0.04);
+    pose.squashX += env * (-anti * 0.04 - bend * 0.07 + over * 0.04);
+    pose.bob += env * (-bend * 2.0);
   }
 
   return pose;

@@ -216,8 +216,10 @@ interface P {
   blossomAmt: number; // 0..1 blossom on the pad
   fallenLeafAmt: number; // 0..1 fallen leaf on the pad
   breathFogAmt: number; // 0..1 breath puff at the bill
-  scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
+  scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha) — disabled here
+  scarfColor: RGB; // scarf colour (kept for tween plumbing; scarf unused on the goose)
+  earmuffAmt: number; // 0..1 little winter EARMUFFS over the head (tweened alpha)
+  earmuffColor: RGB; // earmuff cup colour
 }
 
 // Four BOLD season presets. The goose stays the SAME white long-necked
@@ -249,6 +251,8 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     scarfAmt: 0,
     scarfColor: [206, 64, 60],
+    earmuffAmt: 0,
+    earmuffColor: [70, 96, 150],
   },
   // Summer — brightest full glossy white PEAK; saturated mid-green pad; warm
   // strong light.
@@ -275,6 +279,8 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     scarfAmt: 0,
     scarfColor: [206, 64, 60],
+    earmuffAmt: 0,
+    earmuffColor: [70, 96, 150],
   },
   // Autumn — warm-tinted plumage in low amber light; olive-tan pad; a fallen
   // leaf; dulled gloss.
@@ -301,6 +307,8 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     scarfAmt: 0,
     scarfColor: [206, 64, 60],
+    earmuffAmt: 0,
+    earmuffColor: [70, 96, 150],
   },
   // Winter — FLUFFED puffy white feathers read against COOL blue shadows (not a
   // white-out); snow on the back, frost dusting, breath-fog at the bill, a
@@ -326,8 +334,10 @@ const SP: Record<SeasonName, P> = {
     blossomAmt: 0,
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
-    scarfAmt: 1, // a little scarf appears in winter
+    scarfAmt: 0, // SCARF disabled on the goose — it wears EARMUFFS instead
     scarfColor: [206, 64, 60],
+    earmuffAmt: 1, // little earmuffs appear in winter
+    earmuffColor: [70, 96, 150], // navy-blue earmuff cups
   },
 };
 
@@ -355,6 +365,8 @@ function lerpP(a: P, b: P, t: number): P {
     breathFogAmt: lerp(a.breathFogAmt, b.breathFogAmt, t),
     scarfAmt: lerp(a.scarfAmt, b.scarfAmt, t),
     scarfColor: lerpRGB(a.scarfColor, b.scarfColor, t),
+    earmuffAmt: lerp(a.earmuffAmt, b.earmuffAmt, t),
+    earmuffColor: lerpRGB(a.earmuffColor, b.earmuffColor, t),
   };
 }
 
@@ -372,6 +384,7 @@ function clampP(p: P): P {
     fallenLeafAmt: clamp01(safeNum(p.fallenLeafAmt)),
     breathFogAmt: clamp01(safeNum(p.breathFogAmt)),
     scarfAmt: clamp01(safeNum(p.scarfAmt)),
+    earmuffAmt: clamp01(safeNum(p.earmuffAmt)),
   };
 }
 
@@ -884,6 +897,46 @@ function paintGoose(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.arc(hx - 1.8, hy - 1.0, 0.4, 0, Math.PI * 2);
   ctx.fill();
 
+  // ── EARMUFFS (winter) — a knit headband arcing over the crown with a soft
+  // fuzzy cup on each side of the head. Tweened alpha (winter-only, seamless);
+  // rides with the head pose so it stays put on the goose's head. ────────────
+  if (p.earmuffAmt > 0.01) {
+    ctx.save();
+    ctx.globalAlpha = clamp01(p.earmuffAmt);
+    const dk: RGB = [
+      Math.max(0, p.earmuffColor[0] - 40),
+      Math.max(0, p.earmuffColor[1] - 40),
+      Math.max(0, p.earmuffColor[2] - 40),
+    ];
+    // headband arc over the crown
+    ctx.strokeStyle = rgba(p.earmuffColor, 1);
+    ctx.lineWidth = 1.8;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(hx, hy - 0.4, HEAD_R + 1.4, Math.PI * 1.12, Math.PI * 1.88);
+    ctx.stroke();
+    ctx.lineCap = "butt";
+    // a fuzzy cup on each side of the head
+    for (const side of [-1, 1] as const) {
+      const cxm = hx + side * (HEAD_R + 0.6);
+      const cym = hy + 0.2;
+      ctx.fillStyle = rgba(dk, 1);
+      ctx.beginPath();
+      ctx.ellipse(cxm, cym, 2.6, 3.2, side * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba(p.earmuffColor, 1);
+      ctx.beginPath();
+      ctx.ellipse(cxm - side * 0.4, cym - 0.4, 2.0, 2.6, side * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+      // a soft fuzzy highlight rim
+      ctx.fillStyle = rgba([255, 255, 255], 0.18);
+      ctx.beginPath();
+      ctx.ellipse(cxm - side * 0.7, cym - 0.9, 0.9, 1.3, side * 0.18, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
   ctx.restore(); // end squash/stretch transform
 
   // ── Peck dust / ground-nibble specks (under the bill at the dip bottom) ───
@@ -980,6 +1033,7 @@ function makeTransition(fromIdx: 0 | 1 | 2): (ctx: CanvasRenderingContext2D, p: 
     blended.frostAmt = lerp(a.frostAmt, b.frostAmt, kSnow);
     blended.breathFogAmt = lerp(a.breathFogAmt, b.breathFogAmt, kSnow);
     blended.scarfAmt = lerp(a.scarfAmt, b.scarfAmt, kSnow);
+    blended.earmuffAmt = lerp(a.earmuffAmt, b.earmuffAmt, kSnow); // earmuffs LAG like the scarf
 
     paint(ctx, blended, REST);
 

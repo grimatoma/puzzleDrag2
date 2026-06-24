@@ -227,7 +227,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 40, 70], // berry knit (per-species winter accessory)
   },
   // Summer — PEAK: richest glossy iridescent copper-and-green, mid-green pad,
   // bright warm light.
@@ -256,7 +256,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 40, 70], // berry knit (per-species winter accessory)
   },
   // Autumn — warm coppery plumage GLOWING (pheasants read very autumnal),
   // olive-tan pad + a fallen leaf, dulled gloss, low amber light.
@@ -285,7 +285,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.95,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 40, 70], // berry knit (per-species winter accessory)
   },
   // Winter — FLUFFED plumage, snow on back/tail, a little SCARF, breath fog,
   // frost, snowy pad, cool blue-grey light.
@@ -314,7 +314,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [150, 40, 70], // berry knit (per-species winter accessory)
   },
 };
 

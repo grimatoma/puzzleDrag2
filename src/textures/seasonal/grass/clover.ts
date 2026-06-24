@@ -2,15 +2,20 @@
 //
 // Source/grep token: grass/clover
 //
-// A clump of trefoil (three-leaf) clover — each leaf is three rounded
-// heart-shaped leaflets with a pale chevron mark — plus a few round white-pink
-// clover flower puffs on short stems, sitting on a low grassy pad. The SAME
-// clover silhouette is drawn every season (identity-safe): the trefoil leaves +
-// round flower puffs read in every season. The seasons swing HARD on colour
-// plus a real seasonal prop (pad blossom / fallen leaf / frost + snow blanket +
-// snow caps), and the idle is lively rather than subtle:
+// A small PATCH OF CLOVER: several slender stems rise from the pad centre, each
+// topped by the signature TREFOIL — three rounded heart-shaped leaflets, every
+// leaflet marked with the pale crescent "watermark" band that says CLOVER at a
+// glance. Two or three round white-pink clover flower-puffs nod above the leaves
+// on their own short stems. The TREFOIL is the hero shape: the leaves are drawn
+// big and forward against the pad (NOT carpeting a green dome), so the tile reads
+// unmistakably as clover, not vague ground-cover.
 //
-//   IDLE COMMON  (~6s, win ~0.95s): a SOFT SWAY/NOD — the whole clump bobs and
+// The SAME clover-patch silhouette (stems + trefoils + puffs) is drawn every
+// season (identity-safe). The seasons swing HARD on colour plus a real seasonal
+// prop (pad blossom / fallen clover leaf / frost + snow blanket + snow caps),
+// and the idle is lively rather than subtle:
+//
+//   IDLE COMMON  (~6s, win ~0.95s): a SOFT SWAY/NOD — the whole patch bobs and
 //       leans ~10–14 design-px in a gentle breeze, pivoting at the base, with a
 //       small base squash. Zero velocity at the window edges (seamless).
 //   IDLE SPECIAL (~18s, win ~1.2s, phase +3s): a VISITING BEE dips down to the
@@ -26,7 +31,8 @@
 // REST pose has all zeros, so draw(season) = paint(ctx, SP[season], REST) and the
 // idle's pose is 0 at every action-window edge → seamless loop (draw ≡ anim(0)).
 //
-// Palette lock: a green trefoil clover clump with round white-pink puff blooms.
+// Palette lock: green trefoil clover leaves (pale crescent watermark) with round
+// white-pink puff blooms.
 //
 // Origin-centered in the −24..+24 design box (actions may paint outside it),
 // light from upper-left, flat cel-shaded with a soft dark outline. Pure
@@ -44,14 +50,14 @@ type RGB = [number, number, number];
 interface P {
   leafLight: RGB;        // lit upper face of the clover leaflets
   leafMid: RGB;          // body tone of the leaflets
-  leafDark: RGB;         // shadowed underside / mound base
-  chevron: RGB;          // pale chevron mark on each leaflet
-  stem: RGB;             // short blossom stems
+  leafDark: RGB;         // shadowed leaflet / back leaves
+  crescent: RGB;         // pale crescent watermark band on each leaflet
+  stem: RGB;             // slender leaf + blossom stems
   bloomPetal: RGB;       // puff blossom petals (white-pink)
   bloomCore: RGB;        // puff blossom centre
   padGrass: RGB;         // top of the grass pad
   padDark: RGB;          // shaded pad underside
-  soil: RGB;             // contact / base soil under the clump
+  soil: RGB;             // contact / base soil under the patch
   outline: RGB;          // soft dark outline tint
   light: RGB;            // ambient light tint laid over the whole tile
   lightAmt: number;      // 0..1 strength of the ambient light wash
@@ -68,7 +74,7 @@ interface P {
 /** The idle gesture, separate from season identity. All zero = REST. */
 interface Pose {
   bob: number;     // vertical offset in design px (negative = up)
-  lean: number;    // top-of-clump sway, radians (rock side to side)
+  lean: number;    // top-of-patch sway, radians (rock side to side)
   squashX: number; // additive horizontal scale (+0.18 = 18% wider)
   squashY: number; // additive vertical scale (+0.18 = 18% taller)
   bee: number;     // 0..1 visiting-bee flight progress (0 = bee off-screen)
@@ -107,7 +113,7 @@ function lerpP(a: P, b: P, t: number): P {
     leafLight: lerpRGB(a.leafLight, b.leafLight, t),
     leafMid: lerpRGB(a.leafMid, b.leafMid, t),
     leafDark: lerpRGB(a.leafDark, b.leafDark, t),
-    chevron: lerpRGB(a.chevron, b.chevron, t),
+    crescent: lerpRGB(a.crescent, b.crescent, t),
     stem: lerpRGB(a.stem, b.stem, t),
     bloomPetal: lerpRGB(a.bloomPetal, b.bloomPetal, t),
     bloomCore: lerpRGB(a.bloomCore, b.bloomCore, t),
@@ -153,42 +159,42 @@ const SP: Record<SeasonName, P> = {
   // Spring — fresh bright-green trefoils + first white-pink puffs opening;
   // dewy lime pad, cool-bright light, pad blossoms resting on the turf.
   Spring: {
-    leafLight: [156, 226, 100],
-    leafMid: [96, 190, 66],
-    leafDark: [50, 126, 48],
-    chevron: [212, 246, 174],
-    stem: [110, 174, 62],
+    leafLight: [168, 230, 108],
+    leafMid: [104, 196, 70],
+    leafDark: [52, 132, 50],
+    crescent: [222, 250, 188],
+    stem: [110, 178, 64],
     bloomPetal: [255, 248, 252],
-    bloomCore: [255, 220, 234],
+    bloomCore: [255, 218, 232],
     padGrass: [132, 214, 88],
     padDark: [72, 146, 60],
     soil: [120, 84, 48],
-    outline: [36, 70, 30],
+    outline: [34, 72, 30],
     light: [230, 248, 222],
     lightAmt: 0.18,
-    gloss: 0.4,
+    gloss: 0.42,
     edgeBrown: 0,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
-    bloomAmt: 0.7,
+    bloomAmt: 0.72,
     blossomAmt: 0.85,
     fallenLeafAmt: 0,
   },
   // Summer — LUSH peak: deep saturated green trefoils, abundant open flower
   // puffs, high gloss, warm bright light.
   Summer: {
-    leafLight: [128, 214, 78],
-    leafMid: [60, 166, 52],
-    leafDark: [28, 102, 36],
-    chevron: [190, 236, 152],
+    leafLight: [138, 220, 84],
+    leafMid: [66, 172, 56],
+    leafDark: [30, 106, 38],
+    crescent: [200, 240, 162],
     stem: [80, 158, 50],
     bloomPetal: [255, 252, 254],
-    bloomCore: [255, 200, 222],
+    bloomCore: [255, 198, 220],
     padGrass: [84, 176, 70],
     padDark: [42, 116, 50],
     soil: [126, 86, 48],
-    outline: [22, 72, 30],
+    outline: [22, 74, 30],
     light: [255, 244, 206],
     lightAmt: 0.2,
     gloss: 1.0,
@@ -200,15 +206,15 @@ const SP: Record<SeasonName, P> = {
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
-  // Autumn — clover going tan/bronze, flower puffs turned to brown seed-puffs;
+  // Autumn — clover going olive/bronze, flower puffs turned to brown seed-puffs;
   // olive-amber pad with a fallen leaf, dulled gloss, low amber light.
   Autumn: {
-    leafLight: [196, 168, 86],
-    leafMid: [148, 118, 54],
-    leafDark: [92, 72, 38],
-    chevron: [216, 196, 130],
+    leafLight: [194, 168, 86],
+    leafMid: [150, 120, 56],
+    leafDark: [94, 74, 40],
+    crescent: [222, 200, 134],
     stem: [136, 116, 54],
-    bloomPetal: [198, 168, 122],
+    bloomPetal: [200, 170, 124],
     bloomCore: [150, 112, 64],
     padGrass: [162, 150, 84],
     padDark: [108, 92, 50],
@@ -217,7 +223,7 @@ const SP: Record<SeasonName, P> = {
     light: [250, 200, 138],
     lightAmt: 0.24,
     gloss: 0.3,
-    edgeBrown: 0.9,
+    edgeBrown: 0.92,
     frostAmt: 0,
     snowCapAmt: 0,
     padSnowAmt: 0,
@@ -225,160 +231,183 @@ const SP: Record<SeasonName, P> = {
     blossomAmt: 0,
     fallenLeafAmt: 0.9,
   },
-  // Winter — snow-dusted clover: bold snow blanket over the base + snow caps on
-  // the leaves, frost, cool blue-grey light; green-grey trefoils still poke
-  // through. Clearly snowy, still reads as clover.
+  // Winter — frost-dusted clover: a snow blanket over the base + soft snow caps
+  // on the upward leaflets, frost speckle, cool blue-grey light; the green-grey
+  // trefoils still clearly poke through (NO white-out — the clover stays the
+  // hero shape under the frost).
   Winter: {
-    leafLight: [128, 162, 130],
-    leafMid: [86, 122, 96],
-    leafDark: [52, 84, 68],
-    chevron: [196, 214, 204],
+    leafLight: [134, 168, 134],
+    leafMid: [90, 126, 98],
+    leafDark: [54, 86, 70],
+    crescent: [206, 222, 212],
     stem: [108, 126, 104],
     bloomPetal: [226, 234, 242],
     bloomCore: [198, 210, 222],
     padGrass: [182, 202, 220],
     padDark: [120, 148, 176],
     soil: [132, 114, 100],
-    outline: [50, 58, 60],
+    outline: [50, 60, 62],
     light: [202, 226, 255],
     lightAmt: 0.34,
     gloss: 0.26,
-    edgeBrown: 0.2,
+    edgeBrown: 0.18,
     frostAmt: 0.78,
     snowCapAmt: 1.0,
     padSnowAmt: 1.0,
-    bloomAmt: 0.32,
+    bloomAmt: 0.34,
     blossomAmt: 0,
     fallenLeafAmt: 0,
   },
 };
 
-// ── Clump geometry — the SAME silhouette every season ─────────────────────────
-// A low rounded clump of clover sitting on the pad. Origin-centered. The pose
-// (lean/squash/bob) transforms the whole clump about a pivot near the base so
-// the leaves and puffs sway together. The OUTLINE shape is constant so
-// transitions never snap the silhouette.
+// ── Clover-patch geometry — the SAME silhouette every season ──────────────────
+// Several stems rise from the pad centre, each topped by a hero trefoil; a few
+// flower-puffs nod above on their own stems. The pose (lean/squash/bob)
+// transforms the WHOLE patch about a pivot near the base so the leaves and puffs
+// sway together. The stem + trefoil layout is constant so transitions never snap
+// the silhouette.
 
-const CLUMP_BASE_Y = 15.5;   // where the clump contacts the pad
-const CLUMP_HALF = 16.5;     // half-width of the clump
-const CLUMP_TOP_Y = -7;      // crown of the dome
-const CLUMP_PIVOT_Y = CLUMP_BASE_Y - 1; // rock/lean about a point near the base
+const BASE_Y = 16.5;          // where the stems meet the pad
+const PIVOT_Y = BASE_Y - 1;   // rock/lean about a point near the base
 
-/** Trace the rounded clump dome path (origin-local, unposed). */
-function clumpPath(ctx: CanvasRenderingContext2D): void {
-  const top = CLUMP_TOP_Y;
-  const base = CLUMP_BASE_Y;
-  const h = CLUMP_HALF;
-  ctx.beginPath();
-  ctx.moveTo(-h, base);
-  ctx.quadraticCurveTo(-h, top + 3, -h * 0.5, top + 0.5);
-  ctx.quadraticCurveTo(0, top - 2.5, h * 0.5, top + 0.5);
-  ctx.quadraticCurveTo(h, top + 3, h, base);
-  ctx.quadraticCurveTo(h * 0.5, base + 3, 0, base + 2.6);
-  ctx.quadraticCurveTo(-h * 0.5, base + 3, -h, base);
-  ctx.closePath();
-}
-
-// Trefoil leaf placements across the clump surface: [cx, cy, scale, rot, lucky].
-// Constant layout every season; colour/dressing varies via P. `lucky` adds a
-// fourth leaflet on one charming leaf (the lucky four-leaf clover).
-const LEAVES: Array<[number, number, number, number, number]> = [
-  [-11, 11, 0.95, -0.35, 0],
-  [-6, 3, 1.05, -0.15, 0],
-  [0, -0.5, 1.1, 0.0, 0],
-  [6, 3, 1.05, 0.15, 1], // the lucky four-leaf clover
-  [11, 11, 0.95, 0.35, 0],
-  [-9, 16, 0.8, -0.5, 0],
-  [9, 16, 0.8, 0.5, 0],
-  [0, 12, 0.9, 0.0, 0],
+// Trefoil leaves on stems. Each: [baseX, headX, headY, scale, rot, lucky, layer].
+// `baseX` = where the stem meets the pad; (headX,headY) = the trefoil centre;
+// `rot` tilts the whole trefoil; `lucky` adds a charming fourth leaflet on one
+// leaf (the lucky four-leaf clover); `layer` 0 = back (drawn darker, first),
+// 1 = front. The leaves fan outward + upward and are drawn BIG so the trefoil is
+// the unmistakable hero shape.
+const LEAVES: Array<[number, number, number, number, number, number, number]> = [
+  [-3.5, -12.5, -3.0, 1.05, -0.62, 0, 0],  // back-left, low
+  [3.0, 11.5, -2.0, 1.0, 0.66, 0, 0],      // back-right, low
+  [-2.0, -7.5, -12.5, 1.18, -0.30, 0, 1],  // mid-left, tall
+  [1.5, 6.5, -14.5, 1.22, 0.16, 1, 1],     // centre, tallest — the lucky one
+  [3.0, 12.0, -9.0, 1.08, 0.5, 0, 1],      // right, mid
 ];
 
-// Round flower-puff placements on short stems: [baseX, baseY, topX, topY].
-const BLOOMS: Array<[number, number, number, number]> = [
-  [-7, 4, -8.5, -11],
-  [4, 1, 6, -13.5],
-  [10, 9, 12.5, -4],
+// Round flower-puff placements on stems: [baseX, topX, topY].
+const BLOOMS: Array<[number, number, number]> = [
+  [-1.5, -3.5, -16.5],
+  [2.5, 5.0, -19.5],
 ];
 
 // The centre puff the visiting bee dips to (matches BLOOMS[1] crown).
-const BEE_TARGET_X = 6;
-const BEE_TARGET_Y = -13.5;
+const BEE_TARGET_X = 5.0;
+const BEE_TARGET_Y = -19.5;
 
 // Pad blossom (spring) spots resting ON the pad.
 const PAD_BLOSSOMS: Array<[number, number]> = [[-13, 19], [12, 18.4], [-3, 21]];
 
-/** Draw one trefoil clover leaf (three rounded heart-shaped leaflets with a
- *  pale chevron — plus an optional fourth lucky leaflet). Origin at the leaf
- *  centre; caller has translated/rotated. */
+// ── A single clover leaflet path (rounded heart with a notch) ─────────────────
+// Origin at the leaflet stem-end; the leaflet grows upward (−y). Reused for the
+// fill, the crescent clip, the brown rim and the outline so they always agree.
+function leafletPath(ctx: CanvasRenderingContext2D, w: number, hgt: number): void {
+  ctx.beginPath();
+  ctx.moveTo(0, hgt * 0.55); // stem end (toward the trefoil centre)
+  ctx.quadraticCurveTo(-w, hgt * 0.1, -w * 0.85, -hgt * 0.7);
+  ctx.quadraticCurveTo(-w * 0.4, -hgt, 0, -hgt * 0.55); // outer notch dip
+  ctx.quadraticCurveTo(w * 0.4, -hgt, w * 0.85, -hgt * 0.7);
+  ctx.quadraticCurveTo(w, hgt * 0.1, 0, hgt * 0.55);
+  ctx.closePath();
+}
+
+/** Draw one trefoil clover leaf: three rounded heart-shaped leaflets (plus an
+ *  optional fourth lucky leaflet), each with the pale crescent watermark band.
+ *  Origin at the leaf centre; caller has translated/rotated. The trefoil is the
+ *  HERO — leaflets are large and clearly separated so the read is unmistakable. */
 function trefoil(ctx: CanvasRenderingContext2D, p: P, s: number, lucky = 0): void {
   // three leaflets at ~120° apart, fanning slightly upward; lucky adds a fourth.
-  const base = [-Math.PI / 2 - 0.7, -Math.PI / 2 + 0.7, Math.PI / 2 + 0.05];
-  const angles = lucky > 0.5 ? [...base, Math.PI / 2 - 0.85] : base;
+  const base = [-Math.PI / 2 - 0.78, -Math.PI / 2 + 0.78, Math.PI / 2 + 0.04];
+  const angles = lucky > 0.5 ? [...base, Math.PI / 2 - 0.9] : base;
+
+  // a short stalk joining the trefoil to its stem (reads as a clover petiole)
+  ctx.strokeStyle = rgb(p.stem);
+  ctx.lineWidth = 1.4 * s;
+  ctx.beginPath();
+  ctx.moveTo(0, 1.0 * s);
+  ctx.lineTo(0, 4.2 * s);
+  ctx.stroke();
+
   angles.forEach((ang, idx) => {
-    const dist = 2.6 * s;
+    const dist = 2.9 * s;
     const lx = Math.cos(ang) * dist;
     const ly = Math.sin(ang) * dist;
     ctx.save();
     ctx.translate(lx, ly);
     ctx.rotate(ang + Math.PI / 2);
-    // heart-shaped leaflet: two lobes with a small notch at the outer tip
-    const w = 2.6 * s;
-    const hgt = 3.2 * s;
-    ctx.beginPath();
-    ctx.moveTo(0, hgt * 0.55); // stem end (toward centre)
-    ctx.quadraticCurveTo(-w, hgt * 0.1, -w * 0.85, -hgt * 0.7);
-    ctx.quadraticCurveTo(-w * 0.4, -hgt, 0, -hgt * 0.55); // notch dip
-    ctx.quadraticCurveTo(w * 0.4, -hgt, w * 0.85, -hgt * 0.7);
-    ctx.quadraticCurveTo(w, hgt * 0.1, 0, hgt * 0.55);
-    ctx.closePath();
-    // leaflet body
+
+    const w = 3.0 * s;
+    const hgt = 3.7 * s;
+
+    // 1) soft dark outline pass (a slightly fatter leaflet behind the body)
+    ctx.save();
+    ctx.scale(1.14, 1.12);
+    leafletPath(ctx, w, hgt);
+    ctx.fillStyle = rgb(p.outline);
+    ctx.fill();
+    ctx.restore();
+
+    // 2) leaflet body
+    leafletPath(ctx, w, hgt);
     ctx.fillStyle = rgb(p.leafMid);
     ctx.fill();
-    // browning at the edges (autumn) — a warm rim drawn just inside the edge
-    if (p.edgeBrown > 0.02) {
-      ctx.save();
-      ctx.clip();
-      ctx.strokeStyle = rgba([150, 110, 50], 0.6 * p.edgeBrown);
-      ctx.lineWidth = 1.4 * s;
-      ctx.beginPath();
-      ctx.moveTo(0, hgt * 0.55);
-      ctx.quadraticCurveTo(-w, hgt * 0.1, -w * 0.85, -hgt * 0.7);
-      ctx.quadraticCurveTo(-w * 0.4, -hgt, 0, -hgt * 0.55);
-      ctx.quadraticCurveTo(w * 0.4, -hgt, w * 0.85, -hgt * 0.7);
-      ctx.quadraticCurveTo(w, hgt * 0.1, 0, hgt * 0.55);
-      ctx.stroke();
-      ctx.restore();
-    }
-    // lit upper-left lobe
-    ctx.fillStyle = rgba(p.leafLight, 0.85);
+
+    // clip to the leaflet for the shading / marks below
+    ctx.save();
+    leafletPath(ctx, w, hgt);
+    ctx.clip();
+
+    // lit upper-left lobe (light from upper-left)
+    ctx.fillStyle = rgba(p.leafLight, 0.9);
     ctx.beginPath();
-    ctx.ellipse(-w * 0.25, -hgt * 0.3, w * 0.5, hgt * 0.42, -0.3, 0, Math.PI * 2);
+    ctx.ellipse(-w * 0.22, -hgt * 0.32, w * 0.56, hgt * 0.46, -0.3, 0, Math.PI * 2);
     ctx.fill();
-    // glossy sheen highlight (summer peak reads wet & lush)
-    if (p.gloss > 0.04) {
-      ctx.fillStyle = rgba([255, 255, 255], 0.18 + 0.34 * p.gloss);
-      ctx.beginPath();
-      ctx.ellipse(-w * 0.32, -hgt * 0.42, w * 0.26, hgt * 0.22, -0.3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    // pale chevron mark (the classic clover band) — a soft V across the leaflet
-    ctx.strokeStyle = rgba(p.chevron, 0.85 * (idx >= 2 ? 0.85 : 1));
-    ctx.lineWidth = 0.9 * s;
+
+    // shaded lower-right (depth toward the trefoil throat)
+    ctx.fillStyle = rgba(p.leafDark, 0.55);
     ctx.beginPath();
-    ctx.moveTo(-w * 0.5, hgt * 0.05);
-    ctx.lineTo(0, -hgt * 0.18);
-    ctx.lineTo(w * 0.5, hgt * 0.05);
+    ctx.ellipse(w * 0.32, hgt * 0.34, w * 0.5, hgt * 0.42, -0.3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // browning at the leaflet edge (autumn) — a warm rim hugging the outline
+    if (p.edgeBrown > 0.02) {
+      ctx.strokeStyle = rgba([150, 108, 50], 0.7 * p.edgeBrown);
+      ctx.lineWidth = 1.6 * s;
+      leafletPath(ctx, w, hgt);
+      ctx.stroke();
+    }
+
+    // pale CRESCENT watermark — the signature clover band: a curved pale arc
+    // bowing across the leaflet (the classic chevron-crescent mark).
+    ctx.strokeStyle = rgba(p.crescent, 0.92 * (idx >= 2 ? 0.85 : 1));
+    ctx.lineWidth = 1.05 * s;
+    ctx.beginPath();
+    ctx.moveTo(-w * 0.62, -hgt * 0.02);
+    ctx.quadraticCurveTo(0, -hgt * 0.42, w * 0.62, -hgt * 0.02);
     ctx.stroke();
-    // crisp outline
-    ctx.strokeStyle = rgba(p.outline, 0.7);
+    // a faint inner echo so the crescent reads as a soft band, not a hairline
+    ctx.strokeStyle = rgba(p.crescent, 0.4 * (idx >= 2 ? 0.85 : 1));
     ctx.lineWidth = 0.7 * s;
     ctx.beginPath();
-    ctx.moveTo(0, hgt * 0.55);
-    ctx.quadraticCurveTo(-w, hgt * 0.1, -w * 0.85, -hgt * 0.7);
-    ctx.quadraticCurveTo(-w * 0.4, -hgt, 0, -hgt * 0.55);
-    ctx.quadraticCurveTo(w * 0.4, -hgt, w * 0.85, -hgt * 0.7);
-    ctx.quadraticCurveTo(w, hgt * 0.1, 0, hgt * 0.55);
+    ctx.moveTo(-w * 0.5, -hgt * 0.14);
+    ctx.quadraticCurveTo(0, -hgt * 0.5, w * 0.5, -hgt * 0.14);
     ctx.stroke();
+
+    // glossy sheen highlight (summer peak reads wet & lush)
+    if (p.gloss > 0.04) {
+      ctx.fillStyle = rgba([255, 255, 255], 0.16 + 0.32 * p.gloss);
+      ctx.beginPath();
+      ctx.ellipse(-w * 0.3, -hgt * 0.46, w * 0.24, hgt * 0.2, -0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore(); // end leaflet clip
+
+    // 3) crisp outline on top so each leaflet stays a clean read
+    ctx.strokeStyle = rgba(p.outline, 0.75);
+    ctx.lineWidth = 0.8 * s;
+    leafletPath(ctx, w, hgt);
+    ctx.stroke();
+
     ctx.restore();
   });
 }
@@ -388,34 +417,31 @@ function puffBloom(
   ctx: CanvasRenderingContext2D,
   p: P,
   baseX: number,
-  baseY: number,
   topX: number,
   topY: number,
   open: number,
-  sway: number,
 ): void {
   const o = clamp01(open);
   if (o < 0.03) return;
-  const tx = topX + sway;
-  // short stem
+  // short stem from the pad up to the puff
   ctx.strokeStyle = rgb(p.stem);
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(baseX, baseY);
-  ctx.quadraticCurveTo((baseX + tx) / 2 + sway * 0.4, (baseY + topY) / 2, tx, topY + 1.5);
+  ctx.moveTo(baseX, BASE_Y - 4);
+  ctx.quadraticCurveTo((baseX + topX) / 2, (BASE_Y - 4 + topY) / 2, topX, topY + 1.5);
   ctx.stroke();
   // round pom: a cluster of small petal florets forming a ball
   const r = 3.4 * (0.55 + 0.45 * o);
   // soft outline halo
   ctx.fillStyle = rgba(p.outline, 0.45);
   ctx.beginPath();
-  ctx.arc(tx, topY, r + 0.8, 0, Math.PI * 2);
+  ctx.arc(topX, topY, r + 0.8, 0, Math.PI * 2);
   ctx.fill();
   // petal florets around the rim (white-pink)
   const n = 9;
   for (let k = 0; k < n; k++) {
     const ang = (k / n) * Math.PI * 2 + 0.2;
-    const px = tx + Math.cos(ang) * r * 0.78;
+    const px = topX + Math.cos(ang) * r * 0.78;
     const py = topY + Math.sin(ang) * r * 0.78;
     ctx.fillStyle = rgb(k % 2 === 0 ? p.bloomPetal : p.bloomCore);
     ctx.beginPath();
@@ -425,11 +451,11 @@ function puffBloom(
   // bright core + highlight
   ctx.fillStyle = rgb(p.bloomCore);
   ctx.beginPath();
-  ctx.arc(tx, topY, r * 0.5, 0, Math.PI * 2);
+  ctx.arc(topX, topY, r * 0.5, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = rgba([255, 255, 255], 0.5 * o);
   ctx.beginPath();
-  ctx.arc(tx - r * 0.3, topY - r * 0.3, r * 0.28, 0, Math.PI * 2);
+  ctx.arc(topX - r * 0.3, topY - r * 0.3, r * 0.28, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -536,12 +562,12 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
       ctx.beginPath();
       ctx.ellipse(0, 18.4, 17.4 * (0.6 + 0.4 * p.padSnowAmt), 4.8, 0, 0, Math.PI * 2);
       ctx.fill();
-      // a heaped drift banked against the clump base
+      // a heaped drift banked against the patch base
       ctx.fillStyle = rgba([255, 255, 255], 0.85 * p.padSnowAmt);
       ctx.beginPath();
       ctx.moveTo(-15, 18);
-      ctx.quadraticCurveTo(-6, 11.5, 0, 12.5);
-      ctx.quadraticCurveTo(7, 11.5, 15, 18);
+      ctx.quadraticCurveTo(-6, 12.5, 0, 13.5);
+      ctx.quadraticCurveTo(7, 12.5, 15, 18);
       ctx.quadraticCurveTo(8, 20.6, 0, 20.4);
       ctx.quadraticCurveTo(-8, 20.6, -15, 18);
       ctx.closePath();
@@ -552,7 +578,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
       ctx.fill();
       // sparkle on the snow
       ctx.fillStyle = rgba([255, 255, 255], 0.85 * p.padSnowAmt);
-      ([[-9, 17.6], [5, 19], [11, 17.4], [-3, 20], [0, 14]] as Array<[number, number]>).forEach(([sx, sy]) => {
+      ([[-9, 17.6], [5, 19], [11, 17.4], [-3, 20], [0, 15]] as Array<[number, number]>).forEach(([sx, sy]) => {
         ctx.beginPath();
         ctx.arc(sx, sy, 0.8, 0, Math.PI * 2);
         ctx.fill();
@@ -577,7 +603,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
       });
     }
 
-    // fallen clover leaf on the pad (autumn)
+    // fallen clover leaf on the pad (autumn) — a small browned trefoil resting flat
     if (p.fallenLeafAmt > 0.01) {
       const a = p.fallenLeafAmt;
       const fallen: Array<[number, number, number, RGB]> = [
@@ -588,82 +614,96 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
         ctx.save();
         ctx.translate(lx, ly);
         ctx.rotate(rot);
-        ctx.scale(0.7, 0.7);
+        ctx.scale(0.62, 0.62);
         ctx.globalAlpha = a;
-        trefoil(ctx, { ...p, leafMid: col, leafLight: col, edgeBrown: 1 }, 0.85);
+        trefoil(ctx, { ...p, leafMid: col, leafLight: col, leafDark: col, edgeBrown: 1, gloss: 0 }, 0.78);
         ctx.restore();
       });
       ctx.globalAlpha = 1;
     }
 
-    // ── Contact shadow under the clump (follows the bob/lean for grounding) ───
-    const tipShift = pose.lean * (CLUMP_PIVOT_Y - CLUMP_TOP_Y); // how far the crown leans
-    const shadowSpread = 1 + clamp01(pose.bob < 0 ? -pose.bob / 14 : 0) * 0.5;
+    // ── Contact shadow under the patch (follows the bob/lean for grounding) ───
+    const tipShift = pose.lean * (PIVOT_Y - BEE_TARGET_Y); // how far the crown leans
+    const shadowSpread = 1 + clamp01(pose.bob < 0 ? -pose.bob / 14 : 0) * 0.4;
     ctx.fillStyle = rgb(p.soil);
     ctx.beginPath();
-    ctx.ellipse(0 + tipShift * 0.18, CLUMP_BASE_Y + 2.5, 12 * shadowSpread, 2.8, 0, 0, Math.PI * 2);
+    ctx.ellipse(0 + tipShift * 0.16, BASE_Y + 2.5, 11 * shadowSpread, 2.6, 0, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = rgba(p.outline, 0.28 / shadowSpread);
     ctx.beginPath();
-    ctx.ellipse(2.5 + tipShift * 0.2, CLUMP_BASE_Y + 3, 14 * shadowSpread, 2.6, 0, 0, Math.PI * 2);
+    ctx.ellipse(2.5 + tipShift * 0.18, BASE_Y + 3, 13 * shadowSpread, 2.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // ── Subject: the clover clump, under the idle pose transform ─────────────
+    // ── Subject: the clover patch, under the idle pose transform ─────────────
     ctx.save();
     // Pivot near the base so lean rocks the crown side-to-side and squash anchors
-    // at the base (it "sits" on the pad). bob raises the whole clump.
-    ctx.translate(0, CLUMP_PIVOT_Y + pose.bob);
+    // at the base (it "sits" on the pad). bob raises the whole patch.
+    ctx.translate(0, PIVOT_Y + pose.bob);
     ctx.rotate(pose.lean);
     ctx.scale(1 + pose.squashX, 1 + pose.squashY);
-    ctx.translate(0, -CLUMP_PIVOT_Y);
+    ctx.translate(0, -PIVOT_Y);
 
-    // 1) soft dark outline pass — the dome drawn as the outline tint first
-    clumpPath(ctx);
-    ctx.fillStyle = rgb(p.outline);
-    ctx.fill();
-
-    // 2) clump body, clipped so the outline reads as a rim
-    ctx.save();
-    clumpPath(ctx);
-    ctx.clip();
-
-    const top = CLUMP_TOP_Y;
-    const base = CLUMP_BASE_Y;
-
-    // base dark fill for depth
-    ctx.fillStyle = rgb(p.leafDark);
-    ctx.fillRect(-CLUMP_HALF - 2, top - 6, (CLUMP_HALF + 2) * 2, base - top + 12);
-    // lit dome gradient (upper-left light)
-    const dome = ctx.createRadialGradient(-6, top + 2, 2, -2, lerp(top, base, 0.4), 24);
-    dome.addColorStop(0, rgb(p.leafLight));
-    dome.addColorStop(0.5, rgb(p.leafMid));
-    dome.addColorStop(1, rgb(p.leafDark));
-    ctx.fillStyle = dome;
-    ctx.globalAlpha = 0.92;
-    ctx.beginPath();
-    ctx.ellipse(0, lerp(top, base, 0.45), CLUMP_HALF + 1, (base - top) * 0.7 + 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.globalAlpha = 1;
-
-    // trefoil clover leaves carpeting the clump surface (constant layout)
-    LEAVES.forEach(([cx, cy, sc, rot, lucky]) => {
-      ctx.save();
-      ctx.translate(cx, top + cy + 0.5);
-      ctx.rotate(rot);
-      trefoil(ctx, p, sc, lucky);
-      ctx.restore();
+    // 1) slender stems first, so the trefoils sit on top of their stalks.
+    LEAVES.forEach(([baseX, headX, headY, , , , layer]) => {
+      const stalkCol = layer === 0 ? rgba(p.stem, 0.9) : rgb(p.stem);
+      // dark base pass (outline) then bright stem — layered for depth
+      const midX = lerp(baseX, headX, 0.5);
+      const midY = lerp(BASE_Y - 2, headY, 0.5);
+      ctx.strokeStyle = rgba(p.outline, 0.8);
+      ctx.lineWidth = layer === 0 ? 2.2 : 2.6;
+      ctx.beginPath();
+      ctx.moveTo(baseX, BASE_Y - 1);
+      ctx.quadraticCurveTo(midX, midY, headX, headY + 3.0);
+      ctx.stroke();
+      ctx.strokeStyle = stalkCol;
+      ctx.lineWidth = layer === 0 ? 1.2 : 1.5;
+      ctx.beginPath();
+      ctx.moveTo(baseX, BASE_Y - 1);
+      ctx.quadraticCurveTo(midX, midY, headX, headY + 3.0);
+      ctx.stroke();
     });
 
-    // frost dusting (winter) — cool blue speckle over the upper leaves
+    // 2) trefoil heads — back layer first (drawn slightly darker), then front.
+    //    The trefoil is the HERO: big, clearly-separated heart leaflets.
+    const drawLeafLayer = (wantLayer: number): void => {
+      LEAVES.forEach(([, headX, headY, sc, rot, lucky, layer]) => {
+        if (layer !== wantLayer) return;
+        ctx.save();
+        ctx.translate(headX, headY);
+        ctx.rotate(rot);
+        if (layer === 0) {
+          // back leaves read a touch deeper / smaller so the front trefoils pop
+          ctx.globalAlpha = 0.96;
+          trefoil(ctx, { ...p, leafMid: p.leafDark, leafLight: p.leafMid }, sc * 0.92, lucky);
+          ctx.globalAlpha = 1;
+        } else {
+          trefoil(ctx, p, sc, lucky);
+        }
+        ctx.restore();
+      });
+    };
+    drawLeafLayer(0);
+
+    // 3) round flower puffs poking up on short stems (between leaf layers so a
+    //    front trefoil can overlap a bloom for depth)
+    BLOOMS.forEach(([bx, tx, ty], i) => {
+      const open = p.bloomAmt * (i === 0 ? 0.9 : 1);
+      puffBloom(ctx, p, bx, tx, ty, open);
+    });
+
+    drawLeafLayer(1);
+
+    // 4) frost dusting (winter) — cool blue speckle over the upper leaflets +
+    //    a soft frost veil; the trefoils stay clearly visible underneath.
     if (p.frostAmt > 0.02) {
-      ctx.fillStyle = rgba([210, 230, 250], 0.22 * p.frostAmt);
+      ctx.fillStyle = rgba([210, 230, 250], 0.16 * p.frostAmt);
       ctx.beginPath();
-      ctx.ellipse(0, lerp(top, base, 0.35), CLUMP_HALF, (base - top) * 0.4, 0, 0, Math.PI * 2);
+      ctx.ellipse(0, -6, 15, 12, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = rgba([235, 246, 255], 0.7 * p.frostAmt);
+      ctx.fillStyle = rgba([235, 246, 255], 0.72 * p.frostAmt);
       const speck: Array<[number, number]> = [
-        [-10, top + 4], [-4, top + 2], [3, top + 3], [9, top + 5],
-        [-7, lerp(top, base, 0.4)], [6, lerp(top, base, 0.45)], [0, lerp(top, base, 0.3)],
+        [-12, -3], [-7, -12], [6, -14], [12, -9],
+        [-3, -16], [2, -7], [-9, 4], [9, 2], [0, -2],
       ];
       speck.forEach(([sx, sy]) => {
         ctx.beginPath();
@@ -672,34 +712,26 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
       });
     }
 
-    ctx.restore(); // end clump clip
-
-    // 3) snow caps on the upward leaves (winter) — bold soft caps over the crown
+    // 5) soft snow caps resting on the UPWARD leaflets (winter) — the subject
+    //    stays visible; just little white dollops on the top leaves.
     if (p.snowCapAmt > 0.02) {
       const a = p.snowCapAmt;
-      ctx.fillStyle = rgba([246, 251, 255], 0.92 * a);
-      ctx.beginPath();
-      ctx.moveTo(-CLUMP_HALF * 0.72, top + 4);
-      ctx.quadraticCurveTo(-6, top - 3, 0, top - 2);
-      ctx.quadraticCurveTo(6, top - 3, CLUMP_HALF * 0.72, top + 4);
-      ctx.quadraticCurveTo(CLUMP_HALF * 0.4, top + 6.5, 0, top + 5);
-      ctx.quadraticCurveTo(-CLUMP_HALF * 0.4, top + 6.5, -CLUMP_HALF * 0.72, top + 4);
-      ctx.closePath();
-      ctx.fill();
-      // a few soft snow caps settled on individual leaves
-      ctx.fillStyle = rgba([235, 244, 255], 0.75 * a);
-      ([[-8, top + 6], [5, top + 7], [-2, top + 9], [10, top + 8]] as Array<[number, number]>).forEach(([sx, sy]) => {
+      ctx.fillStyle = rgba([248, 252, 255], 0.92 * a);
+      // a cap on each FRONT trefoil's crown
+      LEAVES.forEach(([, headX, headY, sc, , , layer]) => {
+        if (layer !== 1) return;
         ctx.beginPath();
-        ctx.ellipse(sx, sy, 2.4, 1.4, 0, 0, Math.PI * 2);
+        ctx.ellipse(headX - 0.4, headY - 4.2 * sc, 2.6 * sc, 1.5 * sc, 0, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.fillStyle = rgba([214, 230, 246], 0.55 * a);
+      LEAVES.forEach(([, headX, headY, sc, , , layer]) => {
+        if (layer !== 1) return;
+        ctx.beginPath();
+        ctx.ellipse(headX + 0.8, headY - 3.2 * sc, 1.6 * sc, 0.9 * sc, 0, 0, Math.PI * 2);
         ctx.fill();
       });
     }
-
-    // ── Round flower puffs poking up on short stems (drawn over the clump) ────
-    BLOOMS.forEach(([bx, by, tx, ty], i) => {
-      const open = p.bloomAmt * (i === 2 ? 0.85 : 1);
-      puffBloom(ctx, p, bx, by, tx, ty, open, 0);
-    });
 
     ctx.restore(); // end pose transform
 
@@ -714,17 +746,17 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     }
 
     // ── Visiting bee (idle special) — drawn last, OVER everything, follows the
-    //    clump lean so it reads as visiting the swaying centre puff ───────────
+    //    patch lean so it reads as visiting the swaying centre puff ───────────
     if (pose.bee > 0.001) {
       const b = clamp01(pose.bee);
       // Flight arc: fly in from upper-right off-screen → hover at the centre
-      // puff (crown, transformed by the clump lean) → fly back out. A sin
+      // puff (crown, transformed by the patch lean) → fly back out. A sin
       // envelope keeps the bee fully off-screen (zero contribution) at b→0.
       const env = Math.sin(Math.PI * b); // 0 at edges, 1 mid-window
       const startX = 30;
-      const startY = -26;
-      // target = the centre puff crown, moved with the clump pose lean/bob
-      const leanShift = pose.lean * (CLUMP_PIVOT_Y - BEE_TARGET_Y);
+      const startY = -28;
+      // target = the centre puff crown, moved with the patch pose lean/bob
+      const leanShift = pose.lean * (PIVOT_Y - BEE_TARGET_Y);
       const targetX = BEE_TARGET_X + leanShift;
       const targetY = BEE_TARGET_Y + pose.bob - 4; // hover just above the puff
       const bx = lerp(startX, targetX, env);
@@ -769,13 +801,13 @@ function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, bee: 0 };
 
   // ── COMMON: soft sway / nod (~6s, win 0.95s) ──
-  // Two gentle rocks left→right→left, ~0.18 rad lean → crown travels ~ arm*0.18.
-  // Crown arm ≈ (CLUMP_PIVOT_Y - CLUMP_TOP_Y) ≈ 21.5 px → ~10–14 px sway.
+  // Two gentle rocks left→right→left, ~0.2 rad lean → crown travels ~10–14 px.
+  // Crown arm ≈ (PIVOT_Y - BEE_TARGET_Y) ≈ 35 px, so even a small lean reads.
   const qC = actionQ(t, 6.0, 0.95, 0.0);
   if (qC >= 0) {
     const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
     const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.18 * env * rock;
+    pose.lean += 0.16 * env * rock;
     // a small base squash as it settles weight side to side (a breeze nod)
     pose.squashY += -0.05 * hump(qC);
     pose.squashX += 0.045 * hump(qC);
@@ -790,7 +822,7 @@ function poseFromClock(t: number): Pose {
   if (qS >= 0) {
     // bee flight is driven entirely by pose.bee (0 at edges → bee off-screen).
     pose.bee = hump(qS);
-    // the clump gives a tiny welcoming nod while the bee hovers
+    // the patch gives a tiny welcoming nod while the bee hovers
     pose.bob += -1.0 * hump(qS);
     pose.lean += 0.03 * Math.sin(qS * Math.PI * 2) * Math.sin(Math.PI * qS);
   }
@@ -843,7 +875,7 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         }
         ctx.globalAlpha = 1;
       } else if (season === "Autumn") {
-        // one slow tumbling browning leaf
+        // one slow tumbling browning clover leaf
         const prog = ((tt / 5.0) % 1 + 1) % 1;
         const px = 11 - prog * 6 + Math.sin(prog * Math.PI * 3) * 2;
         const py = -16 + prog * 32;
@@ -851,8 +883,8 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.save();
         ctx.translate(px, py);
         ctx.rotate(prog * Math.PI * 4);
-        ctx.scale(0.55, 0.55);
-        trefoil(ctx, { ...SP.Autumn, leafMid: [158, 116, 52], leafLight: [188, 150, 80], edgeBrown: 1 }, 0.85);
+        ctx.scale(0.5, 0.5);
+        trefoil(ctx, { ...SP.Autumn, leafMid: [158, 116, 52], leafLight: [188, 150, 80], leafDark: [120, 86, 40], edgeBrown: 1, gloss: 0 }, 0.8);
         ctx.restore();
         ctx.globalAlpha = 1;
       }

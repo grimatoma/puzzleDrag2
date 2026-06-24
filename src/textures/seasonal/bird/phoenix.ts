@@ -203,8 +203,9 @@ interface P {
   frostAmt: number; // 0..1 frost on the pad rim (winter)
   backSnowAmt: number; // 0..1 snow that settles + MELTS on the warm back (winter)
   breathFogAmt: number; // 0..1 a steam/breath puff off the warm back (winter)
-  scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked, fades in via alpha)
+  scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha) — disabled here
+  scarfColor: RGB; // scarf colour (kept for tween plumbing; scarf unused on the phoenix)
+  hollyAmt: number; // 0..1 a little winter HOLLY SPRIG at the collar (tweened alpha)
 }
 
 // Four BOLD season presets. The phoenix stays the SAME fiery firebird; only the
@@ -236,6 +237,7 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     scarfAmt: 0,
     scarfColor: [120, 70, 200],
+    hollyAmt: 0,
   },
   // Summer — PEAK blaze: most intense flame glow + sparkle, glossy gold-red
   // plumage, bright warm light. Saturated mid-green pad.
@@ -262,6 +264,7 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     scarfAmt: 0,
     scarfColor: [120, 70, 200],
+    hollyAmt: 0,
   },
   // Autumn — deep ember plumage, glow warm and rich, a fallen leaf on the pad,
   // amber light. Olive-tan browning pad.
@@ -288,6 +291,7 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     scarfAmt: 0,
     scarfColor: [120, 70, 200],
+    hollyAmt: 0,
   },
   // Winter — a firebird IN THE COLD: FLUFFED plumage, snow that MELTS/steams on
   // its warm back (snow + a steam puff), frost on the pad rim, a little winter
@@ -313,8 +317,9 @@ const SP: Record<SeasonName, P> = {
     frostAmt: 0.85,
     backSnowAmt: 0.9, // snow lands on the warm back, then melts/steams
     breathFogAmt: 0.85,
-    scarfAmt: 1, // a little scarf appears in winter
+    scarfAmt: 0, // SCARF disabled on the phoenix — it sports a HOLLY SPRIG instead
     scarfColor: [120, 70, 200],
+    hollyAmt: 1, // a little holly sprig appears in winter
   },
 };
 
@@ -342,6 +347,7 @@ function lerpP(a: P, b: P, t: number): P {
     breathFogAmt: lerp(a.breathFogAmt, b.breathFogAmt, t),
     scarfAmt: lerp(a.scarfAmt, b.scarfAmt, t),
     scarfColor: lerpRGB(a.scarfColor, b.scarfColor, t),
+    hollyAmt: lerp(a.hollyAmt, b.hollyAmt, t),
   };
 }
 
@@ -360,6 +366,7 @@ function clampP(p: P): P {
     backSnowAmt: clamp01(p.backSnowAmt),
     breathFogAmt: clamp01(p.breathFogAmt),
     scarfAmt: clamp01(p.scarfAmt),
+    hollyAmt: clamp01(p.hollyAmt),
   };
 }
 
@@ -849,6 +856,52 @@ function paintPhoenix(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
     ctx.restore();
   }
 
+  // ── HOLLY SPRIG (winter) — two little green leaves + red berries pinned at the
+  // collar (the firebird's festive winter accessory). Tweened alpha (winter-only,
+  // seamless); drawn in the squash frame so it rides with the body. ────────────
+  if (p.hollyAmt > 0.01) {
+    const hxC = hx + 2.6;
+    const hyC = hy + 3.4;
+    ctx.save();
+    ctx.globalAlpha = clamp01(p.hollyAmt);
+    const leafGreen: RGB = [40, 124, 64];
+    const leafDark: RGB = [26, 88, 46];
+    const berry: RGB = [206, 48, 46];
+    // two spiky holly leaves splaying from the collar
+    for (const side of [-1, 1] as const) {
+      ctx.save();
+      ctx.translate(hxC, hyC);
+      ctx.rotate(side * 0.6);
+      ctx.fillStyle = rgba(leafDark);
+      ctx.beginPath();
+      ctx.moveTo(0, 1.2);
+      ctx.quadraticCurveTo(side * 2.6, -0.6, side * 1.2, -4.2);
+      ctx.quadraticCurveTo(side * -0.4, -1.0, 0, 1.2);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = rgba(leafGreen);
+      ctx.beginPath();
+      ctx.moveTo(0, 0.6);
+      ctx.quadraticCurveTo(side * 2.0, -0.6, side * 0.9, -3.6);
+      ctx.quadraticCurveTo(side * -0.2, -0.8, 0, 0.6);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+    // a little cluster of red berries at the centre
+    ctx.fillStyle = rgba(berry);
+    for (const [dx, dy] of [[-1.0, 0.4], [1.0, 0.6], [0, -0.8]] as const) {
+      ctx.beginPath();
+      ctx.arc(hxC + dx, hyC + dy, 1.0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = rgba([255, 255, 255], 0.6);
+    ctx.beginPath();
+    ctx.arc(hxC - 0.4, hyC - 1.1, 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   ctx.restore(); // end squash/stretch transform
 
   // breath/steam puff off the warm back (winter) — drawn OUTSIDE the squash
@@ -1003,6 +1056,7 @@ function makeTransition(fromIdx: 0 | 1 | 2) {
     blended.frostAmt = lerp(a.frostAmt, b.frostAmt, kSnow);
     blended.breathFogAmt = lerp(a.breathFogAmt, b.breathFogAmt, kSnow);
     blended.scarfAmt = lerp(a.scarfAmt, b.scarfAmt, kSnow);
+    blended.hollyAmt = lerp(a.hollyAmt, b.hollyAmt, kSnow); // holly LAGs like the scarf
 
     // at-rest dressing for sparks/steam so transition(0)===draw(from) and
     // transition(1)===draw(to) (both use the same at-rest 0.2 phases).

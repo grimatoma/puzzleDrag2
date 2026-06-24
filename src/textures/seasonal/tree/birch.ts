@@ -127,6 +127,7 @@ interface P {
   bark: RGB; // white-ish birch bark body
   barkShade: RGB; // shaded right side of the trunk
   lenticel: RGB; // dark horizontal bark dashes / branch marks
+  branchTone: RGB; // bare twig/limb colour — dark in winter so it reads against snow
   padGrass: RGB;
   soil: RGB;
   outlineTint: RGB; // soft dark outline colour
@@ -155,6 +156,7 @@ const SP: Record<SeasonName, P> = {
     bark: [240, 242, 238],
     barkShade: [196, 202, 200],
     lenticel: [70, 70, 66],
+    branchTone: [150, 138, 116],
     padGrass: [128, 200, 88],
     soil: [104, 78, 44],
     outlineTint: [44, 50, 38],
@@ -179,6 +181,7 @@ const SP: Record<SeasonName, P> = {
     bark: [242, 244, 240],
     barkShade: [194, 200, 196],
     lenticel: [64, 64, 60],
+    branchTone: [142, 130, 108],
     padGrass: [70, 158, 64],
     soil: [96, 70, 40],
     outlineTint: [36, 48, 30],
@@ -203,6 +206,7 @@ const SP: Record<SeasonName, P> = {
     bark: [234, 232, 222],
     barkShade: [188, 184, 172],
     lenticel: [72, 60, 44],
+    branchTone: [150, 120, 82],
     padGrass: [156, 142, 78],
     soil: [110, 80, 44],
     outlineTint: [60, 46, 22],
@@ -227,6 +231,7 @@ const SP: Record<SeasonName, P> = {
     bark: [238, 242, 246],
     barkShade: [190, 200, 208],
     lenticel: [58, 60, 64],
+    branchTone: [84, 80, 76], // dark wet twigs — must read against the white snow
     padGrass: [198, 212, 226],
     soil: [120, 126, 136],
     outlineTint: [46, 52, 62],
@@ -236,7 +241,7 @@ const SP: Record<SeasonName, P> = {
     airy: 1.0,
     catkinAmt: 0,
     frostAmt: 0.85,
-    branchSnowAmt: 1.0, // HEAVY snow load
+    branchSnowAmt: 0.6, // lighter snow ridge so the dark twigs read (not a white fan)
     padSnowAmt: 1.0, // deep snow blanket
     icicleAmt: 1.0, // hanging icicle
     blossomAmt: 0,
@@ -465,8 +470,9 @@ function branches(ctx: CanvasRenderingContext2D, p: P, sway: number): void {
   ctx.lineCap = "round";
   BRANCHES.forEach(([cx, cy, tx, ty, w]) => {
     const s = sway * (0.4 + Math.abs(tx) / 24);
-    // Branch limb (bark-coloured, thinner than oak — birch is slender).
-    ctx.strokeStyle = rgb(scale3(p.bark, 0.9), 1);
+    // Branch limb — its own twig tone (dark in winter so the bare limbs read
+    // against the snow instead of vanishing white-on-white).
+    ctx.strokeStyle = rgb(p.branchTone, 1);
     ctx.lineWidth = w;
     ctx.beginPath();
     ctx.moveTo(0, -3);
@@ -480,7 +486,7 @@ function branches(ctx: CanvasRenderingContext2D, p: P, sway: number): void {
     ctx.quadraticCurveTo(cx + s * 0.5 + 0.5, cy + 0.6, tx + s + 0.4, ty + 0.6);
     ctx.stroke();
     // Forking twig near the tip.
-    ctx.strokeStyle = rgb(scale3(p.bark, 0.85), 1);
+    ctx.strokeStyle = rgb(scale3(p.branchTone, 0.92), 1);
     ctx.lineWidth = w * 0.5;
     ctx.beginPath();
     ctx.moveTo(cx + s * 0.5, cy);
@@ -498,28 +504,29 @@ function branchSnow(ctx: CanvasRenderingContext2D, p: P, sway: number): void {
   ctx.lineCap = "round";
   BRANCHES.forEach(([cx, cy, tx, ty, w], idx) => {
     const s = sway * (0.4 + Math.abs(tx) / 24);
-    // fat snow base sitting on the upper side of the limb (offset up a touch)
+    // a SLIM snow ridge on the upper side of the limb (offset up a touch) — half
+    // the old width so the dark twig reads beneath it
     ctx.strokeStyle = `rgba(223,233,246,${load})`;
-    ctx.lineWidth = (w + 3.0) * load;
+    ctx.lineWidth = (w + 1.2) * load;
     ctx.beginPath();
     ctx.moveTo(0, -4.0);
     ctx.quadraticCurveTo(cx + s * 0.5, cy - 1.6, tx + s, ty - 1.4);
     ctx.stroke();
     // bright crown on top of the snow
     ctx.strokeStyle = `rgba(255,255,255,${load})`;
-    ctx.lineWidth = (w + 0.8) * load;
+    ctx.lineWidth = (w + 0.3) * load;
     ctx.beginPath();
     ctx.moveTo(0, -4.4);
     ctx.quadraticCurveTo(cx + s * 0.5, cy - 2.2, tx + s, ty - 2.0);
     ctx.stroke();
-    // plump snow clump on the limb tip
+    // a small snow clump on the limb tip
     ctx.fillStyle = `rgba(255,255,255,${load})`;
     ctx.beginPath();
     ctx.ellipse(
       tx + s,
       ty - 1.6,
-      (2.6 + (idx % 2) * 0.8) * load,
-      (1.8 + (idx % 2) * 0.4) * load,
+      (1.5 + (idx % 2) * 0.5) * load,
+      (1.1 + (idx % 2) * 0.3) * load,
       tx < 0 ? -0.5 : 0.5,
       0,
       Math.PI * 2,
@@ -700,6 +707,7 @@ function lerpP(a: P, b: P, f: number): P {
     bark: lerp3(a.bark, b.bark, f),
     barkShade: lerp3(a.barkShade, b.barkShade, f),
     lenticel: lerp3(a.lenticel, b.lenticel, f),
+    branchTone: lerp3(a.branchTone, b.branchTone, f),
     padGrass: lerp3(a.padGrass, b.padGrass, f),
     soil: lerp3(a.soil, b.soil, f),
     outlineTint: lerp3(a.outlineTint, b.outlineTint, f),
@@ -721,8 +729,10 @@ function lerpP(a: P, b: P, f: number): P {
 
 // ── The RARE special: a small bird hops onto a branch and flits off ───────────
 // Drawn at a left-branch anchor; lands, looks around twice, then opens its wing
-// and flits up-and-left, fully gone by the window edge (alpha → 0). Colors
-// locked (robin-ish). Paints outside the box during the flit-off — that's fine.
+// and flits up-and-left, fully gone by the window edge (alpha → 0). Per-species
+// palette: a GOLDFINCH / yellow finch (bright yellow body + pale belly, with a
+// dark cap + dark wings/tail) — reads loud against the birch's white bark and
+// pale crown. Paints outside the box during the flit-off — that's fine.
 function bird(
   ctx: CanvasRenderingContext2D,
   x: number,
@@ -736,43 +746,52 @@ function bird(
   ctx.save();
   ctx.globalAlpha = clamp01(alpha);
   ctx.translate(x, y + hop);
-  // body
-  ctx.fillStyle = "#5a4636";
+  // body — bright finch yellow
+  ctx.fillStyle = "#e9c12f";
   ctx.beginPath();
   ctx.ellipse(0, 0, 4.2, 3.2, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  // warm breast
-  ctx.fillStyle = "#d2693a";
+  // pale lemon belly
+  ctx.fillStyle = "#f6dc59";
   ctx.beginPath();
   ctx.ellipse(-1.4, 0.6, 2.4, 2.2, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  // tail
-  ctx.fillStyle = "#46362a";
+  // tail — dark
+  ctx.fillStyle = "#26241a";
   ctx.beginPath();
   ctx.moveTo(3.4, -0.4);
   ctx.lineTo(7.2, -1.8);
   ctx.lineTo(6.6, 1.2);
   ctx.closePath();
   ctx.fill();
-  // wing (opens during flit-off)
+  // wing (opens during flit-off) — dark goldfinch wing with a pale bar
   ctx.save();
   ctx.translate(0.6, -0.4);
   ctx.rotate(-0.5 * wing);
-  ctx.fillStyle = "#3d2f24";
+  ctx.fillStyle = "#1d1c14";
   ctx.beginPath();
   ctx.ellipse(0, 0, 3.2 + wing * 2.0, 1.8 + wing * 1.2, 0.3, 0, Math.PI * 2);
   ctx.fill();
+  ctx.fillStyle = "#f3e7b2";
+  ctx.beginPath();
+  ctx.ellipse(0.4, 0.5, 1.6 + wing * 0.9, 0.6 + wing * 0.4, 0.3, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
-  // head (looks around)
+  // head (looks around) — dark goldfinch cap over a yellow face
   ctx.save();
   ctx.translate(-3.4, -2.4);
   ctx.rotate(look);
-  ctx.fillStyle = "#5a4636";
+  ctx.fillStyle = "#e9c12f";
   ctx.beginPath();
   ctx.arc(0, 0, 2.4, 0, Math.PI * 2);
   ctx.fill();
-  // beak
-  ctx.fillStyle = "#e2b23a";
+  // black cap on the crown
+  ctx.fillStyle = "#1d1c14";
+  ctx.beginPath();
+  ctx.arc(0.2, -0.7, 2.4, Math.PI * 1.05, Math.PI * 2.05);
+  ctx.fill();
+  // beak — pale ivory finch cone
+  ctx.fillStyle = "#ecdcab";
   ctx.beginPath();
   ctx.moveTo(-2.2, 0.2);
   ctx.lineTo(-4.4, -0.2);
@@ -885,23 +904,28 @@ function animAutumn(ctx: CanvasRenderingContext2D, t: number): void {
   // Steady ambient leaf-fall on a seamless loop — drawn after the tree.
   ctx.save();
   try {
+    // [startX, fallRate, hueBlend] — distinct rates desync the leaves while every
+    // one starts at prog 0 (alpha 0) at t=0, so anim(0) matches the leaf-free
+    // still and the loop wraps with no visible pop.
     const leaves: Array<[number, number, number]> = [
-      [-6, 0.0, 0.55], // [startX, phase, hueBlend]
-      [9, 0.5, 0.35],
-      [2, 0.78, 0.7],
+      [-6, 0.280, 0.55],
+      [9, 0.245, 0.35],
+      [2, 0.310, 0.7],
     ];
-    leaves.forEach(([sx, phase, hb]) => {
-      const prog = ((t * 0.28 + phase) % 1 + 1) % 1;
+    leaves.forEach(([sx, rate, hb]) => {
+      const prog = (t * rate) % 1;
       const ly = -8 + prog * 28; // canopy base to pad
-      const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * 6;
+      const lx = sx + Math.sin(prog * Math.PI * 2 + sx) * 6;
       const col = lerp3(p.foliageMid, p.foliageLight, hb);
-      ctx.fillStyle = rgb(col, 1 - prog * 0.4);
+      ctx.save();
+      ctx.globalAlpha = Math.sin(Math.PI * prog); // fade in at the canopy, out at the pad
+      ctx.fillStyle = rgb(col, 1);
       ctx.translate(lx, ly);
-      ctx.rotate(prog * Math.PI * 3 + phase * 4);
+      ctx.rotate(prog * Math.PI * 3 + sx);
       ctx.beginPath();
       ctx.ellipse(0, 0, 1.7, 3.0, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.restore();
     });
     // RARE: leaf-gust special.
     autumnGust(ctx, p, actionQ(t, SPECIAL_PERIOD, SPECIAL_WIN, SPECIAL_PERIOD / 2));

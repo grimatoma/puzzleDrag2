@@ -10,19 +10,23 @@
 // eyes, sturdy legs. The colour + silhouette are CONSTANT every season; the
 // signature tusks + bristly mane never change. Seasons change only the coat
 // VOLUME (sleek spring → SHAGGY thick winter), the pad colour, the light wash,
-// and BOLD dressing — snow on the back, a little winter SCARF, a breath-fog
-// puff (snorting steam), blossom, a fallen leaf, frost. The animal's identity
+// and BOLD dressing — snow on the back, a breath-fog puff (snorting steam),
+// blossom, a fallen leaf, frost (the boar wears NO scarf — it is the one
+// bare-necked herd brute). The animal's identity
 // colours never change; the silhouette outline is identical for every `P`
 // (only volume scales it). The tusks stay bright all year.
 //
 // IDLE (two-tier occasional action, carried through a `pose` object):
-//   • COMMON ~6s (win ~0.95s): a CHEW + SNORT + EAR-FLICK — the head bobs
-//     ~8–12px, the ear flicks, a breath-snort puffs, the tail wags, the body
-//     squashes. Seamless.
-//   • RARE  ~18s (win ~1.2s, phase +3s): an aggressive HEAD-TOSS / tusk-jab
-//     charge feint — the boar lowers and tosses its head with the tusks
-//     ~14–18px (anticipation → toss → settle) with a front STAMP. The tusks may
-//     swing OUTSIDE the −24..+24 design box at the apex (fine).
+//   • COMMON ~6s (win ~1.0s): a calm SNUFFLE / BREATH — the body breathes
+//     gently (~3px), the snout dips to snuffle the ground, the near ear flicks
+//     and the tail gives a lazy wag, a soft breath puffs. Deliberately QUIET —
+//     no lunge, no big swing — so it reads as the resting tier.
+//   • RARE  ~18s (win ~1.25s, phase +3s): a bold TUSK-GORE LUNGE — the boar
+//     drops its head (anticipation crouch), then surges FORWARD + UP tusks-first
+//     in a quick gore (the whole body lunges toward lower-left ~10px and rises
+//     ~12px as the head throws up so the TUSKS lead the strike), then recovers
+//     to rest. Clearly BOLDER than the snuffle so the two-tier lands. The tusks
+//     may sweep OUTSIDE the −24..+24 design box at the apex (fine).
 // Both gestures return to REST with zero value AND zero velocity at the window
 // edges (raised-cosine windows), so `anim(…, t)` is seamless and `anim(…, 0)`
 // (and `draw`) sit exactly at rest.
@@ -83,36 +87,41 @@ function bump(q: number): number {
   return 0.5 - 0.5 * Math.cos(q * Math.PI * 2);
 }
 
-// Anticipation→action shape for the HEAD-TOSS: a brief lower/crouch (negative)
-// before the upward toss, then a clean toss-up arc and settle. q∈[0,1]. Returns
-// a TOSS factor in roughly −0.2..+1 (negative = lowered head anticipation,
-// positive = head thrown up/forward with the tusks).
-function tossShape(q: number): number {
+// Anticipation→strike shape for the TUSK-GORE LUNGE: a deeper, slower head-drop
+// crouch (negative) to load the strike, then a fast forward+up GORE arc and a
+// settle. q∈[0,1]. Returns a GORE factor in roughly −0.32..+1 (negative =
+// head dropped / coiled anticipation, positive = the tusks driven forward-up).
+// The strike peak is biased early (a quick jab), with a longer recovery tail.
+// Zero value AND zero slope at both ends (seamless window edges).
+function goreShape(q: number): number {
   if (q <= 0 || q >= 1) return 0;
-  const antiEnd = 0.26; // first slice = lower the head (anticipation)
+  const antiEnd = 0.34; // longer load: the boar coils & drops its head
   if (q < antiEnd) {
-    // dip down (anticipation), zero slope at q=0
+    // drop/coil down (anticipation), zero slope at q=0 — deeper than the old toss
     const a = q / antiEnd;
-    return -0.2 * (0.5 - 0.5 * Math.cos(a * Math.PI));
+    return -0.32 * (0.5 - 0.5 * Math.cos(a * Math.PI));
   }
-  // the toss arc, zero at the seam to the crouch and at q=1
-  const a = (q - antiEnd) / (1 - antiEnd);
-  return Math.sin(a * Math.PI);
+  // the gore: a quick forward strike that peaks early then recovers. Built from
+  // sin(a·π) skewed by an ease so the rise is fast and the fall is slower; zero
+  // at the seam to the crouch and at q=1.
+  const a = (q - antiEnd) / (1 - antiEnd); // 0..1 across the strike
+  const skew = a < 0.34 ? a / 0.34 * 0.5 : 0.5 + ((a - 0.34) / 0.66) * 0.5; // fast in, slow out
+  return Math.sin(skew * Math.PI);
 }
 
 // ── The idle POSE (carries all action state into paint) ──────────────────────
 
 interface Pose {
   bob: number; // whole-body vertical bob (design px, + = up)
-  lean: number; // signed forward lean (design px, + = toward lower-left)
+  lean: number; // signed forward lunge (design px, + = toward lower-left)
   squashX: number; // body horizontal scale multiplier (squash/stretch)
   squashY: number; // body vertical scale multiplier
-  head: number; // signed head pivot (+ = thrown up/forward on the toss)
-  chew: number; // 0..1 jaw chew amount
+  head: number; // signed head pivot (radians; + = tusks thrown up/forward, − = snout dips down to snuffle)
+  chew: number; // 0..1 mouth/snuffle open amount
   ear: number; // 0..1 near-ear flick amount
   tail: number; // signed tail wag (design px)
-  hop: number; // 0..1 front-stamp / lunge amount on the head-toss
-  snort: number; // 0..1 extra breath-snort reach (chew exhale)
+  hop: number; // 0..1 forward-stamp / gore-drive amount (rare lunge)
+  snort: number; // 0..1 extra breath-puff reach (snuffle exhale / gore snort)
 }
 
 const REST: Pose = {
@@ -128,9 +137,9 @@ const REST: Pose = {
   snort: 0,
 };
 
-// Build a pose from the wall clock: a common CHEW+SNORT every ~6s and a rare
-// HEAD-TOSS every ~18s. Returns to REST (all zeros / unit scales) at every
-// window edge.
+// Build a pose from the wall clock: a calm SNUFFLE every ~6s and a bold
+// TUSK-GORE LUNGE every ~18s. Returns to REST (all zeros / unit scales) at
+// every window edge.
 function poseFromClock(tIn: number): Pose {
   const t = safeNum(tIn);
   const pose: Pose = {
@@ -146,51 +155,66 @@ function poseFromClock(tIn: number): Pose {
     snort: 0,
   };
 
-  // COMMON ~6s: CHEW + SNORT + EAR-FLICK (win ~0.95s). Head bobs ~8–12px down,
-  // jaw chatters, ear flicks, tail wags, body squashes, a breath-snort puffs.
-  // Built from raised-cosine windows → seamless. Phase 3.0 opens the window at
-  // t≈3.0 (well clear of t=0, so anim(0) sits exactly at REST).
-  const cq = actionQ(t, 6, 0.95, 3.0);
+  // COMMON ~6s: a calm SNUFFLE / BREATH (win ~1.0s). The body breathes gently
+  // (~3px), the snout dips a little to snuffle the ground, the near ear flicks
+  // and the tail gives a lazy wag, a soft breath puffs. Deliberately QUIET — no
+  // lunge, small displacements — so it reads clearly below the rare. Built from
+  // raised-cosine windows → seamless. Phase 3.0 opens it at t≈3.0 (clear of t=0,
+  // so anim(0) sits exactly at REST).
+  const cq = actionQ(t, 6, 1.0, 3.0);
   if (cq >= 0) {
-    const env = bump(cq); // 0→1→0 over the window
-    const chatter = Math.abs(Math.sin(cq * Math.PI * 2));
-    // two chew bobs within the window: head dips DOWN (−head) ~8–12px
-    pose.head = -env * (8 + 4 * chatter) * 0.06; // head pivot (radians-ish scale)
-    pose.bob = -env * (2.2 + 1.6 * chatter); // body dips a touch as it grazes
-    pose.chew = env * (0.5 + 0.5 * chatter);
-    pose.ear = env;
-    pose.tail = Math.sin(cq * Math.PI * 6) * env * 3.0; // a few wags
-    pose.snort = env; // a breath-snort exhale as it chews
-    // gentle body squash with the grazing dip
-    pose.squashY = 1 - env * 0.05;
-    pose.squashX = 1 + env * 0.04;
+    const env = bump(cq); // 0→1→0 over the window (zero value+slope at edges)
+    // Everything is gated by `env`, so each value AND its velocity is zero at
+    // both window edges — seamless. The detail terms (snuffle/wag chatter) are
+    // multiplied INTO env, never added, so they never leak velocity at the rim.
+    pose.bob = env * 1.2; // ribs rise a touch on the breath (small, calm)
+    pose.head = -env * (0.10 + 0.04 * Math.abs(Math.sin(cq * Math.PI * 2))); // snout dips to snuffle
+    pose.chew = env * 0.35 * (0.6 + 0.4 * Math.abs(Math.sin(cq * Math.PI * 3))); // soft snuffle
+    pose.ear = env * 0.7; // a relaxed ear flick
+    pose.tail = env * Math.sin(cq * Math.PI * 4) * 1.8; // a lazy wag or two
+    pose.snort = env * 0.6; // a soft breath puff (cold-air exhale in winter)
+    // barely-there breathing squash
+    pose.squashY = 1 - env * 0.02;
+    pose.squashX = 1 + env * 0.015;
   }
 
-  // RARE ~18s: HEAD-TOSS / tusk-jab charge feint (win ~1.2s, phase +3s). The
-  // boar lowers and tosses its head with the tusks ~14–18px, with a front
-  // stamp/lunge, then settles. May swing the tusks OUTSIDE the design box.
-  const hq = actionQ(t, 18, 1.2, 3.0);
-  if (hq >= 0) {
-    const s = tossShape(hq); // −0.2..+1 (lower then toss-up)
-    // head pivot: lowers on anticipation (negative), throws up on the toss
-    pose.head += s * 0.5; // big swing — tusks sweep up ~14–18px
+  // RARE ~18s: a bold TUSK-GORE LUNGE (win ~1.25s, phase +3s). The boar drops
+  // its head to coil (anticipation), then surges FORWARD + UP tusks-first in a
+  // quick gore (~10px lunge toward lower-left, ~12px rise as the head throws up
+  // so the tusks lead), then recovers. Clearly bolder than the snuffle. The
+  // tusks may sweep OUTSIDE the design box at the apex. Every contribution is
+  // gated by `env` (a raised-cosine window) so value AND velocity are zero at
+  // both window edges → seamless.
+  const gq = actionQ(t, 18, 1.25, 3.0);
+  if (gq >= 0) {
+    const s = goreShape(gq); // −0.32..+1 (coil/drop then drive forward-up)
+    const env = bump(gq); // raised-cosine window → zero value+slope at edges
     if (s < 0) {
-      // anticipation: lower the head + crouch wide, lean back a touch
-      const c = -s; // 0..0.2
-      pose.bob -= c * 4; // settle down a little
-      pose.squashY = 1 - c * 0.6;
-      pose.squashX = 1 + c * 0.45;
-      pose.lean -= c * 3; // shift weight back
+      // anticipation: DROP the snout low, coil down & wide, rock weight back —
+      // a clear "head drops" telegraph before the strike.
+      const c = -s; // 0..0.32
+      pose.head = -c * 0.85; // snout drops low (loading the gore)
+      pose.bob = -c * 5; // hunker down
+      pose.squashY = 1 - c * 0.7;
+      pose.squashX = 1 + c * 0.5;
+      pose.lean = -c * 4.5; // weight rocks back before the drive
     } else {
-      // the toss/lunge: surge forward + up, stretch into the jab
-      pose.lean += s * 6; // lunge toward lower-left
-      pose.bob += s * 4; // shoulders rise into the toss
-      pose.squashY = 1 + s * 0.1;
-      pose.squashX = 1 - s * 0.06;
-      pose.hop = s; // front stamp / lunge
+      // the GORE: drive FORWARD (the gore vector) and up, TUSKS-FIRST. Forward
+      // lunge dominates the rise so it reads as a horizontal gore-thrust, not a
+      // hop. EVERY contribution is gated by `env` (≈1 at the mid-window strike
+      // peak, →0 with zero slope at the window edge) so the recovery tail
+      // returns to rest with zero value AND velocity — seamless.
+      const drive = s * env;
+      pose.head = drive * 0.66; // tusks thrown UP/forward — the gore lead
+      pose.lean = drive * 13; // big forward lunge toward lower-left (the gore)
+      pose.bob = drive * 8.5; // shoulders surge up under the head as it drives
+      pose.squashY = 1 + drive * 0.12; // stretch into the drive
+      pose.squashX = 1 - drive * 0.07;
+      pose.hop = drive; // forward stamp / gore-drive (front leg shoots out)
     }
-    pose.ear = Math.max(pose.ear, bump(hq) * 0.6); // ears pin during the feint
-    pose.tail += Math.sin(hq * Math.PI) * 2.0; // tail flags during the feint
+    pose.ear = Math.max(pose.ear, env * 0.8); // ears pin back during the charge
+    pose.snort = Math.max(pose.snort, env); // a hard snort on the gore
+    pose.tail += env * Math.sin(gq * Math.PI * 2) * 2.4; // tail flags (env-gated → seamless)
   }
 
   return pose;
@@ -326,8 +350,9 @@ const SP: Record<SeasonName, P> = {
     blossomAmt: 0,
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
-    scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfAmt: 0, // NO scarf — the fierce boar wears nothing; the cold reads
+    // entirely through breath-fog + back-snow + frost on the bristle mane.
+    scarfColor: [206, 64, 60], // unused (scarfAmt stays 0); kept for tween plumbing
   },
 };
 
@@ -665,74 +690,38 @@ function paintBoar(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.stroke();
   ctx.lineCap = "butt";
 
-  // ── SCARF (winter) — a little knitted band around the neck, below the head ──
-  if (p.scarfAmt > 0.001) {
-    const sx = cx - 8.5;
-    const sy = cy + 3.2 - pose.bob * 0.2;
-    ctx.save();
-    ctx.globalAlpha = clamp01(p.scarfAmt);
-    // wrap band
-    ctx.fillStyle = rgb(p.scarfColor);
-    ctx.beginPath();
-    ctx.ellipse(sx, sy, 5.2, 3.0, 0.28, 0, Math.PI * 2);
-    ctx.fill();
-    // darker underside for depth
-    ctx.fillStyle = rgb([
-      Math.max(0, p.scarfColor[0] - 50),
-      Math.max(0, p.scarfColor[1] - 30),
-      Math.max(0, p.scarfColor[2] - 30),
-    ]);
-    ctx.beginPath();
-    ctx.ellipse(sx + 0.6, sy + 1.4, 4.8, 1.6, 0.28, 0, Math.PI * 2);
-    ctx.fill();
-    // hanging tail of the scarf, with a knitted notch + fringe
-    ctx.fillStyle = rgb(p.scarfColor);
-    ctx.beginPath();
-    ctx.moveTo(sx - 2.6, sy + 1.8);
-    ctx.lineTo(sx + 1.0, sy + 2.4);
-    ctx.lineTo(sx + 0.2, sy + 8.0);
-    ctx.lineTo(sx - 3.2, sy + 7.2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = rgb([
-      Math.max(0, p.scarfColor[0] - 60),
-      Math.max(0, p.scarfColor[1] - 40),
-      Math.max(0, p.scarfColor[2] - 40),
-    ]);
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(sx - 1.4, sy + 3.2);
-    ctx.lineTo(sx - 1.8, sy + 7.4);
-    ctx.stroke();
-    // fringe at the bottom
-    ctx.strokeStyle = rgb(p.scarfColor);
-    ctx.lineWidth = 0.9;
-    ctx.lineCap = "round";
-    for (const fx of [-3.0, -1.8, -0.6]) {
-      ctx.beginPath();
-      ctx.moveTo(sx + fx, sy + 7.4);
-      ctx.lineTo(sx + fx - 0.2, sy + 9.0);
-      ctx.stroke();
-    }
-    ctx.lineCap = "butt";
-    ctx.restore();
-  }
+  // NO SCARF on the boar — the wild boar wears nothing. Winter reads through the
+  // shaggy frosted bristle mane, the back-snow cap, and the breath-fog snort
+  // (drawn below) rather than any knitted accessory. `scarfAmt` stays 0 every
+  // season, so there is nothing to draw here.
 
   // ── HEAD + long snout + TUSKS (front-¾, lower-left) — locks the identity ────
-  // head pivots with the chew (down) / head-toss (up) about a point at the neck
+  // The head pivots about a point at the neck: +pose.head throws the snout &
+  // tusks UP/forward (the gore lead), −pose.head dips the snout DOWN (snuffle).
   ctx.save();
   ctx.translate(cx - 9, cy + 1);
-  ctx.rotate(-pose.head); // +head throws the snout/tusks up; chew dips it down
+  ctx.rotate(-pose.head);
   const hx = 0;
   const hy = 0;
 
-  // upright pointed ear (dark), set back on the head — flicks via pose
-  ctx.fillStyle = rgb(p.coatShadow);
+  // upright pointed ear (dark), set back on the head — flicks via pose. A
+  // pointed triangular ear (boar/pig cue), with a lit front edge for crispness.
   ctx.save();
-  ctx.translate(hx + 1.5, hy - 5.5);
+  ctx.translate(hx + 1.8, hy - 5.2);
   ctx.rotate(-0.5 - pose.ear * 0.5);
+  ctx.fillStyle = rgb(p.outline);
   ctx.beginPath();
-  ctx.ellipse(0, 0, 2.4, 3.8, 0, 0, Math.PI * 2);
+  ctx.moveTo(-2.2, 1.6);
+  ctx.quadraticCurveTo(-1.4, -3.6, 0.6, -4.4); // back edge up to the point
+  ctx.quadraticCurveTo(2.2, -1.4, 2.0, 1.8); // front edge down
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = rgb(p.coatShadow);
+  ctx.beginPath();
+  ctx.moveTo(-1.5, 1.4);
+  ctx.quadraticCurveTo(-0.9, -2.9, 0.5, -3.6);
+  ctx.quadraticCurveTo(1.6, -1.2, 1.4, 1.5);
+  ctx.closePath();
   ctx.fill();
   ctx.restore();
 
@@ -745,36 +734,73 @@ function paintBoar(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.beginPath();
   ctx.ellipse(hx - 1, hy - 0.5, 6.4, 5.7, -0.2, 0, Math.PI * 2);
   ctx.fill();
+  // lit forehead/brow (light from upper-left) — gives the face form & separates
+  // the head from the dark body behind it
+  ctx.fillStyle = rgb(p.coatLight, 0.7);
+  ctx.beginPath();
+  ctx.ellipse(hx - 3.2, hy - 3.0, 3.4, 2.6, -0.35, 0, Math.PI * 2);
+  ctx.fill();
   // cheek shading (lower-right of head)
   ctx.fillStyle = rgb(p.coatShadow);
   ctx.beginPath();
   ctx.ellipse(hx + 1.5, hy + 2, 4, 3, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  // long snout reaching toward lower-left
+  // long snout reaching toward lower-left — a clean tapered MUZZLE that reads
+  // crisply against the head (lit top ridge + shaded underside + a flat snout
+  // disc), so the boar's long-snouted profile is unmistakable at board size.
   ctx.save();
   ctx.translate(hx - 4.5, hy + 2.5);
   ctx.rotate(0.32);
-  // snout outline
+  // snout outline — a tapered wedge (narrows toward the nose disc), not a blob
   ctx.fillStyle = rgb(p.outline);
   ctx.beginPath();
-  ctx.ellipse(-3.4, 0, 6.2, 3.5, 0, 0, Math.PI * 2);
+  ctx.moveTo(2.4, -3.4);
+  ctx.quadraticCurveTo(-3.0, -3.7, -7.0, -2.7); // top edge tapering to the tip
+  ctx.quadraticCurveTo(-9.0, -2.1, -9.2, 0); // round over the nose
+  ctx.quadraticCurveTo(-9.0, 2.1, -7.0, 2.9); // under the tip
+  ctx.quadraticCurveTo(-3.0, 3.8, 2.4, 3.4); // bottom edge back to the cheek
+  ctx.closePath();
   ctx.fill();
-  // snout fill
+  // snout fill (warm dark)
   ctx.fillStyle = rgb(p.snout);
   ctx.beginPath();
-  ctx.ellipse(-3.4, 0, 5.4, 2.9, 0, 0, Math.PI * 2);
+  ctx.moveTo(2.4, -2.7);
+  ctx.quadraticCurveTo(-3.0, -3.0, -6.6, -2.1);
+  ctx.quadraticCurveTo(-8.3, -1.6, -8.5, 0);
+  ctx.quadraticCurveTo(-8.3, 1.6, -6.6, 2.3);
+  ctx.quadraticCurveTo(-3.0, 3.1, 2.4, 2.7);
+  ctx.closePath();
   ctx.fill();
-  // flat nose disc at the tip
+  // lit top RIDGE of the snout (light from upper-left) — separates muzzle from head
+  ctx.fillStyle = rgb(p.coatLight, 0.85);
+  ctx.beginPath();
+  ctx.moveTo(1.8, -2.4);
+  ctx.quadraticCurveTo(-3.0, -2.7, -6.4, -1.9);
+  ctx.quadraticCurveTo(-3.0, -1.5, 1.8, -1.3);
+  ctx.closePath();
+  ctx.fill();
+  // shaded underside of the muzzle
+  ctx.fillStyle = rgb(p.coatShadow, 0.6);
+  ctx.beginPath();
+  ctx.moveTo(1.8, 2.4);
+  ctx.quadraticCurveTo(-3.0, 2.8, -6.2, 2.0);
+  ctx.quadraticCurveTo(-3.0, 1.6, 1.8, 1.4);
+  ctx.closePath();
+  ctx.fill();
+  // flat round nose disc at the tip (the boar's blunt snout plate)
   ctx.fillStyle = rgb(p.coatShadow);
   ctx.beginPath();
-  ctx.ellipse(-8.2, 0, 2.0, 2.4, 0, 0, Math.PI * 2);
+  ctx.ellipse(-8.4, 0, 1.9, 2.5, 0, 0, Math.PI * 2);
   ctx.fill();
-  // nostrils
+  ctx.strokeStyle = rgb(p.outline, 0.7);
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+  // nostrils — two clear slits on the disc
   ctx.fillStyle = rgb([16, 12, 14]);
-  for (const ny of [-0.9, 0.9]) {
+  for (const ny of [-0.95, 0.95]) {
     ctx.beginPath();
-    ctx.ellipse(-8.4, ny, 0.5, 0.7, 0, 0, Math.PI * 2);
+    ctx.ellipse(-8.6, ny, 0.5, 0.85, 0.1, 0, Math.PI * 2);
     ctx.fill();
   }
   ctx.restore(); // end snout
@@ -792,25 +818,51 @@ function paintBoar(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   }
 
   // ── TUSKS — two prominent curved WHITE tusks (palette-locked bright) ────────
-  // they sweep up-and-out from the lower jaw near the snout base
-  for (const side of [1, 0.6] as const) {
-    // outline
-    ctx.strokeStyle = rgb(p.outline);
-    ctx.lineWidth = 2.6 * side;
+  // The boar signature, and the key tell vs a pig/hog (which has none): two
+  // THIN, sharply-pointed ivory prongs jutting from the lower jaw at the snout
+  // base and curving UP & slightly OUT past the muzzle's side — NOT a fan over
+  // the face. Each is a slim tapered sliver (root → fine point). A far tusk
+  // sits behind (dimmer + smaller); the near tusk is bold up front.
+  const drawTusk = (rootX: number, rootY: number, scale: number, alpha: number): void => {
+    // tip curls up and a touch outward (lower-left). Slim: ~2px root → point.
+    const tipX = rootX - 1.7 * scale;
+    const tipY = rootY - 5.0 * scale;
+    const ctlX = rootX - 1.9 * scale; // control bows the curve outward
+    const ctlY = rootY - 2.7 * scale;
+    const halfRoot = 0.95 * scale; // slim root half-width
+    ctx.save();
+    ctx.globalAlpha = clamp01(alpha);
+    // dark outline pass (a slightly fatter sliver behind the ivory)
+    ctx.fillStyle = rgb(p.outline);
+    ctx.beginPath();
+    ctx.moveTo(rootX - halfRoot - 0.45, rootY + 0.5);
+    ctx.quadraticCurveTo(ctlX - 0.45, ctlY, tipX, tipY); // outer edge to the point
+    ctx.quadraticCurveTo(ctlX + halfRoot + 0.3, ctlY + 0.6, rootX + halfRoot + 0.45, rootY + 0.5); // inner edge back
+    ctx.closePath();
+    ctx.fill();
+    // bright ivory tusk
+    ctx.fillStyle = rgb(p.tusk);
+    ctx.beginPath();
+    ctx.moveTo(rootX - halfRoot, rootY + 0.3);
+    ctx.quadraticCurveTo(ctlX, ctlY, tipX, tipY);
+    ctx.quadraticCurveTo(ctlX + halfRoot, ctlY + 0.6, rootX + halfRoot, rootY + 0.3);
+    ctx.closePath();
+    ctx.fill();
+    // a thin shaded edge along the inner curve for roundness
+    ctx.strokeStyle = rgb([196, 190, 168], 0.7);
+    ctx.lineWidth = 0.5 * scale;
     ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(hx - 6.5, hy + 4 + (1 - side) * 1.5);
-    ctx.quadraticCurveTo(hx - 9.5, hy + 2.5, hx - 9.8 - side, hy - 1.5 - side);
+    ctx.moveTo(rootX + halfRoot * 0.3, rootY);
+    ctx.quadraticCurveTo(ctlX + 0.5, ctlY + 0.3, tipX + 0.3 * scale, tipY + 0.6 * scale);
     ctx.stroke();
-    // bright tusk
-    ctx.strokeStyle = rgb(p.tusk);
-    ctx.lineWidth = 1.7 * side;
-    ctx.beginPath();
-    ctx.moveTo(hx - 6.5, hy + 4 + (1 - side) * 1.5);
-    ctx.quadraticCurveTo(hx - 9.5, hy + 2.5, hx - 9.8 - side, hy - 1.5 - side);
-    ctx.stroke();
-  }
-  ctx.lineCap = "butt";
+    ctx.lineCap = "butt";
+    ctx.restore();
+  };
+  // far tusk (set back & inboard, dimmer + smaller) then the bold near tusk,
+  // offset so the two prongs read as a clear pair, not one mass.
+  drawTusk(hx - 4.7, hy + 4.6, 0.8, 0.72);
+  drawTusk(hx - 6.8, hy + 4.4, 1.0, 1.0);
 
   // small dark eye
   ctx.fillStyle = rgb([245, 244, 238]);
@@ -833,7 +885,7 @@ function paintBoar(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
 
   // breath-fog / snort puff at the snout (winter) — drawn OUTSIDE the squash
   // transform so it reads as air, not body. Static base puff + an exhale swell
-  // during the chew-snort. Snout tip sits roughly at (cx − 20, cy + 3.5).
+  // during the snuffle / gore snort. Snout tip sits roughly at (cx − 20, cy + 3.5).
   if (p.breathFogAmt > 0.001) {
     const reach = 5.0 + pose.snort * 3.4;
     ctx.fillStyle = rgb([235, 244, 255], (0.34 + 0.28 * pose.snort) * p.breathFogAmt);

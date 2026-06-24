@@ -7,12 +7,12 @@
 // frost/snow, and the pad's grass/snow/blossom/leaf dressing change — but the
 // seasons swing HARD and the idle is LOUD rather than subtle:
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the pear rocks/leans
-//       ~10–12 design-px at the neck tip with a squash at the base. Anticipation
-//       → peak → settle, zero velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger SHAKE/BOUNCE — a squash-stretch hop
-//       ~12–14 design-px up, with anticipation crouch, stretch on the way up, and
-//       a squash landing that overshoots then settles.
+//   IDLE COMMON  (~6s, win ~1.1s): a slow graceful PENDULUM sway — the bottom-
+//       heavy pear rocks like a weighted toy out to one side, through centre, to
+//       the other, and rights itself. Zero velocity at the window edges (seamless).
+//   IDLE SPECIAL (~18s, win ~1.6s): a BIG deep pendulum swing — a grand slow sway
+//       that nearly tips the pear to one side, swings through to the other, and
+//       settles upright. A top-heavy pendulum, NOT a hop (the pear shape begs for it).
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized `paint(ctx, p,
 // pose)` where `interface P` holds tweenable season params (colours + prop
@@ -577,51 +577,41 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
-}
-
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** Build the idle pose from the wall clock. Two tiers, both PENDULUM sways (the
+ *  pear is bottom-heavy and rocks like a weighted toy — never a hop):
+ *    common a slow graceful sway every ~6s (win 1.1s),
+ *    rare   a big deep swing every ~18s (win 1.6s).
+ *  Each is the product of two factors that are BOTH zero at the window edges, so
+ *  the pose returns to REST with zero value AND zero velocity (seamless loop). */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // ~0.17 rad lean → tip travels ~ (PEAR_PIVOT_Y − PEAR_TOP) ≈ 28 px arm × 0.17
-  // ≈ 10–12 px sway at the neck tip, with a little base squat.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: a slow, graceful PENDULUM sway (~6s, win 1.1s) ──
+  // Out to one side, through centre, to the other, and settle. Slower + more
+  // graceful than a nervous wobble; pivots near the base so the neck arcs.
+  const qC = actionQ(t, 6.0, 1.1, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.17 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
-    // faint windup tilt from the seamless-curve toolkit (still 0 at edges)
-    pose.lean += 0.02 * anticipate(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0 envelope
+    const swing = Math.sin(qC * Math.PI * 2); // one full L→centre→R→centre swing
+    pose.lean += 0.17 * env * swing;
+    // weight settles into the round base as it leans (tiny squat, 0 at edges)
+    pose.squashY += -0.045 * hump(qC);
+    pose.squashX += 0.04 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12–14px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  // ── RARE: a BIG deep pendulum swing (~18s, win 1.6s) — NOT a hop ──
+  // A grand slow sway: the top-heavy neck describes a wide arc to one side,
+  // swings through to the other, and the pear rights itself.
+  const qS = actionQ(t, 18.0, 1.6, 3.0); // phase 3s so it never overlaps the common
   if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air; // 0..1 in the air
-    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+    const env = Math.sin(Math.PI * qS); // 0..1..0 overall envelope
+    const swing = Math.sin(qS * Math.PI * 2); // one big L→R swing
+    pose.lean += 0.30 * env * swing;
+    // a small pendulum rise off the low side at the apex of each lean, then
+    // settle (a roll on the round bottom — not a jump). Zero at the edges.
+    pose.bob += -1.6 * hump(qS) * Math.abs(swing);
+    pose.squashY += -0.05 * hump(qS);
+    pose.squashX += 0.05 * hump(qS);
   }
 
   return pose;
@@ -687,7 +677,7 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the bounce + glossy ripe pear is the show.
+      // Summer: no extra dressing — the slow pendulum sway + glossy pear is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

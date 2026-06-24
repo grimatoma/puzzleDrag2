@@ -199,8 +199,10 @@ interface P {
   blossomAmt: number; // 0..1 a blossom on the pad
   fallenLeafAmt: number; // 0..1 a fallen leaf (pad + perched on the head)
   breathFogAmt: number; // 0..1 breath puff at the beak
-  scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
+  scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha) — disabled here
+  scarfColor: RGB; // scarf colour (kept for tween plumbing; scarf unused on the dodo)
+  capAmt: number; // 0..1 a little winter BOBBLE/WOOL CAP on the head (tweened alpha)
+  capColor: RGB; // cap knit colour
 }
 
 // Four BOLD season presets. The dodo stays the SAME round grey-brown big-beaked
@@ -231,6 +233,8 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     scarfAmt: 0,
     scarfColor: [206, 64, 60],
+    capAmt: 0,
+    capColor: [180, 70, 60],
   },
   // Summer — full glossy plumage (PEAK), saturated green pad, bright warm light.
   Summer: {
@@ -256,6 +260,8 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     scarfAmt: 0,
     scarfColor: [206, 64, 60],
+    capAmt: 0,
+    capColor: [180, 70, 60],
   },
   // Autumn — warm-tinted fuller plumage, a fallen leaf (pad + on the head),
   // dulled gloss, amber light.
@@ -282,6 +288,8 @@ const SP: Record<SeasonName, P> = {
     breathFogAmt: 0,
     scarfAmt: 0,
     scarfColor: [206, 64, 60],
+    capAmt: 0,
+    capColor: [180, 70, 60],
   },
   // Winter — FLUFFED extra-puffy plumage (very round + cute), snow on the back,
   // a little SCARF, a breath-fog puff, frost, cool blue-grey light; snowy pad.
@@ -307,8 +315,10 @@ const SP: Record<SeasonName, P> = {
     blossomAmt: 0,
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
-    scarfAmt: 1, // a little scarf appears in winter
+    scarfAmt: 0, // SCARF disabled on the dodo — it wears a BOBBLE CAP instead
     scarfColor: [206, 64, 60],
+    capAmt: 1, // a little bobble cap appears in winter
+    capColor: [180, 70, 60], // warm red wool cap
   },
 };
 
@@ -336,6 +346,8 @@ function lerpP(a: P, b: P, t: number): P {
     breathFogAmt: lerp(a.breathFogAmt, b.breathFogAmt, t),
     scarfAmt: lerp(a.scarfAmt, b.scarfAmt, t),
     scarfColor: lerpRGB(a.scarfColor, b.scarfColor, t),
+    capAmt: lerp(a.capAmt, b.capAmt, t),
+    capColor: lerpRGB(a.capColor, b.capColor, t),
   };
 }
 
@@ -353,6 +365,7 @@ function clampP(p: P): P {
     fallenLeafAmt: clamp01(p.fallenLeafAmt),
     breathFogAmt: clamp01(p.breathFogAmt),
     scarfAmt: clamp01(p.scarfAmt),
+    capAmt: clamp01(p.capAmt),
   };
 }
 
@@ -734,6 +747,57 @@ function paintDodo(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
     ctx.restore();
   }
 
+  // ── BOBBLE / WOOL CAP (winter) — a snug knit cap pulled over the dodo's crown
+  // with a fuzzy turn-up brim and a little pom-pom on top. Tweened alpha
+  // (winter-only, seamless); drawn in the head frame so it rides with the bob. ──
+  if (p.capAmt > 0.01) {
+    ctx.save();
+    ctx.globalAlpha = clamp01(p.capAmt);
+    const dk: RGB = [
+      Math.max(0, p.capColor[0] - 45),
+      Math.max(0, p.capColor[1] - 40),
+      Math.max(0, p.capColor[2] - 35),
+    ];
+    // the knit dome hugging the top of the head (clipped to the upper crown)
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(hx - 8, hy - 12, 16, 7.2); // only the crown half
+    ctx.clip();
+    ctx.fillStyle = rgba(p.capColor);
+    ctx.beginPath();
+    ctx.ellipse(hx, hy - 1.2, 6.2, 6.4, -0.12, 0, Math.PI * 2);
+    ctx.fill();
+    // a couple of knit ribs
+    ctx.strokeStyle = rgba(dk, 0.7);
+    ctx.lineWidth = 0.7;
+    for (const rx of [-3, 0, 3]) {
+      ctx.beginPath();
+      ctx.moveTo(hx + rx, hy - 7.4);
+      ctx.lineTo(hx + rx + 0.6, hy - 4.4);
+      ctx.stroke();
+    }
+    ctx.restore();
+    // fuzzy turn-up brim across the forehead
+    ctx.fillStyle = rgba(dk);
+    ctx.beginPath();
+    ctx.ellipse(hx - 0.2, hy - 4.6, 6.6, 1.8, -0.12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba([255, 255, 255], 0.16);
+    ctx.beginPath();
+    ctx.ellipse(hx - 2.2, hy - 5.0, 2.6, 0.9, -0.12, 0, Math.PI * 2);
+    ctx.fill();
+    // little pom-pom on top
+    ctx.fillStyle = rgba([245, 245, 240]);
+    ctx.beginPath();
+    ctx.arc(hx + 0.6, hy - 8.0, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba([210, 214, 220], 0.7);
+    ctx.beginPath();
+    ctx.arc(hx + 1.2, hy - 7.5, 0.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
   ctx.restore(); // end squash/stretch + lean transform
 
   // ── SCARF (winter) — a little knitted band around the neck, below the head ──
@@ -874,6 +938,7 @@ function makeTransition(fromIdx: 0 | 1 | 2) {
     blended.frostAmt = lerp(a.frostAmt, b.frostAmt, kSnow);
     blended.breathFogAmt = lerp(a.breathFogAmt, b.breathFogAmt, kSnow);
     blended.scarfAmt = lerp(a.scarfAmt, b.scarfAmt, kSnow);
+    blended.capAmt = lerp(a.capAmt, b.capAmt, kSnow); // cap LAGs like the scarf
 
     paint(ctx, blended, REST);
 

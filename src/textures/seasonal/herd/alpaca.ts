@@ -9,8 +9,9 @@
 // fluffy topknot, perky ears, and big gentle eyes. Seasons change only its
 // fleece VOLUME (recently-shorn slimmer in spring → thick fluffy winter
 // fleece), the pad colour, the light wash, and BOLD dressing — snow on the
-// back, a little winter SCARF, a breath-fog puff, blossoms, a fallen leaf,
-// frost. The animal's identity colours never change and the silhouette outline
+// back, a little winter SCARF (a soft PLUM knit), a breath-fog puff, blossoms,
+// a fallen leaf, frost. The animal's identity colours never change and the
+// silhouette outline
 // is identical for every `P` (only volume scales it). Never morphs into
 // another animal — it keeps the signature long neck + topknot.
 //
@@ -55,7 +56,11 @@ function rgba(c: RGB, a = 1): string {
   const r = Math.round(clamp01(c[0] / 255) * 255);
   const g = Math.round(clamp01(c[1] / 255) * 255);
   const b = Math.round(clamp01(c[2] / 255) * 255);
-  return `rgba(${r},${g},${b},${clamp01(a)})`;
+  // Quantize alpha to 1e-3 (far finer than 8-bit alpha) so IEEE-754 float noise
+  // from `lerp(..,1)` in transitions can't leak into the output string — keeps
+  // transition(1) byte-identical to draw(to) with no visible change.
+  const al = Math.round(clamp01(a) * 1000) / 1000;
+  return `rgba(${r},${g},${b},${al})`;
 }
 
 // quintic smoothstep — zero first & second derivative at both ends
@@ -171,7 +176,9 @@ interface P {
   lightWash: RGB; // overall colour-of-light wash
   lightWashAmt: number; // 0..1 strength of the light wash
   fleeceVolume: number; // 0..1 BOLD puff of the fleece (shorn → thick winter)
+  fleeceTuft: number; // 0..1 internal wool curl/tuft DETAIL + rim chunkiness
   glossAmt: number; // 0..1 healthy fleece gloss (peak summer → dulled autumn)
+  dewAmt: number; // 0..1 dewy sparkle on the spring pad
   frostAmt: number; // 0..1 frost sparkle on the fleece
   backSnowAmt: number; // 0..1 snow settled on its back
   padSnowAmt: number; // 0..1 snow blanket on the pad
@@ -179,7 +186,7 @@ interface P {
   fallenLeafAmt: number; // 0..1 fallen leaf on the pad
   breathFogAmt: number; // 0..1 breath puff at the nose
   scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked, fades in via alpha)
+  scarfColor: RGB; // scarf colour (locked plum, fades in via alpha)
 }
 
 // Four BOLD season presets. The alpaca stays the SAME cream/tan fluffy alpaca;
@@ -197,7 +204,9 @@ const SP: Record<SeasonName, P> = {
     lightWash: [200, 238, 255], // cool-bright
     lightWashAmt: 0.2,
     fleeceVolume: 0.08, // BOLD: clearly recently-shorn, sleeker coat
-    glossAmt: 0.28,
+    fleeceTuft: 0.12, // sheared: a smooth rim, only the faintest curl detail
+    glossAmt: 0.32, // a touch of freshly-washed sheen on the short coat
+    dewAmt: 0.85, // dewy spring pad
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
@@ -205,7 +214,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [120, 52, 110],
   },
   Summer: {
     fleeceLight: [246, 232, 202], // full healthy warm cream/tan (PEAK)
@@ -218,7 +227,9 @@ const SP: Record<SeasonName, P> = {
     lightWash: [255, 240, 188], // bright warm
     lightWashAmt: 0.22,
     fleeceVolume: 0.52, // full healthy fleece
+    fleeceTuft: 0.4, // sleek but defined — clean curls under a glossy sheen
     glossAmt: 0.95, // glossy peak
+    dewAmt: 0,
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
@@ -226,7 +237,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [120, 52, 110],
   },
   Autumn: {
     fleeceLight: [240, 224, 188], // warm-tinted tan
@@ -239,7 +250,9 @@ const SP: Record<SeasonName, P> = {
     lightWash: [255, 188, 104], // low amber, BOLD
     lightWashAmt: 0.32,
     fleeceVolume: 0.78, // warm-tinted fuller fleece
-    glossAmt: 0.3, // dulled gloss
+    fleeceTuft: 0.78, // fuller, fluffier — deeper curls, chunkier woolly rim
+    glossAmt: 0.22, // dulled, matte autumn coat
+    dewAmt: 0,
     frostAmt: 0,
     backSnowAmt: 0,
     padSnowAmt: 0,
@@ -247,7 +260,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.95,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [120, 52, 110],
   },
   Winter: {
     fleeceLight: [250, 246, 234], // cool-lit cream, still clearly cream
@@ -260,15 +273,18 @@ const SP: Record<SeasonName, P> = {
     lightWash: [192, 214, 250], // cool blue-grey, BOLD
     lightWashAmt: 0.34,
     fleeceVolume: 1, // BOLD: thick fluffy winter fleece
-    glossAmt: 0.18,
-    frostAmt: 0.85,
+    fleeceTuft: 1, // thickest, chunkiest curls — deep woolly winter texture
+    glossAmt: 0.12, // matte; the sheen reads as frost, not gloss
+    dewAmt: 0,
+    frostAmt: 0.9, // crisper frost
+
     backSnowAmt: 0.92,
     padSnowAmt: 0.95,
     blossomAmt: 0,
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [120, 52, 110],
   },
 };
 
@@ -284,7 +300,9 @@ function lerpP(a: P, b: P, t: number): P {
     lightWash: lerpRGB(a.lightWash, b.lightWash, t),
     lightWashAmt: lerp(a.lightWashAmt, b.lightWashAmt, t),
     fleeceVolume: lerp(a.fleeceVolume, b.fleeceVolume, t),
+    fleeceTuft: lerp(a.fleeceTuft, b.fleeceTuft, t),
     glossAmt: lerp(a.glossAmt, b.glossAmt, t),
+    dewAmt: lerp(a.dewAmt, b.dewAmt, t),
     frostAmt: lerp(a.frostAmt, b.frostAmt, t),
     backSnowAmt: lerp(a.backSnowAmt, b.backSnowAmt, t),
     padSnowAmt: lerp(a.padSnowAmt, b.padSnowAmt, t),
@@ -302,7 +320,9 @@ function clampP(p: P): P {
     ...p,
     lightWashAmt: clamp01(p.lightWashAmt),
     fleeceVolume: clamp01(p.fleeceVolume),
+    fleeceTuft: clamp01(p.fleeceTuft),
     glossAmt: clamp01(p.glossAmt),
+    dewAmt: clamp01(p.dewAmt),
     frostAmt: clamp01(p.frostAmt),
     backSnowAmt: clamp01(p.backSnowAmt),
     padSnowAmt: clamp01(p.padSnowAmt),
@@ -354,6 +374,21 @@ function paintPad(ctx: CanvasRenderingContext2D, p: P): void {
   ctx.beginPath();
   ctx.ellipse(-5, 17.5, 9, 2, 0, 0, Math.PI * 2);
   ctx.fill();
+
+  // dewy sparkle on the fresh spring grass — tiny crisp droplet glints catching
+  // the cool-bright light (fixed positions → deterministic).
+  if (p.dewAmt > 0.001) {
+    for (const [dx, dy] of [[-13, 17.6], [-3, 18.6], [7, 17.4], [13, 18.2], [2, 16.8]] as const) {
+      ctx.fillStyle = rgba([214, 248, 230], 0.5 * p.dewAmt);
+      ctx.beginPath();
+      ctx.arc(dx, dy, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba([255, 255, 255], 0.9 * p.dewAmt);
+      ctx.beginPath();
+      ctx.arc(dx - 0.3, dy - 0.4, 0.42, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
 
   // snow blanket over the pad (winter) — BOLD coverage
   if (p.padSnowAmt > 0.001) {
@@ -433,8 +468,18 @@ function paintLeg(ctx: CanvasRenderingContext2D, p: P, x: number, topY: number, 
   ctx.restore();
 }
 
+// the fleece body radii for a given `p` (shared by the body and its dressing so
+// snow/frost track the actual silhouette as volume changes between seasons).
+function fleeceRadii(p: P): { rx: number; ry: number } {
+  // BOLD volume: from clearly-shorn slim to thick fluffy winter fleece
+  const vol = 0.78 + p.fleeceVolume * 0.5;
+  return { rx: 11.5 * vol, ry: 8.4 * vol };
+}
+
 // the fluffy fleece body — a rounded woolly mass whose lumps grow BOLDLY with
 // volume. (constant silhouette: only the puff scale changes between seasons.)
+// `scallop` scales the perimeter wool lumps; the lump COUNT grows with the
+// season's tuft amount so a thick winter coat reads chunkier than a shorn one.
 function paintFleeceBody(
   ctx: CanvasRenderingContext2D,
   p: P,
@@ -443,26 +488,86 @@ function paintFleeceBody(
   fill: string,
   scallop: number,
 ): void {
-  // BOLD volume: from clearly-shorn slim to thick fluffy winter fleece
-  const vol = 0.78 + p.fleeceVolume * 0.5;
-  const rx = 11.5 * vol;
-  const ry = 8.4 * vol;
+  const { rx, ry } = fleeceRadii(p);
   ctx.fillStyle = fill;
   // base body ellipse
   ctx.beginPath();
   ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
   ctx.fill();
-  // scalloped wool lumps around the perimeter — bigger with volume
-  const lumps = 11;
-  const lumpR = (1.8 + p.fleeceVolume * 2.4) * scallop;
+  // scalloped wool lumps around the perimeter — bigger AND more numerous with
+  // volume/tuft, so a shorn spring coat has a smoother rim and a thick winter
+  // coat has a denser, chunkier woolly edge.
+  const lumps = Math.round(11 + p.fleeceTuft * 6);
+  const lumpR = (1.7 + p.fleeceVolume * 2.3) * scallop;
   for (let i = 0; i < lumps; i++) {
     const a = (i / lumps) * Math.PI * 2 - Math.PI / 2;
-    const lx = cx + Math.cos(a) * rx * 0.98;
-    const ly = cy + Math.sin(a) * ry * 0.98;
+    // alternate the rim radius a touch so the curls don't sit on a perfect
+    // ellipse — reads as hand-tufted wool, crisper than a smooth blob.
+    const wob = 0.95 + (i % 2 === 0 ? 0.06 : -0.02) * (0.5 + p.fleeceTuft);
+    const lx = cx + Math.cos(a) * rx * wob;
+    const ly = cy + Math.sin(a) * ry * wob;
     ctx.beginPath();
-    ctx.arc(lx, ly, lumpR, 0, Math.PI * 2);
+    ctx.arc(lx, ly, lumpR * (i % 2 === 0 ? 1 : 0.82), 0, Math.PI * 2);
     ctx.fill();
   }
+}
+
+// Internal fleece DETAIL drawn over the light body pass: a curved core-shadow
+// band that grounds the rounded form, then short curl/tuft strokes so the wool
+// reads textured rather than a flat soft blob. All amounts scale with the
+// season's `fleeceTuft`, and the layout is DETERMINISTIC (fixed offsets), so
+// transitions stay seamless. Drawn entirely inside the body ellipse.
+function paintFleeceDetail(ctx: CanvasRenderingContext2D, p: P, cx: number, cy: number): void {
+  const { rx, ry } = fleeceRadii(p);
+  const tuft = clamp01(p.fleeceTuft);
+
+  // 1) soft curved core-shadow along the lower-right underbelly (light is
+  //    upper-left) — gives the fleece roundness instead of reading flat.
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx * 0.98, ry * 0.98, 0, 0, Math.PI * 2);
+  ctx.clip();
+  ctx.fillStyle = rgba(p.fleeceShadow, 0.5);
+  ctx.beginPath();
+  ctx.ellipse(cx + rx * 0.34, cy + ry * 0.42, rx * 0.8, ry * 0.66, -0.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // 2) curl/tuft strokes — short curved arcs across the body, denser & deeper in
+  //    a fuller coat. Two passes: a shadow tick then a light tick just up-left of
+  //    it (carved-wool look). Fixed seed points → deterministic & tween-safe.
+  if (tuft <= 0.001) return;
+  const curls: Array<[number, number, number]> = [
+    // [u, v, rot] in unit-ellipse space (−1..1), rot in radians
+    [-0.45, -0.35, 0.3], [-0.1, -0.55, -0.2], [0.32, -0.4, 0.25],
+    [-0.6, 0.05, 0.1], [-0.22, -0.05, -0.15], [0.18, -0.08, 0.2],
+    [0.55, -0.05, -0.1], [-0.4, 0.4, 0.3], [0.05, 0.42, -0.2],
+    [0.42, 0.36, 0.25], [-0.05, 0.15, 0.0],
+  ];
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx * 0.96, ry * 0.96, 0, 0, Math.PI * 2);
+  ctx.clip();
+  const span = (2.2 + tuft * 1.8); // arc width in px
+  ctx.lineCap = "round";
+  for (const [u, v, rot] of curls) {
+    const px = cx + u * rx;
+    const py = cy + v * ry;
+    // shadow tick
+    ctx.strokeStyle = rgba(p.fleeceShadow, 0.5 + 0.25 * tuft);
+    ctx.lineWidth = 0.9 + tuft * 0.7;
+    ctx.beginPath();
+    ctx.arc(px, py + 0.4, span, rot + 0.5, rot + 0.5 + Math.PI * 0.8);
+    ctx.stroke();
+    // light tick just up-left, for the carved highlight between curls
+    ctx.strokeStyle = rgba(p.fleeceLight, 0.6);
+    ctx.lineWidth = 0.8 + tuft * 0.5;
+    ctx.beginPath();
+    ctx.arc(px - 0.7, py - 0.5, span * 0.92, rot + 0.5, rot + 0.5 + Math.PI * 0.7);
+    ctx.stroke();
+  }
+  ctx.lineCap = "butt";
+  ctx.restore();
 }
 
 // the long upright neck + small head, swung by `swing` (radians) for idle sway
@@ -507,6 +612,26 @@ function paintNeckHead(
   ctx.quadraticCurveTo(-4.2, -9, neckTopX - 1, neckTopY - 1);
   ctx.stroke();
   ctx.lineCap = "butt";
+
+  // neck wool texture — short curl ticks down the woolly column so the long
+  // neck doesn't read as a smooth tube. Density scales with fleeceTuft;
+  // positions are fixed (deterministic, tween-safe).
+  {
+    const tuft = clamp01(p.fleeceTuft);
+    if (tuft > 0.001) {
+      ctx.lineCap = "round";
+      for (const [ny, side] of [[-4, 1], [-7, -1], [-10, 1], [-13, -1], [-5.5, -1]] as const) {
+        const cxn = -2.4 * (-(ny) / 16); // follow the column's lean toward the top
+        // shadow tick
+        ctx.strokeStyle = rgba(p.fleeceShadow, 0.5 + 0.2 * tuft);
+        ctx.lineWidth = 0.8 + tuft * 0.5;
+        ctx.beginPath();
+        ctx.arc(cxn + side * 1.4, ny, 1.4 + tuft * 0.8, 0.2, 0.2 + Math.PI * 0.7);
+        ctx.stroke();
+      }
+      ctx.lineCap = "butt";
+    }
+  }
 
   // ── HEAD — small, at the top of the neck, turned toward lower-left ──────────
   // the head wobbles a touch extra during the head-shake
@@ -555,6 +680,16 @@ function paintNeckHead(
     ctx.beginPath();
     ctx.arc(hx + tx, hy + ty, tr * (0.82 + p.fleeceVolume * 0.4), 0, Math.PI * 2);
     ctx.fill();
+  }
+  // a little frost/snow dusting CROWNING the topknot (winter) — sits on the
+  // upward crown only, so the head reads cold without whiting out the face.
+  if (p.frostAmt > 0.001) {
+    ctx.fillStyle = rgba([250, 253, 255], 0.9 * clamp01(p.frostAmt));
+    for (const [tx, ty, tr] of [[-1.2, -4.6, 1.3], [0.9, -4.9, 1.1], [-0.2, -5.4, 0.9]] as const) {
+      ctx.beginPath();
+      ctx.arc(hx + tx, hy + ty, tr * (0.82 + p.fleeceVolume * 0.4), 0, Math.PI * 2);
+      ctx.fill();
+    }
   }
 
   // muzzle — a short darker snout toward lower-left (gentle face)
@@ -679,6 +814,19 @@ function paintAlpaca(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.translate(-1.4, -1.6);
   paintFleeceBody(ctx, p, bx, by, rgba(p.fleeceLight), 0.82);
   ctx.restore();
+  // internal wool texture — core-shadow band + curl/tuft strokes (sharpens the
+  // fleece so it reads tufted, not a flat soft blob). Scales with fleeceTuft.
+  paintFleeceDetail(ctx, p, bx, by);
+  // crisp defining rim — a thin outline-tinted stroke just inside the lit edge,
+  // so the silhouette reads sharp at ~64px instead of soft.
+  {
+    const { rx, ry } = fleeceRadii(p);
+    ctx.strokeStyle = rgba(p.outline, 0.45);
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.ellipse(bx, by, rx * 1.0, ry * 1.0, 0, Math.PI * 0.15, Math.PI * 0.95);
+    ctx.stroke();
+  }
 
   // healthy fleece GLOSS — a soft highlight sheen on the wool (peak in summer,
   // dulled in autumn/winter). Painted as soft-light so it reads as sheen.
@@ -698,31 +846,65 @@ function paintAlpaca(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.arc(bx + 11, by - 2, 2.2 + p.fleeceVolume * 0.8, 0, Math.PI * 2);
   ctx.fill();
 
-  // snow settled on the back (winter) — BOLD white cap on top of the fleece
+  // snow settled on the back (winter) — a crisp white cap riding the TOP of the
+  // fleece. Sits on the actual silhouette (tracks fleece radii) and is a domed
+  // crescent, NOT a full coat — the cream fleece stays clearly visible below.
   if (p.backSnowAmt > 0.001) {
-    ctx.fillStyle = rgba([248, 252, 255], 0.95 * p.backSnowAmt);
+    const { rx, ry } = fleeceRadii(p);
+    const capY = by - ry * 0.78;
+    ctx.save();
+    // clip to the upper fleece so the cap can't bleed past the silhouette
     ctx.beginPath();
-    ctx.ellipse(bx - 1, by - 7.2, 9 * (0.9 + p.fleeceVolume * 0.35), 3.4, -0.08, 0, Math.PI * 2);
+    ctx.ellipse(bx, by, rx * 1.04, ry * 1.04, 0, 0, Math.PI * 2);
+    ctx.clip();
+    // domed snow crescent across the back ridge
+    ctx.fillStyle = rgba([248, 252, 255], 0.96 * p.backSnowAmt);
+    ctx.beginPath();
+    ctx.ellipse(bx - 0.5, capY, rx * 0.82, ry * 0.5, -0.06, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = rgba([255, 255, 255], 0.9 * p.backSnowAmt);
-    for (const [dx, dy] of [[-5, -8], [0, -8.6], [5, -7.6], [-2, -9]] as const) {
+    // crisp scalloped lower edge of the cap (reads as settled snow, not a smear)
+    ctx.fillStyle = rgba([255, 255, 255], 0.95 * p.backSnowAmt);
+    for (const dx of [-7, -3.2, 0.6, 4.2, 7.4]) {
+      const ex = bx + dx * (0.9 + p.fleeceVolume * 0.2);
       ctx.beginPath();
-      ctx.arc(bx + dx, by + dy, 1.6 + p.fleeceVolume * 0.5, 0, Math.PI * 2);
+      ctx.arc(ex, capY + ry * 0.32, 1.5 + p.fleeceVolume * 0.5, 0, Math.PI * 2);
       ctx.fill();
     }
+    // faint blue under-shade beneath the cap, so the white snow pops off cream
+    ctx.fillStyle = rgba([196, 214, 240], 0.5 * p.backSnowAmt);
+    ctx.beginPath();
+    ctx.ellipse(bx - 0.5, capY + ry * 0.42, rx * 0.72, ry * 0.22, -0.06, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
   }
 
-  // frost sparkle across the fleece (winter)
+  // frost sparkle across the fleece (winter) — fine ice crystals (a tiny 4-point
+  // glint each) scattered over the wool, plus a cool frost rim along the lower
+  // edge. Crisper than plain dots; the fleece colour still shows through.
   if (p.frostAmt > 0.001) {
-    ctx.fillStyle = rgba([255, 255, 255], 0.85 * p.frostAmt);
     const pts: Array<[number, number]> = [
-      [-7, 0], [-3, 4], [4, -2], [7, 2], [0, -3], [-4, -5], [6, 4],
+      [-7, 0], [-3, 4], [4, -2], [7, 2], [0, -3], [-4, -5], [6, 4], [-9, 3], [2, 5],
     ];
+    ctx.strokeStyle = rgba([255, 255, 255], 0.9 * p.frostAmt);
+    ctx.lineWidth = 0.7;
+    ctx.lineCap = "round";
     for (const [fx, fy] of pts) {
+      // tiny + shaped sparkle
       ctx.beginPath();
-      ctx.arc(bx + fx, by + fy, 0.8, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.moveTo(bx + fx - 1.0, by + fy);
+      ctx.lineTo(bx + fx + 1.0, by + fy);
+      ctx.moveTo(bx + fx, by + fy - 1.0);
+      ctx.lineTo(bx + fx, by + fy + 1.0);
+      ctx.stroke();
     }
+    ctx.lineCap = "butt";
+    // cool frost rim hugging the lower-right underbelly
+    const { rx, ry } = fleeceRadii(p);
+    ctx.strokeStyle = rgba([214, 230, 248], 0.55 * p.frostAmt);
+    ctx.lineWidth = 1.1;
+    ctx.beginPath();
+    ctx.ellipse(bx, by, rx * 0.99, ry * 0.99, 0, Math.PI * 0.1, Math.PI * 0.92);
+    ctx.stroke();
   }
 
   // ── NECK + HEAD — long upright neck rising from the front of the fleece ─────

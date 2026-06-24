@@ -232,25 +232,27 @@ function branchSilhouette(
     BRANCHES.forEach(([cx, cy, tx, ty, w], idx) => {
       const s = sway * (0.4 + Math.abs(tx) / 24);
       const load = snowLoad;
-      // fat snow base sitting on the upper side of the limb (offset up a touch)
+      // A SLIM snow ridge riding only the upper side of each limb, so the dark
+      // bare branch reads between the ridges instead of being buried (the winter
+      // "white-out" fix — roughly half the old stroke widths).
       ctx.strokeStyle = "#dfe9f6";
-      ctx.lineWidth = (w + 3.4) * load;
+      ctx.lineWidth = (w * 0.5 + 0.4) * load; // a thin cap, narrower than the limb
       ctx.lineCap = "round";
       ctx.beginPath();
-      ctx.moveTo(0, -3.0);
-      ctx.quadraticCurveTo(cx + s * 0.5, cy - 1.6, tx + s, ty - 1.4);
+      ctx.moveTo(0, -3.4);
+      ctx.quadraticCurveTo(cx + s * 0.5, cy - 1.9, tx + s, ty - 1.7);
       ctx.stroke();
       // bright crown on top of the snow
       ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = (w + 1.0) * load;
+      ctx.lineWidth = (w * 0.5 - 0.2) * load;
       ctx.beginPath();
-      ctx.moveTo(0, -3.4);
-      ctx.quadraticCurveTo(cx + s * 0.5, cy - 2.2, tx + s, ty - 2.0);
+      ctx.moveTo(0, -3.7);
+      ctx.quadraticCurveTo(cx + s * 0.5, cy - 2.4, tx + s, ty - 2.2);
       ctx.stroke();
-      // a plump snow clump on the limb tip
+      // a small snow clump on the limb tip
       ctx.fillStyle = "#ffffff";
       ctx.beginPath();
-      ctx.ellipse(tx + s, ty - 1.6, (2.8 + (idx % 2) * 0.8) * load, (1.9 + (idx % 2) * 0.4) * load, (tx < 0 ? -0.5 : 0.5), 0, Math.PI * 2);
+      ctx.ellipse(tx + s, ty - 1.9, (1.2 + (idx % 2) * 0.4) * load, (0.9 + (idx % 2) * 0.2) * load, (tx < 0 ? -0.5 : 0.5), 0, Math.PI * 2);
       ctx.fill();
     });
   }
@@ -512,6 +514,9 @@ function autumnOak(
     const ly = -8 + prog * 28;
     const lx = sx + Math.sin(prog * Math.PI * 2 + phase * 6) * amp;
     ctx.save();
+    // Fade in at the canopy, out as it nears the pad, so the drift loop wraps
+    // with zero visible leaf (seamless — no pop on loop entry).
+    ctx.globalAlpha = Math.sin(Math.PI * prog);
     ctx.fillStyle = autumnColors(hue)[1];
     ctx.translate(lx, ly);
     ctx.rotate(prog * Math.PI * 3 + phase * 4);
@@ -692,7 +697,9 @@ function drawOakAutumn(ctx: CanvasRenderingContext2D): void {
   autumnOak(ctx, 0, 0, 0.25, 0);
 }
 function animOakAutumn(ctx: CanvasRenderingContext2D, t: number): void {
-  const fall = (t * 0.22) % 1; // steady ambient drift
+  // Seed the drift at the still's t=0 phase (0.25) so anim(0) ≡ drawOakAutumn —
+  // no leaf-jump when the idle loop (re)enters at rest.
+  const fall = (t * 0.22 + 0.25) % 1;
   const gust = actionQ(t, SPECIAL_PERIOD, SPECIAL_WIN, SPECIAL_PERIOD / 2);
   autumnOak(ctx, swayAt(t), bobAt(t), fall, gust < 0 ? 0 : gust);
 }

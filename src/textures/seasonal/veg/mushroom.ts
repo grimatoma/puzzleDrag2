@@ -4,7 +4,18 @@
 // mushrooms — bright RED domed caps with cream spots on plump cream stems on a
 // low grass pad. Identity is constant; the seasons swing HARD on colour + cap
 // size/openness + a real seasonal PROP (blossom / fallen leaf / snow cap + base
-// snow + frost), and the idle is LOUD rather than a subtle breath.
+// snow + frost). Mushrooms DON'T hop — so the idle is its own quiet, in-
+// character beat rather than a shared bounce:
+//
+//   IDLE COMMON  (~6s, win 2.2s): a CAP-BREATHE — a slow soft pulse where the
+//       caps gently expand and contract. squashX and squashY breathe in
+//       OPPOSITION (wide+short ↔ narrow+tall) so the cluster "inhales" without
+//       a hop. Very calm. Zero value AND velocity at the window edges (seamless).
+//   IDLE RARE    (~18s, win 3.0s): a SPORE-PUFF — the caps compress slightly
+//       (squashY dips) and a soft puff of tiny spores releases from under the
+//       caps, drifting outward and downward as it fades. The spores are drawn
+//       as an additive overlay in anim() (never in the still), enveloped to 0 at
+//       the window edges → exactly invisible at t=0.
 //
 // Architecture mirrors `pepper.bold.ts`: a single parameterized
 // `paint(ctx, p, pose)` where `interface P` holds tweenable season params
@@ -15,13 +26,7 @@
 // the idle's pose is 0 (with zero velocity) at every action-window edge → the
 // loop is seamless.
 //
-//   IDLE COMMON  (~6s, win 0.9s): a side-to-side WOBBLE — the cluster rocks
-//       ~10–12 design-px at the cap with a squash at the base.
-//   IDLE SPECIAL (~18s, win 1.1s): a bigger squash-stretch BOUNCE — an
-//       anticipation crouch, a hop up ~12–14 design-px, then a squash landing
-//       that settles. May briefly paint outside the −24..+24 box.
-//
-// Origin-centered in the ~−24..+24 design box (actions may paint outside it).
+// Origin-centered in the ~−24..+24 design box (overlays may paint outside it).
 // Light comes from upper-left. Pure Canvas-2D vector drawing — never throws,
 // clamps everything, save/restore, resets globalAlpha.
 
@@ -559,50 +564,126 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation curve, 0 (with zero velocity) at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+// ── Shared RARE-window clock — the SPORE-PUFF event ──────────────────────────
+// COMMON breathes every 6s at phase 0 (win 2.2s) → windows [0,2.2),[6,8.2),…
+// The RARE puff uses actionQ(t,18,3,3): with phase 3 the window is where
+// (t+3) mod 18 < 3, i.e. t mod 18 ∈ [15,18) — a 3s window that lands cleanly
+// BETWEEN the COMMON beats (during [15,18) the breathe phase t mod 6 ∈ [3,6) is
+// past its [0,2.2) window, so they never overlap) and ends exactly at the
+// 18≡0 seam where COMMON restarts from REST. One source of truth so the cap
+// compression (poseFromClock) and the spore overlay (anim) stay in lockstep.
+const PUFF_PERIOD = 18.0;
+const PUFF_WIN = 3.0;
+const PUFF_PHASE = 3.0;
+
+/** Progress 0..1 through the spore-puff window, else −1 (no puff). */
+function puffQ(t: number): number {
+  return actionQ(t, PUFF_PERIOD, PUFF_WIN, PUFF_PHASE);
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** How "released" the puff is, 0..1 — the cap compresses quickly to expel the
+ *  spores (fast rise over the first ~22%) then eases back as the cloud drifts
+ *  away. Exactly 0 with zero velocity at q=0 and q=1 (fades in and out of REST):
+ *  a smootherstep ramp up and a longer smootherstep ramp down. */
+function puffRelease(q: number): number {
+  if (!(q >= 0) || q >= 1) return 0;
+  const up = 0.22; // quick compression that expels the spores
+  if (q < up) return smoother(q / up); // 0→1, zero slope at q=0
+  return smoother((1 - q) / (1 - up)); // 1→0 over the rest, zero slope at q=1
+}
+
+/** Build the idle pose from the wall clock. Two tiers, neither a hop:
+ *   COMMON — a calm CAP-BREATHE pulse every ~6s (squashX/squashY in opposition).
+ *   RARE   — a small cap COMPRESSION every ~18s as the spore-puff releases,
+ *            fully synced to the spore overlay in anim() via the shared clock. */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // ~0.17 rad lean about a pivot ~25px below the caps → ~10–12 px sway at top.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: a calm CAP-BREATHE (~6s, win 2.2s) ──
+  // A slow soft pulse, no hop and no lean. squashX and squashY breathe in
+  // OPPOSITION — the cap rounds out wide+short, then draws in narrow+tall, and
+  // settles. hump(qC) is 0 with zero velocity at both edges → seamless.
+  const qC = actionQ(t, 6.0, 2.2, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.17 * env * rock;
-    pose.squashY += -0.06 * hump(qC); // little squat as it rocks
-    pose.squashX += 0.05 * hump(qC);
-    pose.lean += 0.02 * anticipate(qC); // faint windup tilt (still 0 at edges)
+    const breathe = hump(qC); // 0..1..0 over the window, zero velocity at edges
+    pose.squashX += 0.05 * breathe; // widen the cap as it "inhales"
+    pose.squashY += -0.05 * breathe; // … and flatten it the same amount (opposition)
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12–14px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
-  if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    pose.squashY += air * 0.2 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -air * 0.14 + crouch * 0.1 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+  // ── RARE: a small cap COMPRESSION as the spore-puff releases (~18s) ──
+  // The caps dip squat (squashY down, a touch of squashX bulge) to expel the
+  // spores, then ease back. Enveloped entirely by the puff's own release-amount,
+  // which is 0 at the window edges → the compression is exactly 0 at q=0 and q=1.
+  const rel = puffRelease(puffQ(t));
+  if (rel > 0) {
+    pose.squashY += -0.07 * rel; // compress downward to push the spores out
+    pose.squashX += 0.04 * rel; // a small sympathetic bulge
   }
 
   return pose;
+}
+
+// ── The SPORE-PUFF overlay — additive, drawn over the painted cluster in anim()
+// A soft puff of tiny pale spores released from UNDER the three caps, drifting
+// outward and downward as the cloud thins. Driven ONLY by t (via puffQ). Each
+// spore is a deterministic function of its index and the puff progress q, so a
+// given frame is stable. The whole cloud is enveloped to 0 at the window edges
+// (hump-shaped), so it is exactly invisible at q=0, q=1, and therefore at t=0.
+
+// Emission points just under each cap's lower rim (origin-centered design px;
+// matches the cluster: front (0.5,18.5) s1.0, back-left (−8.5,16.5) s0.62,
+// back-right (9.5,17.5) s0.7 — caps sit ~8–10px above each base).
+const PUFF_SOURCES: ReadonlyArray<readonly [number, number]> = [
+  [0.5, 10.5], // under the front-tall cap
+  [-8.5, 11.5], // under the back-left cap
+  [9.5, 11.0], // under the back-right cap
+];
+
+const SPORE_TINT: RGB = [236, 226, 198]; // warm pale spore dust
+
+/** Draw the drifting spore cloud at puff progress q (0..1). Nothing is drawn
+ *  outside the window or at the envelope edges (the still cluster is intact). */
+function drawSporePuff(ctx: CanvasRenderingContext2D, q: number): void {
+  if (!(q >= 0) || q >= 1) return;
+  const cloud = hump(q); // 0..1..0 overall cloud presence, zero at both edges
+  if (cloud <= 0.001) return;
+
+  // Drift grows across the window: spores start tucked under the rim (spread 0)
+  // and waft out + down as q advances. clamp01 keeps it bounded.
+  const drift = clamp01(q);
+
+  ctx.save();
+  try {
+    ctx.globalAlpha = 1;
+    const perSource = 6; // tiny spores per cap
+    for (let si = 0; si < PUFF_SOURCES.length; si++) {
+      const [ox, oy] = PUFF_SOURCES[si];
+      for (let k = 0; k < perSource; k++) {
+        // Deterministic per-spore angle/speed/size from stable trig of (si,k).
+        const seed = si * 7 + k;
+        const ang = Math.PI * 0.5 + Math.sin(seed * 1.7 + 0.6) * 1.15; // fan downward/out
+        const speed = 5.0 + ((Math.sin(seed * 2.3) + 1) * 0.5) * 5.0; // 5..10 px reach
+        const rise = ((Math.sin(seed * 3.1) + 1) * 0.5); // 0..1 stagger of when it leaves
+        // each spore leaves a touch after the puff starts, then drifts
+        const local = clamp01((drift - rise * 0.18) / (1 - rise * 0.18 + 0.0001));
+        const d = speed * local;
+        const sx = ox + Math.cos(ang) * d * 0.9; // bias the spread sideways
+        const sy = oy + Math.sin(ang) * d + d * 0.18; // and gently downward
+        // per-spore alpha: fade in as it leaves the rim, out as the cloud thins.
+        const a = cloud * (0.5 + 0.5 * Math.sin(seed * 1.3 + 0.3)) * (1 - local * 0.5);
+        const r = (0.7 + ((Math.sin(seed * 4.7) + 1) * 0.5) * 0.7) * (1 - 0.3 * local);
+        ctx.globalAlpha = clamp01(a) * 0.85;
+        ctx.fillStyle = rgb(SPORE_TINT);
+        ctx.beginPath();
+        ctx.arc(sx, sy, Math.max(0.3, r), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
 // ── idle anim: two-tier action pose + per-season micro-shimmer/overlays ──────
@@ -618,6 +699,13 @@ const animFor = (season: SeasonName) => (ctx: CanvasRenderingContext2D, t: numbe
   if (season === "Winter") sparkle = 0.45 * (0.5 - 0.5 * Math.cos(tt * 1.4)); // cold sheen
 
   paint(ctx, p, poseFromClock(tt), sparkle);
+
+  // ── RARE SPORE-PUFF event (all seasons) — a soft puff of spores releases
+  // from under the caps, drifting out and down, then fades. Additive overlay
+  // only; fully synced to the cap compression in poseFromClock via the shared
+  // puff clock. The cloud envelope is 0 at the window edges (and so at t=0), so
+  // nothing is drawn at rest. ──
+  drawSporePuff(ctx, puffQ(tt));
 
   // ── per-season additive overlays (dressing only) ──
   ctx.save();

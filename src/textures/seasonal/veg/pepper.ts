@@ -3,14 +3,20 @@
 // A single glossy bell pepper sitting low-centre on a grassy pad. The SAME
 // glossy bell pepper is drawn every season (identity-safe), but the seasons
 // swing hard on colour + a real seasonal prop (blossom / fallen leaf / snow cap
-// + base snow), and the idle is lively rather than subtle:
+// + base snow), and the idle is a distinct, in-character two-tier beat (NOT the
+// generic shared bounce):
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the pepper rocks/leans
-//       ~10–12 design-px at the tip with a squash at the base. Anticipation →
-//       peak → settle, zero velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger SHAKE/BOUNCE — a squash-stretch hop
-//       ~12–14 design-px up, with anticipation crouch, stretch on the way up, and
-//       a squash landing that overshoots then settles.
+//   IDLE COMMON  (~6s, win ~1.0s): a gentle SWAY/SETTLE — the pepper leans
+//       calmly to one side, drifts through centre to the other, and settles,
+//       with a faint breath squash. The quiet beat. Zero value AND velocity at
+//       the window edges (seamless).
+//   IDLE RARE    (~18s, win ~2.6s): a SEED-RATTLE + HEAT-SHIMMER. A quick
+//       high-frequency pose JITTER that damps out — as if the seeds rattle
+//       loose inside the hollow pepper — paired with a wavy translucent HEAT-
+//       SHIMMER rising off the top of the pepper (an additive overlay in anim()
+//       only, enveloped to 0 at the window edges, so it is exactly absent at
+//       t=0 and at every loop seam). The rattle and the shimmer share one RARE
+//       clock so they fire together as a single event.
 //
 // The architecture is a single parameterized `paint(ctx, p, pose)` where
 // `interface P` holds tweenable season params (colours + prop amounts) and
@@ -552,62 +558,152 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-// Dips slightly negative early (anticipation) then a strong positive peak.
-function anticipate(q: number): number {
-  // windup wave: a small negative lobe then a big positive lobe, both returning
-  // to zero at the edges. (1-cos) envelope keeps velocity zero at q=0,1.
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, but velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+// ── Shared RARE-window clock — the SEED-RATTLE + HEAT-SHIMMER event ───────────
+// COMMON fires every 6s at phase 0 (win 1.0s) → windows [0,1),[6,7),[12,13)
+// within each 18s span. The RARE event uses actionQ(t,18,2.6,3): with phase 3
+// the window is where (t+3) mod 18 < 2.6, i.e. t mod 18 ∈ [15,17.6) — a 2.6s
+// window that lands cleanly BETWEEN the COMMON beats (never overlaps) and ends
+// before the 18≡0 seam where COMMON restarts from REST. One source of truth so
+// the pose rattle (poseFromClock) and the shimmer overlay (anim) stay in lockstep.
+const RARE_PERIOD = 18.0;
+const RARE_WIN = 2.6;
+const RARE_PHASE = 3.0;
+
+/** Progress 0..1 through the RARE window, else −1 (rattle + shimmer hidden). */
+function rareQ(t: number): number {
+  return actionQ(t, RARE_PERIOD, RARE_WIN, RARE_PHASE);
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** Damping envelope for the seed-rattle: 0 with zero velocity at q=0 and q=1
+ *  (hump pins both edges) and front-loaded by the (1−q) decay, so the jitter is
+ *  strongest just after onset then dies away — a rattle that settles. */
+function rattleEnv(q: number): number {
+  if (!(q >= 0) || q >= 1) return 0;
+  return hump(q) * (1 - q);
+}
+
+/** Envelope for the heat-shimmer's strength across the RARE window: a single
+ *  smooth hump, 0 (with zero velocity) at both edges so it fades in and out of
+ *  rest. Drives the additive overlay's alpha in anim(). */
+function shimmerEnv(q: number): number {
+  if (!(q >= 0) || q >= 1) return 0;
+  return hump(q);
+}
+
+/** Build the idle pose from the wall clock. Two tiers, neither a bounce:
+ *   COMMON — a gentle calm sway/settle every ~6s (win 1.0s).
+ *   RARE   — a quick high-frequency seed-RATTLE (a damping pose jitter, as if
+ *            seeds shake loose in the hollow pepper) every ~18s, fully synced to
+ *            the heat-shimmer overlay in anim() via the shared RARE clock.
+ *  Every factor is the product of terms that are BOTH zero at the window edges,
+ *  so the pose returns to REST with zero value AND zero velocity (seamless). */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // Two rocks left→right→left, ~0.16 rad lean → tip travels ~ pivotArm*0.16.
-  // Tip arm ≈ (PEP_PIVOT_Y - PEP_TOP) ≈ 25 px → ~10–12 px sway at the tip.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: a gentle calm sway + settle (~6s, win 1.0s) ──
+  // One slow lean out, through centre, and back — much calmer than a wobble,
+  // with a faint breath squash. Zero value AND velocity at the window edges.
+  const qC = actionQ(t, 6.0, 1.0, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.17 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0 envelope, zero at edges
+    const sway = Math.sin(qC * Math.PI * 2); // one gentle L→centre→R→centre
+    pose.lean += 0.06 * env * sway; // ~3px top sway — a calm drift, not a rock
+    pose.squashY += -0.02 * hump(qC); // a soft breath settling
+    pose.squashX += 0.018 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12–14px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
-  if (qS >= 0) {
-    // Hop height profile: brief crouch (q<0.18), launch arc, squash landing.
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air; // 0..1 in the air
-    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-  }
-
-  // Reference anticipate() so it stays part of the seamless-curve toolkit and
-  // contributes a faint windup tilt to the common wobble (still 0 at edges).
-  if (qC >= 0) {
-    pose.lean += 0.02 * anticipate(qC);
+  // ── RARE: a quick SEED-RATTLE that damps out (~18s) ──
+  // A high-frequency, low-amplitude jitter on lean + squash — the pepper buzzes
+  // as if loose seeds rattle inside its hollow shell, then settles. The rattle
+  // amplitude is the damping envelope (0 with zero slope at q=0 and q=1), so the
+  // jitter starts and ENDS exactly at REST with no snap.
+  const qR = rareQ(t);
+  if (qR >= 0) {
+    const amp = rattleEnv(qR); // damping envelope, 0 at both edges
+    // Several fast cycles across the window → reads as a buzz, not a sway. The
+    // squash jitter runs at a different multiple + phase so the rattle feels
+    // chaotic/internal rather than a clean rock.
+    pose.lean += 0.045 * amp * Math.sin(qR * Math.PI * 18);
+    pose.squashX += 0.05 * amp * Math.sin(qR * Math.PI * 22 + 1.1);
+    pose.squashY += -0.05 * amp * Math.sin(qR * Math.PI * 22 + 1.1);
+    // a tiny vertical buzz so it visibly vibrates in place (never a hop)
+    pose.bob += 0.6 * amp * Math.sin(qR * Math.PI * 26 + 0.5);
   }
 
   return pose;
+}
+
+// ── The HEAT-SHIMMER overlay — additive, drawn over the pepper in anim() ─────
+// A wavy translucent column of warm air rising off the TOP of the pepper: a few
+// stacked sinuous strands that ripple horizontally as they rise and fade out
+// near the top of the box. Drawn ADDITIVELY (composite "lighter") so it only
+// brightens — it never darkens or recolours the pepper's own skin. Driven ONLY
+// by t and gated by `strength` (from shimmerEnv), which is 0 at the RARE window
+// edges → the shimmer is exactly absent at t=0 and at every loop seam.
+
+const SHIMMER_TOP_Y = PEP_TOP - 6;  // just above the calyx — where heat lifts off
+const SHIMMER_RISE = 18;            // how far up the strands travel (toward -24)
+const SHIMMER_WARM: RGB = [255, 238, 206]; // faint warm-white heat haze tint
+
+/** Draw the rising heat-shimmer at the given strength (0..1) and phase time `t`.
+ *  At strength<=0 nothing is drawn (the still / rest frame is untouched). */
+function drawHeatShimmer(ctx: CanvasRenderingContext2D, strength: number, t: number): void {
+  const s = clamp01(strength);
+  if (s <= 0.001) return;
+  const tt = Number.isFinite(t) ? t : 0;
+
+  ctx.save();
+  try {
+    ctx.globalCompositeOperation = "lighter"; // ADDITIVE — brighten only
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+
+    // A few vertical strands, each a sine-rippled ribbon rising from the top of
+    // the pepper. Higher up = more horizontal wave + more fade (heat dissipating).
+    const strands = 3;
+    for (let k = 0; k < strands; k++) {
+      const baseX = -4.5 + k * 4.5;        // spread across the pepper shoulder
+      const ph = k * 1.9 + tt * 3.2;       // each strand ripples on its own phase
+      const wob = 1.4 + 0.5 * k;           // outer strands wave a touch wider
+
+      ctx.beginPath();
+      const steps = 10;
+      for (let i = 0; i <= steps; i++) {
+        const f = i / steps;               // 0 at the pepper, 1 at the top
+        const y = SHIMMER_TOP_Y - f * SHIMMER_RISE;
+        const wave = Math.sin(ph + f * Math.PI * 3) * wob * f; // grows as it rises
+        const x = baseX + wave;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      // alpha fades with strength and is faint by design (dressing, not a flash)
+      const a = 0.16 * s * (0.7 + 0.3 * Math.sin(ph * 1.3));
+      ctx.strokeStyle = rgba(SHIMMER_WARM, clamp01(a));
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+      // a softer wider echo behind it for a hazy, gaseous read
+      ctx.strokeStyle = rgba(SHIMMER_WARM, clamp01(a * 0.5));
+      ctx.lineWidth = 4.0;
+      ctx.stroke();
+    }
+
+    // a couple of tiny rising shimmer motes for extra life near the lift-off
+    const motes = 3;
+    for (let m = 0; m < motes; m++) {
+      const prog = (((tt * 0.6 + m * 0.37) % 1) + 1) % 1; // 0..1 rising loop
+      const mx = -3 + m * 3 + Math.sin(prog * Math.PI * 4 + m) * 2.4 * prog;
+      const my = SHIMMER_TOP_Y - prog * SHIMMER_RISE;
+      const ma = 0.22 * s * Math.sin(prog * Math.PI); // fade in/out over the rise
+      ctx.fillStyle = rgba(SHIMMER_WARM, clamp01(ma));
+      ctx.beginPath();
+      ctx.ellipse(mx, my, 1.2, 1.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } finally {
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
@@ -620,6 +716,16 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   return (ctx, t) => {
     const tt = Number.isFinite(t) ? t : 0;
     paint(ctx, SP[season], poseFromClock(tt));
+
+    // RARE HEAT-SHIMMER event (all seasons) — a wavy translucent heat haze rises
+    // off the top of the pepper while the seeds rattle. Additive overlay only;
+    // fully synced to the rattle in poseFromClock via the shared RARE clock. The
+    // strength is 0 at the window edges (and so at t=0), so nothing is drawn at
+    // rest.
+    const strength = shimmerEnv(rareQ(tt));
+    if (strength > 0) {
+      drawHeatShimmer(ctx, strength, tt);
+    }
 
     // Light additive season micro-sparkle (dressing only — never the subject's
     // own colour/brightness). Kept tiny so the POSE action is the star.
@@ -670,7 +776,8 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the bounce + glossy red is the show.
+      // Summer: no extra falling dressing — the glossy red + the RARE seed-
+      // rattle and heat-shimmer are the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

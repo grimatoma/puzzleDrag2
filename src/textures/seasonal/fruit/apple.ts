@@ -3,14 +3,16 @@
 // Same apple every season (identity-safe): the classic two-lobe apple body with
 // a top dimple, a woody stem, and a stem-leaf — reused from the original apple
 // geometry. The seasons swing HARD on colour + a readable seasonal prop, and the
-// idle is a loud two-tier WC3-style gesture rather than a subtle bob:
+// idle is a distinct, in-character two-tier beat (NOT a generic bounce):
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the apple rocks/leans
-//       ~10–12 design-px at the top with a squash at the base. Anticipation →
-//       peak → settle, zero velocity at the window edges (seamless).
-//   IDLE RARE    (~18s, win ~1.1s): a bigger BOUNCE — a squash-stretch hop
-//       ~12–14 design-px up, with an anticipation crouch, stretch on the way up,
-//       and a squash landing that overshoots then settles (seamless).
+//   IDLE COMMON  (~6s, win ~1.0s): a small, CALM breathing sway — the apple
+//       leans gently a few px to one side and settles, with a faint squash. The
+//       quiet beat. Zero value AND velocity at the window edges (seamless).
+//   IDLE RARE    (~18s, win ~3.0s): a WORM pokes out of a little hole on the
+//       apple's lit cheek, looks around once, and ducks back in (drawn as an
+//       additive overlay in anim(), never in the still). The apple gives a tiny
+//       flinch (small squash + micro-lean) as the worm emerges. The worm and the
+//       flinch are exactly 0 — and the hole is absent — at the window edges.
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized `paint(ctx,p,pose)`
 // where `interface P` holds tweenable season params (colours + prop amounts) and
@@ -576,53 +578,190 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+// ── Shared RARE-window clock — the WORM event ────────────────────────────────
+// COMMON fires every 6s at phase 0 (win 1.0s) → windows [0,1),[6,7),[12,13) each
+// 18s period. The RARE worm uses actionQ(t,18,3,3): with phase 3 the window is
+// where (t+3) mod 18 < 3, i.e. t mod 18 ∈ [15,18) — a 3s window that lands
+// cleanly BETWEEN the COMMON beats (verified: the two never overlap), and ends
+// exactly at the 18≡0 seam where COMMON restarts from REST. One source of truth
+// so the apple flinch (poseFromClock) and the worm overlay (anim) stay in lockstep.
+const WORM_PERIOD = 18.0;
+const WORM_WIN = 3.0;
+const WORM_PHASE = 3.0;
+
+/** Progress 0..1 through the worm window, else −1 (worm fully hidden). */
+function wormQ(t: number): number {
+  return actionQ(t, WORM_PERIOD, WORM_WIN, WORM_PHASE);
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** How far the worm is OUT, 0..1 — emerge fast, HOLD out while it looks around,
+ *  then duck back. Exactly 0 with zero velocity at q=0 and q=1 (the whole event
+ *  fades in and out of REST). A smootherstep ramp up (first ~30%) and a mirrored
+ *  ramp down (last ~30%) with a flat hold of 1 in between — `sin(π·q)` would peak
+ *  instead of hold, so we shape it explicitly but keep the seamless edges. */
+function wormOut(q: number): number {
+  if (!(q >= 0) || q >= 1) return 0;
+  const up = 0.3; // fraction of the window spent emerging / ducking back
+  if (q < up) return smoother(q / up); // 0→1, zero slope at q=0
+  if (q > 1 - up) return smoother((1 - q) / up); // 1→0, zero slope at q=1
+  return 1; // held fully out (the "looking around" beat)
+}
+
+/** Build the idle pose from the wall clock. Two tiers, neither a bounce:
+ *   COMMON — a small, calm side-to-side breathing lean+squash every ~6s.
+ *   RARE   — a tiny apple FLINCH (small squash + micro-lean) as the worm pops
+ *            out, every ~18s, fully synced to the worm overlay in anim(). */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // ~0.17 rad lean → top arm ≈ (AP_PIVOT_Y - AP_TOP) ≈ 22 px → ~10–12 px sway.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: a small, calm breathing sway (~6s, win 1.0s) ──
+  // Much gentler than a wobble — one slow lean out and back with a faint squash,
+  // the quiet "resting" beat. Zero value AND velocity at the window edges.
+  const qC = actionQ(t, 6.0, 1.0, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.18 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
-    // faint windup tilt (still 0 at edges) — keeps anticipate() in the toolkit
-    pose.lean += 0.02 * anticipate(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0 envelope, zero at edges
+    const sway = Math.sin(qC * Math.PI * 2); // one gentle L→centre→R→centre
+    pose.lean += 0.05 * env * sway; // ~3px top sway — calm, not a rock
+    pose.squashY += -0.02 * hump(qC); // a soft breath settling
+    pose.squashX += 0.018 * hump(qC);
   }
 
-  // ── RARE: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12–14px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
-  if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air;
-    pose.squashY += apex * 0.2 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.14 + crouch * 0.1 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+  // ── RARE: a tiny FLINCH as the worm pokes out (~18s) ──
+  // The apple gives a small squash + a micro-lean away from the hole when the
+  // worm emerges. Every factor is enveloped by the worm's own out-amount, which
+  // is 0 at the window edges → the flinch is exactly 0 at q=0 and q=1.
+  const out = wormOut(wormQ(t));
+  if (out > 0) {
+    // a quick double-take pulse so the flinch reads as a "surprise", peaking with
+    // the worm; hump() keeps it 0 at the edges, `out` gates it to the window.
+    const startle = out * hump(out);
+    pose.squashY += -0.05 * out; // squat down a touch
+    pose.squashX += 0.045 * out; // and bulge wide
+    pose.lean += -0.035 * startle; // micro-lean away from the lit cheek hole
   }
 
   return pose;
+}
+
+// ── The WORM overlay — additive, drawn over the painted apple in anim() ──────
+// A short rounded chartreuse-green segmented body with a tiny head that emerges
+// from a little hole on the apple's LIT cheek (upper-left), looks around once,
+// then ducks back in. Driven ONLY by t. Invisible when `out` (from wormOut) is 0,
+// so it is exactly absent at the window edges (and therefore at t=0).
+
+// Hole on the apple's lit upper-left cheek (apple centre (0, AP_CY), radius AP_R).
+const WORM_HOLE_X = -4.6;
+const WORM_HOLE_Y = AP_CY - 4.4;
+// Direction the worm pokes (up-and-out, away from the apple body): unit-ish vector.
+const WORM_DIR_X = -0.55;
+const WORM_DIR_Y = -0.835;
+const WORM_REACH = 12; // design-px the head travels from the hole when fully out
+
+const WORM_BODY: RGB = [150, 198, 70]; // chartreuse green body
+const WORM_BODY_HI: RGB = [196, 226, 116]; // lit top of each segment
+const WORM_BODY_LO: RGB = [96, 144, 44]; // shaded belly
+const WORM_OUTLINE: RGB = [56, 92, 30]; // soft dark green outline
+
+/** Draw the worm at the given out-amount (0..1) and look-amount (−1..1, a head
+ *  turn). At out<=0 nothing is drawn (the apple's skin is intact). */
+function drawWorm(ctx: CanvasRenderingContext2D, out: number, look: number): void {
+  const o = clamp01(out);
+  if (o <= 0.001) return;
+  const lk = Number.isFinite(look) ? Math.max(-1, Math.min(1, look)) : 0;
+
+  ctx.save();
+  try {
+    ctx.globalAlpha = 1;
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+
+    // A small dark socket/hole — ONLY while the worm is out (never on the still).
+    // Sits flat on the lit cheek; fades with `out` so it appears and leaves with
+    // the worm rather than being a permanent pit in the apple.
+    ctx.fillStyle = rgba([28, 14, 16], 0.55 * o);
+    ctx.beginPath();
+    ctx.ellipse(WORM_HOLE_X, WORM_HOLE_Y, 3.0, 2.2, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = rgba([72, 30, 28], 0.5 * o);
+    ctx.beginPath();
+    ctx.ellipse(WORM_HOLE_X + 0.5, WORM_HOLE_Y + 0.4, 2.1, 1.5, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body as a chain of segments from the hole outward. `o` scales the reach so
+    // the worm slides in/out of the hole; `lk` bends the tip for the look-around.
+    const reach = WORM_REACH * o;
+    const segs = 5;
+    type Seg = { x: number; y: number; r: number };
+    const chain: Seg[] = [];
+    for (let i = 0; i <= segs; i++) {
+      const f = i / segs; // 0 at hole, 1 at head
+      const d = reach * f; // distance travelled along the poke direction
+      // a gentle base curve plus a look-around bend that grows toward the head
+      const bend = (0.9 * lk) * f * f; // radians, only the front half really turns
+      const dirX = WORM_DIR_X * Math.cos(bend) - WORM_DIR_Y * Math.sin(bend);
+      const dirY = WORM_DIR_X * Math.sin(bend) + WORM_DIR_Y * Math.cos(bend);
+      const x = WORM_HOLE_X + dirX * d;
+      const y = WORM_HOLE_Y + dirY * d;
+      const r = 2.6 - 0.9 * f; // tapers slightly toward the head
+      chain.push({ x, y, r });
+    }
+
+    // dark outline pass (slightly fatter discs)
+    ctx.fillStyle = rgb(WORM_OUTLINE);
+    for (const s of chain) {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r + 0.9, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // body fill
+    ctx.fillStyle = rgb(WORM_BODY);
+    for (const s of chain) {
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // lit tops (upper-left) per segment + shaded bellies
+    for (const s of chain) {
+      ctx.fillStyle = rgba(WORM_BODY_HI, 0.85);
+      ctx.beginPath();
+      ctx.arc(s.x - s.r * 0.32, s.y - s.r * 0.36, s.r * 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba(WORM_BODY_LO, 0.5);
+      ctx.beginPath();
+      ctx.arc(s.x + s.r * 0.34, s.y + s.r * 0.4, s.r * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Head — the last segment, with a tiny dark eye on the lit side. Only show the
+    // face once the worm is mostly out so it doesn't peek from inside the hole.
+    const head = chain[chain.length - 1];
+    const faceA = clamp01((o - 0.45) / 0.4);
+    if (faceA > 0.01) {
+      // round the head a touch fuller
+      ctx.fillStyle = rgb(WORM_BODY);
+      ctx.beginPath();
+      ctx.arc(head.x, head.y, 2.0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba(WORM_BODY_HI, 0.9 * faceA);
+      ctx.beginPath();
+      ctx.arc(head.x - 0.6, head.y - 0.7, 1.0, 0, Math.PI * 2);
+      ctx.fill();
+      // a single tiny eye, turned with the look
+      const eyeX = head.x - 0.4 + lk * 0.9;
+      const eyeY = head.y - 0.5;
+      ctx.fillStyle = rgba([24, 28, 20], 0.92 * faceA);
+      ctx.beginPath();
+      ctx.arc(eyeX, eyeY, 0.62, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = rgba([255, 255, 255], 0.8 * faceA);
+      ctx.beginPath();
+      ctx.arc(eyeX - 0.2, eyeY - 0.2, 0.22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
@@ -635,6 +774,19 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   return (ctx, t) => {
     const tt = Number.isFinite(t) ? t : 0;
     paint(ctx, SP[season], poseFromClock(tt));
+
+    // RARE WORM event (all seasons) — a worm pokes out of the lit cheek, looks
+    // around once, and ducks back. Additive overlay only; fully synced to the
+    // flinch in poseFromClock via the shared worm clock. `out` is 0 at the window
+    // edges (and so at t=0), so nothing is drawn at rest.
+    const wq = wormQ(tt);
+    const out = wormOut(wq);
+    if (out > 0) {
+      // One left→right glance, gated by `out` so the head only turns while it is
+      // actually outside the hole (zero when tucked, zero at the window edges).
+      const look = Math.sin(wq * Math.PI * 2) * out;
+      drawWorm(ctx, out, look);
+    }
 
     // Light additive season micro-sparkle (dressing only — never the subject's
     // own colour/brightness). Kept tiny so the POSE action is the star.

@@ -5,20 +5,27 @@
 // that turn to dark triangular seeds. The SAME buckwheat silhouette is drawn
 // every season (identity-safe) — branching reddish stems + flower/seed cluster
 // nodes in the same place each season — but the seasons swing hard on colour
-// plus a real seasonal prop (blossom / fallen leaf / snow cap + base snow), and
-// the idle is BOLD rather than subtle:
+// plus a real seasonal prop (blossom / fallen leaf / snow cap + base snow). Its
+// idle is built around its SIGNATURE — the white-pink florets — so it reads as
+// buckwheat rather than another swaying grain stalk:
 //
-//   IDLE COMMON  (~6s, win ~0.95s): a traveling-wave RUSTLE — the branching
-//       stems + leaves bend ~10–14 design-px as wind passes through, pivoting
-//       near the base, with a base squash. Zero pose + zero velocity at the
-//       window edges (seamless).
-//   IDLE RARE    (~18s, win ~1.2s, phase +3s): a STRONG GUST BEND — the whole
-//       plant leans hard ~16–20px at the top (anticipation → big bend →
-//       overshoot → settle), springing back. May exit the box at the apex.
+//   IDLE COMMON  (~6.4s, win ~1.15s): a distinct FLORET FLUTTER — the white-pink
+//       floret heads QUIVER in place (each petal shivers on its ring) while the
+//       stems give only the faintest answering sway. The flutter is the star;
+//       buckwheat siblings (wheat/rice/corn) instead do a stalk traveling-wave,
+//       so this reads differently. Zero pose + zero velocity at the window edges
+//       (seamless); flutter is 0 at the edges.
+//   IDLE RARE    (~17s, win ~1.3s, phase +3s): a BOLDER GUST that visibly bends
+//       the stalks (~20–24px at the top: anticipation → hard bend → overshoot →
+//       settle) AND a SEED-SPILL — a few seeds/petals tear loose from the heads
+//       and scatter off, fading out. The spill is an ADDITIVE overlay enveloped
+//       to 0 at both window edges (so it is invisible at rest / t=0). May exit
+//       the box at the apex.
 //
 // The architecture is a single parameterized `paint(ctx, p, pose)` where
 // `interface P` holds ONLY tweenable season params (colours + 0..1 prop
-// amounts) and `pose` holds the idle gesture (bob / lean / squash / wave).
+// amounts) and `pose` holds the idle gesture (bob / lean / squash / wave /
+// flutter).
 // Because every season is the same paint with tweened P, transitions are
 // seamless: transition(0) ≡ draw(from), transition(1) ≡ draw(to). REST pose has
 // all zeros, so draw(season) = paint(ctx, SP[season], REST) and the idle's pose
@@ -72,9 +79,10 @@ interface Pose {
   squashX: number; // additive horizontal scale (+0.18 = 18% wider)
   squashY: number; // additive vertical scale (+0.18 = 18% taller)
   wave: number;    // traveling-wave bend amount in design px at the tips
+  flutter: number; // floret-head quiver amount (petals shiver on their ring)
 }
 
-const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, wave: 0 };
+const REST: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, wave: 0, flutter: 0 };
 
 // ── Local math helpers ───────────────────────────────────────────────────────
 
@@ -426,7 +434,11 @@ function leaves(ctx: CanvasRenderingContext2D, p: P, wave: number, flutter: numb
   });
 }
 
-/** A small white-pink 5-petal buckwheat floret at (fx,fy), scaled by amt. */
+/** A small white-pink 5-petal buckwheat floret at (fx,fy), scaled by amt.
+ *  `flutter` (idle) shivers each petal on its ring — a tiny per-petal angle +
+ *  radius wobble — without touching the floret's colour; `seed` is a stable
+ *  per-floret phase so neighbouring heads quiver out of step. `twinkle` is the
+ *  separate tiny summer sparkle dressing. */
 function floret(
   ctx: CanvasRenderingContext2D,
   p: P,
@@ -434,13 +446,21 @@ function floret(
   fy: number,
   amt: number,
   twinkle: number,
+  flutter: number,
+  seed: number,
 ): void {
   const petalR = 1.5 * (0.5 + 0.5 * amt);
   const ringR = 1.7 * (0.55 + 0.45 * amt);
+  const fl = flutter;
   for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
-    const px = fx + Math.cos(a) * ringR;
-    const py = fy + Math.sin(a) * ringR;
+    const base = (i / 5) * Math.PI * 2 - Math.PI / 2;
+    // per-petal quiver: angle shiver + a little radial in/out breathing. The
+    // phase varies by petal index and the head's `seed` so the shimmer is busy
+    // but deterministic; `fl` (0 at the window edges) scales it all to rest.
+    const a = base + fl * 0.5 * Math.sin(seed * 2.3 + i * 1.9);
+    const r = ringR * (1 + fl * 0.16 * Math.sin(seed * 1.7 + i * 2.7));
+    const px = fx + Math.cos(a) * r;
+    const py = fy + Math.sin(a) * r;
     const pg = ctx.createRadialGradient(px - 0.5, py - 0.5, 0.2, px, py, petalR + 0.1);
     pg.addColorStop(0, rgb(lerpRGB(p.petal, [255, 255, 255], 0.25)));
     pg.addColorStop(1, rgb(p.petal));
@@ -499,12 +519,14 @@ function seedTri(
 
 /** The cluster at each node: buds (spring) + florets (bloom) + seeds (autumn),
  *  each scaled by its amount. Node POSITIONS are constant; only the idle wave
- *  offsets them along with their branch tips. */
+ *  offsets them along with their branch tips. `flutter` (0 at rest) shivers the
+ *  open florets; `twinkles` is the per-node summer sparkle. */
 function clusters(
   ctx: CanvasRenderingContext2D,
   p: P,
   wave: number,
   twinkles: [number, number, number],
+  flutter: number,
 ): void {
   const spray: Array<[number, number]> = [
     [0, 0],
@@ -536,12 +558,14 @@ function clusters(
       });
       ctx.restore();
     }
-    // open florets (summer peak; small in spring/autumn).
+    // open florets (summer peak; small in spring/autumn). Each spray floret gets
+    // a stable phase seed (node index + spray slot) so the flutter quiver runs
+    // out of step head-to-head.
     if (p.flowerAmt > 0.03) {
       ctx.save();
       ctx.globalAlpha = clamp01(p.flowerAmt + 0.15);
-      spray.forEach(([ox, oy]) => {
-        floret(ctx, p, nx + ox, ny + oy, p.flowerAmt, twinkles[ni]);
+      spray.forEach(([ox, oy], si) => {
+        floret(ctx, p, nx + ox, ny + oy, p.flowerAmt, twinkles[ni], flutter, ni * 3 + si);
       });
       ctx.restore();
     }
@@ -615,6 +639,7 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     squashX: safeNum(rawPose.squashX),
     squashY: safeNum(rawPose.squashY),
     wave: safeNum(rawPose.wave),
+    flutter: safeNum(rawPose.flutter),
   };
 
   ctx.save();
@@ -748,10 +773,11 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     ctx.scale(1 + pose.squashX, 1 + pose.squashY);
     ctx.translate(0, -PIVOT_Y);
 
-    // The traveling-wave bend is applied per-part inside the painters via `wave`.
+    // The traveling-wave bend is applied per-part inside the painters via `wave`;
+    // the floret quiver via `flutter`.
     stems(ctx, p, pose.wave);
     leaves(ctx, p, pose.wave, pose.wave * 0.06);
-    clusters(ctx, p, pose.wave, [0, 0, 0]);
+    clusters(ctx, p, pose.wave, [0, 0, 0], pose.flutter);
     sheen(ctx, p, pose.wave);
     frostAndSnow(ctx, p, pose.wave);
 
@@ -788,58 +814,140 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 (with zero velocity) at the
-// edges: a small negative windup lobe then a big positive lobe.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
-}
-
-/** Build the idle pose from the wall clock. Two tiers:
- *   common RUSTLE every ~6s (win 0.95s), rare GUST BEND every ~18s (win 1.2s). */
+/** Build the idle pose from the wall clock. Two tiers, chosen to read as
+ *  buckwheat specifically:
+ *   COMMON FLORET FLUTTER every ~6.4s (win 1.15s) — the floret heads quiver,
+ *     the stems barely answer; and
+ *   RARE BOLDER GUST every ~17s (win 1.3s, phase +3s) — a hard stalk bend
+ *     (the seed-spill overlay rides the same window over in `anim`). */
 function poseFromClock(t: number): Pose {
-  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, wave: 0 };
+  const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, wave: 0, flutter: 0 };
 
-  // ── COMMON: traveling-wave RUSTLE (~6s, win 0.95s) ──
-  // A wind gust passes through: the tips bend ~11–13 design-px (wave) and the
-  // whole plant leans a touch, with a small base squash. Envelope keeps the
-  // pose 0 with zero velocity at the window edges.
-  const qC = actionQ(t, 6.0, 0.95, 0.0);
+  // ── COMMON: FLORET FLUTTER (~6.4s, win 1.15s) ──
+  // The white-pink heads shiver in place: `flutter` runs several quiver cycles
+  // inside the window (the petals shimmer on their rings) while the stems give
+  // only a whisper of sway, so the FLORETS lead the motion — distinct from the
+  // stalk traveling-wave the other grains use. The sin(pi*q) envelope makes
+  // every channel 0 with zero velocity at both window edges (seamless).
+  const qC = actionQ(t, 6.4, 1.15, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    // two passes of the wave sweeping through within the window
-    const sweep = Math.sin(qC * Math.PI * 3);
-    pose.wave += 12.0 * env * sweep;
-    pose.lean += 0.05 * env * sweep;
-    pose.squashY += -0.05 * hump(qC);
-    pose.squashX += 0.045 * hump(qC);
-    // a faint windup tilt from the seamless toolkit (still 0 at edges)
-    pose.lean += 0.015 * anticipate(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0, zero velocity at edges
+    // busy quiver: ~3.5 shiver cycles across the window, enveloped to rest.
+    pose.flutter += env * (0.85 * Math.sin(qC * Math.PI * 7) + 0.3 * Math.sin(qC * Math.PI * 11));
+    // the stems only faintly answer the flutter (heads lead, stalk follows).
+    pose.wave += 2.4 * env * Math.sin(qC * Math.PI * 3);
+    pose.lean += 0.018 * env * Math.sin(qC * Math.PI * 2);
+    // a barely-there breathing squash so the head "lives".
+    pose.squashY += 0.018 * hump(qC);
+    pose.squashX += -0.014 * hump(qC);
   }
 
-  // ── RARE: STRONG GUST BEND (~18s, win 1.2s, phase +3s so it never collides) ──
-  // Anticipation (lean slightly back) → big bend over (~18–20px at the top) →
-  // overshoot the other way → settle. The whole plant leans hard.
-  const qS = actionQ(t, 18.0, 1.2, 3.0);
+  // ── RARE: BOLDER GUST BEND (~17s, win 1.3s, phase +3s so it never collides) ──
+  // Anticipation (a brief lean back) → a HARD bend over (~20–24px at the top) →
+  // overshoot the other way → settle. Bolder than before so it stands apart and
+  // visibly bends the stalks. The seed-spill overlay rides the same window.
+  const qS = actionQ(t, 17.0, 1.3, 3.0);
   if (qS >= 0) {
-    // windup: a brief backward lean before the big bend.
-    const windup = qS < 0.2 ? -Math.sin((qS / 0.2) * Math.PI) : 0; // 0..-1..0
-    // main bend arc with a damped overshoot, all enveloped to 0 at the edges.
-    const env = Math.sin(Math.PI * qS); // 0..1..0
-    const bend = env * (Math.sin(qS * Math.PI) + 0.32 * Math.sin(qS * Math.PI * 2));
-    // lean: hard over; top arm ≈ (PIVOT_Y - TOP_Y) ≈ 34px, so 0.55 rad ~ big.
-    pose.lean += 0.42 * bend + 0.07 * windup;
-    // wave: tips whip further than the trunk during the gust.
-    pose.wave += 8.0 * bend + 3.0 * windup;
-    // squash: crouch on windup, stretch through the bend, settle.
-    pose.squashY += 0.06 * env - 0.05 * Math.abs(windup);
-    pose.squashX += -0.05 * env + 0.05 * Math.abs(windup);
-    // a touch of lift at the apex of the bend.
-    pose.bob += -1.6 * hump(qS);
+    const env = Math.sin(Math.PI * qS); // 0..1..0, zero velocity at both edges
+    // anticipation lobe (negative) then the main bend + a damped overshoot.
+    // Every term is multiplied by `env`, so the whole gust is exactly 0 with
+    // zero velocity at q=0 and q=1.
+    const bend = env * (
+      Math.sin(qS * Math.PI)              // main hard bend over (one way)
+      + 0.34 * Math.sin(qS * Math.PI * 2) // anticipation + overshoot wobble
+      - 0.12 * Math.sin(qS * Math.PI * 3) // smaller follow-through settle
+    );
+    // top arm ≈ (PIVOT_Y - TOP_Y) ≈ 34px, so 0.6 rad peak ≈ 20–24px at the tip.
+    pose.lean += 0.6 * bend;
+    // tips whip further than the trunk during the gust.
+    pose.wave += 11.0 * bend;
+    // the heads also shiver as the gust tears through them.
+    pose.flutter += 0.5 * env * Math.sin(qS * Math.PI * 5);
+    // crouch/stretch load at the base, settling out.
+    pose.squashY += 0.07 * env - 0.05 * hump(qS);
+    pose.squashX += -0.06 * env + 0.045 * hump(qS);
+    // a touch of lift at the apex of the whip.
+    pose.bob += -1.8 * hump(qS);
   }
 
   return pose;
+}
+
+// ── Seed-spill overlay (RARE gust dressing) ──────────────────────────────────
+
+/** A few seeds / petals that tear loose from the heads during the RARE gust and
+ *  scatter off, fading out. ADDITIVE dressing painted over the tile, NOT part of
+ *  the silhouette. It rides the SAME window as the gust bend (period 17s, win
+ *  1.3s, phase +3s) and is enveloped to 0 alpha at BOTH window edges, so:
+ *    • at rest / t=0 the window is inactive (qS < 0) → nothing is drawn at all;
+ *    • across the active window the particles fade in from and back out to 0.
+ *  Deterministic (fixed per-particle launch params); never throws; clamps. */
+function seedSpill(
+  ctx: CanvasRenderingContext2D,
+  p: P,
+  t: number,
+): void {
+  const qS = actionQ(t, 17.0, 1.3, 3.0);
+  if (qS < 0) return; // inactive (true at t=0) → invisible at rest
+  const env = Math.sin(Math.PI * qS); // 0 at q=0 and q=1 → 0 alpha at both edges
+  if (env <= 0) return;
+
+  // Loose debris launches from the three seed-head nodes and blows downwind
+  // (+x, the bend direction) and outward, drifting down with a little gravity.
+  // [originX, originY, vx, vy, spin, sizeK] — fixed so the scatter is repeatable.
+  const bits: Array<[number, number, number, number, number, number]> = [
+    [MAIN_TIP[0], MAIN_TIP[1], 17, -6, 5.0, 1.0],
+    [10, -14, 15, -2, -4.0, 0.9],
+    [-9.5, -11, 12, -9, 3.2, 0.85],
+    [MAIN_TIP[0] + 1, MAIN_TIP[1] + 2, 21, 2, 6.0, 0.75],
+    [10, -13, 19, 5, -5.5, 0.7],
+  ];
+
+  // The spill takes on the head's current content: dark triangular seeds when
+  // gone-to-seed (autumn), else pale petals (spring/summer), with winter pale
+  // husk-flecks. Read straight from the season params (no identity change).
+  const asSeed = p.seedAmt > p.flowerAmt + 0.05;
+  const petalCol = lerpRGB(p.petal, [255, 255, 255], 0.15);
+
+  ctx.save();
+  try {
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    bits.forEach(([ox, oy, vx, vy, spin, sizeK]) => {
+      // travel out along the wind as q advances; gravity pulls down late.
+      const px = ox + vx * qS;
+      const py = oy + vy * qS + 14 * qS * qS;
+      // each bit fades within the window: rise then fall, scaled by the gust env
+      // so it is 0 at both edges (alpha 0 at q=0 and q=1).
+      const a = clamp01(env * (0.55 + 0.45 * Math.sin(qS * Math.PI)));
+      if (a <= 0) return;
+      ctx.save();
+      ctx.globalAlpha = a;
+      ctx.translate(px, py);
+      ctx.rotate(spin * qS);
+      if (asSeed) {
+        // a tiny dark triangular seed flake
+        const s = 1.6 * sizeK;
+        ctx.fillStyle = rgb(p.seed);
+        ctx.beginPath();
+        ctx.moveTo(0, s);
+        ctx.lineTo(-s * 0.9, -s * 0.7);
+        ctx.lineTo(s * 0.9, -s * 0.7);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        // a small pale petal flake
+        ctx.fillStyle = rgb(petalCol);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 1.5 * sizeK, 0.95 * sizeK, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    });
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
@@ -902,7 +1010,12 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the gust + abundant bloom is the show.
+      // Summer: no extra continuous dressing — the gust + abundant bloom is the show.
+
+      // RARE seed-spill: a few seeds/petals scatter off the heads during the
+      // gust window and fade. Additive overlay, enveloped to 0 at the window
+      // edges, and inactive at rest → invisible at t=0. Runs every season.
+      seedSpill(ctx, SP[season], tt);
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

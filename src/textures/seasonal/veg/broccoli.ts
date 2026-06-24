@@ -1,19 +1,22 @@
 // BOLD seasonal art for the BROCCOLI vegetable tile (`tile_veg_broccoli`).
 //
 // One broccoli floret: a thick pale-green stalk rising from the pad, topped by a
-// single dense rounded DOME head made of tightly packed tiny blue-green buds
-// (bumpy / granular texture). The SAME stalk+dome silhouette is drawn every
-// season — only colour and the small dressing (frost, snow cap, pad blossoms /
-// fallen leaves / snow, light tint, sheen) change, plus the crown buds opening &
-// yellowing in autumn (a tweened amount, NOT a shape swap). The seasons swing
-// HARD on colour + a real seasonal prop, and the idle is loud rather than subtle:
+// single dense rounded DOME head made of a few BRIGHT, READABLE bud CLUMPS (fewer
+// and larger than a noisy granular field, with strong lit caps so the head reads
+// clearly at ~58px instead of dark noise). The SAME stalk+dome silhouette is
+// drawn every season — only colour and the small dressing (frost, snow cap, pad
+// blossoms / fallen leaves / snow, light tint, sheen) change, plus the crown buds
+// opening & yellowing in autumn (a tweened amount, NOT a shape swap). The seasons
+// swing HARD on colour + a real seasonal prop, and the idle is a distinct, in-
+// character two-tier beat (NOT a generic wobble/bounce):
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the head rocks/leans
-//       ~10–12 design-px at the crown with a squash at the base. Anticipation →
-//       peak → settle, zero velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger SHAKE/BOUNCE — a squash-stretch hop
-//       ~12–13 design-px up, with anticipation crouch, stretch on the way up, and
-//       a squash landing that overshoots then settles.
+//   IDLE COMMON  (~6s, win ~1.1s): a gentle SWAY-AND-SETTLE — the head leans
+//       calmly a few px to one side, through centre, and rights itself with a
+//       faint breath. The quiet beat. Zero value AND velocity at the edges.
+//   IDLE RARE    (~18s, win ~1.6s): a TREMBLE-AND-SETTLE — a rapid, small shiver
+//       of the whole head (fast low-amplitude lean + squash jitter) that DAMPS
+//       OUT to rest. Pose-only. Every factor is 0 with zero velocity at the
+//       window edges, so the fast tremble still loops seamlessly.
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized `paint(ctx, p, pose)`
 // where `interface P` holds tweenable season params (colours + prop amounts) and
@@ -148,10 +151,10 @@ const SP: Record<SeasonName, P> = {
   // Spring — small young head, looser & a touch lighter green; dewy lime pad +
   // a prominent blossom. Cool-bright light. Palette stays blue-green (younger).
   Spring: {
-    budLight: [140, 210, 138],
-    budMid: [78, 162, 108],
+    budLight: [168, 228, 158],
+    budMid: [92, 176, 120],
     budDark: [40, 104, 76],
-    budCrown: [162, 216, 138],
+    budCrown: [178, 226, 146],
     stalkLight: [200, 226, 170],
     stalkMid: [160, 200, 134],
     stalkDark: [112, 156, 98],
@@ -173,10 +176,10 @@ const SP: Record<SeasonName, P> = {
   // Summer — PEAK: full TIGHT dense BLUE-GREEN head; richest saturation, mid-green
   // pad, warm light, strong soft sheen over the packed buds.
   Summer: {
-    budLight: [88, 184, 132],
-    budMid: [34, 130, 92],
-    budDark: [14, 80, 60],
-    budCrown: [60, 158, 110],
+    budLight: [120, 204, 150],
+    budMid: [48, 148, 104],
+    budDark: [16, 86, 64],
+    budCrown: [88, 180, 124],
     stalkLight: [208, 228, 168],
     stalkMid: [168, 202, 128],
     stalkDark: [116, 158, 92],
@@ -198,10 +201,10 @@ const SP: Record<SeasonName, P> = {
   // Autumn — head loosening: buds opening & yellowing at the crown; deeper olive
   // blue-green body; olive-tan pad, a fallen leaf. Low amber light.
   Autumn: {
-    budLight: [128, 176, 100],
-    budMid: [74, 126, 76],
-    budDark: [38, 78, 50],
-    budCrown: [220, 206, 88], // yellowing open crown
+    budLight: [156, 196, 116],
+    budMid: [88, 142, 86],
+    budDark: [40, 82, 52],
+    budCrown: [226, 210, 96], // yellowing open crown
     stalkLight: [198, 210, 138],
     stalkMid: [158, 178, 106],
     stalkDark: [106, 130, 74],
@@ -223,10 +226,10 @@ const SP: Record<SeasonName, P> = {
   // Winter — cool blue-grey light; frost-dusted BLUE-GREEN head still clearly
   // reads, a bold snow cap on the crown + a snow drift at the base. Tight again.
   Winter: {
-    budLight: [112, 174, 146],
-    budMid: [54, 118, 102],
-    budDark: [26, 74, 68],
-    budCrown: [100, 162, 138],
+    budLight: [144, 198, 172],
+    budMid: [70, 138, 120],
+    budDark: [28, 80, 72],
+    budCrown: [124, 180, 156],
     stalkLight: [198, 216, 200],
     stalkMid: [154, 184, 168],
     stalkDark: [106, 144, 134],
@@ -261,23 +264,28 @@ const DOME_RY = 11;     // dome half-height (rounded, a touch taller than flat)
 
 const PIVOT_Y = STALK_BOT - 1; // rock/lean & squash anchor near the base
 
-// A fixed cluster of tiny "bud" blobs covering the dome (constant outline /
+// A small set of BRIGHT, READABLE bud CLUMPS covering the dome (constant outline /
 // positions every season). Each: [x, y, radius] relative to the dome centre.
-// The dome silhouette is the convex hull of these; identical for all seasons.
+// Fewer + larger than a granular field on purpose: the head reads as clear
+// rounded curds at ~58px rather than dark noise. The dome SILHOUETTE is the
+// fixed `domePath` (NOT the hull of these), so it stays identical across seasons;
+// the clumps just sit inside that footprint. Larger clumps last (painted later =
+// on top) so the lit crown clumps stay legible over the body.
 const BUDS: Array<[number, number, number]> = [
-  // crown row (top of the dome)
-  [-7, -8.2, 3.0], [-2.4, -9.4, 3.2], [2.6, -9.2, 3.2], [7.2, -8.0, 3.0],
-  // upper-mid row
-  [-11, -5.0, 3.0], [-5.6, -5.4, 3.3], [0, -6.0, 3.4], [5.6, -5.4, 3.3], [11, -5.0, 3.0],
-  // mid row
-  [-12.6, -0.6, 3.0], [-7.4, -1.0, 3.3], [-2, -1.4, 3.4], [3.4, -1.2, 3.4], [8.4, -0.8, 3.3], [12.8, -0.6, 3.0],
-  // lower row (skirt of the dome over the stalk shoulders)
-  [-9.6, 3.2, 2.8], [-4.2, 3.0, 3.0], [1.2, 2.8, 3.0], [6.6, 3.0, 2.9], [10.6, 3.4, 2.6],
+  // lower skirt (drawn first → sits behind, over the stalk shoulders)
+  [-8.6, 3.4, 3.6], [0.2, 3.6, 3.9], [8.4, 3.6, 3.5],
+  // mid band — the broad body of the head
+  [-10.4, -0.8, 4.0], [-2.4, -0.6, 4.6], [5.6, -0.8, 4.3], [11.0, -1.2, 3.4],
+  // upper band
+  [-7.0, -5.6, 4.4], [1.0, -5.4, 4.8], [8.0, -5.2, 4.2],
+  // crown clumps (top of the dome) — the readable highlights / autumn yellowing
+  [-3.4, -9.0, 4.2], [3.8, -9.0, 4.2],
 ];
 
-// Which buds sit at the crown (used for the autumn "opening / yellowing" cue and
-// the winter snow cap). Indices into BUDS.
-const CROWN_IDX = [0, 1, 2, 3, 5, 6, 7];
+// Which clumps sit at the crown (used for the autumn "opening / yellowing" cue
+// and informing the winter snow cap). Indices into BUDS — the two top clumps
+// plus the upper band.
+const CROWN_IDX = [7, 8, 9, 10, 11];
 
 /** Trace the dome head silhouette (one smooth rounded dome) into the path. */
 function domePath(ctx: CanvasRenderingContext2D): void {
@@ -506,36 +514,42 @@ function paint(ctx: CanvasRenderingContext2D, raw: P, rawPose: Pose): void {
     ctx.fillRect(-DOME_RX - 2, cy - DOME_RY - 4, (DOME_RX + 2) * 2, DOME_RY * 2 + 10);
     ctx.globalAlpha = 1;
 
-    // the tiny buds: dark base blob, then a lit cap → tightly-packed granular read
+    // the bud CLUMPS: dark base ring, body fill, then a BRIGHT lit cap + a small
+    // bright crest → clear rounded curds that read at small size (not dark noise).
     BUDS.forEach(([bx, by, br], i) => {
       const x = bx;
       const y = by;
       const isCrown = CROWN_IDX.includes(i);
-      // crown buds open & yellow with `loosen` (autumn); a touch larger/separated
+      // crown clumps open & yellow with `loosen` (autumn); a touch larger/separated
       const open = isCrown ? p.loosen : p.loosen * 0.35;
-      const r = br * (1 + open * 0.12);
-      // shadow ring between buds (dark)
+      const r = br * (1 + open * 0.1);
+      // shadow ring between clumps (dark) — keeps each curd separated & readable
       ctx.fillStyle = rgb(p.budDark);
       ctx.beginPath();
-      ctx.arc(x, y + 0.5, r + 0.5, 0, Math.PI * 2);
+      ctx.arc(x, y + 0.6, r + 0.6, 0, Math.PI * 2);
       ctx.fill();
-      // bud body — crown buds tilt toward budCrown colour as they yellow/open
+      // clump body — crown clumps tilt toward budCrown colour as they yellow/open
       const body: RGB = isCrown ? lerpRGB(p.budMid, p.budCrown, open) : p.budMid;
       ctx.fillStyle = rgb(body);
       ctx.beginPath();
       ctx.arc(x, y, r, 0, Math.PI * 2);
       ctx.fill();
-      // lit cap upper-left on each bud
+      // BRIGHT lit cap upper-left — larger + more opaque than before for contrast
       const cap: RGB = isCrown ? lerpRGB(p.budLight, p.budCrown, open * 0.6) : p.budLight;
-      ctx.fillStyle = rgba(cap, 0.9);
+      ctx.fillStyle = rgba(cap, 0.98);
       ctx.beginPath();
-      ctx.arc(x - r * 0.32, y - r * 0.34, r * 0.62, 0, Math.PI * 2);
+      ctx.arc(x - r * 0.3, y - r * 0.32, r * 0.72, 0, Math.PI * 2);
       ctx.fill();
-      // a tiny dark fleck centre when buds open (granular detail, autumn)
+      // a small bright crest highlight on top of the cap for that fresh-curd pop
+      ctx.fillStyle = rgba([255, 255, 255], 0.42);
+      ctx.beginPath();
+      ctx.arc(x - r * 0.4, y - r * 0.46, r * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      // a tiny dark fleck centre when clumps open (granular detail, autumn)
       if (open > 0.25) {
         ctx.fillStyle = rgba(p.budDark, 0.5 * open);
         ctx.beginPath();
-        ctx.arc(x, y, r * 0.22, 0, Math.PI * 2);
+        ctx.arc(x, y, r * 0.2, 0, Math.PI * 2);
         ctx.fill();
       }
     });
@@ -619,56 +633,55 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  // windup wave: a small negative lobe then a big positive lobe, both returning
-  // to zero at the edges. (1-cos) envelope keeps velocity zero at q=0,1.
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+/** A seamless tremble carrier: a fast oscillation that is exactly 0 with zero
+ *  velocity at q=0 and q=1. `Math.sin(Math.PI*q)` is 0 at both edges and the fast
+ *  `Math.sin(2*Math.PI*freq*q)` (integer `freq`) is 0 at both edges too, so every
+ *  term of the product's derivative carries a zero factor → zero slope at the
+ *  edges. Multiply by any finite weight (e.g. a decay) and the edges stay clean. */
+function tremble(q: number, freq: number): number {
+  return Math.sin(Math.PI * q) * Math.sin(2 * Math.PI * freq * q);
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** Build the idle pose from the wall clock. Two tiers, neither a bounce:
+ *   COMMON — a gentle SWAY-AND-SETTLE every ~6s (win 1.1s): one calm lean out,
+ *            through centre, and right itself, with a faint breath.
+ *   RARE   — a TREMBLE-AND-SETTLE every ~18s (win 1.6s): a rapid small shiver of
+ *            the whole head (fast lean + squash jitter) whose amplitude DAMPS
+ *            toward rest. Pose-only.
+ *  Each factor is 0 with zero value AND zero velocity at the window edges, so the
+ *  loop is seamless even though the rare beat is fast. */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // Crown arm ≈ (PIVOT_Y - DOME_CY) ≈ 23 px → ~0.17 rad lean → ~10–12 px sway.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: a gentle sway-and-settle (~6s, win 1.1s) ──
+  // Calm, not a nervous wobble: one slow lean out and back with a faint breath.
+  // env=sin(πq) and the carrier sin(2πq) are each 0 at q=0 and q=1 → seamless.
+  const qC = actionQ(t, 6.0, 1.1, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.17 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0 envelope, zero at edges
+    const sway = Math.sin(qC * Math.PI * 2); // one gentle L→centre→R→centre
+    pose.lean += 0.07 * env * sway; // ~4–5px crown sway — calm
+    // a soft breath settling at the base (0 with zero velocity at the edges)
+    pose.squashY += -0.025 * hump(qC);
+    pose.squashX += 0.022 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12–13px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
-  if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air; // 0..1 in the air
-    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-  }
-
-  // Reference anticipate() so it stays part of the seamless-curve toolkit and
-  // contributes a faint windup tilt to the common wobble (still 0 at edges).
-  if (qC >= 0) {
-    pose.lean += 0.02 * anticipate(qC);
+  // ── RARE: a TREMBLE-AND-SETTLE (~18s, win 1.6s) — NOT a hop ──
+  // A rapid low-amplitude shiver of the whole head that damps toward rest. The
+  // `tremble` carriers are seamless at the edges; a decaying weight (still finite
+  // and smooth) front-loads the shiver so it settles. Phase 3s clears the COMMON
+  // beat: the window is t mod 18 ∈ [15,18), ending at the 18≡0 seam where COMMON
+  // restarts from REST (verified non-overlapping, like the pear/apple).
+  const qR = actionQ(t, 18.0, 1.6, 3.0);
+  if (qR >= 0) {
+    // decay: 1 → ~0.1 across the window; finite & smooth so it preserves the
+    // carriers' zero value+velocity at q=0 and q=1 (0·finite = 0 either edge).
+    const decay = Math.exp(-2.6 * qR);
+    // fast lean jitter (6 cycles) and a squash jitter a half-step out of phase so
+    // the head reads as a shiver, not a pure rock. Small amplitudes (low-key).
+    pose.lean += 0.05 * decay * tremble(qR, 6);
+    pose.squashX += 0.05 * decay * tremble(qR, 5);
+    pose.squashY += -0.05 * decay * tremble(qR, 5);
   }
 
   return pose;
@@ -734,7 +747,7 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the bounce + dense blue-green head is the show.
+      // Summer: no extra dressing — the bright blue-green head + sway is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

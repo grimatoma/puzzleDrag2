@@ -15,9 +15,9 @@
 //   IDLE COMMON  (~6s, win ~1.0s): a slow HEAVY WOBBLE — the melon rolls/rocks
 //       side to side ~10–12 design-px at the rim with a base squash. Zero
 //       velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.2s): a bigger BOUNCE — a squash-stretch hop with
-//       an anticipation crouch, a (modest, it's heavy) rise, and a squash
-//       landing that settles. May rise out of the −24..+24 box.
+//   IDLE SPECIAL (~18s, win ~1.6s): a big HEAVY ROLL — the round melon teeters
+//       far to one side as if about to roll off, holds, then rolls back through
+//       centre and settles. A weighty roll, NOT a hop.
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized
 // `paint(ctx, p, pose)` where `interface P` holds tweenable season params
@@ -671,24 +671,21 @@ function poseFromClock(t: number): Pose {
     pose.lean += 0.02 * anticipate(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.2s) ──
-  // Anticipation crouch → modest rise (it's heavy) → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.2, 3.0); // phase 3s so it doesn't collide w/ wobble
+  // ── RARE: a big HEAVY ROLL (~18s, win 1.6s) — NOT a hop ──
+  // The round melon teeters far to one side as if about to roll off, holds, then
+  // rolls back through centre and settles. A heavy weighty roll suits a melon far
+  // better than the generic produce hop it used to share.
+  const qS = actionQ(t, 18.0, 1.6, 3.0); // phase 3s so it never overlaps the wobble
   if (qS >= 0) {
-    const crouch = qS < 0.2 ? Math.sin((qS / 0.2) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.2 && qS < 0.82 ? (qS - 0.2) / 0.62 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down, then a heavy rise (negative = up) ~11px (it's big).
-    pose.bob += crouch * 1.8 - air * 11.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air; // 0..1 in the air
-    pose.squashY += apex * 0.18 - crouch * 0.14 - land * 0.18;
-    pose.squashX += -apex * 0.12 + crouch * 0.12 + land * 0.16;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
+    const env = Math.sin(Math.PI * qS); // 0..1..0 overall envelope
+    const roll = Math.sin(qS * Math.PI * 2); // one big roll out → through → back
+    pose.lean += 0.34 * env * roll;
+    // the heavy melon settles deep on the low side at each extreme, then rights
+    pose.squashY += -0.1 * hump(qS);
+    pose.squashX += 0.09 * hump(qS);
+    // a weighty teeter: it sinks a touch onto its side at each extreme (a roll,
+    // not a jump — bob dips DOWN, never up).
+    pose.bob += 1.4 * hump(qS) * Math.abs(roll);
   }
 
   return pose;
@@ -755,7 +752,7 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the bounce + glossy ripe green is the show.
+      // Summer: no extra dressing — the heavy roll + glossy ripe green is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

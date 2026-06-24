@@ -5,15 +5,20 @@
 // part of its identity — it gently shimmers in EVERY season. The SAME mound
 // silhouette is drawn every season (identity-safe); the seasons swing hard on
 // colour + a real seasonal prop (blossom / fallen leaf / snow cap + base snow +
-// frost) and on the glow/sparkle, and the idle is lively rather than subtle:
+// frost) and on the glow/sparkle. The idle leans into the magic: a calm
+// earthbound rustle as the common beat, and a distinctly MAGICAL glow pulse as
+// the rare — what sets manna apart from corn/wheat/rice:
 //
-//   IDLE COMMON  (~6s, win ~0.95s): a gentle FLOAT + SHIMMER — the manna lifts
-//       and sways ~10–14 design-px (reads as a soft magical float) while its
-//       glow pulses. Anticipation → peak → settle, zero velocity at the window
-//       edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.2s): a SPARKLE-BURST — a bigger "look-at-me"
-//       float ~16–20 design-px up with anticipation crouch → stretch → settle,
-//       the glow flaring and sparkles flashing at the apex.
+//   IDLE COMMON  (~6s, win ~0.95s): a calm WIND RUSTLE — the mound rocks
+//       ~10–14 design-px side-to-side with a soft base squash, like a breeze.
+//       Deliberately grounded (no glow flare), so the rare beat reads as
+//       special. Zero value+velocity at the window edges (seamless).
+//   IDLE SPECIAL (~18s, win ~1.2s): a MAGICAL GLOW PULSE — the mound lifts a
+//       touch while a soft golden halo SWELLS over the grain heads, a contained
+//       sparkle flares, and a few luminous MOTES rise and fade above the mound.
+//       The motes + glow swell are drawn as an ADDITIVE ('lighter') overlay in
+//       anim, enveloped by hump(qS) so they fade in from / out to exactly
+//       nothing at the window edges (invisible at t=0).
 //
 // The architecture is a single parameterized `paint(ctx, p, pose)` where
 // `interface P` holds tweenable season params (colours + glow + prop amounts)
@@ -574,51 +579,127 @@ function anticipate(q: number): number {
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0, glowPulse: 0, sparkPulse: 0 };
 
-  // ── COMMON: gentle float + shimmer (~6s, win 0.95s) ──
-  // Lifts ~10–14px with a soft sway and a glow pulse. Seamless at the edges.
+  // ── COMMON: calm wind RUSTLE (~6s, win 0.95s) ──
+  // A grounded, gentle sway — the mound rocks ~10–14px side-to-side with a soft
+  // base squash, like a breeze passing through. Deliberately calm and earthy so
+  // the RARE magical beat reads as special by contrast. NO big float, NO glow
+  // flare here. Seamless: every term is 0 (with zero velocity) at the edges.
   const qC = actionQ(t, 6.0, 0.95, 0.0);
   if (qC >= 0) {
     const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rise = hump(qC);              // 0..1..0
-    pose.bob += -12.0 * rise;           // float up ~12px
-    pose.lean += 0.06 * env * Math.sin(qC * Math.PI * 2);
-    pose.squashY += 0.05 * rise;        // a touch of stretch at the apex
-    pose.squashX += -0.035 * rise;
-    pose.glowPulse += 0.35 * rise;      // glow breathes up with the float
-    pose.sparkPulse += 0.25 * rise;     // a gentle shimmer
+    const rock = Math.sin(qC * Math.PI * 3); // ~1.5 rocks within the window
+    pose.lean += 0.12 * env * rock;     // ~0.12 rad → ~12px sway at the top
+    // gentle base squash as the breeze loads the mound (hump = 0/vel-0 at edges)
+    pose.squashY += -0.045 * hump(qC);
+    pose.squashX += 0.04 * hump(qC);
+    // a barely-there lift so it breathes; tiny so it stays a rustle, not a float
+    pose.bob += -1.6 * hump(qC);
   }
 
-  // ── RARE SPECIAL: sparkle-burst / bigger float (~18s, win 1.2s, phase +3s) ──
-  // Anticipation crouch → big float up ~16–20px → settle, glow flares, sparkles
-  // flash at the apex.
+  // ── RARE SPECIAL: a MAGICAL GLOW PULSE (~18s, win 1.2s, phase +3s) ──
+  // This is manna's signature beat — what sets it apart from corn/wheat/rice.
+  // The mound rises a touch and the AMBIENT HALO swells warm + bright while a
+  // contained sparkle flares; the luminous MOTES (drawn as an additive overlay
+  // in anim) lift and fade above the heads in the same window. The pose stays
+  // gentle so the GLOW, not a big jump, is the show. Seamless: bob/squash use
+  // hump (0 value + 0 velocity at edges); glow/spark pulses use hump too, so the
+  // base halo returns exactly to rest at the window edges.
   const qS = actionQ(t, 18.0, 1.2, 3.0);
   if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // settle bump
-
-    // bob: brief dip on the crouch, then a big rise (negative = up) ~18px.
-    pose.bob += crouch * 1.8 - air * 18.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & settle.
-    pose.squashY += air * 0.22 - crouch * 0.12 - land * 0.14;
-    pose.squashX += -air * 0.15 + crouch * 0.10 + land * 0.12;
-    // a tiny lean wiggle for life.
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-    // glow + sparkle flare hard at the apex (still 0 at the edges).
-    const flare = hump(qS);
-    pose.glowPulse += 0.85 * flare;
-    pose.sparkPulse += 1.0 * flare;
+    const rise = hump(qS);                 // 0..1..0, zero value+velocity at edges
+    const env = Math.sin(Math.PI * qS);    // 0..1..0
+    pose.bob += -6.5 * rise;               // a soft levitating lift ~6–7px
+    pose.squashY += 0.07 * rise;           // gentle breath-stretch at the apex
+    pose.squashX += -0.05 * rise;
+    // a faint dreamy sway, vanishing at the edges (env zeroes it there)
+    pose.lean += 0.03 * env * Math.sin(qS * Math.PI * 2);
+    // the glow + contained sparkle swell hard mid-window, 0 at the edges.
+    pose.glowPulse += 1.0 * rise;
+    pose.sparkPulse += 1.0 * rise;
   }
 
   // Reference anticipate() so it stays part of the seamless-curve toolkit and
-  // adds a faint windup tilt to the common float (still 0 at edges).
+  // adds a faint windup tilt to the common rustle (still 0 at edges).
   if (qC >= 0) {
-    pose.lean += 0.015 * anticipate(qC);
+    pose.lean += 0.012 * anticipate(qC);
   }
 
   return pose;
+}
+
+// ── RARE magical overlay: glow pulse + drifting luminous motes ────────────────
+// Drawn additively (`lighter`) ON TOP of the painted tile during the rare beat
+// only. This is manna's signature magical read — a soft glow swelling over the
+// grain heads while a few luminous motes rise and fade above the mound.
+//
+// SEAMLESS / invisible-at-t0 contract:
+//   • The whole overlay is gated on the rare window being OPEN (qS >= 0). At
+//     t = 0 the window (period 18s, phase +3s) is closed, so NOTHING draws.
+//   • Even when open, every alpha is scaled by hump(qS) = sin²(πqS), which is 0
+//     with ZERO VELOCITY at qS = 0 and qS = 1 — so the overlay fades in from and
+//     out to exactly nothing at the window edges (no pop, no residue).
+//   • Pure additive light over existing pixels; it never alters the subject's
+//     own painted colour at rest.
+const MOTES: ReadonlyArray<{ x: number; y0: number; rise: number; drift: number; r: number; lead: number }> = [
+  { x: -7, y0: -10, rise: 20, drift: 3.0, r: 1.7, lead: 0.0 },
+  { x: 5, y0: -12, rise: 24, drift: -2.4, r: 1.4, lead: 0.18 },
+  { x: -1, y0: -15, rise: 22, drift: 1.6, r: 1.9, lead: 0.34 },
+  { x: 9, y0: -7, rise: 18, drift: 2.2, r: 1.2, lead: 0.5 },
+  { x: -10, y0: -5, rise: 19, drift: -1.8, r: 1.3, lead: 0.62 },
+];
+
+function drawMagicOverlay(ctx: CanvasRenderingContext2D, t: number, glow: RGB, mote: RGB): void {
+  const qS = actionQ(t, 18.0, 1.2, 3.0);
+  if (qS < 0) return; // window closed (true at t=0) → nothing drawn
+  const env = hump(qS); // 0 with zero velocity at qS=0 and qS=1
+  if (env <= 0.001) return;
+
+  ctx.save();
+  try {
+    ctx.globalCompositeOperation = "lighter";
+    ctx.globalAlpha = 1;
+
+    // 1) soft golden glow swell centred over the grain heads.
+    const gr = 14 + 10 * env;
+    const g = ctx.createRadialGradient(0, -6, 1, 0, -6, gr);
+    g.addColorStop(0, rgba(glow, clamp01(0.5 * env)));
+    g.addColorStop(0.5, rgba(glow, clamp01(0.22 * env)));
+    g.addColorStop(1, rgba(glow, 0));
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(0, -6, gr, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2) luminous motes rising from the heads and fading out as they climb.
+    MOTES.forEach((m) => {
+      // per-mote progress staggered by `lead`, wrapped into 0..1 and only used
+      // while the window is open; its alpha is gated by the window envelope.
+      const local = ((qS + m.lead) % 1 + 1) % 1;
+      const climb = m.y0 - m.rise * local;            // rises upward (negative y)
+      const dx = m.x + m.drift * Math.sin(local * Math.PI * 2);
+      const moteFade = Math.sin(local * Math.PI);      // 0..1..0 over its climb
+      const a = clamp01(0.9 * env * moteFade);
+      const rr = m.r * (0.7 + 0.5 * env);
+      // soft halo around the mote
+      const mg = ctx.createRadialGradient(dx, climb, 0, dx, climb, rr * 3.2);
+      mg.addColorStop(0, rgba(mote, a));
+      mg.addColorStop(0.4, rgba(glow, clamp01(a * 0.55)));
+      mg.addColorStop(1, rgba(glow, 0));
+      ctx.fillStyle = mg;
+      ctx.beginPath();
+      ctx.arc(dx, climb, rr * 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      // bright core
+      ctx.fillStyle = rgba(mote, a);
+      ctx.beginPath();
+      ctx.arc(dx, climb, rr, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+    ctx.restore();
+  }
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
@@ -681,11 +762,18 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the radiant glow + sparkle-float is the show.
+      // Summer: no extra falling dressing — the magical glow beat is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();
     }
+
+    // The RARE magical beat: an additive glow pulse over the grain heads plus a
+    // few luminous motes that rise and fade. Drawn last so the light sits over
+    // everything; invisible except during the rare window (so nothing at t=0).
+    const sp = SP[season];
+    const moteTint = lerpRGB(sp.grainInner, [255, 255, 255], 0.6);
+    drawMagicOverlay(ctx, tt, sp.glowColor, moteTint);
   };
 }
 

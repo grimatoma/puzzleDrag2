@@ -199,7 +199,7 @@ interface P {
   fallenLeafAmt: number; // 0..1 a fallen leaf on the pad (autumn)
   breathFogAmt: number; // 0..1 breath puff at the muzzle (winter)
   scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
+  scarfColor: RGB; // scarf colour (locked mustard, fades in via alpha)
 }
 
 // Four BOLD season presets. The longhorn stays the SAME tan, white-blazed,
@@ -230,7 +230,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 158, 52],
   },
   // Summer — GLOSSY tan coat (PEAK), saturated mid-green pad, bright warm light.
   Summer: {
@@ -256,7 +256,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 158, 52],
   },
   // Autumn — warm reddish-tinted fuller coat, olive-tan pad, a fallen leaf,
   // dulled gloss, amber light.
@@ -283,7 +283,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.92,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 158, 52],
   },
   // Winter — FURRIER thick coat + frosted/snow-dusted horns + back-snow + a
   // little scarf + breath fog, snowy pad, cool blue-grey light. The tan hide
@@ -311,7 +311,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 158, 52],
   },
 };
 
@@ -703,12 +703,41 @@ function paintLonghorn(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
 
   // ── HEAD (front-¾, lower-left) — locks identity: tan face w/ white blaze,
   //    WIDE horns, ears, dark muzzle. The head bobs (chew) + swings (toss). ────
-  const hx = bx - 14 + pose.head; // head swings sideways with the toss
+  // The head + horns SWING about a neck pivot anchored on the body's front-left
+  // shoulder, so the toss ARCS the head (and the wide horns) rather than sliding
+  // it sideways — it can never detach from the body. swingAng=0 at rest, so every
+  // season still + transition endpoint is pixel-identical to before.
+  const neckX = bx - 8;
+  const neckY = by + 2;
+  const swingAng = Math.max(-0.8, Math.min(0.8, pose.head * 0.045));
+  const hx = bx - 14; // rest head x (the toss is the rotation below, not a slide)
   const hy = by + 3 + pose.chew; // chew dips the head down
 
-  // the signature WIDE horns (behind the crown), constant width every season,
-  // swaying with the head swing
-  paintHorns(ctx, p, hx, hy, pose.head * 0.5);
+  ctx.save();
+  ctx.translate(neckX, neckY);
+  ctx.rotate(swingAng);
+  ctx.translate(-neckX, -neckY);
+
+  // a short tan NECK bridging the shoulder to the head base (behind the head) so
+  // the join always reads as one animal — especially mid-toss.
+  ctx.lineCap = "round";
+  ctx.strokeStyle = rgba(p.outline);
+  ctx.lineWidth = 7.4;
+  ctx.beginPath();
+  ctx.moveTo(neckX + 1.5, neckY - 1);
+  ctx.lineTo(hx + 3.5, hy - 1.5);
+  ctx.stroke();
+  ctx.strokeStyle = rgba(p.hideMid);
+  ctx.lineWidth = 5.0;
+  ctx.beginPath();
+  ctx.moveTo(neckX + 1.5, neckY - 1);
+  ctx.lineTo(hx + 3.5, hy - 1.5);
+  ctx.stroke();
+  ctx.lineCap = "butt";
+
+  // the signature WIDE horns (behind the crown), constant width every season —
+  // they rotate rigidly with the head via the swing transform above.
+  paintHorns(ctx, p, hx, hy, 0);
 
   // ears (tan outer + lighter inner), set wide, behind the head. The near
   // (left) ear flicks up with the chew.
@@ -735,7 +764,7 @@ function paintLonghorn(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   // head — tan ovoid (outline then fill), tilted toward lower-left
   ctx.save();
   ctx.translate(hx, hy);
-  ctx.rotate(0.22 + pose.head * 0.01);
+  ctx.rotate(0.22); // the head-swing rotation (about the neck) supplies the toss tilt
   // outline
   ctx.fillStyle = rgba(p.outline);
   ctx.beginPath();
@@ -807,8 +836,11 @@ function paintLonghorn(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
     ctx.fill();
   }
   ctx.restore(); // end head transform
+  ctx.restore(); // end head-swing rotation (neck + horns + head arc as one)
 
   // ── SCARF (winter) — a little knitted band around the neck, below the head ──
+  // Drawn OUTSIDE the head-swing rotation so it stays put on the neck while the
+  // head tosses (the scarf reads as wrapped around the steady neck).
   if (p.scarfAmt > 0.001) {
     const sx = hx + 5.0;
     const sy = hy + 4.0;

@@ -10,15 +10,21 @@
 // reads as colour/shade only.
 //
 // This is the BOLD variant (mirrors pepper.bold.ts): seasons swing HARD on
-// colour + a real seasonal prop (blossom / fallen leaf / snow cap + base snow),
-// and the idle is LOUD rather than subtle:
+// colour + a real seasonal prop (blossom / fallen leaf / snow cap + base snow).
+// The idle is a LENGTH-WISE ROLL, not a vertical hop — a long horizontal
+// cucumber rolling/rocking about its long axis suits this form far better than
+// a jump (there is NO vertical bob anywhere in the idle):
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the cucumber rocks
-//       about its resting base with a squash, ~10–12 design-px at the raised
-//       tip. Zero velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger SHAKE/BOUNCE — a squash-stretch
-//       hop ~12–14 design-px up, anticipation crouch → stretch → squash
-//       landing that overshoots then settles.
+//   IDLE COMMON  (~6s, win ~1.0s): a gentle length-wise ROCK/ROLL — the long
+//       cucumber rolls a little side-to-side about its long axis (a small lean
+//       out, through level, to the other side and back) with a faint flex
+//       (squash), as if it might roll away. Calm; NO vertical hop. Zero value
+//       AND velocity at the window edges (seamless).
+//   IDLE RARE    (~18s, win ~1.6s, phased clear of COMMON): a bigger LENGTH-WISE
+//       BEND/ROLL — a fuller roll to one side, through to the other, plus a
+//       pronounced bow/flex along its length (wide+thin then settle), then it
+//       rights itself. Implemented purely via lean (roll/rock) + squashX/squashY
+//       (flex/bow); explicitly NO vertical bounce.
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized
 // `paint(ctx, p, pose)` where `interface P` holds tweenable season params
@@ -245,7 +251,9 @@ const SP: Record<SeasonName, P> = {
 // (stem/flower end, near the pad) to the upper-right (raised blossom-scar tip),
 // slightly curved. We define a central spine of points (design px) plus a
 // half-thickness; both ends round in. The idle pose pivots near the resting
-// base so the lean rocks the RAISED tip side to side.
+// base so `lean` reads as the long cucumber ROLLING/ROCKING about its long axis
+// (the raised tip arcs side to side); `squash` reads as a flex/bow along its
+// length. There is NO vertical bob in the idle (a hop suits this long form least).
 
 const CUKE_HALF = 6.4; // half-thickness of the cucumber barrel
 
@@ -666,54 +674,45 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
-}
-
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** Build the idle pose from the wall clock. Two tiers, BOTH a length-wise
+ *  roll/rock — never a vertical hop (a long horizontal cucumber rolls; it does
+ *  not jump). `lean` is the roll about the long axis (raised tip arcs side to
+ *  side); `squashX`/`squashY` give a flex/bow along the length. `pose.bob` stays
+ *  0 throughout. Each factor is a product of terms that are BOTH zero at the
+ *  window edges (`env·sway` for lean, `hump` for squash), so the pose returns to
+ *  REST with zero value AND zero velocity → seamless loop:
+ *    COMMON a gentle roll every ~6s (win 1.0s),
+ *    RARE   a bigger roll + length-wise bow every ~18s (win 1.6s). */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // ~0.16 rad lean about the base pivot → raised tip travels ~10–12 px.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: a gentle length-wise ROLL/ROCK (~6s, win 1.0s) ──
+  // One calm roll out to one side, through level, to the other and back — as if
+  // the long cucumber might roll away. NO bob. ~0.10 rad → raised tip arcs ~7px.
+  const qC = actionQ(t, 6.0, 1.0, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.17 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
+    const env = Math.sin(Math.PI * qC); // 0..1..0 envelope, zero at edges
+    const roll = Math.sin(qC * Math.PI * 2); // one gentle L→level→R→level roll
+    pose.lean += 0.10 * env * roll; // a calm roll about the long axis (no hop)
+    // a faint flex as it rolls — slightly wider + a touch flatter, 0 at edges
+    pose.squashX += 0.035 * hump(qC);
+    pose.squashY += -0.025 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12–14px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  // ── RARE: a bigger LENGTH-WISE BEND/ROLL (~18s, win 1.6s) — NO hop ──
+  // A fuller roll to one side, through to the other, plus a pronounced bow/flex
+  // along the length (the cucumber visibly flexes wide+thin then settles) and
+  // rights itself. Phase 3s so it never overlaps the COMMON roll. Still NO bob.
+  const qS = actionQ(t, 18.0, 1.6, 3.0);
   if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air; // 0..1 in the air
-    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-  }
-
-  // Reference anticipate() so it stays part of the seamless-curve toolkit and
-  // contributes a faint windup tilt to the common wobble (still 0 at edges).
-  if (qC >= 0) {
-    pose.lean += 0.02 * anticipate(qC);
+    const env = Math.sin(Math.PI * qS); // 0..1..0 envelope
+    const roll = Math.sin(qS * Math.PI * 2); // one big L→R roll
+    pose.lean += 0.22 * env * roll; // a fuller roll about the long axis
+    // a length-wise bow: it bulges wide and thins through its length at the apex
+    // of the roll, then settles. hump() keeps both 0 (with zero velocity) at the
+    // edges, so the bend reads as a flex along the body, not a jump.
+    pose.squashX += 0.085 * hump(qS);
+    pose.squashY += -0.06 * hump(qS);
   }
 
   return pose;
@@ -779,7 +778,7 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.restore();
         ctx.globalAlpha = 1;
       }
-      // Summer: no extra dressing — the bounce + glossy green is the show.
+      // Summer: no extra dressing — the length-wise roll + glossy green is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

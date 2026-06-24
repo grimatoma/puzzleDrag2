@@ -6,15 +6,18 @@
 //
 // SAME drupelet-cluster silhouette every season (identity-safe), but the seasons
 // swing HARD on colour + a real seasonal prop (blossom / fallen leaf / snow cap
-// + base snow), and the idle is loud rather than subtle — the berry cluster
-// jiggles:
+// + base snow), and the idle is an in-character CLUSTER beat (a bunch of berries,
+// not a hopping fruit):
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the cluster rocks/leans
-//       at the crown ~10–12 design-px, with a squash at the base. Anticipation →
-//       peak → settle, zero velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger SHAKE/BOUNCE — a squash-stretch hop
-//       ~12–13 design-px up, with anticipation crouch, stretch on the way up, and
-//       a squash landing that overshoots then settles (the bunch may exit the box).
+//   IDLE COMMON  (~6s, win ~1.4s): a gentle CLUSTER JIGGLE — a soft squash
+//       breathing as the bunch of drupelets settles (a small widen + shorten with
+//       a tiny jiggle on top). Pose-only, no lean, zero velocity at the window
+//       edges (seamless).
+//   IDLE RARE    (~18s, win ~1.5s): a BERRY-PLUMP — the whole cluster swells and
+//       tightens (drupelets plump up: squashX+squashY expand together ~16%), lifts
+//       a hair, then settles. In Spring/Summer a single DEW DROPLET beads at the
+//       crown and slides off the right, drawn as an additive overlay enveloped to
+//       0 at the window edges. The plump pulse is pose-only and reliable.
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized `paint(ctx, p, pose)`
 // where `interface P` holds tweenable season params (colours + prop amounts) and
@@ -289,36 +292,44 @@ function drawBerry(
 
   // matte/overripe darkening pulls the body toward the dark tone
   const bodyMid = lerpRGB(p.berryMid, p.berryDark, 0.55 * p.sunken);
+  // a BRIGHTER lit tone (berryLight pushed toward white) so each drupelet reads
+  // as a distinct rounded bump at board size — contrast only, silhouette intact.
+  const capBright = lerpRGB(p.berryLight, [255, 255, 255], 0.34);
 
-  // each drupelet: dark base then a lit cap (light from upper-left)
+  // each drupelet: a dark SEPARATING ring, dark base, mid body, then a bright
+  // lit cap (light from upper-left). The dark ring + extra body inset deepen the
+  // gaps BETWEEN drupelets so the bumpy aggregate stays legible at ~58px.
   for (const [dx, dy, dr] of DRUPELETS) {
     const px = cx + dx * r;
     const py = cy + dy * r;
     const pr = dr * r;
+    // dark separating ring — sits in the gaps between neighbouring drupelets
+    ctx.fillStyle = rgb(p.outline);
+    ctx.beginPath();
+    ctx.arc(px, py, pr * 1.08, 0, Math.PI * 2);
+    ctx.fill();
     // dark base
     ctx.fillStyle = rgb(p.berryDark);
     ctx.beginPath();
-    ctx.arc(px, py, pr, 0, Math.PI * 2);
+    ctx.arc(px, py, pr * 0.92, 0, Math.PI * 2);
     ctx.fill();
-    // mid body, inset
+    // mid body, inset a touch more than before so the dark gap shows
     ctx.fillStyle = rgb(bodyMid);
     ctx.beginPath();
-    ctx.arc(px, py, pr * 0.86, 0, Math.PI * 2);
+    ctx.arc(px, py, pr * 0.78, 0, Math.PI * 2);
     ctx.fill();
-    // lit cap toward upper-left
-    ctx.fillStyle = rgb(p.berryLight);
-    ctx.globalAlpha = 0.85;
+    // brighter lit cap toward upper-left (full opacity, brightened tone)
+    ctx.fillStyle = rgb(capBright);
+    ctx.globalAlpha = 0.95;
     ctx.beginPath();
     ctx.arc(px - pr * 0.3, py - pr * 0.34, pr * 0.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.globalAlpha = 1;
-    // tiny specular highlight (gloss strength from P)
-    if (p.gloss > 0.02) {
-      ctx.fillStyle = rgba([255, 255, 255], 0.25 + 0.65 * p.gloss);
-      ctx.beginPath();
-      ctx.arc(px - pr * 0.36, py - pr * 0.42, pr * 0.2 + 0.3, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // tiny specular highlight (gloss strength from P) — brighter to pop the bump
+    ctx.fillStyle = rgba([255, 255, 255], 0.4 + 0.55 * p.gloss);
+    ctx.beginPath();
+    ctx.arc(px - pr * 0.36, py - pr * 0.42, pr * 0.22 + 0.32, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // unifying shade under the bottom drupelets to round the berry
@@ -597,58 +608,96 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
-}
+// RARE phase + window — shared by the pose plump and the anim() dew overlay so
+// the droplet is gated to exactly the same beat.
+const RARE_PERIOD = 18.0;
+const RARE_WIN = 1.5;
+const RARE_PHASE = 3.0; // phased clear of the common jiggle (never overlaps)
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** Build the idle pose from the wall clock. An in-character CLUSTER beat:
+ *   COMMON a gentle squash-breathing JIGGLE every ~6s (win 1.4s),
+ *   RARE   a BERRY-PLUMP swell+settle every ~18s (win 1.5s).
+ *  Both beats are built from factors that are zero with zero VELOCITY at the
+ *  window edges (hump, and hump×sin(2πq)), so the pose returns to REST cleanly
+ *  → a seamless loop. No lean: a bunch of berries settles/plumps, it doesn't
+ *  rock or hop. */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // ~0.17 rad lean about the base; crown arm ≈ (PIVOT_Y - (-7)) ≈ 20.5 px →
-  // ~10–12 px sway at the crown. The cluster jiggles.
-  const qC = actionQ(t, 6.0, 0.9, 0.0);
+  // ── COMMON: gentle cluster jiggle — soft squash breathing (~6s, win 1.4s) ──
+  // The bunch of drupelets settles: a small widen + shorten with a faint jiggle
+  // riding on top. Tiny, pose-only.
+  const qC = actionQ(t, 6.0, 1.4, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.17 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
+    const env = hump(qC); // 0..1..0, zero value+velocity at edges
+    const jig = Math.sin(qC * Math.PI * 2); // one in→out wiggle within the window
+    // base soft breathe: widen a touch, shorten a touch (a settling bunch)
+    pose.squashX += 0.05 * env;
+    pose.squashY += -0.04 * env;
+    // faint jiggle on top — env keeps it 0 (with 0 velocity) at the edges
+    pose.squashX += 0.022 * env * jig;
+    pose.squashY += -0.018 * env * jig;
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12–13px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
+  // ── RARE: BERRY-PLUMP — the whole cluster swells & tightens then settles ──
+  // squashX AND squashY expand TOGETHER (uniform inflate, not a flatten) so it
+  // reads as the drupelets plumping up, with a small lift, then a settle-back.
+  // Clearly distinct from the COMMON jiggle (uniform swell vs widen-and-shorten,
+  // and ~3× the amount), not just a bigger version of it.
+  const qS = actionQ(t, RARE_PERIOD, RARE_WIN, RARE_PHASE);
   if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~12.5px.
-    pose.bob += crouch * 1.5 - air * 12.5;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air; // 0..1 in the air
-    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-  }
-
-  // Reference anticipate() so it stays part of the seamless-curve toolkit and
-  // contributes a faint windup tilt to the common wobble (still 0 at edges).
-  if (qC >= 0) {
-    pose.lean += 0.02 * anticipate(qC);
+    const swell = hump(qS); // 0..1..0 main plump
+    const tighten = hump(qS) * Math.sin(qS * Math.PI * 2); // tighten→release wiggle
+    pose.squashX += 0.16 * swell + 0.04 * tighten;
+    pose.squashY += 0.14 * swell + 0.035 * tighten;
+    // a small lift as it plumps (the bunch lifts a hair), zero at the edges
+    pose.bob += -1.8 * hump(qS);
   }
 
   return pose;
+}
+
+/** Additive DEW DROPLET overlay for the RARE berry-plump (Spring/Summer only).
+ *  A single bead forms at the crown, swells, then slides down the right of the
+ *  cluster and off. Gated to the RARE window via actionQ, so it is INVISIBLE at
+ *  t=0 (RARE is at rest there) and its alpha envelope is 0 at BOTH window edges
+ *  → it never pops in or out. Pure dressing, never touches the silhouette. */
+function drawDewDrop(ctx: CanvasRenderingContext2D, t: number): void {
+  const qS = actionQ(t, RARE_PERIOD, RARE_WIN, RARE_PHASE);
+  if (qS < 0) return; // at rest (also the case at t=0) → nothing drawn
+  // alpha fades in then out, exactly 0 at qS=0 and qS=1 (no pop).
+  const alpha = Math.sin(Math.PI * qS) * 0.9;
+  if (alpha <= 0.001) return;
+  // bead near the crown for the first ~45%, then slide down-right and off.
+  const slide = clamp01((qS - 0.45) / 0.55); // 0 while beading → 1 sliding off
+  const ease = slide * slide;
+  const dx = 2.0 + ease * 7.0; // drifts toward the right edge of the bunch
+  const dy = -5.5 + ease * 16.0; // slides down past the bunch
+  const rad = 1.0 + Math.sin(Math.PI * clamp01(qS / 0.45)) * 0.9 - ease * 0.3; // beads then thins
+  const r = Math.max(0.4, rad);
+
+  ctx.save();
+  try {
+    ctx.globalAlpha = clamp01(alpha);
+    // translucent water body
+    ctx.fillStyle = "rgba(214,238,255,0.55)";
+    ctx.beginPath();
+    ctx.ellipse(dx, dy, r * 0.82, r, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // bright rim + a small specular glint (reads as a wet bead)
+    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.ellipse(dx, dy, r * 0.82, r, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.9)";
+    ctx.beginPath();
+    ctx.arc(dx - r * 0.3, dy - r * 0.4, r * 0.28, 0, Math.PI * 2);
+    ctx.fill();
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
@@ -695,6 +744,8 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
           ctx.fill();
         }
         ctx.globalAlpha = 1;
+        // a dew bead on the fresh cluster during the rare berry-plump
+        drawDewDrop(ctx, tt);
       } else if (season === "Autumn") {
         // one slow tumbling leaf
         const prog = ((tt / 5.0) % 1 + 1) % 1;
@@ -710,8 +761,10 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
         ctx.fill();
         ctx.restore();
         ctx.globalAlpha = 1;
+      } else if (season === "Summer") {
+        // a dew bead on the glossy ripe cluster during the rare berry-plump
+        drawDewDrop(ctx, tt);
       }
-      // Summer: no extra dressing — the bounce + glossy black is the show.
     } finally {
       ctx.globalAlpha = 1;
       ctx.restore();

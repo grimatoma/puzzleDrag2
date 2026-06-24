@@ -4,15 +4,19 @@
 // citrus (blunt nub at top + bottom, dimpled rind, a single leaf at the
 // shoulder, resting low-centre on a flat grass pad) drawn the SAME every season
 // — identity-safe — while the seasons swing HARD on colour + a real seasonal
-// prop, and the idle is a loud two-tier WC3-style gesture rather than a subtle
-// shimmer:
+// prop. The idle is a distinct, in-character CITRUS beat (NOT the generic
+// shared squash-stretch bounce that every fruit/veg used to share):
 //
-//   IDLE COMMON  (~6s, win ~0.9s): a side-to-side WOBBLE — the lemon rocks/leans
-//       ~10–12 design-px at the nub with a squash at the base. Anticipation →
-//       peak → settle, zero velocity at the window edges (seamless).
-//   IDLE SPECIAL (~18s, win ~1.1s): a bigger SHAKE/BOUNCE — a squash-stretch hop
-//       ~12–14 design-px up, with an anticipation crouch, stretch on the way up,
-//       and a squash landing that overshoots then settles (may exit the box).
+//   IDLE COMMON  (~6s, win ~0.9s): a FAST, NERVOUS little wobble — a perky small
+//       fruit's higher-frequency, smaller-amplitude jitter (a quick steady tremble
+//       at the nub, not a slow rock), with a faint squash at the base. Pose-only.
+//       Zero value AND velocity at the window edges (seamless).
+//   IDLE RARE    (~18s, win ~1.1s): a CITRUS-SPRITZ — a brief burst of very rapid
+//       tiny shakes that damps out (a shiver), while a fine MIST PUFF of tiny
+//       droplets sprays outward from the lemon's tip/shoulder (drawn as an
+//       additive overlay in anim(), never in the still). The shiver is pose; both
+//       the shiver and the mist are exactly 0 at the window edges (so at t=0 the
+//       lemon is at REST and no droplet is drawn).
 //
 // Architecture mirrors pepper.bold.ts: a single parameterized
 // `paint(ctx, p, pose)` where `interface P` holds tweenable season params
@@ -573,57 +577,144 @@ function hump(q: number): number {
   return s * s;
 }
 
-// An asymmetric anticipation→peak→settle curve, 0 (zero velocity) at q=0 and q=1.
-function anticipate(q: number): number {
-  const env = 0.5 * (1 - Math.cos(2 * Math.PI * q)); // 0..1..0, velocity 0 at edges
-  const tilt = Math.sin(Math.PI * q) * Math.sin(1.5 * Math.PI * q);
-  return env * (0.55 * Math.sin(2 * Math.PI * q) + 0.9 * tilt);
+// ── Shared RARE-window clock — the CITRUS-SPRITZ event ────────────────────────
+// COMMON and RARE never overlap: COMMON fires every 6s at phase 0 (win 0.9s);
+// the RARE spritz fires every 18s at phase 3.0s (win 1.1s) — its window
+// [3.0, 4.1) is clear of the COMMON windows at 0, 6, 12 (and 18 ≡ 0). One source
+// of truth so the lemon's SHIVER (in poseFromClock) and the MIST PUFF overlay
+// (in anim) stay in lockstep and share identical seamless edges.
+const SPRITZ_PERIOD = 18.0;
+const SPRITZ_WIN = 1.1;
+const SPRITZ_PHASE = 3.0;
+
+/** Progress 0..1 through the spritz window, else −1 (no spritz). */
+function spritzQ(t: number): number {
+  return actionQ(t, SPRITZ_PERIOD, SPRITZ_WIN, SPRITZ_PHASE);
 }
 
-/** Build the idle pose from the wall clock. Two tiers:
- *   common WOBBLE every ~6s (win 0.9s), rare BOUNCE every ~18s (win 1.1s). */
+/** The spritz "burst that damps out" envelope, 0..~1. A fast smootherstep attack
+ *  then an exponential decay (the shakes/spray fade through the window), all
+ *  multiplied by sin²(πq) so the result is EXACTLY 0 with zero velocity at q=0
+ *  and q=1 — the whole event begins and ends at REST (and so is absent at t=0).
+ *  Returns 0 outside the window. */
+function spritzBurst(q: number): number {
+  if (!(q >= 0) || q > 1) return 0;
+  const gate = Math.sin(Math.PI * q);
+  const gate2 = gate * gate; // 0 + zero slope at both edges
+  const up = 0.12;
+  const attack = q < up ? smoother(q / up) : 1; // quick rise, zero slope at q=0
+  const decay = Math.exp(-3.0 * q); // the burst damps out across the window
+  return gate2 * attack * decay;
+}
+
+/** Build the idle pose from the wall clock. Two tiers, NEITHER a bounce:
+ *   COMMON — a fast, nervous little wobble (a perky tremble) every ~6s.
+ *   RARE   — a citrus-spritz SHIVER (rapid tiny shakes that damp out) every ~18s,
+ *            fully synced to the mist-puff overlay in anim() via spritzBurst. */
 function poseFromClock(t: number): Pose {
   const pose: Pose = { bob: 0, lean: 0, squashX: 0, squashY: 0 };
 
-  // ── COMMON: side-to-side wobble (~6s, win 0.9s) ──
-  // ~0.17 rad lean about the base → nub (arm ≈ 28px) travels ~10–12 px.
+  // ── COMMON: a FAST, NERVOUS little wobble (~6s, win 0.9s) ──
+  // Higher-frequency, smaller-amplitude than a slow rock — a perky small-fruit
+  // tremble. The fast oscillation is multiplied by sin²(πqC), which is 0 with
+  // zero slope at q=0 and q=1, so the nervous wobble starts and ends at REST.
   const qC = actionQ(t, 6.0, 0.9, 0.0);
   if (qC >= 0) {
-    const env = Math.sin(Math.PI * qC); // 0..1..0, zero at edges
-    const rock = Math.sin(qC * Math.PI * 3); // 1.5 rocks within the window
-    pose.lean += 0.17 * env * rock;
-    // little squat at the base as it rocks (settle weight side to side)
-    pose.squashY += -0.06 * hump(qC);
-    pose.squashX += 0.05 * hump(qC);
+    const gate = Math.sin(Math.PI * qC);
+    const env = gate * gate; // 0..1..0 with zero velocity at both edges
+    const jitter = Math.sin(qC * Math.PI * 5); // 2.5 quick rocks; =0 at q=0 and q=1
+    pose.lean += 0.1 * env * jitter; // small amplitude → nub trembles a few px
+    // a faint perky squash pulsing with the tremble (0 at edges via hump)
+    pose.squashY += -0.032 * hump(qC);
+    pose.squashX += 0.028 * hump(qC);
   }
 
-  // ── RARE SPECIAL: squash-stretch BOUNCE hop (~18s, win 1.1s) ──
-  // Anticipation crouch → stretch up ~12–14px → squash landing → settle.
-  const qS = actionQ(t, 18.0, 1.1, 3.0); // phase 3s so it doesn't collide w/ wobble
-  if (qS >= 0) {
-    const crouch = qS < 0.18 ? Math.sin((qS / 0.18) * Math.PI) : 0; // 0..1..0
-    const airWin = qS >= 0.18 && qS < 0.82 ? (qS - 0.18) / 0.64 : -1;
-    const air = airWin >= 0 ? Math.sin(airWin * Math.PI) : 0; // arc up & down
-    const landWin = qS >= 0.74 ? Math.min(1, (qS - 0.74) / 0.26) : -1;
-    const land = landWin >= 0 ? Math.sin(landWin * Math.PI) : 0; // squash bump
-
-    // bob: crouch dips down a touch, then a big rise (negative = up) ~13px.
-    pose.bob += crouch * 1.6 - air * 13.0;
-    // squash-stretch: tall+thin at apex, short+wide on crouch & landing.
-    const apex = air;
-    pose.squashY += apex * 0.20 - crouch * 0.12 - land * 0.16;
-    pose.squashX += -apex * 0.14 + crouch * 0.10 + land * 0.14;
-    // a tiny lean wiggle on the way down for life
-    pose.lean += 0.05 * Math.sin(qS * Math.PI * 4) * (1 - Math.abs(2 * qS - 1));
-  }
-
-  // Reference anticipate() so it stays part of the seamless-curve toolkit and
-  // contributes a faint windup tilt to the common wobble (still 0 at edges).
-  if (qC >= 0) {
-    pose.lean += 0.02 * anticipate(qC);
+  // ── RARE: the CITRUS-SPRITZ SHIVER (~18s, win 1.1s) ──
+  // A brief burst of VERY rapid tiny shakes that damps out as the lemon sprays a
+  // mist puff. Every factor rides spritzBurst (which is 0 with zero velocity at
+  // the window edges), so the shiver is exactly 0 at q=0 and q=1 — and stays in
+  // lockstep with the mist overlay drawn in anim().
+  const burst = spritzBurst(spritzQ(t));
+  if (burst > 0) {
+    const phase = spritzQ(t) * Math.PI * 14; // ~7 oscillations across the window
+    const shakeL = Math.sin(phase); // lands on 0 at q=1 (sin of integer·π)
+    const shakeS = Math.abs(Math.sin(phase + 1.1)); // squash shimmies, slight phase
+    pose.lean += 0.07 * burst * shakeL; // a fine rapid tremor at the nub
+    pose.squashX += 0.05 * burst * shakeS; // tiny bulge/relax as it shivers
+    pose.squashY += -0.045 * burst * shakeS;
+    pose.bob += -0.7 * burst; // a tiny lift on the spritz (settles back to 0)
   }
 
   return pose;
+}
+
+// ── The MIST PUFF overlay — additive, drawn over the painted lemon in anim() ──
+// A fine fan of tiny droplets sprays outward from the lemon's tip/shoulder during
+// the rare citrus-spritz, then dissipates. Driven ONLY by t through the shared
+// spritzBurst envelope, so it is invisible (nothing drawn) at the window edges —
+// and therefore at t=0 the still lemon is untouched.
+
+// Spray origin just off the top nub, on the lit upper-left shoulder.
+const MIST_ORIG_X = -1.0;
+const MIST_ORIG_Y = -12.0;
+const MIST_DROPS = 9;
+
+// Deterministic pseudo-random in [0,1) from an integer seed — for a stable,
+// repeatable droplet fan (no per-frame randomness, so the spray reads the same
+// every spritz).
+function mistRand(n: number): number {
+  const s = Math.sin(n * 127.1 + 0.5) * 43758.5453;
+  return s - Math.floor(s);
+}
+
+/** Draw the citrus mist puff at burst amount `b` (0..1) and progress `q` (0..1)
+ *  through the spritz window. At b<=0 nothing is drawn. Each droplet travels
+ *  outward with `q` (a spray that leaves the rind) and fades with `b` (so the
+ *  whole puff is gone at the window edges). Pure additive dressing — never the
+ *  lemon's own colour/brightness. */
+function drawMist(ctx: CanvasRenderingContext2D, b: number, q: number): void {
+  const amt = clamp01(b);
+  if (amt <= 0.001) return;
+  const prog = clamp01(q); // how far along the spray the droplets have travelled
+
+  ctx.save();
+  try {
+    ctx.globalAlpha = 1;
+    // A faint cool-white haze right at the spray mouth (densest, fades fastest).
+    ctx.fillStyle = rgba([255, 255, 255], 0.22 * amt);
+    ctx.beginPath();
+    ctx.ellipse(MIST_ORIG_X + 1.5, MIST_ORIG_Y - 2, 4.2, 3.2, -0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // The droplet fan — tiny round specks streaking up-and-out toward open space.
+    for (let i = 0; i < MIST_DROPS; i++) {
+      const ang = -1.85 + mistRand(i * 3 + 1) * 1.5; // up-left → up-right fan
+      const reach = 9 + mistRand(i * 3 + 2) * 8; // px travelled when fully out
+      const sz = 0.7 + mistRand(i * 3 + 3) * 0.8;
+      // each droplet emerges slightly staggered so the puff "sprays" outward
+      const lead = 0.12 * mistRand(i * 3 + 4);
+      const dp = clamp01((prog - lead) / Math.max(0.01, 1 - lead));
+      const d = reach * dp;
+      const dx = MIST_ORIG_X + Math.cos(ang) * d;
+      const dy = MIST_ORIG_Y + Math.sin(ang) * d;
+      // alpha: gated by the burst (0 at window edges) and trailing off as the
+      // droplet flies out and shrinks; clamp keeps it safe.
+      const a = amt * (0.85 - 0.45 * dp);
+      const r = Math.max(0.2, sz * (1 - 0.4 * dp));
+      ctx.fillStyle = rgba([255, 255, 255], clamp01(a));
+      ctx.beginPath();
+      ctx.arc(dx, dy, r, 0, Math.PI * 2);
+      ctx.fill();
+      // a fainter cool-tint core for a juicy citrus shimmer
+      ctx.fillStyle = rgba([226, 246, 196], clamp01(a * 0.5));
+      ctx.beginPath();
+      ctx.arc(dx, dy, r * 0.55, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } finally {
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
 }
 
 // ── Per-season draw / anim ───────────────────────────────────────────────────
@@ -636,6 +727,16 @@ function anim(season: SeasonName): (ctx: CanvasRenderingContext2D, t: number) =>
   return (ctx, t) => {
     const tt = Number.isFinite(t) ? t : 0;
     paint(ctx, SP[season], poseFromClock(tt));
+
+    // RARE CITRUS-SPRITZ (all seasons) — a fine mist puff sprays from the lemon's
+    // tip/shoulder while it shivers. Additive overlay only; fully synced to the
+    // shiver in poseFromClock via the shared spritz clock. `spritzBurst` is 0 at
+    // the window edges (and so at t=0), so nothing is drawn at rest.
+    const sq = spritzQ(tt);
+    const burst = spritzBurst(sq);
+    if (burst > 0) {
+      drawMist(ctx, burst, sq);
+    }
 
     // Light additive season micro-sparkle (dressing only — never the subject's
     // own colour/brightness). Kept tiny so the POSE action is the star.
