@@ -85,6 +85,10 @@
   .tag{font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;padding:.05rem .4rem;border-radius:4px;}
   .tag.now{background:color-mix(in srgb,var(--ok) 16%,#fff);color:#2f6d33;border:1px solid color-mix(in srgb,var(--ok) 35%,#fff);}
   .tag.des{background:color-mix(in srgb,var(--accent) 14%,#fff);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 32%,#fff);}
+  .bd{display:inline-block;font-size:.66rem;font-weight:700;padding:.05rem .4rem;border-radius:999px;border:1px solid;margin-right:.2rem;white-space:nowrap;}
+  .bd.f{color:var(--accent2);border-color:color-mix(in srgb,var(--accent2) 45%,#fff);background:color-mix(in srgb,var(--accent2) 10%,#fff);}
+  .bd.m{color:#8a6d3b;border-color:#cda96a;background:color-mix(in srgb,#8a6d3b 10%,#fff);}
+  .bd.fi{color:var(--info);border-color:color-mix(in srgb,var(--info) 45%,#fff);background:color-mix(in srgb,var(--info) 10%,#fff);}
 
   .card{background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:.7rem 1.1rem;margin:.85rem 0;box-shadow:var(--shadow);transition:transform .14s,box-shadow .14s;}
   .card.g{border-left-color:var(--accent2);}
@@ -145,13 +149,13 @@
 
   <header class="hero">
     <h1>puzzleDrag2 — How the Game Plays</h1>
-    <p class="sub">The whole game as one picture: the core loop, the mechanics under it, how value flows from production into sinks, and — the heart of this pass — <b>each town's crux and win condition</b>, the buildings &amp; tools they unlock, and how the towns chain into a full path. Read top to bottom.</p>
-    <p class="meta">Systems &amp; progression overview · 2026-06-24 · big-picture design. <span class="tag now">today</span> = in code now · <span class="tag des">design</span> = where we're steering it. Towns&nbsp;1–2 are specified to numbers; later towns are sketched as the full path. Where code and this disagree, the <b>Gaps</b> tab says so.</p>
+    <p class="sub">The whole game as one picture: the core loop, the stacked-board economy, how value flows from production into sinks, and — the heart of this pass — <b>each of the seven towns: its boards, its crux, and its win condition</b>, plus the buildings &amp; tools they unlock. Read top to bottom.</p>
+    <p class="meta">Systems &amp; progression overview · 2026-06-24 · big-picture design. <span class="tag now">today</span> = in code now · <span class="tag des">design</span> = where we're steering it. Towns&nbsp;1–2 are specified to numbers; later towns are sketched as the full required path. Where code and this disagree, the <b>Gaps</b> tab says so.</p>
     <div class="chips">
       <span class="chip">match-merge farming</span>
-      <span class="chip">settlement builder</span>
-      <span class="chip">town crux &amp; win</span>
-      <span class="chip">wagon-founded path</span>
+      <span class="chip">stacked boards</span>
+      <span class="chip">7 towns · all required</span>
+      <span class="chip">caravan-founded</span>
       <span class="chip">buildings → tools</span>
     </div>
   </header>
@@ -173,8 +177,8 @@
 
     <section id="what">
       <h2>What the game is</h2>
-      <p class="lead">puzzleDrag2 is a cozy <b>match-merge farming &amp; settlement</b> game. On a small board you <b>drag chains of matching tiles</b>; each chain harvests resources <em>and</em> merges tiles into better ones. You spend what you grow to build up a settlement — and once it's thriving and you've completed its <b>signature task</b>, you load a <b>wagon</b> and roll out to found the next town. Each town is a fresh board with its own twist and its own win condition, but always the same heart: <b>drag, harvest, grow, complete, move on.</b></p>
-      <div class="box story"><b>The fantasy.</b> You arrive at a cold hearth in a forgotten vale and someone hands you the tongs. You re-light the farm, throw the first harvest festival, then pack a wagon and head over the ridge to found the next town — a quarry, a harbor, a rat-plagued meadow — each harder and larger than the last, until you raise the Old Capital and wake the whole kingdom.</p></div>
+      <p class="lead">puzzleDrag2 is a cozy <b>match-merge farming &amp; settlement</b> game. On a small board you <b>drag chains of matching tiles</b>; each chain harvests resources <em>and</em> merges tiles into better ones. You spend what you grow to build up a settlement — and once it's thriving and you've completed its <b>signature task</b>, you load a <b>caravan</b> and roll out to found the next town. Each town stacks a new board on the last and gets bigger and harder, but always the same heart: <b>drag, harvest, grow, complete, move on.</b></p>
+      <div class="box story"><b>The fantasy.</b> You arrive at a cold hearth in a forgotten vale and someone hands you the tongs. You re-light the farm, build a caravan, and head over the ridge to found the next town — first a quiet farm-and-mine valley, then a hazard-ridden quarry, a harbor, a rat-plagued meadow — each one larger, until you raise the Old Capital and wake the whole kingdom.</p></div>
     </section>
 
     <section id="loop">
@@ -208,10 +212,45 @@
       </div>
     </section>
 
+    <section id="stack">
+      <h2>Boards build on each other</h2>
+      <p>The backbone of the whole progression — and the thing that keeps it from being "the same board over and over": <b>a new board type is always <em>fed by</em> the boards before it.</b></p>
+      <div class="diagram">
+        <svg viewBox="0 0 900 200" width="100%" role="img" aria-label="The farm feeds the mine which together feed the fishery: farm makes food, food buys mine expeditions, farm food and mine metal together fund fishing.">
+          <defs><marker id="sf" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--accent)"/></marker></defs>
+          <g font-family="IBM Plex Sans, sans-serif" font-size="12">
+            <rect x="30" y="70" width="200" height="74" rx="12" fill="color-mix(in srgb,var(--accent2) 15%,#fff)" stroke="var(--accent2)"/>
+            <text x="130" y="96" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="15" fill="var(--ink)">Farm</text>
+            <text x="130" y="116" text-anchor="middle" fill="var(--muted)">free base · makes food</text>
+            <text x="130" y="132" text-anchor="middle" fill="var(--muted)" font-size="10.5">always playable</text>
+
+            <rect x="350" y="70" width="200" height="74" rx="12" fill="color-mix(in srgb,#8a6d3b 15%,#fff)" stroke="#8a6d3b"/>
+            <text x="450" y="96" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="15" fill="var(--ink)">Mine</text>
+            <text x="450" y="116" text-anchor="middle" fill="var(--muted)">food → expedition turns</text>
+            <text x="450" y="132" text-anchor="middle" fill="var(--muted)" font-size="10.5">pays out ore &amp; metal</text>
+
+            <rect x="670" y="70" width="200" height="74" rx="12" fill="color-mix(in srgb,var(--info) 13%,#fff)" stroke="var(--info)"/>
+            <text x="770" y="96" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="15" fill="var(--ink)">Fishery</text>
+            <text x="770" y="116" text-anchor="middle" fill="var(--muted)">food (bait) + metal (tackle)</text>
+            <text x="770" y="132" text-anchor="middle" fill="var(--muted)" font-size="10.5">pays out the rare catch</text>
+
+            <line x1="230" y1="100" x2="348" y2="100" stroke="var(--accent)" stroke-width="2.4" marker-end="url(#sf)"/>
+            <text x="289" y="92" text-anchor="middle" fill="var(--accent)" font-size="10.5">food</text>
+            <line x1="550" y1="100" x2="668" y2="100" stroke="var(--accent)" stroke-width="2.4" marker-end="url(#sf)"/>
+            <text x="609" y="92" text-anchor="middle" fill="var(--accent)" font-size="10.5">metal</text>
+            <path d="M130,144 C130,180 760,180 770,146" fill="none" stroke="var(--accent2)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#sf)"/>
+            <text x="450" y="178" text-anchor="middle" fill="var(--accent2)" font-size="10.5" font-style="italic">farm food also feeds the fishery (bait)</text>
+          </g>
+        </svg>
+        <p class="cap">So every town with a mine also has a farm; every town with a fishery has a farm <em>and</em> a mine. The puzzles stack, and earlier boards never idle — later boards keep buying from them.</p>
+      </div>
+      <p>Each town in the path adds at most one new board on top of the stack it inherited. The whole game is that stack growing — farm, then farm+mine, then farm+mine+fish — across a ladder of towns.</p>
+    </section>
+
     <section id="session">
       <h2>The shape of a session &amp; the long arc</h2>
       <p><b>A session</b> is one visit to a board: a small budget of <b>turns</b> (~10), each chain spends one, whatever you harvest banks into <em>that town's</em> stockpile, and the visit ends when turns run out. Between visits you spend the stockpile on growth.</p>
-      <p><b>The long arc</b> is a ladder of towns. You found each one by <b>wagon</b>, build it up, beat its <b>signature task</b>, and move on — towns getting bigger and harder as you climb. <b>Workers, coins, and your global tool kit travel with you</b>; each town's <b>resource stockpile is its own</b>. The whole game is that ladder, ending at the Old Capital.</p>
+      <p><b>The long arc</b> is a ladder of <b>seven towns, all required</b>. You found each by <b>caravan</b>, build it up, beat its <b>signature task</b>, and roll on — towns getting bigger, their board-stack taller, their hazards meaner. <b>Workers, coins, and your global tool kit travel with you</b>; each town's <b>resource stockpile is its own</b>. The whole game is that ladder, ending at the Old Capital.</p>
     </section>
   </div>
 
@@ -227,19 +266,19 @@
           <li><b>It merges</b> — a long-enough chain promotes a tile up its ladder (grass→bird, grain→vegetable…). Longer chain → a better board.</li>
         </ul>
         You can't max both at once. Reading the board for the best chain <em>is</em> the puzzle.</div>
-      <p><b>Tiers &amp; divisors.</b> Each family climbs a tier ladder; higher tiers yield more. The divisor sets how generous a family is — small for staples (grass), big for premium goods (flowers, gems, gold) — which keeps hay common and a cut gem precious. <b>Refining</b> turns raw harvest into the goods the game actually prices in: Mill→flour, Bakery→bread, Kitchen→supplies, Forge→bars &amp; tools.</p>
+      <p><b>Tiers &amp; divisors.</b> Each family climbs a tier ladder; higher tiers yield more. The divisor sets how generous a family is — small for staples (grass), big for premium goods (flowers, gems, gold). <b>Refining</b> turns raw harvest into the goods the game prices in: Mill→flour, Bakery→bread, Kitchen→supplies, Forge→bars &amp; tools.</p>
     </section>
 
     <section id="founding">
-      <h2>Founding by wagon</h2>
-      <p>Every town past your home is <b>founded by sending out a wagon</b> — the universal "open the next place" ritual. You complete the current town's signature task, that unlocks the wagon route, and you spend a founding cost to roll out and settle the next site. Home is the one exception: it's where you start.</p>
-      <p><span class="tag now">today</span> founding cost already exists (<code>~300 × 1.7ⁿ</code> coins, escalating per town) and the map tracks visited/adjacent nodes. <span class="tag des">design</span> wrap that in the wagon as a single, legible founding act, gated on the previous town's win — and (for later towns) let the wagon also carry a starter basket of supplies for the journey.</p>
+      <h2>Founding by caravan</h2>
+      <p>You leave every town the same way: by building a <b>caravan</b> and rolling it out to found the next site. Town&nbsp;1's entire win condition <em>is</em> building that first caravan; thereafter each town's signature task unlocks the caravan onward. Founding spends a (rising) coin cost for the journey — and, for later towns, the caravan can carry a starter basket of supplies. Home is where you start; every town after is caravan-founded.</p>
+      <p><span class="tag now">today</span> a founding cost already exists (<code>~300 × 1.7ⁿ</code> coins, escalating per town) and the map tracks visited/adjacent nodes. <span class="tag des">design</span> wrap that in the caravan as one legible act, gated on the previous town's win.</p>
     </section>
 
     <section id="workers">
       <h2>Workers — the multiplier (and the main cost)</h2>
-      <p>You hire workers with <b>coins + resources</b>. Each hire <b>permanently lowers production cost</b> (fewer tiles per unit) or adds an ability (promote a category, cut a recipe's cost, bonus coins/runes). Workers are <b>global</b> — they follow you to every town — so they're the engine that makes the flywheel accelerate across the whole run.</p>
-      <p>Worker hiring is also the game's main <b>sink</b>, and the design wants it to bite harder so growth stays meaningful: <b>scale both the coin and the material cost up, and steeper.</b></p>
+      <p>You hire workers with <b>coins + resources</b>. Each hire <b>permanently lowers production cost</b> (fewer tiles per unit) or adds an ability. Workers are <b>global</b> — they follow you to every town — so they're the engine that makes the flywheel accelerate across the whole run.</p>
+      <p>Worker hiring is also the game's main <b>coin + resource sink</b>, and the design wants it to bite harder: <b>scale both the coin and the material cost up, and steeper.</b></p>
       <table>
         <thead><tr><th>Worker</th><th>Coins <span class="tag now">today</span></th><th>Material <span class="tag now">today</span></th><th>Direction <span class="tag des">design</span></th></tr></thead>
         <tbody>
@@ -248,19 +287,20 @@
           <tr><td>Miner (stone)</td><td>75 + 35·N</td><td>2 stone / 3rd hire</td></tr>
         </tbody>
       </table>
-      <p style="font-size:.82rem;color:var(--muted);">Some workers use a geometric coin curve already (Baker <code>75 × 1.4ⁿ</code>); most are linear. Max 10 per type. Today the material is a flat 2 units that only steps every 3rd hire — that's the part the design most wants to steepen.</p>
+      <p style="font-size:.82rem;color:var(--muted);">Some workers use a geometric coin curve already (Baker <code>75 × 1.4ⁿ</code>); most are linear. Max 10 per type. Today the material is a flat 2 units stepping only every 3rd hire — the part the design most wants to steepen.</p>
     </section>
 
     <section id="tools-sys">
       <h2>Tools &amp; the building → tool unlock</h2>
       <p><b>Tools</b> are board powers you craft and spend — clear a tile, shuffle, drop a bomb, reveal ore, clear a hazard. Your <b>tool inventory is global</b> <span class="tag now">today</span> (one kit across every town).</p>
-      <p>The design ties tools to buildings: <b>building a building unlocks its tool, globally, to be crafted.</b> So your town layout literally decides what's in your kit. <span class="tag now">today</span> the seed of this already exists — the Town Hall's "provisions" map buildings to tools (Mill→clear, Workshop→basic, Forge→rare, Granary→shuffle, Sawmill→axe, Powder&nbsp;Store→bomb) and Powder Store actually grants its tool — and ~30 tools have craft recipes. <span class="tag des">design</span> make that the rule across the board, and gate each recipe behind its building so unlocking is meaningful. The full map is on the <b>Buildings &amp; tools</b> tab.</p>
+      <p>The design ties tools to buildings: <b>building a building unlocks its tool, globally, to be crafted</b> — and some buildings <b>generate</b> a tool on a timer instead. So your town layout literally decides your kit. <span class="tag now">today</span> the seed exists — the Town Hall maps buildings to tools (Mill→clear, Workshop→basic, Forge→rare, Granary→shuffle, Sawmill→axe, Powder&nbsp;Store→bomb), Powder Store actually grants its tool, and ~30 tools have craft recipes. <span class="tag des">design</span> make "build unlocks the recipe (or the timed grant)" the universal rule. Full map on the <b>Buildings &amp; tools</b> tab.</p>
     </section>
 
     <section id="expeditions">
-      <h2>Expeditions, hazards &amp; the supply system</h2>
-      <p>Some boards push back. <b>Expedition boards</b> (mine, harbor) make you <b>pack food to buy turns</b>: spend rations to depart, play till they run out, and <b>keep everything you gathered</b> (soft fail, never a wipe). The food→turns rate is the single biggest pacing dial — it sets how much farming funds one trip down. <b>Hazards</b> (cave-ins, gas, moles; rats; storms) eat tiles or block you and force a response — the urgency a gentle farm never has.</p>
-      <div class="box"><b>The supply system — for towns with no farm.</b> A farm town makes its own food; a <b>mine-only</b> town can't. <span class="tag des">design</span> there, you provision two ways: <b>supply depots</b> — buildings that generate a small, capped number of supplies <b>every few real-time hours</b> — and <b>shipping</b> a basket in from your farm towns by wagon. Both are limited, so the town becomes a <b>planning puzzle</b>: ration scarce supplies across expeditions instead of farming freely. <span class="tag now">today</span> neither the real-time drip nor inter-zone shipping exists (the closest is the 8-hour Town-Hall tax); this is the signature new system for the mine-only town.</div>
+      <h2>Expeditions, hazards &amp; provisioning</h2>
+      <p>The stacked boards aren't free. <b>Expedition boards</b> (mine, fishery) make you <b>pack what an earlier board produced to buy turns</b>: spend farm food (and, for the fishery, mine metal) to depart, play till it runs out, and <b>keep everything you gathered</b> (soft fail, never a wipe). That exchange rate — how much farming funds one descent — is the single biggest pacing dial.</p>
+      <p><b>Hazards</b> arrive gradually as the towns climb: none in the first two, then mine hazards (cave-ins, gas, moles), tides, rats, and combinations. They eat tiles or block you and force a response — urgency the gentle farm never had.</p>
+      <div class="box"><b>Timed generation.</b> <span class="tag des">design</span> some buildings <b>generate a small, capped batch every few real-time hours</b> — supplies or a tool — a gentle idle faucet that helps you provision between sessions without grinding. <span class="tag now">today</span> the closest is the 8-hour Town-Hall "provisions" (tools delivered as a board crate) and the season-end Powder-Store bomb grant; the design generalises that to an "every X hours" building ability.</div>
     </section>
   </div>
 
@@ -292,7 +332,7 @@
               <text x="128" y="108" text-anchor="middle" fill="var(--muted)">chaining — the engine</text>
               <rect x="22" y="134" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="159" text-anchor="middle" fill="var(--ink)">Refining stations</text>
               <rect x="22" y="190" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="215" text-anchor="middle" fill="var(--ink)">Daily login streak</text>
-              <rect x="22" y="246" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="271" text-anchor="middle" fill="var(--ink)">Civic tax · supply drip</text>
+              <rect x="22" y="246" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="271" text-anchor="middle" fill="var(--ink)">Civic tax · timed grants</text>
               <rect x="22" y="302" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="327" text-anchor="middle" fill="var(--ink)">Quests</text>
               <rect x="22" y="358" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="383" text-anchor="middle" fill="var(--ink)">Achievements</text>
               <rect x="22" y="414" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent2) 12%,#fff)" stroke="var(--accent2)"/><text x="128" y="439" text-anchor="middle" fill="var(--ink)">Boss / festival rewards</text>
@@ -310,10 +350,10 @@
               <rect x="766" y="64" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="89" text-anchor="middle" fill="var(--ink)">Tile upgrades</text>
               <rect x="766" y="116" width="212" height="44" rx="9" fill="color-mix(in srgb,var(--accent) 22%,#fff)" stroke="var(--accent)" stroke-width="1.8"/><text x="872" y="135" text-anchor="middle" font-weight="800" fill="var(--ink)">Worker hires</text><text x="872" y="151" text-anchor="middle" fill="var(--danger)" font-size="10.5">◆ the main pinch (scaling up)</text>
               <rect x="766" y="172" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="197" text-anchor="middle" fill="var(--ink)">Buildings → unlock tools</text>
-              <rect x="766" y="224" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="249" text-anchor="middle" fill="var(--ink)">Town tiers (plots)</text>
-              <rect x="766" y="276" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="301" text-anchor="middle" fill="var(--ink)">Wagon founding</text>
-              <rect x="766" y="328" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="353" text-anchor="middle" fill="var(--ink)">Expedition food</text>
-              <rect x="766" y="380" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="405" text-anchor="middle" fill="var(--ink)">Crafting (tools, refines)</text>
+              <rect x="766" y="224" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="249" text-anchor="middle" fill="var(--ink)">Town tiers (coins + goods)</text>
+              <rect x="766" y="276" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="301" text-anchor="middle" fill="var(--ink)">Caravan founding</text>
+              <rect x="766" y="328" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="353" text-anchor="middle" fill="var(--ink)">Expedition provisioning</text>
+              <rect x="766" y="380" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="405" text-anchor="middle" fill="var(--ink)">Market (coins → goods)</text>
               <rect x="766" y="432" width="212" height="40" rx="9" fill="color-mix(in srgb,var(--accent) 12%,#fff)" stroke="var(--accent)"/><text x="872" y="457" text-anchor="middle" fill="var(--ink)">Win-task baskets</text>
               <rect x="766" y="484" width="212" height="40" rx="9" fill="#fff" stroke="var(--idle)" stroke-dasharray="5 4"/><text x="872" y="503" text-anchor="middle" fill="var(--muted)">Castle / NPC orders</text><text x="872" y="517" text-anchor="middle" fill="var(--idle)" font-size="10">half-wired</text>
             </g>
@@ -346,18 +386,22 @@
       </div>
     </section>
 
-    <section id="loops">
-      <h2>The three loops that matter</h2>
+    <section id="coins">
+      <h2>What coins are for</h2>
+      <p>Coins are the soft, <b>global</b> currency. The risk today is that they pour in (board, daily, quests, achievements, bosses) but have shallow sinks, so they pile up. The design gives them real, non-locking outlets:</p>
       <div class="grid">
-        <div class="card g"><h3>1 · Reinvestment (the flywheel)</h3><p>Board → resources → <b>tile upgrades + worker hires</b> → the board yields more → repeat. The engine of the whole game; it compounds and never stops. Scaling worker cost is how we keep it from trivialising itself.</p></div>
-        <div class="card g"><h3>2 · Growth</h3><p>Resources → <b>buildings + town tiers</b> → more plots, new tools, new tile families → which add <em>new</em> faucets and sinks. How a town gets wider, not just faster.</p></div>
-        <div class="card"><h3>3 · The provisioning spine</h3><p>Food → <b>expedition turns</b> → ore → refine → build → capacity. In farm+mine towns the farm pays for it; in mine-only towns the supply drip + shipping pay for it under scarcity.</p></div>
+        <div class="card"><h3>Hire workers</h3><p>The main, scaling sink (coins + resources). Bites harder as we steepen the curve.</p></div>
+        <div class="card"><h3>Found the next town</h3><p>The caravan journey cost, rising each time you roll out.</p></div>
+        <div class="card"><h3>Upgrade town tiers</h3><p>Coins + goods per rung. Good because it's optional progression, not a gate on earning.</p></div>
+        <div class="card g"><h3>The Market</h3><p>Spend coins to buy resources or tools you're short on. The <b>always-available</b> outlet that keeps surplus coins meaningful — the cleanest answer to "what are coins for?"</p></div>
+        <div class="card"><h3>Conveniences</h3><p>Reroll a quest, restock supplies, expand a cap — small optional spends.</p></div>
       </div>
+      <div class="box warn"><b>On "coins to start a farm round" — careful.</b> The farm is your main coin <em>source</em>, so charging coins to play it risks a <b>soft-lock / death-spiral</b>: bottom out, can't pay to play, can't play to earn. If you want a per-play stake, put it on <b>expeditions</b> (mine/fishery), where the free farm is always the fallback to recover — or guarantee a free farm fallback. Gating the farm itself behind coins is the one place "pay to play" becomes game-locking. <b>Recommendation:</b> keep the farm free; make coins matter through the Market + tiers + workers + founding instead.</div>
     </section>
 
     <section id="asymmetry">
-      <h2>The shape of the whole thing (and its tension)</h2>
-      <div class="box warn"><b>The economy is lopsided — on purpose, but it needs watching.</b> Faucets are <b>abundant</b> (the board plus daily / civic / quests / achievements / bosses). Sinks are <b>resource-gated</b> — buildings want big baskets, worker hires want coins <em>and</em> escalating resources (more so once we scale them). So difficulty lives in the sinks. One consequence to keep flagged: <b>coins are an easy faucet with thin sinks</b> (tiers/buildings are resource-priced; the Market doesn't buy yet), so "<b>what are coins for?</b>" is the biggest open balance question — see Gaps.</div>
+      <h2>The shape of the whole thing</h2>
+      <div class="box"><b>The economy is lopsided — on purpose.</b> Faucets are <b>abundant</b> (the board plus the meta ring). Sinks are <b>resource-gated</b> — buildings want big baskets, worker hires want coins <em>and</em> escalating resources (more so once scaled). Difficulty lives in the sinks; the worker flywheel slowly dissolves the early grind. Adding the Market and steeper worker costs is how we keep both coins and resources meaningful all the way up.</div>
     </section>
   </div>
 
@@ -365,162 +409,179 @@
   <div class="panel" id="towns" role="tabpanel" aria-label="The towns">
 
     <section id="arc">
-      <h2>The town path</h2>
-      <p class="lead">The game is a ladder of towns, each founded by wagon, each with one <b>unique hook</b>, one <b>crux</b> (the thing it teaches), and one <b>win condition</b> — a signature "big task" that needn't be a boss. Towns get <b>bigger and harder</b> as you climb. The three biome towns (farm, mine, fish) each yield a <b>hearth token</b>, and the three tokens open the finale.</p>
+      <h2>The seven-town path</h2>
+      <p class="lead">Seven towns, <b>all required</b>, each founded by caravan. Every town adds at most one new board to the stack (<span class="bd f">Farm</span> → <span class="bd m">Mine</span> → <span class="bd fi">Fish</span>), one <b>crux</b> (the thing it teaches), and one <b>win task</b> — a signature "big task" that needn't be a boss. Towns get bigger and harder; hazards arrive only after the basics are taught.</p>
       <div class="diagram">
-        <svg viewBox="0 0 1000 330" width="100%" role="img" aria-label="Six towns left to right, growing in size, founded one after another by wagon. The farm, mine and fish towns each grant a hearth token that unlocks the final Old Capital.">
+        <svg viewBox="0 0 1000 320" width="100%" role="img" aria-label="Seven towns left to right, growing in size, founded one after another by caravan. Board stacks grow from Farm to Farm+Mine to Farm+Mine+Fish; the last town is the finale.">
           <defs><marker id="tw" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/></marker></defs>
-          <g font-family="IBM Plex Sans, sans-serif" font-size="11">
-            <!-- towns, growing height -->
-            <rect x="18" y="196" width="132" height="74" rx="10" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)"/>
-            <text x="84" y="218" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="13" fill="var(--ink)">1 · Hearthwood</text>
-            <text x="84" y="234" text-anchor="middle" fill="var(--muted)">Farm · ~6 plots</text>
-            <text x="84" y="251" text-anchor="middle" fill="var(--accent2)" font-weight="700">win: festival</text>
-            <text x="84" y="266" text-anchor="middle" fill="var(--muted)" font-size="10">★ token</text>
+          <g font-family="IBM Plex Sans, sans-serif" font-size="10.5">
+            <rect x="14" y="202" width="120" height="70" rx="9" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)"/>
+            <text x="74" y="222" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="12" fill="var(--ink)">1 Hearthwood</text>
+            <text x="74" y="238" text-anchor="middle" fill="var(--accent2)" font-weight="700">Farm</text>
+            <text x="74" y="253" text-anchor="middle" fill="var(--muted)">win: caravan</text>
+            <text x="74" y="266" text-anchor="middle" fill="var(--muted)" font-size="9.5">~6 plots</text>
 
-            <rect x="180" y="176" width="138" height="94" rx="10" fill="color-mix(in srgb,#8a6d3b 16%,#fff)" stroke="#8a6d3b"/>
-            <text x="249" y="198" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="13" fill="var(--ink)">2 · Cracked Quarry</text>
-            <text x="249" y="214" text-anchor="middle" fill="var(--muted)">Farm+Mine · ~12</text>
-            <text x="249" y="231" text-anchor="middle" fill="#8a6d3b" font-weight="700">win: boss</text>
-            <text x="249" y="248" text-anchor="middle" fill="var(--muted)" font-size="10">★ token</text>
+            <rect x="154" y="186" width="120" height="86" rx="9" fill="color-mix(in srgb,#8a6d3b 16%,#fff)" stroke="#8a6d3b"/>
+            <text x="214" y="206" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="12" fill="var(--ink)">2 Two Rivers</text>
+            <text x="214" y="222" text-anchor="middle" fill="#8a6d3b" font-weight="700">Farm+Mine</text>
+            <text x="214" y="237" text-anchor="middle" fill="var(--muted)">win: grand order</text>
+            <text x="214" y="250" text-anchor="middle" fill="var(--muted)" font-size="9.5">no hazards · ~10</text>
 
-            <rect x="346" y="158" width="138" height="112" rx="10" fill="color-mix(in srgb,var(--info) 13%,#fff)" stroke="var(--info)"/>
-            <text x="415" y="180" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="13" fill="var(--ink)">3 · Saltspray</text>
-            <text x="415" y="196" text-anchor="middle" fill="var(--muted)">Fish · ~15 plots</text>
-            <text x="415" y="213" text-anchor="middle" fill="var(--info)" font-weight="700">win: regatta</text>
-            <text x="415" y="230" text-anchor="middle" fill="var(--muted)" font-size="10">★ token</text>
+            <rect x="294" y="170" width="120" height="102" rx="9" fill="color-mix(in srgb,#8a6d3b 16%,#fff)" stroke="#8a6d3b"/>
+            <text x="354" y="190" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="12" fill="var(--ink)">3 Cracked Quarry</text>
+            <text x="354" y="206" text-anchor="middle" fill="#8a6d3b" font-weight="700">Farm+Mine</text>
+            <text x="354" y="221" text-anchor="middle" fill="var(--muted)">win: boss</text>
+            <text x="354" y="234" text-anchor="middle" fill="var(--danger)" font-size="9.5">cave hazards · ~13</text>
 
-            <rect x="512" y="138" width="146" height="132" rx="10" fill="color-mix(in srgb,#8a6d3b 16%,#fff)" stroke="#8a6d3b"/>
-            <text x="585" y="160" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="13" fill="var(--ink)">4 · Deepdelve</text>
-            <text x="585" y="176" text-anchor="middle" fill="var(--muted)">Mine-only · ~16</text>
-            <text x="585" y="193" text-anchor="middle" fill="#8a6d3b" font-weight="700">win: shipment</text>
-            <text x="585" y="210" text-anchor="middle" fill="var(--muted)" font-size="10">supply-planning</text>
+            <rect x="434" y="154" width="120" height="118" rx="9" fill="color-mix(in srgb,var(--info) 13%,#fff)" stroke="var(--info)"/>
+            <text x="494" y="174" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="12" fill="var(--ink)">4 Saltspray</text>
+            <text x="494" y="190" text-anchor="middle" fill="var(--info)" font-weight="700">+Fish</text>
+            <text x="494" y="205" text-anchor="middle" fill="var(--muted)">win: regatta</text>
+            <text x="494" y="218" text-anchor="middle" fill="var(--muted)" font-size="9.5">tides · ~15</text>
 
-            <rect x="686" y="118" width="146" height="152" rx="10" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)"/>
-            <text x="759" y="140" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="13" fill="var(--ink)">5 · Greenmeadow</text>
-            <text x="759" y="156" text-anchor="middle" fill="var(--muted)">Rich farm · ~18</text>
-            <text x="759" y="173" text-anchor="middle" fill="var(--accent2)" font-weight="700">win: big build</text>
-            <text x="759" y="190" text-anchor="middle" fill="var(--muted)" font-size="10">rat hazard</text>
+            <rect x="574" y="138" width="120" height="134" rx="9" fill="color-mix(in srgb,var(--accent2) 16%,#fff)" stroke="var(--accent2)"/>
+            <text x="634" y="158" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="12" fill="var(--ink)">5 Greenmeadow</text>
+            <text x="634" y="174" text-anchor="middle" fill="#8a6d3b" font-weight="700">Farm+Mine</text>
+            <text x="634" y="189" text-anchor="middle" fill="var(--muted)">win: great build</text>
+            <text x="634" y="202" text-anchor="middle" fill="var(--danger)" font-size="9.5">rats · ~17</text>
 
-            <rect x="860" y="96" width="124" height="174" rx="10" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)"/>
-            <text x="922" y="120" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="13" fill="var(--ink)">6 · Old Capital</text>
-            <text x="922" y="136" text-anchor="middle" fill="var(--muted)">Finale · biggest</text>
-            <text x="922" y="153" text-anchor="middle" fill="var(--danger)" font-weight="700">win: monument</text>
-            <text x="922" y="170" text-anchor="middle" fill="var(--muted)" font-size="10">needs 3 ★</text>
+            <rect x="714" y="122" width="120" height="150" rx="9" fill="color-mix(in srgb,var(--info) 13%,#fff)" stroke="var(--info)"/>
+            <text x="774" y="142" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="12" fill="var(--ink)">6 Mirefen</text>
+            <text x="774" y="158" text-anchor="middle" fill="var(--info)" font-weight="700">Farm+Mine+Fish</text>
+            <text x="774" y="173" text-anchor="middle" fill="var(--muted)">win: sea boss</text>
+            <text x="774" y="186" text-anchor="middle" fill="var(--danger)" font-size="9.5">combined · ~19</text>
 
-            <!-- wagon arrows -->
+            <rect x="854" y="104" width="132" height="168" rx="9" fill="color-mix(in srgb,var(--danger) 12%,#fff)" stroke="var(--danger)"/>
+            <text x="920" y="126" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="12" fill="var(--ink)">7 Old Capital</text>
+            <text x="920" y="142" text-anchor="middle" fill="var(--danger)" font-weight="700">all boards</text>
+            <text x="920" y="157" text-anchor="middle" fill="var(--muted)">win: monument</text>
+            <text x="920" y="170" text-anchor="middle" fill="var(--muted)" font-size="9.5">needs all 6 · biggest</text>
+
             <g stroke="var(--muted)" stroke-width="2" fill="none">
-              <line x1="150" y1="233" x2="178" y2="223" marker-end="url(#tw)"/>
-              <line x1="318" y1="223" x2="344" y2="214" marker-end="url(#tw)"/>
-              <line x1="484" y1="214" x2="510" y2="204" marker-end="url(#tw)"/>
-              <line x1="658" y1="204" x2="684" y2="194" marker-end="url(#tw)"/>
-              <line x1="832" y1="194" x2="858" y2="184" marker-end="url(#tw)"/>
+              <line x1="134" y1="232" x2="152" y2="226" marker-end="url(#tw)"/>
+              <line x1="274" y1="216" x2="292" y2="210" marker-end="url(#tw)"/>
+              <line x1="414" y1="200" x2="432" y2="194" marker-end="url(#tw)"/>
+              <line x1="554" y1="184" x2="572" y2="178" marker-end="url(#tw)"/>
+              <line x1="694" y1="168" x2="712" y2="162" marker-end="url(#tw)"/>
+              <line x1="834" y1="152" x2="852" y2="146" marker-end="url(#tw)"/>
             </g>
-            <text x="500" y="292" text-anchor="middle" fill="var(--muted)" font-size="10.5" font-style="italic">each step is a wagon expedition — found, build, win the signature task, roll on</text>
-            <!-- token track -->
-            <path d="M84,270 C84,308 700,312 900,300 C914,299 922,290 922,272" fill="none" stroke="var(--accent)" stroke-width="1.6" stroke-dasharray="4 4"/>
-            <text x="430" y="322" text-anchor="middle" fill="var(--accent)" font-size="10.5">★ farm + mine + fish tokens → unlock the Old Capital</text>
+            <text x="500" y="296" text-anchor="middle" fill="var(--muted)" font-size="10.5" font-style="italic">each step is a caravan expedition — found, build, win the signature task, roll on · the board-stack grows as you climb</text>
           </g>
         </svg>
         <p class="cap">Sizes are the design target (T1 deliberately tiny, the finale largest). Authored maps exist today at home 3→20, quarry 2→12, mirefen 3→15 plots — these can be re-sized / re-skinned to fit the ladder.</p>
       </div>
       <table>
-        <thead><tr><th>#</th><th>Town</th><th>Biome / board</th><th>Max plots</th><th>Unique hook</th><th>Crux</th><th>Win task</th></tr></thead>
+        <thead><tr><th>#</th><th>Town</th><th>Boards</th><th>Plots</th><th>Unique hook</th><th>Crux</th><th>Win task</th></tr></thead>
         <tbody>
-          <tr><td class="c">1</td><td><b>Hearthwood Vale</b></td><td>Farm</td><td class="num">~6</td><td>gentle (the teacher)</td><td>learn the whole loop</td><td>Harvest Festival</td></tr>
-          <tr><td class="c">2</td><td><b>Cracked Quarry</b></td><td>Farm + Mine</td><td class="num">~12</td><td>two boards + cave hazards</td><td>food funds mining</td><td>capstone boss</td></tr>
-          <tr><td class="c">3</td><td><b>Saltspray Harbor</b></td><td>Fish</td><td class="num">~15</td><td>tides &amp; storms</td><td>expeditions on water</td><td>Regatta festival</td></tr>
-          <tr><td class="c">4</td><td><b>Deepdelve</b></td><td>Mine only</td><td class="num">~16</td><td>no farm — supply drip + shipping</td><td>provision under scarcity</td><td>fill the ore shipment</td></tr>
-          <tr><td class="c">5</td><td><b>Greenmeadow</b></td><td>Rich farm</td><td class="num">~18</td><td>rat hazard</td><td>hazard mgmt on the farm</td><td>raise a great building</td></tr>
-          <tr><td class="c">6</td><td><b>The Old Capital</b></td><td>Finale / civic</td><td class="num">biggest</td><td>everything at once</td><td>the capstone</td><td>build the monument</td></tr>
+          <tr><td class="c">1</td><td><b>Hearthwood Vale</b></td><td><span class="bd f">F</span></td><td class="num">~6</td><td>gentle (teacher)</td><td>learn the whole loop</td><td>build the Caravan</td></tr>
+          <tr><td class="c">2</td><td><b>Two Rivers</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~10</td><td>none (calm)</td><td>the farm→mine connection</td><td>fill a grand order</td></tr>
+          <tr><td class="c">3</td><td><b>Cracked Quarry</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~13</td><td>cave hazards</td><td>mine hazard mgmt</td><td>capstone boss</td></tr>
+          <tr><td class="c">4</td><td><b>Saltspray Harbor</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">~15</td><td>tides</td><td>the full stack</td><td>the Regatta</td></tr>
+          <tr><td class="c">5</td><td><b>Greenmeadow</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~17</td><td>rats</td><td>farm hazard at scale</td><td>raise a great building</td></tr>
+          <tr><td class="c">6</td><td><b>Mirefen Hollow</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">~19</td><td>combined hazards</td><td>master the stack</td><td>sea boss / shipment</td></tr>
+          <tr><td class="c">7</td><td><b>The Old Capital</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">biggest</td><td>everything</td><td>the capstone</td><td>build the monument</td></tr>
         </tbody>
       </table>
-      <p style="font-size:.82rem;color:var(--muted);">Grounded: all six map to real zones (<code>home, quarry, harbor, caves/forge, meadow, oldcapital</code>), the gating chain (home→City unlocks quarry; quarry unlocks harbor/caves/forge), the 6 bosses, and the 3-token → Old Capital finale all exist in code. <span class="tag des">design</span> the per-town win tasks, the reduced T1 size, the order, and the mine-only supply system.</p>
+      <p style="font-size:.82rem;color:var(--muted);">Grounded: the towns map to real zones (<code>home, quarry, harbor, meadow, mirefen, oldcapital</code> + one new generic node), the gating chain, the 6 bosses, and an Old-Capital finale all exist in code. <span class="tag des">design</span> the additive board stacking, the per-town win tasks, the calm Town 2, the reduced T1 size, "all required", and timed-generation buildings.</p>
     </section>
 
     <section id="t1">
       <div class="town farm">
         <h3><span class="tn">Town 1</span> Hearthwood Vale — the farm <span style="font-size:.7rem;color:var(--muted);font-weight:400;">specified to numbers</span></h3>
         <dl>
-          <dt>Crux</dt><dd>The tutorial hub. Teaches every verb — chain, refine, fill orders, tier up, hire a worker — with no pressure. Stays your home and caravan terminus forever.</dd>
-          <dt>Unique hook</dt><dd>None by design: it's the gentle teacher. Seasons turn the board over, but nothing attacks you.</dd>
+          <dt>Boards</dt><dd><span class="bd f">Farm</span> only — the free base board.</dd>
+          <dt>Crux</dt><dd>The tutorial hub. Teaches every verb — chain, refine, fill orders, tier up, hire a worker — with no pressure. Stays your home forever.</dd>
+          <dt>Hook</dt><dd>None by design: the gentle teacher. Seasons turn the board over; nothing attacks you.</dd>
           <dt>Size</dt><dd><b>~6 plots</b> (deliberately tiny — re-sized down from the authored 20-plot home map). A handful of buildings, no sprawl.</dd>
-          <dt>Buildings</dt><dd>Hearth (free) · Mill · Bakery · Granary · Kitchen · one of Inn/Larder. The bread + supplies chain and basic storage — nothing more.</dd>
-          <dt>Win task</dt><dd><b>Host the Harvest Festival</b> — gather a festival basket of farm goods (bread, eggs, a luxury). Completing it grants the <b>farm hearth token</b> and unlocks the wagon to found Town 2.</dd>
+          <dt>Win task</dt><dd><b>Build the Caravan.</b> Gather the goods to assemble the wagon — and the moment it's built, you found Town 2. The win condition <em>is</em> the bridge to the next town.</dd>
         </dl>
         <ol class="play">
           <li><b>First chains.</b> Drag 3+ touching tiles; each chain banks crops and, if long, merges a tile up a tier. One of ~10 turns.</li>
           <li><b>Refine.</b> Grain → Mill → flour → Bakery → <b>bread</b>, the staple everything is priced in. Granary stores it; the Kitchen turns grain into <code>supplies</code> for later.</li>
           <li><b>Earn &amp; shape.</b> Fill villager orders for coins; hire your <b>first worker</b> (cheaper forever, travels with you). Quests/achievements tick in the background.</li>
-          <li><b>Throw the festival.</b> Stockpile the festival basket, host the Harvest Festival — the gentle "you've learned it" moment — and pack the wagon for the ridge.</li>
+          <li><b>Build the caravan.</b> Stockpile the caravan's basket, assemble it — the "you've learned it" moment — and roll out to found Two Rivers.</li>
         </ol>
       </div>
     </section>
 
     <section id="t2">
       <div class="town mine">
-        <h3><span class="tn">Town 2</span> Cracked Quarry — the combination <span style="font-size:.7rem;color:var(--muted);font-weight:400;">specified to numbers</span></h3>
+        <h3><span class="tn">Town 2</span> Two Rivers — the connection <span style="font-size:.7rem;color:var(--muted);font-weight:400;">specified to numbers</span></h3>
         <dl>
-          <dt>Crux</dt><dd>The supply chain made literal: a <b>farm board</b> (normal turns) grows food; the food buys descents into a <b>mine board</b> (expeditions); the mine pays out ore. Two boards, one shared stockpile — one economy literally funding the other.</dd>
-          <dt>Unique hook</dt><dd>Two boards in one town, and <b>mine hazards</b> (cave-ins, gas vents, moles) that the farm never had.</dd>
-          <dt>Size</dt><dd><b>~12 plots</b> (the authored 6-tier quarry ladder, 2→12). Founded by wagon, gated until home reached City.</dd>
-          <dt>Buildings</dt><dd>Adds the mine line: Mining Camp · Workshop · Forge · Powder Store · Barn (mine-board preserve) — plus the carried farm buildings. This is where most <b>tools</b> come online (picks, hammers, bomb).</dd>
-          <dt>Win task</dt><dd><b>Defeat the capstone boss</b> — the guardian in the deep (e.g. Old Stoneface). Grants the <b>mine hearth token</b> and the wagon onward.</dd>
+          <dt>Boards</dt><dd><span class="bd f">Farm</span> <span class="bd m">Mine</span> — the first stacked town, one shared stockpile.</dd>
+          <dt>Crux</dt><dd>The whole point: <b>the farm feeds the mine.</b> A calm, generic valley where two boards first share a stockpile — farm food buys mine expeditions, the mine pays out ore, ore refines into metal. No distractions; just learn the connection.</dd>
+          <dt>Hook</dt><dd><b>None — no hazards.</b> Deliberately the safe town where you internalise the supply chain before anything threatens it.</dd>
+          <dt>Size</dt><dd>~10 plots.</dd>
+          <dt>Win task</dt><dd><b>Fill a grand order</b> — a combined shipment that needs both farm goods (bread) and mine metal (iron), proving you can run the two boards together. Builds the caravan onward.</dd>
         </dl>
         <ol class="play g">
-          <li><b>Found &amp; bootstrap.</b> Wagon to the pit; workers/tools came with you, the stockpile starts empty.</li>
+          <li><b>Found &amp; bootstrap.</b> Caravan to the valley; workers/tools came with you, the stockpile starts empty.</li>
           <li><b>Run the farm board.</b> Free turns: chain grain, build the Kitchen, convert grain → <b>supplies</b>.</li>
-          <li><b>Pack &amp; descend.</b> Spend supplies to depart a mine expedition; chain stone/iron while hazards press you; run out of food and you keep everything mined.</li>
-          <li><b>Build the mine up.</b> Spend ore to climb the ladder, unlock Forge + metal tools, hire mine workers. Farm refills the pantry; the mine empties it.</li>
-          <li><b>Beat the guardian.</b> Stock the boss basket, win the fight, take the token, pack the wagon.</li>
+          <li><b>Open the mine.</b> Spend supplies to depart an expedition; chain stone/iron; run out of food and you keep everything mined. No hazards yet — just the rhythm.</li>
+          <li><b>Refine &amp; connect.</b> Forge ore → metal; see the farm refill the pantry while the mine empties it. Hire mine workers (global).</li>
+          <li><b>Fill the grand order.</b> Assemble the bread + iron shipment, complete it, build the caravan, roll on.</li>
         </ol>
       </div>
     </section>
 
     <section id="t3plus">
-      <h2>Towns 3–6 — the full path <span style="font-size:.7rem;color:var(--muted);">(big-picture; numbers later)</span></h2>
+      <h2>Towns 3–7 — the full required path <span style="font-size:.7rem;color:var(--muted);">(big-picture; numbers later)</span></h2>
 
-      <div class="town fish">
-        <h3><span class="tn">Town 3</span> Saltspray Harbor — the fishery</h3>
+      <div class="town mine">
+        <h3><span class="tn">Town 3</span> Cracked Quarry — hazards arrive</h3>
         <dl>
-          <dt>Crux</dt><dd>Expeditions move to the water. Same pack-food-for-turns spine as the mine, but read against tides — a second take on provisioning before the game gets mean about it.</dd>
-          <dt>Unique hook</dt><dd>The sea: tide states shift the board, and <b>storms</b> are the hazard. Fish refine at the Smokehouse/Fishmonger.</dd>
-          <dt>Size</dt><dd>~15 plots (mirefen's authored 4-tier ladder fits, or a harbor re-skin).</dd>
-          <dt>Win task</dt><dd><b>The Regatta</b> — a festival that asks for a haul of cured fish + a built dock, rather than a fight (variety from Town 2). Grants the <b>fish hearth token</b> — the third, which opens the finale.</dd>
+          <dt>Boards</dt><dd><span class="bd f">Farm</span> <span class="bd m">Mine</span> — same stack as Two Rivers, now dangerous.</dd>
+          <dt>Crux</dt><dd>Take the farm→mine loop you just learned and add pressure: <b>mine hazards</b> (cave-ins, gas vents, moles) that eat tiles and force you to chain efficiently and spend hazard-clearing tools.</dd>
+          <dt>Hook</dt><dd>The cave hazards — the first town that fights back.</dd>
+          <dt>Size</dt><dd>~13 plots.</dd>
+          <dt>Win task</dt><dd><b>Defeat the capstone boss</b> — the guardian in the deep (e.g. Old Stoneface). The first "beat the monster" win, earned only after hazard mastery.</dd>
         </dl>
       </div>
 
-      <div class="town mine">
-        <h3><span class="tn">Town 4</span> Deepdelve — the mine with no farm</h3>
+      <div class="town fish">
+        <h3><span class="tn">Town 4</span> Saltspray Harbor — the fishery <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(kept light for now)</span></h3>
         <dl>
-          <dt>Crux</dt><dd>The planning town. With <b>no farm board</b>, you can't freely make food — so every expedition is rationed against a limited supply income. Progress is about sequencing, not grinding.</dd>
-          <dt>Unique hook</dt><dd>The <b>supply system</b>: <b>supply depots</b> generate a small capped batch every few real-time hours, and you can <b>ship</b> a basket in by wagon from your farm towns. Both scarce on purpose.</dd>
-          <dt>Size</dt><dd>~16 plots (procedural map, or the Black Forge / Caves layouts).</dd>
-          <dt>Win task</dt><dd><b>Fill the great shipment</b> — accumulate and dispatch a large ore order (a "big task" that isn't a boss or a party). Proves you mastered scarce provisioning.</dd>
+          <dt>Boards</dt><dd><span class="bd f">Farm</span> <span class="bd m">Mine</span> <span class="bd fi">Fish</span> — the full stack for the first time.</dd>
+          <dt>Crux</dt><dd>The third board, fed by the first two: <b>fishing needs farm food (bait) and mine metal (tackle).</b> The supply chain reaches its full depth.</dd>
+          <dt>Hook</dt><dd>The sea — tides shift the board. (Fish-town specifics deferred per direction; for now: it exists and completes the stack.)</dd>
+          <dt>Size</dt><dd>~15 plots.</dd>
+          <dt>Win task</dt><dd><b>The Regatta</b> — a festival asking for a cured-fish haul + a built dock, rather than a fight (variety).</dd>
         </dl>
       </div>
 
       <div class="town farm">
         <h3><span class="tn">Town 5</span> Greenmeadow — the rich farm &amp; the rats</h3>
         <dl>
-          <dt>Crux</dt><dd>The loop turns on you: abundance is the threat. As the stockpile climbs, <b>rats</b> appear and eat adjacent crops each turn — farm-side hazard management mirroring the mine's danger.</dd>
-          <dt>Unique hook</dt><dd>The <b>rat hazard</b> and its counters: chain rats directly, build the Ratcatcher (free moves on rats) and Master Ratcatcher (clear rats together with grass).</dd>
-          <dt>Size</dt><dd>~18 plots — the widest farm yet.</dd>
-          <dt>Win task</dt><dd><b>Raise a great building</b> — a Cathedral / Great Granary that demands a deep, sustained resource basket while you keep the rats down.</dd>
+          <dt>Boards</dt><dd><span class="bd f">Farm</span> <span class="bd m">Mine</span> — a deep farm with its own mine beneath it.</dd>
+          <dt>Crux</dt><dd>The loop turns on you: abundance is the threat. As the stockpile climbs, <b>rats</b> appear and eat adjacent crops each turn — farm-side hazard management mirroring the mine's danger — while you still run the mine.</dd>
+          <dt>Hook</dt><dd>The <b>rat hazard</b> and its counters: chain rats directly, build the Ratcatcher (free moves on rats) and Master Ratcatcher (clear rats together with grass).</dd>
+          <dt>Size</dt><dd>~17 plots — the widest farm yet.</dd>
+          <dt>Win task</dt><dd><b>Raise a great building</b> — a Cathedral / Great Granary demanding a deep, sustained basket while you keep the rats down.</dd>
+        </dl>
+      </div>
+
+      <div class="town fish">
+        <h3><span class="tn">Town 6</span> Mirefen Hollow — the master stack <span style="font-size:.7rem;color:var(--muted);font-weight:400;">(kept light for now)</span></h3>
+        <dl>
+          <dt>Boards</dt><dd><span class="bd f">Farm</span> <span class="bd m">Mine</span> <span class="bd fi">Fish</span> — the full stack under combined pressure.</dd>
+          <dt>Crux</dt><dd>The wringer before the finale: all three boards, hazards layered (a sea hazard plus a returning one), demanding you juggle the whole supply chain at once.</dd>
+          <dt>Size</dt><dd>~19 plots.</dd>
+          <dt>Win task</dt><dd><b>A sea boss or a great shipment</b> — the hardest non-finale task. (Details deferred with the fish biome.)</dd>
         </dl>
       </div>
 
       <div class="town cap">
-        <h3><span class="tn">Town 6</span> The Old Capital — the finale</h3>
+        <h3><span class="tn">Town 7</span> The Old Capital — the finale</h3>
         <dl>
-          <dt>Crux</dt><dd>Everything at once. Gated behind the <b>three hearth tokens</b> (farm + mine + fish), it's the capstone that asks you to bring the whole toolkit to bear.</dd>
-          <dt>Unique hook</dt><dd>A civic build with mixed demands drawing on every prior town's goods (and, if we want, multiple hazards).</dd>
+          <dt>Boards</dt><dd><span class="bd f">Farm</span> <span class="bd m">Mine</span> <span class="bd fi">Fish</span> — everything, at the largest scale.</dd>
+          <dt>Crux</dt><dd>The capstone. <b>Requires all six prior towns complete</b> — it asks you to bring the entire toolkit and supply chain to bear at once.</dd>
+          <dt>Hook</dt><dd>A grand civic build with mixed demands drawing on every prior town's goods.</dd>
           <dt>Size</dt><dd>The biggest layout (the 20-plot City map fits the role).</dd>
           <dt>Win task</dt><dd><b>Build the grand monument</b> — the ending. The longest basket in the game; finishing it wins the run.</dd>
         </dl>
       </div>
 
-      <div class="box"><b>Why the win tasks vary.</b> Festival (T1), boss (T2), regatta (T3), shipment (T4), great building (T5), monument (T6) — so "completing a town" never feels like one rote beat. <span class="tag now">today</span> completion is "build enough + resolve the town's keeper (coexist/drive-out) → hearth token." <span class="tag des">design</span> reframes that keeper-resolution moment as the town's signature task, and varies it per town.</div>
+      <div class="box"><b>Why the win tasks vary.</b> Caravan-build (T1), grand order (T2), boss (T3), regatta (T4), great building (T5), sea boss/shipment (T6), monument (T7) — so "completing a town" never feels rote. <span class="tag now">today</span> completion is "build enough + resolve the town's keeper → hearth token", and the finale opens on 3 biome tokens. <span class="tag des">design</span> reframe the completion moment as each town's signature task, and gate the finale on <b>all six</b> towns (since they're all required), not just three tokens.</div>
     </section>
   </div>
 
@@ -529,53 +590,51 @@
 
     <section id="b-intro">
       <h2>Buildings unlock tools — globally</h2>
-      <p class="lead">A town's plots are scarce, and what you build on them decides your kit: <b>building a building unlocks its tool, globally, to be crafted</b> for the rest of the run. Plots are few in Town 1 and grow with each town, so early on you're <em>choosing</em> which tools to bring online — a real decision, not a checklist.</p>
-      <div class="box"><span class="tag now">today</span> tools are already a <b>global</b> inventory; ~30 tools have craft recipes; and the Town Hall's "provisions" already map buildings to tools (Mill→clear, Workshop→basic, Forge→rare, Granary→shuffle, Sawmill→axe, Powder&nbsp;Store→bomb), with Powder Store fully granting its tool. <span class="tag des">design</span> make "build unlocks the recipe" the universal rule, using the map below.</div>
+      <p class="lead">A town's plots are scarce, and what you build on them decides your kit: <b>building a building unlocks its tool, globally, to be crafted</b> for the rest of the run — and a few buildings <b>generate</b> a tool/supply on a timer instead. Plots are few in Town 1 and grow with each town, so early on you're <em>choosing</em> which tools to bring online.</p>
+      <div class="box"><span class="tag now">today</span> tools are already a <b>global</b> inventory; ~30 tools have craft recipes; the Town-Hall "provisions" already map buildings to tools (Mill→clear, Workshop→basic, Forge→rare, Granary→shuffle, Sawmill→axe, Powder&nbsp;Store→bomb); and Powder Store fully grants its tool at season-end. <span class="tag des">design</span> make "build unlocks the recipe (or the timed grant)" the universal rule. <em>This is also the <code>/b/</code> wiki update in flight — each tool's page will state how it's acquired, and each building's page what recipes/tools it unlocks.</em></div>
     </section>
 
     <section id="b-map">
       <h2>Building → tool map</h2>
-      <p>Which building brings which tool online, and roughly which town it first appears in. Costs are the real in-code build costs.</p>
+      <p>Which building brings which tool online, roughly which town it first appears in, and whether it <b>unlocks</b> the recipe or <b>generates</b> the tool on a timer. Costs are the real in-code build costs.</p>
       <table>
-        <thead><tr><th>Building</th><th>First town</th><th>Build cost <span class="tag now">today</span></th><th>Unlocks tool(s) <span class="tag des">design</span></th><th>What the tool does</th></tr></thead>
+        <thead><tr><th>Building</th><th>Town</th><th>Build cost <span class="tag now">today</span></th><th>Tool(s)</th><th>Mode</th></tr></thead>
         <tbody>
-          <tr><td><b>Hearth</b></td><td>1 Farm</td><td>free (prebuilt)</td><td>—</td><td>the town core</td></tr>
-          <tr><td><b>Mill</b></td><td>1 Farm</td><td>6 plank, 8 bread, 2 block, 8 iron_bar</td><td><b>clear</b> (Scythe)</td><td>clears 6 random tiles · also −1 flour on bread</td></tr>
-          <tr><td><b>Bakery</b></td><td>1 Farm</td><td>8 plank, 6 hay, 4 eggs</td><td>bird_feed</td><td>refines bread · biases next fill to birds</td></tr>
-          <tr><td><b>Granary</b></td><td>1 Farm</td><td>12 bread, 6 block, 4 iron_bar</td><td><b>shuffle</b> (Reshuffle Horn)</td><td>reshuffles the board · +1 turn, +cap</td></tr>
-          <tr><td><b>Kitchen</b></td><td>1 Farm</td><td>9 bread, 5 dirt, 6 iron_bar</td><td>— (makes supplies)</td><td>grain → expedition rations</td></tr>
-          <tr><td><b>Sawmill</b></td><td>2 Mine</td><td>20 plank, 6 soup, 4 meat, 10 iron_bar, 4 coke</td><td><b>axe</b>, trimmer</td><td>fell all trees / trees→grass · +1 oak yield</td></tr>
-          <tr><td><b>Workshop</b></td><td>2 Mine</td><td>6 block, 5 iron_bar</td><td><b>basic</b> hand tools (rake, hoe, sickle, fertilizer…)</td><td>the everyday board tools</td></tr>
-          <tr><td><b>Forge</b></td><td>2 Mine</td><td>6 eggs, 10 dirt, 15 iron_bar</td><td><b>rare</b> metal tools (iron_pick, stone/coal hammer, auger, drill, gold_pick, magnet)</td><td>clear/transmute ore lines</td></tr>
-          <tr><td><b>Powder Store</b></td><td>2 Mine</td><td>12 iron_bar, 4 coke, 10 dirt</td><td><b>bomb</b> ✓, explosives, blast_charge</td><td>area blasts · clears cave-in/mole hazards</td></tr>
-          <tr><td><b>Stable</b></td><td>2 Mine</td><td>12 plank, 10 hay, 8 block</td><td>saddle</td><td>collect all mounts · +1 horse yield</td></tr>
-          <tr><td><b>Apiary</b></td><td>1–2</td><td>8 plank, 8 hay</td><td>bee</td><td>flowers→apples · +1 pansy yield</td></tr>
-          <tr><td><b>Observatory</b></td><td>4 Mine</td><td>20 block, 10 iron_bar, 10 coke, 1 cut_gem, 1 gold_bar</td><td>miners_hat</td><td>reveal hidden ore · −1 gem divisor</td></tr>
-          <tr><td><b>Smokehouse</b></td><td>3 Fish</td><td>8 plank, 6 block, 4 fish_fillet</td><td>(rations) </td><td>+1 turn on meat rations</td></tr>
-          <tr><td><b>Harbor Dock</b></td><td>3 Fish</td><td>2 soup, 1 meat, 1 coke, 1 silver_bar, 2 fish</td><td>(rations)</td><td>+1 turn on all rations</td></tr>
-          <tr><td><b>Supply Depot</b> <span class="tag des">design</span></td><td>4 Mine-only</td><td>TBD (mine goods)</td><td>— (drips supplies)</td><td>generates a capped batch of supplies every few hours</td></tr>
-          <tr><td><b>Ratcatcher</b> <span class="tag des">design</span></td><td>5 Rich farm</td><td>TBD</td><td>cat / terrier</td><td>clear all rat hazards · free moves on rats</td></tr>
-          <tr><td><b>Watchtower</b></td><td>5</td><td>8 eggs, 2 soup, 14 block, 10 iron_bar</td><td>rifle / hound</td><td>end / scatter wolf hazards</td></tr>
+          <tr><td><b>Mill</b></td><td>1</td><td>6 plank, 8 bread, 2 block, 8 iron_bar</td><td>clear (Scythe)</td><td>unlock + −1 flour on bread</td></tr>
+          <tr><td><b>Bakery</b></td><td>1</td><td>8 plank, 6 hay, 4 eggs</td><td>bird_feed</td><td>unlock (refines bread)</td></tr>
+          <tr><td><b>Granary</b></td><td>1</td><td>12 bread, 6 block, 4 iron_bar</td><td>shuffle</td><td>unlock + turn/cap bonus</td></tr>
+          <tr><td><b>Kitchen</b></td><td>1</td><td>9 bread, 5 dirt, 6 iron_bar</td><td>— (makes supplies)</td><td>grain → rations</td></tr>
+          <tr><td><b>Workshop</b></td><td>2</td><td>6 block, 5 iron_bar</td><td>basic hand tools (rake, hoe, sickle, fertilizer…)</td><td>unlock recipes</td></tr>
+          <tr><td><b>Forge</b></td><td>2</td><td>6 eggs, 10 dirt, 15 iron_bar</td><td>rare metal tools (iron_pick, hammers, auger, drill, gold_pick, magnet)</td><td>unlock recipes</td></tr>
+          <tr><td><b>Sawmill</b></td><td>2</td><td>20 plank, 6 soup, 4 meat, 10 iron_bar, 4 coke</td><td>axe, trimmer</td><td>unlock + 1 oak yield</td></tr>
+          <tr><td><b>Powder Store</b></td><td>2</td><td>12 iron_bar, 4 coke, 10 dirt</td><td>bomb ✓, explosives</td><td><b>generates</b> 2 bombs / timer</td></tr>
+          <tr><td><b>Stable</b></td><td>2</td><td>12 plank, 10 hay, 8 block</td><td>saddle</td><td>unlock + 1 horse yield</td></tr>
+          <tr><td><b>Apiary</b></td><td>1–2</td><td>8 plank, 8 hay</td><td>bee</td><td>unlock + 1 pansy yield</td></tr>
+          <tr><td><b>Observatory</b></td><td>3</td><td>20 block, 10 iron_bar, 10 coke, 1 cut_gem, 1 gold_bar</td><td>miners_hat</td><td>unlock + reveal ore</td></tr>
+          <tr><td><b>Smokehouse / Harbor Dock</b></td><td>4</td><td>fish + metal goods</td><td>— (ration stretch)</td><td>+1 turn on rations</td></tr>
+          <tr><td><b>Ratcatcher</b> <span class="tag des">design</span></td><td>5</td><td>TBD</td><td>cat / terrier</td><td>unlock + free moves on rats</td></tr>
+          <tr><td><b>Watchtower</b></td><td>5</td><td>8 eggs, 2 soup, 14 block, 10 iron_bar</td><td>rifle / hound</td><td>unlock (wolf control)</td></tr>
         </tbody>
       </table>
-      <p style="font-size:.82rem;color:var(--muted);">Other buildings carry non-tool roles: Granary/Mining&nbsp;Camp (+turns &amp; cap), Housing (worker pool), Silo/Barn (board preserve), Chapel (season coin bonus), Caravan Post (wagon hub), Portal (rune summons), Larder (ration stretch), plus decorative civic buildings. Full list lives in <code>src/constants.ts</code> (27 buildings).</p>
+      <p style="font-size:.82rem;color:var(--muted);">Other buildings carry non-tool roles: Granary/Mining&nbsp;Camp (+turns &amp; cap), Housing (worker pool), Silo/Barn (board preserve), Chapel (season coin bonus), Caravan Post (founding hub), Portal (rune summons), Larder (ration stretch), plus decorative civic buildings. Full list: <code>src/constants.ts</code> (27 buildings).</p>
     </section>
 
     <section id="b-bytown">
       <h2>Buildings by town (scope)</h2>
-      <p>Roughly which buildings come online where, so each town has a distinct, growing roster:</p>
+      <p>Roughly which buildings come online where — each town a distinct, growing roster on top of the last:</p>
       <table>
-        <thead><tr><th>Town</th><th>Plots</th><th>Building roster (cumulative new arrivals)</th></tr></thead>
+        <thead><tr><th>Town</th><th>Boards</th><th>Plots</th><th>New building arrivals</th></tr></thead>
         <tbody>
-          <tr><td><b>1 · Farm</b></td><td class="num">~6</td><td>Hearth, Mill, Bakery, Granary, Kitchen, Inn/Larder — the bread + supplies + storage core. Tools: clear, shuffle, a couple of hand tools.</td></tr>
-          <tr><td><b>2 · Farm+Mine</b></td><td class="num">~12</td><td>+ Mining Camp, Workshop, Forge, Powder Store, Sawmill, Stable, Barn — the whole tool economy (metal tools, bomb, axe). The kit's center of gravity.</td></tr>
-          <tr><td><b>3 · Fish</b></td><td class="num">~15</td><td>+ Harbor Dock, Smokehouse, Fishmonger, Lighthouse — fish refine &amp; ration-stretch.</td></tr>
-          <tr><td><b>4 · Mine-only</b></td><td class="num">~16</td><td>+ Supply Depot(s), Observatory, deeper Forge tiers — provisioning &amp; deep-ore tools.</td></tr>
-          <tr><td><b>5 · Rich farm</b></td><td class="num">~18</td><td>+ Ratcatcher, Master Ratcatcher, Watchtower, the great building — hazard counters at scale.</td></tr>
-          <tr><td><b>6 · Finale</b></td><td class="num">biggest</td><td>+ civic/monument builds drawing on every prior good.</td></tr>
+          <tr><td><b>1 · Hearthwood</b></td><td><span class="bd f">F</span></td><td class="num">~6</td><td>Hearth, Mill, Bakery, Granary, Kitchen, Inn/Larder — bread + supplies + storage. Tools: clear, shuffle, a couple of hand tools.</td></tr>
+          <tr><td><b>2 · Two Rivers</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~10</td><td>+ Mining Camp, Workshop, Forge, Powder Store, Sawmill, Stable, Barn — the whole tool economy (metal tools, bomb, axe). The kit's center of gravity.</td></tr>
+          <tr><td><b>3 · Cracked Quarry</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~13</td><td>+ Observatory, Watchtower, deeper Forge tiers — deep-ore + hazard-clearing tools.</td></tr>
+          <tr><td><b>4 · Saltspray</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">~15</td><td>+ Harbor Dock, Smokehouse, Fishmonger, Lighthouse — fish refine &amp; ration-stretch.</td></tr>
+          <tr><td><b>5 · Greenmeadow</b></td><td><span class="bd f">F</span><span class="bd m">M</span></td><td class="num">~17</td><td>+ Ratcatcher, Master Ratcatcher, the great building — hazard counters at scale.</td></tr>
+          <tr><td><b>6 · Mirefen</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">~19</td><td>+ combined-hazard counters, timed-generation depots.</td></tr>
+          <tr><td><b>7 · Old Capital</b></td><td><span class="bd f">F</span><span class="bd m">M</span><span class="bd fi">Fi</span></td><td class="num">biggest</td><td>+ civic/monument builds drawing on every prior good.</td></tr>
         </tbody>
       </table>
-      <div class="box tip"><b>The point of small early plots.</b> With ~6 plots in Town 1, you can't have everything — so unlocking the Granary (shuffle) instead of, say, a yield building is a felt choice. As towns widen, the roster fills out and the kit deepens. Plot scarcity is the early-game's main strategic texture.</div>
+      <div class="box tip"><b>The point of small early plots.</b> With ~6 plots in Town 1, you can't have everything — so unlocking the Granary (shuffle) instead of a yield building is a felt choice. As towns widen, the roster fills out and the kit deepens. Plot scarcity is the early game's main strategic texture.</div>
     </section>
   </div>
 
@@ -590,15 +649,15 @@
     <section id="meta-cards">
       <div class="grid">
         <div class="card g"><h3>Workers — the multiplier</h3><p>Coins + (scaling) resources in; permanently cheaper production + abilities out. Global. The accelerator of the flywheel and the biggest sink — see Mechanics for the cost direction.</p></div>
-        <div class="card g"><h3>Story — the sequencer</h3><p>Thresholds (a total, a building, a win task) in; the next town, boss summons, rare resources out. Decides <em>when</em> each part of the game opens — the order behind the verbs.</p></div>
+        <div class="card g"><h3>Story — the sequencer</h3><p>Thresholds (a total, a building, a win task) in; the next town, boss summons, rare resources out. Decides <em>when</em> each part of the game opens.</p></div>
         <div class="card"><h3>Achievements</h3><p>Passive counters in; mostly coins, a few special tools out. One-way faucet rewarding mastery &amp; breadth.</p></div>
         <div class="card"><h3>Quests</h3><p>A handful of seasonal goals in; coins + XP out. Gives a session a target beyond "play till turns end."</p></div>
-        <div class="card"><h3>Daily login</h3><p>Showing up in; a streak of coins + tools out. Pure retention, off to the side.</p></div>
-        <div class="card"><h3>Civic tax &amp; supply drip</h3><p>Time + how much you've built in; coins + tool provisions (a board crate) out — and, in mine-only towns, the supply drip. The game's idle-ish layer.</p></div>
-        <div class="card"><h3>Tools</h3><p>Fed by nearly everything (daily, civic, achievements, building grants) and unlocked by buildings; spent as board powers. Global. The shared "spend" that ties the side-faucets to play.</p></div>
+        <div class="card"><h3>Daily login</h3><p>Showing up in; a streak of coins + tools out. Pure retention.</p></div>
+        <div class="card"><h3>Civic tax &amp; timed grants</h3><p>Time + how much you've built in; coins + tool provisions (a board crate) out, plus the every-X-hours building grants. The game's idle-ish layer.</p></div>
+        <div class="card"><h3>Tools</h3><p>Unlocked by buildings, fed by daily/civic/grants; spent as board powers. Global. The shared "spend" tying side-faucets to play.</p></div>
         <div class="card r"><h3>Bosses → runes → portal</h3><p>Beating a boss pays coins + a rune; runes are meant to fuel portal summons — still being wired (see Gaps). Today runes mostly accumulate.</p></div>
       </div>
-      <div class="box warn"><b>One pattern to notice:</b> most side systems pay out in <b>coins</b> — fine only if coins have somewhere meaningful to go, which they mostly don't yet. The meta ring and the "what are coins for?" question are the same problem from two sides.</div>
+      <div class="box warn"><b>One pattern to notice:</b> most side systems pay out in <b>coins</b> — fine now that the Market gives coins a real home (see Economy). Without it, they'd just inflate.</div>
     </section>
   </div>
 
@@ -607,7 +666,7 @@
 
     <section id="gaps-intro">
       <h2>Where the picture doesn't close yet</h2>
-      <p class="lead">The honest part: where systems don't fully connect, a faucet has no sink (or vice-versa), a mechanic is half-built, or a choice is genuinely undecided. None block the core loop — but each is a seam to settle before we tune numbers. Filter by kind:</p>
+      <p class="lead">The honest part: where systems don't fully connect, a mechanic is half-built, or a choice is still open. None block the core loop — but each is a seam to settle before we tune numbers. Filter by kind:</p>
       <div class="filterbar">
         <span class="lbl">Show:</span>
         <button class="on" data-filter="all">All</button>
@@ -618,21 +677,21 @@
       <table id="status-table">
         <thead><tr><th>Seam</th><th>Kind</th><th>What's going on</th></tr></thead>
         <tbody>
-          <tr data-status="build"><td><b>Building → tool unlock</b></td><td><span class="pill warn">build</span></td><td>Only Powder Store grants a tool today; recipes exist but aren't gated by building. Make "build unlocks the recipe" universal, per the Buildings map.</td></tr>
-          <tr data-status="build"><td><b>Worker cost scaling</b></td><td><span class="pill warn">build</span></td><td>Raise base + step and ramp the material every hire (today material is a flat 2 every 3rd hire). Tune for T1–T2.</td></tr>
-          <tr data-status="build"><td><b>Town 2 farm board</b></td><td><span class="pill warn">build</span></td><td>The quarry is mine-only in code; the "combination" needs a second (farm) board on it, sharing the stockpile.</td></tr>
-          <tr data-status="build"><td><b>Supply drip + shipping</b></td><td><span class="pill warn">build</span></td><td>Real-time supply generation and inter-zone shipping don't exist (closest: 8h civic tax). Needed for the mine-only town.</td></tr>
-          <tr data-status="build"><td><b>Wagon founding</b></td><td><span class="pill warn">build</span></td><td>Founding cost &amp; map travel exist; wrap them in the wagon act gated on the previous town's win task.</td></tr>
-          <tr data-status="build"><td><b>Town 1 down to ~6 plots</b></td><td><span class="pill warn">build</span></td><td>Re-size the authored 20-plot home map (or reuse a smaller layout) so early plots are scarce.</td></tr>
-          <tr data-status="build"><td><b>Per-town win tasks</b></td><td><span class="pill warn">build</span></td><td>Festival / boss / regatta / shipment / great-build as completion triggers, replacing the generic keeper-resolve.</td></tr>
-          <tr data-status="wire"><td><b>Coins have no deep sink</b></td><td><span class="pill info">half-wired</span></td><td>Coins pour in; tiers/buildings are resource-priced and the Market doesn't buy. They inflate.</td></tr>
-          <tr data-status="wire"><td><b>Runes / hearth tokens spend</b></td><td><span class="pill info">half-wired</span></td><td>Earned, but the portal summon they feed is unfinished. Tokens gate the finale; runes mostly idle.</td></tr>
-          <tr data-status="wire"><td><b>Castle / NPC orders</b></td><td><span class="pill info">half-wired</span></td><td>Donation/order sinks exist without reward gates or auto-spawn — the steady "fill orders" faucet isn't really on.</td></tr>
-          <tr data-status="wire"><td><b>Expedition enforcement</b></td><td><span class="pill info">half-wired</span></td><td>Food→turns + Kitchen exist; expeditions aren't fully enforced as turn-budgeted sessions everywhere.</td></tr>
-          <tr data-status="ask"><td><b>Finale gating</b></td><td><span class="pill idle">question</span></td><td>Open the Old Capital on the 3 biome tokens alone (so the mine-only + rich-farm towns are optional), or require them too?</td></tr>
-          <tr data-status="ask"><td><b>How many towns / the order</b></td><td><span class="pill idle">question</span></td><td>The six here are a proposal anchored on real zones. Right count? Right sequence (e.g. fish before or after the mine-only town)?</td></tr>
-          <tr data-status="ask"><td><b>T1 win: festival vs build</b></td><td><span class="pill idle">question</span></td><td>Is a Harvest Festival the right first "big task," or should Town 1 close on a signature building instead?</td></tr>
-          <tr data-status="ask"><td><b>What are coins for?</b></td><td><span class="pill idle">question</span></td><td>Give coins a real sink (a coin-priced track, the Market, the wagon journey) or let them stay a soft lubricant?</td></tr>
+          <tr data-status="build"><td><b>Additive board stacking</b></td><td><span class="pill warn">build</span></td><td>A town must host multiple boards (farm+mine, farm+mine+fish) sharing one stockpile, with the fishery fed by farm + mine. Today zones are single-board.</td></tr>
+          <tr data-status="build"><td><b>Building → tool unlock</b></td><td><span class="pill warn">build</span></td><td>Only Powder Store grants a tool; recipes aren't gated by building. Make "build unlocks the recipe / timed grant" universal. (Also the wiki update.)</td></tr>
+          <tr data-status="build"><td><b>Worker cost scaling</b></td><td><span class="pill warn">build</span></td><td>Raise base + step and ramp the material every hire (today: flat 2 every 3rd). Tune for T1–T2.</td></tr>
+          <tr data-status="build"><td><b>The Market (coin sink)</b></td><td><span class="pill warn">build</span></td><td>Spend coins to buy resources/tools — the always-available outlet. Market exists but is sell-only today.</td></tr>
+          <tr data-status="build"><td><b>Timed-generation buildings</b></td><td><span class="pill warn">build</span></td><td>Generalise grant_tool / civic provisions into an "every X hours" capped generator (supplies or a tool).</td></tr>
+          <tr data-status="build"><td><b>Caravan founding</b></td><td><span class="pill warn">build</span></td><td>Wrap founding cost + travel in the caravan act, gated on each town's win task; T1's win = build the caravan.</td></tr>
+          <tr data-status="build"><td><b>Town 1 down to ~6 plots</b></td><td><span class="pill warn">build</span></td><td>Re-size the authored 20-plot home map so early plots are scarce.</td></tr>
+          <tr data-status="build"><td><b>Per-town win tasks + finale gate</b></td><td><span class="pill warn">build</span></td><td>Caravan / order / boss / regatta / great-build as completion triggers; finale requires all six towns (not just 3 tokens).</td></tr>
+          <tr data-status="wire"><td><b>Coins still need wiring</b></td><td><span class="pill info">half-wired</span></td><td>Tier-ups and the Market need to actually consume coins for the new sinks to bite.</td></tr>
+          <tr data-status="wire"><td><b>Runes / hearth tokens spend</b></td><td><span class="pill info">half-wired</span></td><td>Earned, but the portal summon they feed is unfinished. With the finale now gated on all towns, decide what tokens are <em>for</em>.</td></tr>
+          <tr data-status="wire"><td><b>Castle / NPC orders</b></td><td><span class="pill info">half-wired</span></td><td>Donation/order sinks exist without reward gates or auto-spawn — could become the Town 2 "grand order" win.</td></tr>
+          <tr data-status="wire"><td><b>Expedition enforcement</b></td><td><span class="pill info">half-wired</span></td><td>Food→turns + Kitchen exist; expeditions aren't fully enforced as turn-budgeted sessions everywhere — needed for the stack.</td></tr>
+          <tr data-status="ask"><td><b>Town 6 identity</b></td><td><span class="pill idle">question</span></td><td>Mirefen as the "master stack" full-stack town before the finale — right call, or should T6 be something else?</td></tr>
+          <tr data-status="ask"><td><b>Fish-town specifics</b></td><td><span class="pill idle">question</span></td><td>Deferred for now (T4 &amp; T6). When ready: how does fishing read differently from mining, and what's the bait/tackle exchange?</td></tr>
+          <tr data-status="ask"><td><b>Per-play stake?</b></td><td><span class="pill idle">question</span></td><td>If you want a "pay to play" feel, put it on expeditions (free farm fallback), not the farm. Want one at all, or keep play free?</td></tr>
         </tbody>
       </table>
     </section>
@@ -640,16 +699,16 @@
     <section id="next">
       <h2>What this unlocks</h2>
       <ol>
-        <li><b>Settle the design questions</b> (the <span class="pill idle">question</span> rows) — they change <em>what</em> the game is, so first.</li>
-        <li><b>Build the seams</b> (the <span class="pill warn">build</span> / half-wired rows) so the map matches the code.</li>
-        <li><b>Then balance Towns 1–2</b> — divisors, scaled worker costs, the food→turns rate, building baskets — against the sim, with the later towns defined but un-tuned.</li>
+        <li><b>Settle the open questions</b> (the <span class="pill idle">question</span> rows).</li>
+        <li><b>Build the seams</b> (the <span class="pill warn">build</span> / half-wired rows) so the map matches the code — additive boards and the building→tool unlock are the big ones.</li>
+        <li><b>Then balance Towns 1–2</b> — divisors, scaled worker costs, the food→turns rate, building baskets, the grand-order — against the sim, with later towns defined but un-tuned.</li>
       </ol>
-      <div class="box tip"><b>One-sentence summary.</b> puzzleDrag2 is a compounding loop — drag to harvest, spend to grow — carried across a wagon-founded ladder of towns, each with its own hook and its own signature win; the work now is locking each town's crux/win and the building→tool &amp; supply rules, then tuning the first two towns hard.</div>
+      <div class="box tip"><b>One-sentence summary.</b> puzzleDrag2 is a compounding loop — drag to harvest, spend to grow — played across a caravan-founded ladder of seven towns whose boards stack (farm feeds mine feeds fishery), each with its own hook and signature win; the work now is building the stack, the building→tool unlock, and the coin sinks, then tuning the first two towns hard.</div>
     </section>
 
     <details>
       <summary>Note on grounding</summary>
-      <p style="font-size:.86rem;color:var(--muted);">Written for the game's <b>feel and structure</b>, checked against the source. Grounded in code: the board/chain rules, production lines, the 11 zones with their tier ladders &amp; plot counts (home 3→20, quarry 2→12, mirefen 3→15) and gating, the 27 buildings &amp; their costs, the civic building→tool provisions seed, global tools, the 6 bosses, the 3-token Old Capital finale, and the worker cost curves. Marked <span class="tag des">design</span>: the per-town win tasks, the reduced Town 1 size, the wagon-founding framing, scaled worker costs, universal building→tool unlocks, and the mine-only supply/shipping system. Where code and this disagree it's listed above; code is the truth. Hard numbers stay in the balance docs / Dev Panel.</p>
+      <p style="font-size:.86rem;color:var(--muted);">Written for the game's <b>feel and structure</b>, checked against the source. Grounded in code: the board/chain rules, production lines, the zones with their tier ladders &amp; plot counts (home 3→20, quarry 2→12, mirefen 3→15) and gating, the 27 buildings &amp; costs, the civic building→tool provisions seed, global tools, the worker cost curves, the 6 bosses, and the hearth-token finale. Marked <span class="tag des">design</span>: additive board stacking, the seven-town required path, per-town win tasks, the calm Town 2, reduced Town 1 size, caravan founding, scaled worker costs, the Market &amp; coin sinks, universal building→tool unlocks, and timed-generation buildings. Disagreements are listed above; code is the truth. Hard numbers stay in the balance docs / Dev Panel.</p>
     </details>
   </div>
 
