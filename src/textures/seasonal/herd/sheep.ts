@@ -7,7 +7,8 @@
 // PALETTE LOCK: it is ALWAYS the same white, fluffy, dark-faced sheep. Seasons
 // change only its fleece VOLUME (recently-shorn in spring → thick fluffy winter
 // fleece), the pad colour, the light wash, and BOLD dressing — snow on the back,
-// a little winter SCARF, a breath-fog puff, blossoms, a fallen leaf, frost. The
+// a little winter SCARF (a warm MUSTARD knit), a breath-fog puff, blossoms, a
+// fallen leaf, frost. The
 // animal's identity colours never change; the silhouette outline is identical
 // for every `P` (only volume scales it).
 //
@@ -162,7 +163,7 @@ interface P {
   fallenLeafAmt: number; // 0..1 fallen leaf on the pad
   breathFogAmt: number; // 0..1 breath puff at the nose
   scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
+  scarfColor: RGB; // scarf colour (locked warm mustard, fades in via alpha)
 }
 
 // Four BOLD season presets. The sheep stays the SAME white woolly dark-faced
@@ -186,7 +187,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 160, 46],
   },
   Summer: {
     fleeceLight: [252, 252, 248],
@@ -205,7 +206,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 160, 46],
   },
   Autumn: {
     fleeceLight: [244, 238, 226],
@@ -224,7 +225,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.95,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 160, 46],
   },
   Winter: {
     fleeceLight: [252, 253, 255],
@@ -243,7 +244,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 160, 46],
   },
 };
 

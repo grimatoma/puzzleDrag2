@@ -240,7 +240,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [46, 110, 70], // forest-green knit (per-species winter accessory)
   },
   // Summer — PEAK; full healthy glossy plumage; saturated mid-green pad; bright
   // warm light.
@@ -266,7 +266,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [46, 110, 70], // forest-green knit (per-species winter accessory)
   },
   // Autumn — plumage tinted warm, a fallen leaf on the pad, dulled gloss, amber
   // light.
@@ -292,7 +292,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.95,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [46, 110, 70], // forest-green knit (per-species winter accessory)
   },
   // Winter — FLUFFED-UP cold-puffed plumage + snow on the back + a little winter
   // SCARF + a breath-fog puff, frost dusting, cool blue-grey light. Clearly
@@ -319,7 +319,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [46, 110, 70], // forest-green knit (per-species winter accessory)
   },
 };
 

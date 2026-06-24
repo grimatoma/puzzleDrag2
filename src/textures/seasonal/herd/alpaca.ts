@@ -9,8 +9,9 @@
 // fluffy topknot, perky ears, and big gentle eyes. Seasons change only its
 // fleece VOLUME (recently-shorn slimmer in spring → thick fluffy winter
 // fleece), the pad colour, the light wash, and BOLD dressing — snow on the
-// back, a little winter SCARF, a breath-fog puff, blossoms, a fallen leaf,
-// frost. The animal's identity colours never change and the silhouette outline
+// back, a little winter SCARF (a soft PLUM knit), a breath-fog puff, blossoms,
+// a fallen leaf, frost. The animal's identity colours never change and the
+// silhouette outline
 // is identical for every `P` (only volume scales it). Never morphs into
 // another animal — it keeps the signature long neck + topknot.
 //
@@ -185,7 +186,7 @@ interface P {
   fallenLeafAmt: number; // 0..1 fallen leaf on the pad
   breathFogAmt: number; // 0..1 breath puff at the nose
   scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked, fades in via alpha)
+  scarfColor: RGB; // scarf colour (locked plum, fades in via alpha)
 }
 
 // Four BOLD season presets. The alpaca stays the SAME cream/tan fluffy alpaca;
@@ -213,7 +214,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [120, 52, 110],
   },
   Summer: {
     fleeceLight: [246, 232, 202], // full healthy warm cream/tan (PEAK)
@@ -236,7 +237,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [120, 52, 110],
   },
   Autumn: {
     fleeceLight: [240, 224, 188], // warm-tinted tan
@@ -259,7 +260,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.95,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [120, 52, 110],
   },
   Winter: {
     fleeceLight: [250, 246, 234], // cool-lit cream, still clearly cream
@@ -283,7 +284,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [120, 52, 110],
   },
 };
 

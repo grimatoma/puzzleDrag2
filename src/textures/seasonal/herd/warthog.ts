@@ -8,7 +8,8 @@
 // running down the neck/back, thin legs, and a thin tufted tail. Seasons change
 // only its coat VOLUME (sleek spring → shaggy fuller winter mane), the pad
 // colour, the light wash, and BOLD dressing — snow on the back, a little winter
-// SCARF, a breath-fog puff, blossom, a fallen leaf, frost. The animal's
+// pair of EARMUFFS (its accessory, not a scarf), a breath-fog puff, blossom, a
+// fallen leaf, frost. The animal's
 // identity colours never change; the silhouette outline is identical for every
 // `P` (only the mane volume scales).
 //
@@ -283,8 +284,8 @@ const SP: Record<SeasonName, P> = {
     blossomAmt: 0,
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
-    scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfAmt: 1, // the winter accessory (EARMUFFS) fades in via this tween
+    scarfColor: [206, 64, 60], // plumbing only; the earmuffs use their own palette
   },
 };
 
@@ -704,56 +705,65 @@ function paintWarthog(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.lineCap = "butt";
   ctx.restore();
 
-  // ── SCARF (winter) — a little knitted band around the neck, below the head ──
+  // ── EARMUFFS (winter) — a cosy fuzzy pair instead of a scarf: a slim headband
+  // arcing over the crown with a round fluffy muff cupping each ear. Anchored to
+  // the (posed) head so they ride the chew/toss, and gated by the same winter
+  // `scarfAmt` tween (fades in over autumn→winter / out in reverse).
   if (p.scarfAmt > 0.001) {
-    const sx = hx + 5.4;
-    const sy = hy - 0.4;
+    // earmuff palette (fixed; the grey-brown hide stays the identity colour)
+    const muffFuzz: RGB = [232, 96, 92]; // warm berry-red fleece muffs
+    const muffFuzzDark: RGB = [180, 60, 60];
+    const band: RGB = [86, 70, 64]; // dark padded headband
+    // the two ear/muff anchor points (mirror the ear placement on the head)
+    const earTopY = hy - 6.6;
+    const lxm = hx + 1.5 - 2.6; // left (far) muff
+    const rxm = hx + 1.5 + 3.0; // right (near) muff
     ctx.save();
     ctx.globalAlpha = clamp01(p.scarfAmt);
-    // wrap band
-    ctx.fillStyle = rgba(p.scarfColor);
-    ctx.beginPath();
-    ctx.ellipse(sx, sy, 5.0, 2.8, 0.28, 0, Math.PI * 2);
-    ctx.fill();
-    // darker underside for depth
-    ctx.fillStyle = rgba([
-      Math.max(0, p.scarfColor[0] - 50),
-      Math.max(0, p.scarfColor[1] - 30),
-      Math.max(0, p.scarfColor[2] - 30),
-    ]);
-    ctx.beginPath();
-    ctx.ellipse(sx + 0.6, sy + 1.3, 4.6, 1.5, 0.28, 0, Math.PI * 2);
-    ctx.fill();
-    // hanging tail of the scarf, with a knitted notch + fringe
-    ctx.fillStyle = rgba(p.scarfColor);
-    ctx.beginPath();
-    ctx.moveTo(sx - 2.4, sy + 1.6);
-    ctx.lineTo(sx + 1.0, sy + 2.2);
-    ctx.lineTo(sx + 0.2, sy + 7.8);
-    ctx.lineTo(sx - 3.0, sy + 7.0);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = rgba([
-      Math.max(0, p.scarfColor[0] - 60),
-      Math.max(0, p.scarfColor[1] - 40),
-      Math.max(0, p.scarfColor[2] - 40),
-    ]);
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(sx - 1.2, sy + 3.0);
-    ctx.lineTo(sx - 1.6, sy + 7.2);
-    ctx.stroke();
-    // fringe at the bottom
-    ctx.strokeStyle = rgba(p.scarfColor);
-    ctx.lineWidth = 0.9;
+    // headband arc over the crown, joining the two muffs
+    ctx.strokeStyle = rgba(band);
+    ctx.lineWidth = 1.8;
     ctx.lineCap = "round";
-    for (const fx of [-2.8, -1.6, -0.4]) {
-      ctx.beginPath();
-      ctx.moveTo(sx + fx, sy + 7.2);
-      ctx.lineTo(sx + fx - 0.2, sy + 8.8);
-      ctx.stroke();
-    }
+    ctx.beginPath();
+    ctx.moveTo(lxm, earTopY);
+    ctx.quadraticCurveTo(hx + 0.5, earTopY - 4.6, rxm, earTopY);
+    ctx.stroke();
+    // a thin lit edge along the top of the band (light from upper-left)
+    ctx.strokeStyle = rgba([150, 132, 124], 0.8);
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.moveTo(lxm, earTopY - 0.6);
+    ctx.quadraticCurveTo(hx + 0.5, earTopY - 5.1, rxm, earTopY - 0.6);
+    ctx.stroke();
     ctx.lineCap = "butt";
+    // the two fuzzy round muffs (far one a touch smaller/dimmer for the ¾ read)
+    const drawMuff = (mx: number, my: number, r: number, dim: number): void => {
+      // fuzzy outer puff
+      ctx.fillStyle = rgba(muffFuzz, dim);
+      ctx.beginPath();
+      ctx.arc(mx, my, r, 0, Math.PI * 2);
+      ctx.fill();
+      // a ring of little fluff bumps so the muff reads soft, not a hard disc
+      ctx.fillStyle = rgba(muffFuzz, dim);
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        ctx.beginPath();
+        ctx.arc(mx + Math.cos(a) * r, my + Math.sin(a) * r, r * 0.42, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      // shaded lower-right crescent
+      ctx.fillStyle = rgba(muffFuzzDark, 0.7 * dim);
+      ctx.beginPath();
+      ctx.arc(mx + r * 0.4, my + r * 0.4, r * 0.7, 0, Math.PI * 2);
+      ctx.fill();
+      // upper-left highlight
+      ctx.fillStyle = rgba([255, 220, 214], 0.55 * dim);
+      ctx.beginPath();
+      ctx.arc(mx - r * 0.4, my - r * 0.4, r * 0.42, 0, Math.PI * 2);
+      ctx.fill();
+    };
+    drawMuff(lxm, earTopY + 0.6, 2.4, 0.85); // far muff
+    drawMuff(rxm, earTopY + 0.6, 2.9, 1.0); // near muff
     ctx.restore();
   }
 

@@ -9,7 +9,8 @@
 // little curly tail. Seasons change only its COAT/bristle VOLUME (sleek pink in
 // spring/summer → a bit fluffier/bristlier in winter), the pad colour, the
 // light wash, the skin gloss, and BOLD dressing — snow on the back, a little
-// winter SCARF, a breath-fog puff, blossoms, a fallen leaf, frost. The animal's
+// winter HOLLY SPRIG at the collar (its festive accessory, not a scarf), a
+// breath-fog puff, blossoms, a fallen leaf, frost. The animal's
 // identity colour (pink) never changes; the silhouette outline is identical for
 // every `P` (only volume modestly fuzzes the bristle fringe). Keeps the snout +
 // curly tail in every season — never morphs into another animal.
@@ -304,8 +305,8 @@ const SP: Record<SeasonName, P> = {
     blossomAmt: 0,
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
-    scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfAmt: 1, // the winter accessory (a HOLLY SPRIG) fades in via this tween
+    scarfColor: [206, 64, 60], // plumbing only; the holly uses its own greens/berry
   },
 };
 
@@ -715,57 +716,66 @@ function paintPig(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
 
   ctx.restore(); // end squash/stretch transform
 
-  // ── SCARF (winter) — a little knitted band around the neck, below the head ──
-  // drawn OUTSIDE the squash transform, anchored to the (posed) head.
+  // ── HOLLY SPRIG (winter) — a little festive holly cluster pinned at the collar
+  // instead of a scarf: two serrated holly leaves + a trio of red berries. Drawn
+  // OUTSIDE the squash transform, anchored to the (posed) head, and gated by the
+  // same winter `scarfAmt` tween (fades in over autumn→winter / out in reverse).
   if (p.scarfAmt > 0.001) {
-    const sx = hx + 5.4;
-    const sy = hy + 4.0;
+    const sx = hx + 5.0;
+    const sy = hy + 4.4;
     ctx.save();
     ctx.globalAlpha = clamp01(p.scarfAmt);
-    // wrap band
-    ctx.fillStyle = rgba(p.scarfColor);
-    ctx.beginPath();
-    ctx.ellipse(sx, sy, 5.4, 3.0, 0.32, 0, Math.PI * 2);
-    ctx.fill();
-    // darker underside for depth
-    ctx.fillStyle = rgba([
-      Math.max(0, p.scarfColor[0] - 50),
-      Math.max(0, p.scarfColor[1] - 30),
-      Math.max(0, p.scarfColor[2] - 30),
-    ]);
-    ctx.beginPath();
-    ctx.ellipse(sx + 0.6, sy + 1.4, 5.0, 1.6, 0.32, 0, Math.PI * 2);
-    ctx.fill();
-    // hanging tail of the scarf, with a knitted notch + fringe
-    ctx.fillStyle = rgba(p.scarfColor);
-    ctx.beginPath();
-    ctx.moveTo(sx - 2.6, sy + 1.8);
-    ctx.lineTo(sx + 1.0, sy + 2.4);
-    ctx.lineTo(sx + 0.2, sy + 8.4);
-    ctx.lineTo(sx - 3.2, sy + 7.6);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = rgba([
-      Math.max(0, p.scarfColor[0] - 60),
-      Math.max(0, p.scarfColor[1] - 40),
-      Math.max(0, p.scarfColor[2] - 40),
-    ]);
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(sx - 1.4, sy + 3.2);
-    ctx.lineTo(sx - 1.8, sy + 7.8);
-    ctx.stroke();
-    // fringe at the bottom
-    ctx.strokeStyle = rgba(p.scarfColor);
-    ctx.lineWidth = 0.9;
-    ctx.lineCap = "round";
-    for (const fx of [-3.0, -1.8, -0.6]) {
+    // holly palette (fixed; the pink hide stays the identity colour)
+    const leafDark: RGB = [22, 96, 54];
+    const leafLight: RGB = [54, 150, 84];
+    const berry: RGB = [206, 44, 46];
+    // one serrated holly leaf as a spiky lozenge, drawn at a given rotation
+    const drawLeaf = (lx: number, ly: number, rot: number, len: number): void => {
+      ctx.save();
+      ctx.translate(lx, ly);
+      ctx.rotate(rot);
+      // dark leaf body — a pointed lozenge with a few saw-tooth spikes per side
+      ctx.fillStyle = rgba(leafDark);
       ctx.beginPath();
-      ctx.moveTo(sx + fx, sy + 7.8);
-      ctx.lineTo(sx + fx - 0.2, sy + 9.4);
+      ctx.moveTo(-len, 0);
+      ctx.quadraticCurveTo(-len * 0.4, -2.2, 0, -1.0);
+      ctx.quadraticCurveTo(len * 0.5, -2.4, len, 0);
+      ctx.quadraticCurveTo(len * 0.5, 2.4, 0, 1.0);
+      ctx.quadraticCurveTo(-len * 0.4, 2.2, -len, 0);
+      ctx.closePath();
+      ctx.fill();
+      // lit upper edge for a glossy holly sheen (light from upper-left)
+      ctx.fillStyle = rgba(leafLight, 0.85);
+      ctx.beginPath();
+      ctx.moveTo(-len * 0.8, -0.4);
+      ctx.quadraticCurveTo(0, -2.0, len * 0.8, -0.4);
+      ctx.quadraticCurveTo(0, -0.8, -len * 0.8, -0.4);
+      ctx.closePath();
+      ctx.fill();
+      // a central vein
+      ctx.strokeStyle = rgba(leafDark);
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(-len * 0.85, 0);
+      ctx.lineTo(len * 0.85, 0);
       ctx.stroke();
+      ctx.restore();
+    };
+    // two leaves splaying from the collar
+    drawLeaf(sx - 1.4, sy + 1.2, -0.5, 4.4);
+    drawLeaf(sx + 1.8, sy + 1.6, 0.42, 4.0);
+    // a trio of glossy red berries nestled where the leaves meet
+    for (const [bxp, byp] of [[sx - 0.2, sy + 0.4], [sx + 1.4, sy + 0.8], [sx + 0.5, sy + 2.0]] as const) {
+      ctx.fillStyle = rgba(berry);
+      ctx.beginPath();
+      ctx.arc(bxp, byp, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      // tiny highlight glint (upper-left)
+      ctx.fillStyle = rgba([255, 220, 210], 0.85);
+      ctx.beginPath();
+      ctx.arc(bxp - 0.5, byp - 0.5, 0.5, 0, Math.PI * 2);
+      ctx.fill();
     }
-    ctx.lineCap = "butt";
     ctx.restore();
   }
 

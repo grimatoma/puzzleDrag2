@@ -10,8 +10,9 @@
 // eyes, sturdy legs. The colour + silhouette are CONSTANT every season; the
 // signature tusks + bristly mane never change. Seasons change only the coat
 // VOLUME (sleek spring → SHAGGY thick winter), the pad colour, the light wash,
-// and BOLD dressing — snow on the back, a little winter SCARF, a breath-fog
-// puff (snorting steam), blossom, a fallen leaf, frost. The animal's identity
+// and BOLD dressing — snow on the back, a breath-fog puff (snorting steam),
+// blossom, a fallen leaf, frost (the boar wears NO scarf — it is the one
+// bare-necked herd brute). The animal's identity
 // colours never change; the silhouette outline is identical for every `P`
 // (only volume scales it). The tusks stay bright all year.
 //
@@ -349,8 +350,9 @@ const SP: Record<SeasonName, P> = {
     blossomAmt: 0,
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
-    scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfAmt: 0, // NO scarf — the fierce boar wears nothing; the cold reads
+    // entirely through breath-fog + back-snow + frost on the bristle mane.
+    scarfColor: [206, 64, 60], // unused (scarfAmt stays 0); kept for tween plumbing
   },
 };
 
@@ -688,58 +690,10 @@ function paintBoar(ctx: CanvasRenderingContext2D, p: P, pose: Pose): void {
   ctx.stroke();
   ctx.lineCap = "butt";
 
-  // ── SCARF (winter) — a little knitted band around the neck, below the head ──
-  if (p.scarfAmt > 0.001) {
-    const sx = cx - 8.5;
-    const sy = cy + 3.2 - pose.bob * 0.2;
-    ctx.save();
-    ctx.globalAlpha = clamp01(p.scarfAmt);
-    // wrap band
-    ctx.fillStyle = rgb(p.scarfColor);
-    ctx.beginPath();
-    ctx.ellipse(sx, sy, 5.2, 3.0, 0.28, 0, Math.PI * 2);
-    ctx.fill();
-    // darker underside for depth
-    ctx.fillStyle = rgb([
-      Math.max(0, p.scarfColor[0] - 50),
-      Math.max(0, p.scarfColor[1] - 30),
-      Math.max(0, p.scarfColor[2] - 30),
-    ]);
-    ctx.beginPath();
-    ctx.ellipse(sx + 0.6, sy + 1.4, 4.8, 1.6, 0.28, 0, Math.PI * 2);
-    ctx.fill();
-    // hanging tail of the scarf, with a knitted notch + fringe
-    ctx.fillStyle = rgb(p.scarfColor);
-    ctx.beginPath();
-    ctx.moveTo(sx - 2.6, sy + 1.8);
-    ctx.lineTo(sx + 1.0, sy + 2.4);
-    ctx.lineTo(sx + 0.2, sy + 8.0);
-    ctx.lineTo(sx - 3.2, sy + 7.2);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = rgb([
-      Math.max(0, p.scarfColor[0] - 60),
-      Math.max(0, p.scarfColor[1] - 40),
-      Math.max(0, p.scarfColor[2] - 40),
-    ]);
-    ctx.lineWidth = 0.8;
-    ctx.beginPath();
-    ctx.moveTo(sx - 1.4, sy + 3.2);
-    ctx.lineTo(sx - 1.8, sy + 7.4);
-    ctx.stroke();
-    // fringe at the bottom
-    ctx.strokeStyle = rgb(p.scarfColor);
-    ctx.lineWidth = 0.9;
-    ctx.lineCap = "round";
-    for (const fx of [-3.0, -1.8, -0.6]) {
-      ctx.beginPath();
-      ctx.moveTo(sx + fx, sy + 7.4);
-      ctx.lineTo(sx + fx - 0.2, sy + 9.0);
-      ctx.stroke();
-    }
-    ctx.lineCap = "butt";
-    ctx.restore();
-  }
+  // NO SCARF on the boar — the wild boar wears nothing. Winter reads through the
+  // shaggy frosted bristle mane, the back-snow cap, and the breath-fog snort
+  // (drawn below) rather than any knitted accessory. `scarfAmt` stays 0 every
+  // season, so there is nothing to draw here.
 
   // ── HEAD + long snout + TUSKS (front-¾, lower-left) — locks the identity ────
   // The head pivots about a point at the neck: +pose.head throws the snout &

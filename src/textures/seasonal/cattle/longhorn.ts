@@ -199,7 +199,7 @@ interface P {
   fallenLeafAmt: number; // 0..1 a fallen leaf on the pad (autumn)
   breathFogAmt: number; // 0..1 breath puff at the muzzle (winter)
   scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
+  scarfColor: RGB; // scarf colour (locked mustard, fades in via alpha)
 }
 
 // Four BOLD season presets. The longhorn stays the SAME tan, white-blazed,
@@ -230,7 +230,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 158, 52],
   },
   // Summer — GLOSSY tan coat (PEAK), saturated mid-green pad, bright warm light.
   Summer: {
@@ -256,7 +256,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 158, 52],
   },
   // Autumn — warm reddish-tinted fuller coat, olive-tan pad, a fallen leaf,
   // dulled gloss, amber light.
@@ -283,7 +283,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.92,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 158, 52],
   },
   // Winter — FURRIER thick coat + frosted/snow-dusted horns + back-snow + a
   // little scarf + breath fog, snowy pad, cool blue-grey light. The tan hide
@@ -311,7 +311,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [214, 158, 52],
   },
 };
 

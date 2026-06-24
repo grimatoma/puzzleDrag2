@@ -224,9 +224,11 @@ interface P {
   fallenLeafAmt: number; // 0..1 fallen leaves on the pad (autumn)
 }
 
-// Scarf knit colour is a constant cosy red — used only where scarfAmt > 0.
-const SCARF: RGB = [206, 78, 72];
-const SCARF_DARK: RGB = [150, 44, 46];
+// Scarf knit colour — a STRIPED berry-and-cream knit (the costumed pig's own
+// winter accessory, distinct from the other birds). Used only where scarfAmt > 0.
+const SCARF: RGB = [180, 52, 76]; // berry base
+const SCARF_DARK: RGB = [122, 34, 54]; // shaded berry
+const SCARF_STRIPE: RGB = [238, 226, 198]; // cream stripe
 
 // ── Four BOLD season presets ──────────────────────────────────────────────────
 // IDENTITY LOCK: skin* + feather* + beakMask* stay essentially constant. Only
@@ -934,13 +936,29 @@ function drawScarf(ctx: CanvasRenderingContext2D, _p: P, hx: number, hy: number,
   ctx.moveTo(hx + 4.5, hy + 4.4);
   ctx.quadraticCurveTo(hx + 6.5, hy + 8.5, hx + 5.2, hy + 11.5);
   ctx.stroke();
-  // little knit-row ticks for texture
-  ctx.strokeStyle = rgba(SCARF_DARK, 0.8);
-  ctx.lineWidth = 0.7;
+  // cream STRIPES across the wrap band (candy-stripe knit, distinct accessory)
+  ctx.strokeStyle = rgba(SCARF_STRIPE);
+  ctx.lineWidth = 1.3;
   for (let i = -3; i <= 5; i += 2) {
     ctx.beginPath();
-    ctx.moveTo(hx + i, hy + 3.2);
-    ctx.lineTo(hx + i + 0.6, hy + 6.4);
+    ctx.moveTo(hx + i, hy + 3.4);
+    ctx.lineTo(hx + i + 0.5, hy + 6.2);
+    ctx.stroke();
+  }
+  // cream stripes down the hanging tail too
+  for (const ty of [6.4, 9.0]) {
+    ctx.beginPath();
+    ctx.moveTo(hx + 5.0, hy + ty);
+    ctx.lineTo(hx + 6.0, hy + ty + 0.4);
+    ctx.stroke();
+  }
+  // little dark knit-row ticks between the stripes for texture
+  ctx.strokeStyle = rgba(SCARF_DARK, 0.8);
+  ctx.lineWidth = 0.6;
+  for (let i = -2; i <= 4; i += 2) {
+    ctx.beginPath();
+    ctx.moveTo(hx + i, hy + 3.6);
+    ctx.lineTo(hx + i + 0.5, hy + 6.0);
     ctx.stroke();
   }
   // a couple of fringe strands at the scarf tail's end

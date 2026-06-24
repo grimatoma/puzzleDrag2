@@ -233,7 +233,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [226, 214, 184], // cream-knit (per-species winter accessory)
   },
   // Summer — richest, glossiest tricolour (PEAK); saturated mid-green pad.
   Summer: {
@@ -260,7 +260,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [226, 214, 184], // cream-knit (per-species winter accessory)
   },
   // Autumn — vivid plumage under warm amber light, a fallen leaf, dulled gloss.
   Autumn: {
@@ -287,7 +287,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.9,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [226, 214, 184], // cream-knit (per-species winter accessory)
   },
   // Winter — FLUFFED feathers, snow on back/perch, a SCARF, breath-fog, frost,
   // snowy pad, cool blue-grey light. Still obviously the same vivid macaw.
@@ -315,7 +315,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [226, 214, 184], // cream-knit (per-species winter accessory)
   },
 };
 

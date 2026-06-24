@@ -195,7 +195,7 @@ interface P {
   fallenLeafAmt: number; // 0..1 a fallen leaf on the pad (autumn)
   breathFogAmt: number; // 0..1 breath puff at the muzzle (winter)
   scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked red, fades in via alpha)
+  scarfColor: RGB; // scarf colour (locked plum, fades in via alpha)
 }
 
 // Four BOLD season presets. The horse stays the SAME brown, dark-maned,
@@ -225,7 +225,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [122, 60, 110],
   },
   // Summer — glossy brown coat (PEAK), saturated mid-green pad, bright warm light.
   Summer: {
@@ -250,7 +250,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [122, 60, 110],
   },
   // Autumn — warm-tinted fuller coat, olive-tan pad + a fallen leaf, amber light.
   Autumn: {
@@ -275,7 +275,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.95,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [122, 60, 110],
   },
   // Winter — thick shaggy coat + back-snow + scarf + breath fog, snowy pad, cool light.
   Winter: {
@@ -300,7 +300,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [122, 60, 110],
   },
 };
 

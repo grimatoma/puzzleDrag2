@@ -196,7 +196,7 @@ interface P {
   fallenLeafAmt: number; // 0..1 a fallen leaf on the pad (autumn)
   breathFogAmt: number; // 0..1 breath puff at the muzzle (winter)
   scarfAmt: number; // 0..1 a little winter SCARF (tweened alpha)
-  scarfColor: RGB; // scarf colour (locked, fades in via alpha)
+  scarfColor: RGB; // scarf colour (locked cream-knit, fades in via alpha)
 }
 
 // Four BOLD season presets. The donkey stays the SAME grey, pale-muzzled,
@@ -226,7 +226,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [224, 206, 160],
   },
   // Summer — glossy grey coat (PEAK), saturated mid-green pad, bright warm light.
   Summer: {
@@ -251,7 +251,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [224, 206, 160],
   },
   // Autumn — warm-tinted fuller coat, olive-tan browning pad, a fallen leaf,
   // dulled gloss, amber light.
@@ -277,7 +277,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0.9,
     breathFogAmt: 0,
     scarfAmt: 0,
-    scarfColor: [206, 64, 60],
+    scarfColor: [224, 206, 160],
   },
   // Winter — SHAGGIER thick fluffed coat + back-snow + a SCARF + breath fog,
   // snowy pad, frost, cool blue-grey light.
@@ -303,7 +303,7 @@ const SP: Record<SeasonName, P> = {
     fallenLeafAmt: 0,
     breathFogAmt: 0.85,
     scarfAmt: 1, // a little scarf appears in winter
-    scarfColor: [206, 64, 60],
+    scarfColor: [224, 206, 160],
   },
 };
 
