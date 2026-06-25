@@ -8,11 +8,28 @@ test('menu opens, settings/about tabs work', async ({ page }) => {
 
   // Tab buttons are on the menu's MainTab. Settings/About each replace the
   // main tab, so we go back between switches.
-  await page.getByRole('button', { name: '⚙ Settings' }).click();
+  const settingsBtn = page.getByRole('button', { name: '⚙ Settings' });
+  await expect(settingsBtn).toBeVisible();
+  await settingsBtn.click();
   await expect(page.getByText('Sound Effects')).toBeVisible();
   await page.getByRole('button', { name: '← Back' }).click();
 
-  await page.getByRole('button', { name: 'ℹ About' }).click();
+  // Wait for the main tab to come back, then open About. The menu Body is a
+  // short scroll container (max-h-[88dvh] overflow-y-auto on the 390px-tall
+  // iphone-landscape viewport); returning from Settings leaves it in a state
+  // where the About button never satisfies Playwright's actionability checks —
+  // it hangs forever on "stable" (the dialog height oscillates under mobile dvh
+  // emulation) and/or "receives events" (the absolute top-right close button
+  // overlaps it at the stale scroll position). Both .click() and
+  // .scrollIntoViewIfNeeded() block on those checks. Since we've asserted the
+  // button is the right one, visible and enabled, dispatch the click directly to
+  // the element — skipping actionability — and let the version-text assertion
+  // below prove the About tab really opened.
+  await expect(settingsBtn).toBeVisible();
+  const aboutBtn = page.getByRole('button', { name: 'ℹ About' });
+  await expect(aboutBtn).toBeVisible();
+  await expect(aboutBtn).toBeEnabled();
+  await aboutBtn.dispatchEvent('click');
   await expect(page.getByText(/Hearthlands · v/)).toBeVisible();
 });
 
