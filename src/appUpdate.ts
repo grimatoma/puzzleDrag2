@@ -31,6 +31,13 @@ let registration: ServiceWorkerRegistration | null = null;
 let started = false;
 const listeners = new Set<Listener>();
 
+// Captured so an HMR dispose can stop the poll/listeners — otherwise every dev
+// hot-reload re-runs start() and stacks another 60s interval + focus/visibility
+// listeners. No effect in production (the singleton lives for the app session).
+let _pollId: number | undefined;
+let _onFocus: (() => void) | undefined;
+let _onVisibility: (() => void) | undefined;
+
 function emit(): void {
   for (const l of listeners) l();
 }
@@ -90,11 +97,11 @@ function start(): void {
           /* offline or transient — try again next tick */
         });
       };
-      window.setInterval(check, POLL_MS);
+      _pollId = window.setInterval(check, POLL_MS);
+      _onFocus = check;
       window.addEventListener("focus", check);
-      document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) check();
-      });
+      _onVisibility = () => { if (!document.hidden) check(); };
+      document.addEventListener("visibilitychange", _onVisibility);
     })
     .catch(() => {
       /* no registration available (e.g. SW disabled in dev) */
@@ -132,4 +139,14 @@ export function useAppUpdateReady(): boolean {
     () => updateReady,
     () => false,
   );
+}
+
+// Dev only: tear the watcher down on hot-reload so the poll interval + listeners
+// don't accumulate across HMR cycles. import.meta.hot is undefined in prod.
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    if (_pollId !== undefined) window.clearInterval(_pollId);
+    if (_onFocus) window.removeEventListener("focus", _onFocus);
+    if (_onVisibility) document.removeEventListener("visibilitychange", _onVisibility);
+  });
 }

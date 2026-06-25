@@ -276,6 +276,13 @@ export class GameScene extends Phaser.Scene {
     this.scale.on("resize", onResize);
 
     this.events.once("shutdown", () => {
+      // The two scene-level pointer listeners added in create() live on the
+      // InputPlugin, which persists across a scene.restart — without removing
+      // them, a restart re-adds duplicates that double-fire endPath() /
+      // tryAddToPath() against stale grid refs. (The global document/window
+      // listeners below leak the same way and are already torn down here.)
+      this.input.off("pointerup");
+      this.input.off("pointermove");
       canvas.removeEventListener("selectstart", preventSelect);
       canvas.removeEventListener("contextmenu", preventSelect);
       canvas.removeEventListener("pointerleave", onPointerLeave);
