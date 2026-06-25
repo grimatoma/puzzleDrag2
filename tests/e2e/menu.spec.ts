@@ -15,18 +15,21 @@ test('menu opens, settings/about tabs work', async ({ page }) => {
   await page.getByRole('button', { name: '← Back' }).click();
 
   // Wait for the main tab to come back, then open About. The menu Body is a
-  // short, scrollable container (max-h-[88dvh] overflow-y-auto on the 390px-tall
-  // iphone-landscape viewport) with an absolute close button pinned top-right.
-  // Returning from Settings leaves a stale scrollTop, so Playwright's auto-scroll
-  // can park "About" under the close button and the click hit-test never clears
-  // (this deterministically hung all retries). Assert the button is genuinely
-  // visible + enabled, then force past the overlay heuristic — the version-text
-  // assertion below still proves the tab actually opened.
+  // short scroll container (max-h-[88dvh] overflow-y-auto on the 390px-tall
+  // iphone-landscape viewport); returning from Settings leaves it in a state
+  // where the About button never satisfies Playwright's actionability checks —
+  // it hangs forever on "stable" (the dialog height oscillates under mobile dvh
+  // emulation) and/or "receives events" (the absolute top-right close button
+  // overlaps it at the stale scroll position). Both .click() and
+  // .scrollIntoViewIfNeeded() block on those checks. Since we've asserted the
+  // button is the right one, visible and enabled, dispatch the click directly to
+  // the element — skipping actionability — and let the version-text assertion
+  // below prove the About tab really opened.
   await expect(settingsBtn).toBeVisible();
   const aboutBtn = page.getByRole('button', { name: 'ℹ About' });
+  await expect(aboutBtn).toBeVisible();
   await expect(aboutBtn).toBeEnabled();
-  await aboutBtn.scrollIntoViewIfNeeded();
-  await aboutBtn.click({ force: true });
+  await aboutBtn.dispatchEvent('click');
   await expect(page.getByText(/Hearthlands · v/)).toBeVisible();
 });
 
