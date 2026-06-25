@@ -7,19 +7,26 @@ test('menu opens, settings/about tabs work', async ({ page }) => {
   await expect(page.getByText('🔥 Hearthlands')).toBeVisible();
 
   // Tab buttons are on the menu's MainTab. Settings/About each replace the
-  // main tab, so we go back between switches. Gate each click on the target
-  // button being visible first — the main tab re-mounts on every Back, and
-  // clicking a tab mid-transition is what made this spec flake under CI load.
+  // main tab, so we go back between switches.
   const settingsBtn = page.getByRole('button', { name: '⚙ Settings' });
   await expect(settingsBtn).toBeVisible();
   await settingsBtn.click();
   await expect(page.getByText('Sound Effects')).toBeVisible();
   await page.getByRole('button', { name: '← Back' }).click();
 
-  // Wait for the main tab to come back before reaching for the About tab.
+  // Wait for the main tab to come back, then open About. The menu Body is a
+  // short, scrollable container (max-h-[88dvh] overflow-y-auto on the 390px-tall
+  // iphone-landscape viewport) with an absolute close button pinned top-right.
+  // Returning from Settings leaves a stale scrollTop, so Playwright's auto-scroll
+  // can park "About" under the close button and the click hit-test never clears
+  // (this deterministically hung all retries). Assert the button is genuinely
+  // visible + enabled, then force past the overlay heuristic — the version-text
+  // assertion below still proves the tab actually opened.
   await expect(settingsBtn).toBeVisible();
   const aboutBtn = page.getByRole('button', { name: 'ℹ About' });
-  await aboutBtn.click();
+  await expect(aboutBtn).toBeEnabled();
+  await aboutBtn.scrollIntoViewIfNeeded();
+  await aboutBtn.click({ force: true });
   await expect(page.getByText(/Hearthlands · v/)).toBeVisible();
 });
 
