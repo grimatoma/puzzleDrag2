@@ -139,9 +139,9 @@ export default function InventoryScreen({ state, dispatch, searchOpen: searchOpe
   const recentOrder = useRecentOrder(settlementInv);
 
   useEffect(() => {
-    if (!searchOpen) {
-      setTimeout(() => setQueryInput(""), 0);
-    }
+    if (searchOpen) return;
+    const id = setTimeout(() => setQueryInput(""), 0);
+    return () => clearTimeout(id);
   }, [searchOpen]);
 
   const combinedFilter = primaryFilter === "all" ? [] : [primaryFilter];

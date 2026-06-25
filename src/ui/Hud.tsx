@@ -132,7 +132,7 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
   useEffect(() => {
     setCoinAnchorEl(coinAnchorRef.current);
     return () => setCoinAnchorEl(null);
-  });
+  }, []); // setCoinAnchorEl is a stable module fn; ref is set after mount — run once.
   const settlementName = "Hearthwood Vale";
   const showTide = state.biomeKey === "fish" && (onBoard || view === "town");
   const VIEW_LABELS: Record<string, string> = {
