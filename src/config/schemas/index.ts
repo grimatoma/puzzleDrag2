@@ -50,7 +50,6 @@ export {
 export { zoneOverrideSchema, zonesOverridesSchema } from "./zone.js";
 
 export {
-  seasonDropsSchema,
   farmSeasonDropRowSchema,
   farmSeasonDropsSchema,
   farmUpgradeMapSchema,
