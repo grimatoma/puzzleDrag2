@@ -127,8 +127,8 @@ h1{margin:0 0 4px;font-size:26px;letter-spacing:-.3px}
 .controls select,.controls input{font:14px inherit;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink)}
 .controls input[type=search]{min-width:240px;flex:1}
 .controls .count{margin-left:auto;color:var(--mut);font-size:13px}
-table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
-thead th{position:sticky;top:64px;background:#efeadf;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);padding:10px;border-bottom:1px solid var(--line);z-index:2}
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px}
+thead th{position:sticky;top:var(--head-top,64px);background:#efeadf;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.4px;color:var(--mut);padding:10px;border-bottom:1px solid var(--line);z-index:2}
 tbody tr{border-bottom:1px solid var(--line);content-visibility:auto;contain-intrinsic-size:140px}
 tbody tr:hover{background:#fbf8f0}
 td{padding:10px;vertical-align:top}
@@ -196,6 +196,10 @@ function apply(){const k=fk.value,v=fv.value,s=fs.value,g=fg.value,q=fq.value.tr
  for(const tr of rowsEl){const ok=(!k||tr.dataset.kind===k)&&(!v||tr.dataset.verdict===v)&&(!s||tr.dataset.status===s)&&(!g||tr.dataset.group===g)&&(!q||tr.dataset.search.includes(q));tr.style.display=ok?'':'none';if(ok)n++;}
  count.textContent=n+' / '+rowsEl.length+' shown';}
 [fk,fv,fs,fg].forEach(e=>e.onchange=apply);fq.oninput=apply;apply();
+// Pin the table head flush below the sticky controls bar (its height varies with wrap).
+const ctrls=document.querySelector('.controls');
+const syncHeadTop=()=>document.documentElement.style.setProperty('--head-top',ctrls.offsetHeight+'px');
+syncHeadTop();new ResizeObserver(syncHeadTop).observe(ctrls);addEventListener('resize',syncHeadTop);
 </script>
 </body></html>`;
 
