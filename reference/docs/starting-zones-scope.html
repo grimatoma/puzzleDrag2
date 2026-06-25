@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>puzzleDrag2 — Starting Zones (1 & 2): Scope & Balance Baseline</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#2b2118; --ink-soft:#5c4f40; --paper:#f6efe1; --paper-2:#efe5d2; --paper-3:#f9f4e9;
+    --gold:#b07d2b; --gold-deep:#8a6018; --green:#5f7d3a; --stone:#857c6d;
+    --tide:#3f7286; --ember:#b4532a; --line:#e2d6bd; --line-2:#d4c4a4;
+    --good:#5f7d3a; --warn:#b07d2b; --drop:#b4532a; --mute:#857c6d;
+    --shadow:rgba(60,40,15,.10);
+    --maxw:1060px;
+    --mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:"IBM Plex Sans",ui-sans-serif,system-ui,sans-serif;
+    --serif:"Fraunces","Iowan Old Style",Palatino,Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;
+    background:
+      radial-gradient(1200px 600px at 50% -260px, #fff8ea 0%, transparent 62%),
+      var(--paper);
+    color:var(--ink); font:16px/1.62 var(--sans); -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:40px 22px 120px}
+
+  /* Header */
+  header.title{margin:18px 0 6px}
+  .kicker{font-family:var(--sans); text-transform:uppercase; letter-spacing:.2em;
+    font-size:11.5px; color:var(--gold-deep); font-weight:700}
+  h1{font-family:var(--serif); font-weight:800; font-size:40px; line-height:1.05;
+    margin:.18em 0 .12em; letter-spacing:-.01em}
+  .sub{color:var(--ink-soft); font-size:17px; max-width:70ch}
+  .meta-row{display:flex; gap:8px; flex-wrap:wrap; margin:16px 0 4px}
+  .pill{font-family:var(--mono); font-size:11.5px; padding:3px 9px; border-radius:999px;
+    border:1px solid var(--line-2); background:var(--paper-3); color:var(--ink-soft)}
+
+  .rule{height:1px; background:linear-gradient(90deg,transparent,var(--line-2),transparent); margin:22px 0}
+
+  /* Tabs */
+  .tabs{position:sticky; top:0; z-index:20; display:flex; gap:2px; flex-wrap:wrap;
+    padding:10px 0 8px; margin:6px 0 20px;
+    background:linear-gradient(180deg,var(--paper) 70%, rgba(246,239,225,0));
+    backdrop-filter:saturate(1.1) blur(2px)}
+  .tab{font-family:var(--sans); font-weight:600; font-size:13.5px; cursor:pointer;
+    border:1px solid transparent; background:transparent; color:var(--ink-soft);
+    padding:8px 14px; border-radius:9px}
+  .tab:hover{background:var(--paper-2); color:var(--ink)}
+  .tab[aria-selected="true"]{background:var(--ink); color:#fdf7ea; box-shadow:0 1px 0 var(--gold-deep)}
+
+  .panel{display:none; animation:fade .28s ease both}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none}}
+  @media (prefers-reduced-motion: reduce){ .panel{animation:none} }
+
+  section{margin:0 0 34px; scroll-margin-top:64px}
+  h2{font-family:var(--serif); font-weight:800; font-size:25px; letter-spacing:-.01em;
+    margin:30px 0 4px; display:flex; align-items:baseline; gap:10px}
+  h2 .ix{font-family:var(--mono); font-size:13px; color:var(--gold); font-weight:600}
+  h3{font-family:var(--sans); font-weight:700; font-size:15px; text-transform:uppercase;
+    letter-spacing:.08em; color:var(--gold-deep); margin:26px 0 8px}
+  p{margin:0 0 13px; max-width:78ch}
+  p.lede{font-size:17px; color:#3c3326; max-width:74ch}
+  em.k{font-style:normal; font-weight:600; color:var(--ink)}
+  .muted{color:var(--ink-soft)}
+  a{color:var(--gold-deep); text-decoration:none; border-bottom:1px solid var(--line-2)}
+  a:hover{border-color:var(--gold)}
+
+  /* Tables */
+  .tbl-wrap{overflow-x:auto; border:1px solid var(--line); border-radius:12px; margin:14px 0 6px; background:var(--paper-3)}
+  table{border-collapse:collapse; width:100%; font-size:13.5px}
+  caption{caption-side:top; text-align:left; font-family:var(--sans); font-weight:700;
+    font-size:12.5px; letter-spacing:.04em; color:var(--ink-soft); padding:10px 12px 2px}
+  th,td{padding:9px 12px; text-align:left; vertical-align:top; border-bottom:1px solid var(--line)}
+  thead th{position:sticky; top:0; background:var(--paper-2); font-size:11.5px;
+    text-transform:uppercase; letter-spacing:.06em; color:var(--gold-deep); border-bottom:1px solid var(--line-2)}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#fffaf0}
+  td.num,th.num{font-family:var(--mono); white-space:nowrap}
+  .cost{font-family:var(--mono); font-size:12.5px; color:#4a3d2c}
+  .name{font-weight:600}
+  .free{color:var(--green); font-weight:600}
+
+  /* Chips */
+  .chip{font-family:var(--mono); font-size:11px; font-weight:600; padding:2px 8px; border-radius:999px;
+    border:1px solid; white-space:nowrap; display:inline-block; line-height:1.5}
+  .chip.in{color:#46611f; border-color:#bcd08e; background:#eef4dd}
+  .chip.out{color:#8a3a1c; border-color:#e3b29c; background:#f7e6dc}
+  .chip.new{color:#7a5410; border-color:#e6c98a; background:#f7edd4}
+  .chip.t0{color:#5c4f40; border-color:var(--line-2); background:var(--paper-2)}
+  .chip.farm{color:#46611f; border-color:#bcd08e; background:#eef4dd}
+  .chip.mine{color:#5b4636; border-color:#cbb59c; background:#efe3d3}
+
+  /* Cards */
+  .grid{display:grid; gap:14px; margin:16px 0}
+  .grid.two{grid-template-columns:repeat(2,1fr)}
+  .grid.three{grid-template-columns:repeat(3,1fr)}
+  .card{background:var(--paper-3); border:1px solid var(--line); border-radius:12px; padding:14px 16px}
+  .card .h{font-family:var(--sans); font-weight:700; font-size:13px; text-transform:uppercase;
+    letter-spacing:.06em; color:var(--gold-deep); margin-bottom:7px}
+  .card.farm{border-top:3px solid var(--green)}
+  .card.mine{border-top:3px solid var(--stone)}
+  .card.coin{border-top:3px solid var(--gold)}
+  .card ul{margin:6px 0 0; padding-left:18px}
+  .card li{margin:0 0 6px; font-size:13.5px}
+  .big{font-family:var(--serif); font-weight:800; font-size:30px; line-height:1; color:var(--ink)}
+  .big small{font-family:var(--sans); font-weight:600; font-size:12px; color:var(--ink-soft); display:block; margin-top:4px; letter-spacing:.03em; text-transform:uppercase}
+
+  /* Callouts */
+  .note{border-left:3px solid var(--gold); background:var(--paper-2); border-radius:0 10px 10px 0;
+    padding:12px 16px; margin:16px 0; font-size:14px}
+  .note.tip{border-color:var(--green); background:#eef4dd}
+  .note.warn{border-color:var(--ember); background:#f7e7df}
+  .note .h{font-family:var(--sans); font-weight:700; font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; color:var(--gold-deep); margin-bottom:3px}
+  .note.tip .h{color:#4d6a26} .note.warn .h{color:var(--ember)}
+
+  details{border:1px solid var(--line); border-radius:10px; padding:4px 14px; margin:12px 0; background:var(--paper-3)}
+  summary{cursor:pointer; font-weight:600; font-size:14px; padding:8px 0; color:var(--gold-deep)}
+  details[open] summary{border-bottom:1px solid var(--line); margin-bottom:8px}
+
+  .legend{display:flex; gap:14px; flex-wrap:wrap; font-size:12.5px; color:var(--ink-soft); margin:10px 0}
+  .legend span{display:inline-flex; align-items:center; gap:6px}
+
+  footer.note-foot{margin-top:50px; padding-top:16px; border-top:1px solid var(--line-2);
+    font-size:12.5px; color:var(--mute); font-family:var(--sans)}
+  code{font-family:var(--mono); font-size:12.5px; background:var(--paper-2); padding:1px 5px; border-radius:5px; color:#4a3d2c}
+
+  @media (max-width:740px){
+    h1{font-size:30px} .wrap{padding:26px 14px 90px}
+    .grid.two,.grid.three{grid-template-columns:1fr}
+    .tabs{top:0}
+  }
+  @media print{
+    .tabs{display:none} .panel{display:block!important; animation:none}
+    body{background:#fff} .card,.note,.tbl-wrap{break-inside:avoid}
+    a{border:none; color:var(--ink)}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="title">
+    <div class="kicker">puzzleDrag2 · design proposal · for review</div>
+    <h1>Starting Zones 1 &amp; 2 — Scope &amp; Balance Baseline</h1>
+    <p class="sub">The complete, deliberately-narrowed set of buildings, recipes, tools, tiles, costs and
+      thresholds that exist in the <em class="k">first two settlements</em> — and an explicit list of
+      everything to <em class="k">ignore</em> while balancing them.</p>
+    <div class="meta-row">
+      <span class="pill">Town 1 · Farm</span>
+      <span class="pill">Town 2 · Farm + Mining</span>
+      <span class="pill">values = PROPOSED</span>
+      <span class="pill">source of truth = src/</span>
+    </div>
+  </header>
+
+  <div class="rule"></div>
+
+  <div class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" aria-selected="true" data-panel="overview">Overview</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="towns">Towns &amp; Buildings</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="board">Board &amp; Tiles</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="crafting">Crafting · Tools · Mine</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="workers">Workers &amp; Coins</button>
+    <button class="tab" role="tab" aria-selected="false" data-panel="ignore">Out of Scope</button>
+  </div>
+
+  <!-- ===================== OVERVIEW ===================== -->
+  <div class="panel active" id="overview" role="tabpanel">
+
+    <section id="purpose">
+      <h2><span class="ix">00</span> Purpose &amp; how to read</h2>
+      <p class="lede">The game currently ships far more concepts than the early game should expose —
+        32 buildings, 50 recipes, 80+ tiles, 30+ worker types, 10 tile families. This document fixes the
+        <em class="k">scope of zones 1 and 2</em> so balancing has a finite surface: a fixed list of what
+        a new player can build, craft, hold, and chain, with one proposed number on every knob.</p>
+      <div class="legend">
+        <span><span class="chip in">IN SCOPE</span> shipped &amp; balanced now</span>
+        <span><span class="chip new">CHANGED</span> differs from current code</span>
+        <span><span class="chip out">DEFERRED</span> exists, but made unreachable here</span>
+      </div>
+      <div class="note">
+        <div class="h">Two ground rules</div>
+        <p style="margin:0">1 — <em class="k">Every town has a farm.</em> Mining/fishing are additive layers on top.
+        2 — <em class="k">Nothing out of scope gets a flag.</em> We keep deferred content in the catalog (art still
+        renders) but simply don't make its building buildable or its recipe/tile unlockable. The
+        <a href="#ignore">Out of Scope</a> tab is the ignore-list for balancing.</p>
+      </div>
+    </section>
+
+    <section id="glance">
+      <h2><span class="ix">01</span> The two zones at a glance</h2>
+      <div class="grid two">
+        <div class="card farm">
+          <div class="h">Town 1 — Hearthwood Vale</div>
+          <p class="muted" style="margin:0 0 8px">The hub &amp; tutorial. Pure farm. The only town with a
+            Workshop, Mill and Kitchen — your base of operations.</p>
+          <div class="big">4 tiers <small>3 → 6 → 9 → 12 plots · max 3 houses</small></div>
+          <ul style="margin-top:10px">
+            <li>Board: <span class="chip farm">farm</span> — grass, grain, trees, birds, veg, fruit</li>
+            <li>Founded free; lights the hearth to begin</li>
+            <li>10 civic building types + House</li>
+          </ul>
+        </div>
+        <div class="card mine">
+          <div class="h">Town 2 — frontier (farm + mining)</div>
+          <p class="muted" style="margin:0 0 8px">Learn the rhythm, then add the mine. A farm board <em>and</em>
+            a mine board, with the first metalwork.</p>
+          <div class="big">3 tiers <small>4 → 7 → 10 plots · max 2 houses</small></div>
+          <ul style="margin-top:10px">
+            <li>Boards: <span class="chip farm">farm</span> <span class="chip mine">mine</span></li>
+            <li>Founded with a <em class="k">resource</em> caravan (not coins)</li>
+            <li>8 civic building types + House</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="caravan">
+      <h2><span class="ix">02</span> The caravan — founding Town 2</h2>
+      <p>Founding currently costs <code>300 × 1.7^k</code> <em class="k">coins</em>
+        (<code>settlementFoundingCost</code>, <code>features/zones/data.ts</code>). We replace that with a
+        one-time <em class="k">resource caravan</em> paid out of farm production — consistent with the rule that
+        big commitments are a demand on your goods, not your purse. In scope there is exactly one founding:</p>
+      <div class="tbl-wrap">
+        <table>
+          <caption>Founding cost — PROPOSED <span class="chip new">CHANGED</span></caption>
+          <thead><tr><th>Settlement</th><th>Cost</th><th>Paid in</th></tr></thead>
+          <tbody>
+            <tr><td class="name">Town 1 — home</td><td class="free">free</td><td class="muted">light the hearth (20 hay)</td></tr>
+            <tr><td class="name">Town 2 — frontier</td><td class="cost">12 plank · 10 bread · 8 hay_bundle</td><td class="muted">all farm goods Town 1 makes</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">Beyond scope: the basket scales ~×1.6 per founding and layers in metal goods for later, farther towns — out of scope here.</p>
+      <div class="note">
+        <div class="h">Not the Caravan Post</div>
+        <p style="margin:0">The <em class="k">Caravan Post</em> building (unlocks the sell-market) is separate and already
+          costs resources. "The caravan" above is the founding/travel cost only.</p>
+      </div>
+    </section>
+
+    <section id="entry">
+      <h2><span class="ix">03</span> Session entry tolls &amp; standing economy</h2>
+      <div class="grid three">
+        <div class="card coin"><div class="h">Entry toll — farm</div><div class="big">50<small>coins / session</small></div></div>
+        <div class="card mine"><div class="h">Entry toll — mine (Town 2)</div><div class="big">100<small>coins / session</small></div></div>
+        <div class="card coin"><div class="h">Chapel income</div><div class="big">+50<small>coins / season end</small></div></div>
+      </div>
+      <p class="muted">Coins fund tolls, worker hires and decorations. Resources fund buildings, tier-ups, crafting and
+        the caravan. Keep the two ledgers separate — see the <a href="#workers">Workers &amp; Coins</a> tab.</p>
+    </section>
+
+  </div>
+
+  <!-- ===================== TOWNS ===================== -->
+  <div class="panel" id="towns" role="tabpanel">
+
+    <section id="t1-ladder">
+      <h2><span class="ix">04</span> Town 1 — tier ladder, plots &amp; houses</h2>
+      <div class="tbl-wrap">
+        <table>
+          <caption>Hearthwood Vale · 4 tiers · max 3 houses · plot ceiling 12 (was 20)</caption>
+          <thead><tr><th>Tier</th><th class="num">Plots</th><th>Tier-up cost (PROPOSED)</th><th>Newly unlocked</th><th class="num">Houses</th></tr></thead>
+          <tbody>
+            <tr><td class="name">0 · Outpost</td><td class="num">3</td><td class="muted">— start —</td><td>Hearth <span class="free">(free)</span>, Mill, Bakery</td><td class="num">0</td></tr>
+            <tr><td class="name">1 · Hamlet</td><td class="num">6</td><td class="cost">8 plank · 10 hay · 6 bread</td><td>Granary, Larder, House</td><td class="num">1</td></tr>
+            <tr><td class="name">2 · Village</td><td class="num">9</td><td class="cost">12 plank · 14 bread · 6 preserve · 8 eggs</td><td>Workshop, Sawmill, Silo, House</td><td class="num">2</td></tr>
+            <tr><td class="name">3 · Town</td><td class="num">12</td><td class="cost">20 plank · 24 bread · 10 preserve · 8 pie</td><td>Caravan Post, Chapel, Kitchen, House</td><td class="num">3</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">10 civic types compete for ≤9 civic plots (Hearth is free and doesn't count; 3 plots go to houses
+        if you max population) → you leave ~2 buildings out. Houses-vs-civic is the core build-order choice.</p>
+    </section>
+
+    <section id="t2-ladder">
+      <h2><span class="ix">05</span> Town 2 — tier ladder, plots &amp; houses</h2>
+      <div class="tbl-wrap">
+        <table>
+          <caption>Frontier (farm + mining) · 3 tiers · max 2 houses · plot ceiling 10</caption>
+          <thead><tr><th>Tier</th><th class="num">Plots</th><th>Tier-up cost (PROPOSED)</th><th>Newly unlocked</th><th class="num">Houses</th></tr></thead>
+          <tbody>
+            <tr><td class="name">0 · Camp</td><td class="num">4</td><td class="muted">— start —</td><td>Hearth <span class="free">(free)</span>, Bakery, Mining Camp</td><td class="num">0</td></tr>
+            <tr><td class="name">1 · Diggings</td><td class="num">7</td><td class="cost">10 plank · 12 bread · 10 block</td><td>Granary, Forge, House</td><td class="num">1</td></tr>
+            <tr><td class="name">2 · Boomtown</td><td class="num">10</td><td class="cost">16 plank · 14 bread · 12 block · 8 iron_bar</td><td>Sawmill, Powder Store, Chapel, Caravan Post, House</td><td class="num">2</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">Bigger than a pure-farm second town because it carries two boards. Its tier-ups demand
+        <em class="k">block/iron</em> — which only its own mine produces — so growth is gated by actually digging.</p>
+    </section>
+
+    <section id="buildings">
+      <h2><span class="ix">06</span> Buildings — powers &amp; costs</h2>
+      <p>Thirteen building types across both towns. Costs re-pointed onto <em class="k">in-scope resources</em> and
+        sequenced so early (pre-mine) buildings cost farm goods only; metal-costed buildings naturally gate behind
+        having a mine. <span class="chip new">CHANGED</span> marks a power or cost altered from current code.</p>
+      <div class="tbl-wrap">
+        <table>
+          <caption>Building roster — PROPOSED powers &amp; build costs</caption>
+          <thead><tr><th>Building</th><th>Power (what it does)</th><th>Build cost</th><th>Where · tier</th></tr></thead>
+          <tbody>
+            <tr><td class="name">Hearth</td><td>Anchor; lights the town. No mechanical effect.</td><td class="free">free</td><td>both · T0</td></tr>
+            <tr><td class="name">Mill</td><td>−1 flour on the Bread recipe</td><td class="cost">8 plank · 6 hay</td><td>T1 · T0</td></tr>
+            <tr><td class="name">Bakery</td><td>Crafting station — bread &amp; pie</td><td class="cost">8 plank · 6 hay · 4 eggs</td><td>both · T0</td></tr>
+            <tr><td class="name">Granary</td><td>+1 session turn · +300 storage cap</td><td class="cost">12 bread · 6 plank · 4 soup <span class="chip new">CHANGED</span></td><td>both · T1</td></tr>
+            <tr><td class="name">Larder</td><td>Crafting station — preserves · +1 mine-food turn</td><td class="cost">12 bread · 4 plank · 6 jam <span class="chip new">CHANGED</span></td><td>T1 · T1</td></tr>
+            <tr><td class="name">Silo</td><td>Preserves the farm board layout between sessions</td><td class="cost">6 plank · 8 bread</td><td>T1 · T2</td></tr>
+            <tr><td class="name">Sawmill</td><td>+1 plank per tree chain</td><td class="cost">12 plank · 8 block <span class="chip new">CHANGED</span></td><td>both · T2</td></tr>
+            <tr><td class="name">Workshop</td><td>Crafting station — hand tools</td><td class="cost">10 plank · 6 block · 5 iron_bar</td><td>T1 · T2</td></tr>
+            <tr><td class="name">Kitchen</td><td>Crafting station — supplies (mine food)</td><td class="cost">9 bread · 6 plank · 5 block <span class="chip new">CHANGED</span></td><td>T1 · T3</td></tr>
+            <tr><td class="name">Caravan Post</td><td>Unlocks the sell-market</td><td class="cost">20 plank · 10 block · 5 iron_bar</td><td>both · T3 / T2</td></tr>
+            <tr><td class="name">Chapel</td><td>+50 coins at season end</td><td class="cost">20 bread · 12 block · 6 preserve <span class="chip new">CHANGED</span></td><td>both · T3 / T2</td></tr>
+            <tr><td class="name">Mining Camp</td><td>+1 turn to every mine expedition</td><td class="cost">10 bread · 6 plank <span class="chip new">CHANGED</span></td><td>T2 · T0</td></tr>
+            <tr><td class="name">Forge</td><td>Crafting station — basic metalwork</td><td class="cost">6 plank · 10 iron_bar · 4 coke <span class="chip new">CHANGED</span></td><td>T2 · T1</td></tr>
+            <tr><td class="name">Powder Store</td><td>Stamps out 2 Bombs every season</td><td class="cost">12 iron_bar · 6 coke · 8 block <span class="chip new">CHANGED</span></td><td>T2 · T2</td></tr>
+            <tr><td class="name">House <span class="chip new">NEW</span></td><td>+3 villager capacity (population → workers)</td><td class="cost">8 plank · 6 bread · 4 eggs</td><td>both · repeatable</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note warn">
+        <div class="h">House replaces housing / housing2 / housing3</div>
+        <p style="margin:0">Today three identical Housing Blocks chain off each other. We collapse them into <em class="k">one
+          repeatable House</em>, capped per town (3 at Town 1 → 9 pop; 2 at Town 2 → 6 pop). Each grants a fixed
+          <em class="k">+3 villager capacity</em> on build (proposed, replacing the +1/season drip). Villagers are spent
+          1:1 to hire workers.</p>
+      </div>
+      <details>
+        <summary>Why these costs changed (drop-ins from out-of-scope resources)</summary>
+        <p style="margin:8px 0 0">Current code prices several of these in resources we've cut from zones 1–2:
+          Sawmill costs <code>meat</code> (herd) + <code>coke</code>; Chapel costs <code>gold_bar</code> + <code>ink</code>;
+          Granary/Kitchen/Mining Camp lean on <code>dirt</code>/<code>iron</code> before a mine exists. Each is re-pointed onto
+          an in-scope good of similar worth. <em class="k">Apiary</em> (boosts pansy→honey) and <em class="k">Stable</em>
+          (boosts horse→horseshoe) are dropped entirely — their target tiles (flowers, mounts) are out of scope.</p>
+      </details>
+    </section>
+
+  </div>
+
+  <!-- ===================== BOARD & TILES ===================== -->
+  <div class="panel" id="board" role="tabpanel">
+
+    <section id="chain-rules">
+      <h2><span class="ix">07</span> How the board pays — chain &amp; yield rules</h2>
+      <div class="grid three">
+        <div class="card"><div class="h">Min chain to collect</div><div class="big">3<small>tiles, same family</small></div></div>
+        <div class="card"><div class="h">Cross-collect</div><div class="big">+adj<small>partner family swept too</small></div></div>
+        <div class="card"><div class="h">Upgrade bloom</div><div class="big">at N<small>seeds next-tier tile</small></div></div>
+      </div>
+      <p>Drag <em class="k">3+</em> of one family → collect → the family's raw resource drops into stores and pays coins
+        (≈ tiles × value). Chain to the family's <em class="k">bloom threshold N</em> and a next-tier tile blooms where you
+        let go. Adjacent partner families get cross-collected.</p>
+    </section>
+
+    <section id="families">
+      <h2><span class="ix">08</span> Tile families in scope — resource &amp; thresholds</h2>
+      <div class="tbl-wrap">
+        <table>
+          <caption>In-scope families · resource produced · bloom threshold (chain length to upgrade)</caption>
+          <thead><tr><th>Family</th><th>Board</th><th>Resource</th><th class="num">Bloom @</th><th>Cross-collect partner</th></tr></thead>
+          <tbody>
+            <tr><td class="name">Grass</td><td><span class="chip farm">farm</span></td><td>hay_bundle</td><td class="num">6</td><td>grain</td></tr>
+            <tr><td class="name">Grain</td><td><span class="chip farm">farm</span></td><td>flour</td><td class="num">5</td><td>grass</td></tr>
+            <tr><td class="name">Trees</td><td><span class="chip farm">farm</span></td><td>plank</td><td class="num">6</td><td>birds</td></tr>
+            <tr><td class="name">Birds</td><td><span class="chip farm">farm</span></td><td>eggs</td><td class="num">6</td><td>trees</td></tr>
+            <tr><td class="name">Vegetables</td><td><span class="chip farm">farm</span></td><td>soup</td><td class="num">6</td><td>grain</td></tr>
+            <tr><td class="name">Fruits</td><td><span class="chip farm">farm</span></td><td>pie · jam</td><td class="num">7</td><td>trees</td></tr>
+            <tr><td class="name">Stone</td><td><span class="chip mine">mine</span></td><td>block</td><td class="num">8</td><td>—</td></tr>
+            <tr><td class="name">Iron ore</td><td><span class="chip mine">mine</span></td><td>iron_bar</td><td class="num">6</td><td>—</td></tr>
+            <tr><td class="name">Coal</td><td><span class="chip mine">mine</span></td><td>coke</td><td class="num">7</td><td>—</td></tr>
+            <tr><td class="name">Dirt</td><td><span class="chip mine">mine</span></td><td>dirt</td><td class="num">—</td><td>—</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">Ore→bar is automatic (the chain pipeline promotes <code>ore→iron_bar</code>, <code>coal→coke</code>,
+        <code>stone→block</code>) — no smelter building needed.</p>
+    </section>
+
+    <section id="starters">
+      <h2><span class="ix">09</span> Tiles a player starts with &amp; can discover</h2>
+      <div class="grid two">
+        <div class="card farm">
+          <div class="h">Starter deck — 6 default tiles</div>
+          <ul>
+            <li><em class="k">Grass</em> → hay (lights the hearth)</li>
+            <li><em class="k">Corn</em> (grain) → flour → bread</li>
+            <li><em class="k">Oak</em> (trees) → planks</li>
+            <li><em class="k">Pheasant</em> (birds) → eggs</li>
+            <li><em class="k">Carrot</em> (veg) → soup</li>
+            <li><em class="k">Apple</em> (fruits) → pie / jam</li>
+          </ul>
+        </div>
+        <div class="card mine">
+          <div class="h">Town 2 mine — 4 default tiles</div>
+          <ul>
+            <li><em class="k">Stone</em> → block</li>
+            <li><em class="k">Ore</em> → iron_bar</li>
+            <li><em class="k">Coal</em> → coke</li>
+            <li><em class="k">Dirt</em> → dirt (for fertilizer)</li>
+          </ul>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <caption>Discoverable at the start — exactly 2, both by chaining</caption>
+          <thead><tr><th>Discover</th><th>How (unlock)</th><th>Payoff</th><th>Teaches</th></tr></thead>
+          <tbody>
+            <tr><td class="name">Meadow Grass</td><td class="cost">chain 20 Grass</td><td>+1 Grass to the spawn pool</td><td>unlocked tiles reshape the board</td></tr>
+            <tr><td class="name">Chicken</td><td class="cost">chain 6 Pheasant</td><td>stronger egg producer</td><td>tier-up a family for yield</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note warn">
+        <div class="h">Excluded from the first zones</div>
+        <p style="margin:0"><span class="chip out">Flowers</span> (Pansy) and <span class="chip out">Mounts</span> (Horse) per
+          rule — flipped off <code>default</code>. <span class="chip out">Herd</span> (Pig) and
+          <span class="chip out">Cattle</span> (Cow) also deferred (the farm board never spawns them). Every other
+          chain/research/buy/daily unlock currently hanging off the starters (Wheat, Pear, Birch, Hen, Eggplant…) is
+          re-gated to a later zone so only the 2 above are reachable.</p>
+      </div>
+      <details>
+        <summary>One coupling to resolve — the Birds→Herd bloom</summary>
+        <p style="margin:8px 0 0">Today the home board <em>blooms</em> birds into herd animals (<code>upgradeMap</code> in
+          <code>cartography/data.ts</code>). With herd deferred, either keep <em class="k">Pig</em> as a 7th starter, or
+          redirect that bloom to stay in-family (recommended — keeps the deck at a clean 6). <em class="k">Open decision.</em></p>
+      </details>
+    </section>
+
+  </div>
+
+  <!-- ===================== CRAFTING / TOOLS / MINE ===================== -->
+  <div class="panel" id="crafting" role="tabpanel">
+
+    <section id="recipes">
+      <h2><span class="ix">10</span> Recipes in scope — 11 of 50</h2>
+      <p>Goods &amp; tools you can craft, the station that gates each, and what unlocks it. A recipe becomes available
+        the moment its <em class="k">station building</em> exists and you hold the inputs — so tools needing
+        <code>block</code>/<code>iron</code> can't be made until Town 2's mine yields them.</p>
+      <div class="tbl-wrap">
+        <table>
+          <caption>Recipes — inputs · output (sell value) · gate</caption>
+          <thead><tr><th>Recipe</th><th>Station</th><th>Inputs</th><th>Output</th><th class="num">Value</th><th>Unlocks from</th></tr></thead>
+          <tbody>
+            <tr><td class="name">Bread</td><td>Bakery</td><td class="cost">3 flour · 1 eggs</td><td>bread</td><td class="num">125</td><td>Bakery built</td></tr>
+            <tr><td class="name">Harvest Pie</td><td>Bakery</td><td class="cost">2 flour · 1 jam · 1 eggs</td><td>harvestpie</td><td class="num">175</td><td>Bakery + fruit</td></tr>
+            <tr><td class="name">Preserve</td><td>Larder</td><td class="cost">2 jam · 1 eggs</td><td>preserve</td><td class="num">100</td><td>Larder built</td></tr>
+            <tr><td class="name">Supplies</td><td>Kitchen</td><td class="cost">5 flour</td><td>supplies</td><td class="num">30</td><td>Kitchen built</td></tr>
+            <tr><td class="name">Rake</td><td>Workshop</td><td class="cost">1 plank</td><td>rake (tool)</td><td class="num">—</td><td>Workshop built</td></tr>
+            <tr><td class="name">Fertilizer</td><td>Workshop</td><td class="cost">1 hay · 1 dirt</td><td>fertilizer (tool)</td><td class="num">—</td><td>Workshop + mine</td></tr>
+            <tr><td class="name">Sickle</td><td>Workshop</td><td class="cost">1 plank · 1 iron_bar</td><td>sickle (tool)</td><td class="num">—</td><td>Workshop + mine</td></tr>
+            <tr><td class="name">Plough</td><td>Workshop</td><td class="cost">2 plank · 1 iron_bar</td><td>plough (tool)</td><td class="num">—</td><td>Workshop + mine</td></tr>
+            <tr><td class="name">Fruit Picker</td><td>Workshop</td><td class="cost">2 plank</td><td>fruit_picker (tool)</td><td class="num">—</td><td>Workshop built</td></tr>
+            <tr><td class="name">Iron Hinge</td><td>Forge</td><td class="cost">2 iron_bar · 1 coke</td><td>iron_hinge</td><td class="num">175</td><td>Forge (Town 2)</td></tr>
+            <tr><td class="name">Lantern</td><td>Forge</td><td class="cost">1 iron_bar · 1 coke · 1 plank</td><td>lantern</td><td class="num">150</td><td>Forge (Town 2)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="tools">
+      <h2><span class="ix">11</span> Tools accessible</h2>
+      <p>Single-use board-breakers. Five in scope — the rest of the 31-tool workshop tree is deferred.</p>
+      <div class="tbl-wrap">
+        <table>
+          <caption>Tools — effect · source</caption>
+          <thead><tr><th>Tool</th><th>Effect</th><th>Source</th><th>Board</th></tr></thead>
+          <tbody>
+            <tr><td class="name">Fertilizer</td><td>×2 turns for the session</td><td>craft @ Workshop</td><td><span class="chip farm">farm</span></td></tr>
+            <tr><td class="name">Sickle</td><td>Reaps a full row</td><td>craft @ Workshop</td><td><span class="chip farm">farm</span></td></tr>
+            <tr><td class="name">Plough</td><td>Harvests every grass &amp; grain tile at once</td><td>craft @ Workshop</td><td><span class="chip farm">farm</span></td></tr>
+            <tr><td class="name">Fruit Picker</td><td>Gathers all fruit tiles</td><td>craft @ Workshop</td><td><span class="chip farm">farm</span></td></tr>
+            <tr><td class="name">Bomb</td><td>Clears a 3×3 hole where you tap</td><td>Powder Store · 2 / season</td><td><span class="chip mine">mine</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">Deferred tools: Rake variants, Auger (column), Blast Charge (cross), Drill, Stone Hammer, Water Pump,
+        Reshuffle Horn, Magic Seed, and all Portal tools (Magic Wand, Philosopher's Stone).</p>
+    </section>
+
+    <section id="rations">
+      <h2><span class="ix">12</span> Mine expeditions — rations</h2>
+      <p>A mine session at Town 2 is paid in <em class="k">food carried from the farm</em>, not turns granted free. Each
+        food unit is worth a number of turns; you must pack at least <em class="k">3 turns</em> of food to set out
+        (<code>MIN_EXPEDITION_TURNS = 3</code>).</p>
+      <div class="grid two">
+        <div class="tbl-wrap" style="margin:0">
+          <table>
+            <caption>Food → turns (in scope)</caption>
+            <thead><tr><th>Food</th><th class="num">Turns</th><th class="num">w/ Mining Camp</th></tr></thead>
+            <tbody>
+              <tr><td class="name">Bread</td><td class="num">1</td><td class="num">2</td></tr>
+              <tr><td class="name">Apple</td><td class="num">1</td><td class="num">2</td></tr>
+              <tr><td class="name">Supplies</td><td class="num">1</td><td class="num">2</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="card">
+          <div class="h">Rules</div>
+          <ul>
+            <li>Min to set out: <em class="k">3 turns</em> of packed food</li>
+            <li><em class="k">Mining Camp</em>: +1 turn to <em>every</em> mine food</li>
+            <li><em class="k">Larder</em>: +1 mine-food turn (stacks)</li>
+            <li>Mine entry toll: <em class="k">100 coins</em> on top of food</li>
+          </ul>
+        </div>
+      </div>
+      <p class="muted">Deferred rations: cured_meat (2 · needs Smokehouse), festival_loaf (2), wedding_pie (3),
+        iron_ration (4). The whole point of the loop — bake on the farm to afford turns in the mine — works with bread alone.</p>
+    </section>
+
+  </div>
+
+  <!-- ===================== WORKERS ===================== -->
+  <div class="panel" id="workers" role="tabpanel">
+
+    <section id="worker-roster">
+      <h2><span class="ix">13</span> Workers in scope</h2>
+      <p>Hired by type; each hire shaves a tile off its family's chain (or trims a recipe / tips coins), stacking up to
+        <code>maxCount</code>. Every hire costs coins (ramping) <em class="k">plus 1 villager</em> from housing — so your
+        <a href="#buildings">House</a> cap is the real ceiling on how many hands you field. Cost shown is the first hire;
+        <code>+step</code> is the per-hire ramp.</p>
+      <div class="tbl-wrap">
+        <table>
+          <caption>In-scope worker types · first-hire cost · effect (max 10 each)</caption>
+          <thead><tr><th>Worker</th><th>Effect</th><th class="num">1st hire</th><th class="num">+ / hire</th><th>Resource</th></tr></thead>
+          <tbody>
+            <tr><td class="name">Peasant</td><td>−1 hay (grass) chain</td><td class="num">40c</td><td class="num">+20c</td><td class="cost">2 grass</td></tr>
+            <tr><td class="name">Farmer</td><td>−1 grain chain</td><td class="num">50c</td><td class="num">+25c</td><td class="cost">2 grass</td></tr>
+            <tr><td class="name">Lumberjack</td><td>−1 tree chain</td><td class="num">60c</td><td class="num">+30c</td><td class="cost">2 oak</td></tr>
+            <tr><td class="name">Poultryman</td><td>−1 egg (bird) chain</td><td class="num">55c</td><td class="num">+25c</td><td class="cost">2 eggs</td></tr>
+            <tr><td class="name">Vegetable Picker</td><td>−1 vegetable chain</td><td class="num">50c</td><td class="num">+25c</td><td class="cost">2 carrot</td></tr>
+            <tr><td class="name">Fruit Picker</td><td>−1 fruit chain</td><td class="num">60c</td><td class="num">+30c</td><td class="cost">2 apple</td></tr>
+            <tr><td class="name">Baker</td><td>−1 flour on Bread recipe</td><td class="num">75c</td><td class="num">×1.4</td><td class="cost">1 flour · 1 eggs</td></tr>
+            <tr><td class="name">Miner</td><td>−1 stone chain <span class="chip mine">T2</span></td><td class="num">75c</td><td class="num">+35c</td><td class="cost">2 stone</td></tr>
+            <tr><td class="name">Iron Miner</td><td>−1 ore chain <span class="chip mine">T2</span></td><td class="num">70c</td><td class="num">+35c</td><td class="cost">2 ore</td></tr>
+            <tr><td class="name">Coal Miner</td><td>−1 coal chain <span class="chip mine">T2</span></td><td class="num">70c</td><td class="num">+35c</td><td class="cost">2 coal</td></tr>
+            <tr><td class="name">Tax Collector</td><td>+2 flat coins / chain</td><td class="num">100c</td><td class="num">+50c</td><td class="muted">coins only</td></tr>
+            <tr><td class="name">Florist</td><td>+1 coin / tile / chain</td><td class="num">120c</td><td class="num">+60c</td><td class="muted">coins only</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="muted">12 of 33 worker types. Deferred: Bee Keeper (flowers), Herder/Drover (herd), Dairywoman (cattle),
+        Wrangler (mounts), Gem-cutter/Gold Miner (deep mine), Fisherman, all 8 promotion workers, Rune Seeker.</p>
+    </section>
+
+    <section id="population">
+      <h2><span class="ix">14</span> Population math</h2>
+      <div class="grid two">
+        <div class="card farm"><div class="h">Town 1</div><div class="big">9 pop<small>3 houses × 3 villagers</small></div><p class="muted" style="margin:8px 0 0">≤ 9 total worker hires across all types.</p></div>
+        <div class="card mine"><div class="h">Town 2</div><div class="big">6 pop<small>2 houses × 3 villagers</small></div><p class="muted" style="margin:8px 0 0">≤ 6 total worker hires.</p></div>
+      </div>
+      <p class="muted">Per-house villager grant (3) and the per-town house cap are the two knobs that set the worker ceiling —
+        tune these against the chain-reduction power above.</p>
+    </section>
+
+  </div>
+
+  <!-- ===================== OUT OF SCOPE ===================== -->
+  <div class="panel" id="ignore" role="tabpanel">
+
+    <section id="ignore-list">
+      <h2><span class="ix">15</span> Out of scope — the ignore list</h2>
+      <p class="lede">Everything below <em class="k">exists in the codebase</em> but is deliberately unreachable in zones 1–2.
+        When balancing, treat these as out of the model — don't tune them, don't let them into the economy.</p>
+
+      <div class="grid two">
+        <div class="card">
+          <div class="h">Tile families &amp; tiles</div>
+          <ul>
+            <li><span class="chip out">Flowers</span> Pansy, Water Lily (+ honey)</li>
+            <li><span class="chip out">Mounts</span> Horse, Donkey, Moose, Mammoth (+ horseshoe)</li>
+            <li><span class="chip out">Herd</span> Pig, Hog, Boar, Sheep… (+ meat)</li>
+            <li><span class="chip out">Cattle</span> Cow, Longhorn, Triceratops (+ milk)</li>
+            <li><span class="chip out">Mine</span> Gem, Gold, Silver, Copper (+ cut_gem, bars)</li>
+            <li><span class="chip out">Fish</span> entire biome</li>
+            <li><span class="chip out">Treasure</span> Golden Coin tile</li>
+            <li>All deep chain/research/buy/daily variants of in-scope families</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="h">Buildings (19 deferred)</div>
+          <ul>
+            <li>Inn, Watchtower, Brewery, Apothecary, Clock Tower (cosmetic, no power)</li>
+            <li>Apiary, Stable (boost out-of-scope tiles)</li>
+            <li>Observatory (gem threshold), Portal (runes)</li>
+            <li>Barn (mine board preserve), Smokehouse (cured meat)</li>
+            <li>Harbor Dock, Fishmonger, Lighthouse (fish biome)</li>
+            <li>Housing 2 / 3 (folded into House)</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="h">Recipes (39 deferred)</div>
+          <ul>
+            <li>Forge: gold ring, gem-crown, ironframe, stonework, cobblepath</li>
+            <li>Workshop: drill, gold pick, magnet, coal hammer, auger, blast charge, water pump, explosives, + ~15 more tools</li>
+            <li>Bakery: honey roll, festival loaf, wedding pie</li>
+            <li>Larder: tincture, chowder · Smokehouse: cured meat · Kitchen: iron ration</li>
+            <li>Animal/pet crafts: cat, hound, terrier, bird cage, bee…</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="h">Mechanics &amp; content</div>
+          <ul>
+            <li>Research points &amp; research-unlocks</li>
+            <li>Daily-login tile rewards, almanac</li>
+            <li>Mysterious Ore / Giant Pearl → runes</li>
+            <li>Keepers, Hearth Tokens, Old Capital finale</li>
+            <li>Biome hazards (fire, wolves, flooding…)</li>
+            <li>Decorations / town prestige</li>
+            <li>Zones 3+: Quarry, Caves, Black Forge, Harbor, Mirefen, festivals</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section id="decisions">
+      <h2><span class="ix">16</span> Open decisions &amp; knobs to tune</h2>
+      <div class="tbl-wrap">
+        <table>
+          <caption>What still needs your call before/during balancing</caption>
+          <thead><tr><th>#</th><th>Decision</th><th>Proposed default</th></tr></thead>
+          <tbody>
+            <tr><td class="num">1</td><td>Birds→Herd bloom: keep Pig as 7th starter, or redirect the bloom in-family?</td><td>Redirect (clean 6-tile deck)</td></tr>
+            <tr><td class="num">2</td><td>House grant model: fixed +3 capacity on build, or +1 villager/season drip?</td><td>Fixed +3 capacity</td></tr>
+            <tr><td class="num">3</td><td>Per-house villagers (3) &amp; house caps (3 / 2)</td><td>9 pop Town 1 · 6 pop Town 2</td></tr>
+            <tr><td class="num">4</td><td>Founding caravan basket size</td><td>12 plank · 10 bread · 8 hay</td></tr>
+            <tr><td class="num">5</td><td>Tier-up basket curve (rungs of both towns)</td><td>see ladders — scaled to plot growth</td></tr>
+            <tr><td class="num">6</td><td>Second early discovery: Chicken, or an ability tile (e.g. Pig's free-move)?</td><td>Chicken</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note tip">
+        <div class="h">Next step</div>
+        <p style="margin:0">Once you've signed off on this scope, the balancing run has a finite surface: ~15 buildings,
+          11 recipes, 5 tools, 10 tile families, 12 workers, one founding cost and two tier ladders. Everything else is
+          off the table until zone 3.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <footer class="note-foot">
+    Proposed values for the initial balancing run. Grounded in the live source — buildings/recipes/tools/food
+    (<code>src/constants.ts</code>), tiles &amp; discovery (<code>src/features/tileCollection/data.ts</code>),
+    bloom thresholds (<code>src/config/upgradeThresholds.ts</code>), tier ladders &amp; tolls
+    (<code>src/features/cartography/data.ts</code>), founding (<code>src/features/zones/data.ts</code>),
+    workers (<code>src/features/workers/data.ts</code>). Where a value differs from current code it is marked
+    <span class="chip new">CHANGED</span>. Code is the source of truth; this doc sets the target.
+  </footer>
+
+</div>
+
+<script>
+(function(){
+  var tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+  var panels = Array.prototype.slice.call(document.querySelectorAll('.panel'));
+  function show(id, push){
+    var found = false;
+    tabs.forEach(function(t){
+      var on = t.dataset.panel === id;
+      t.setAttribute('aria-selected', on ? 'true' : 'false');
+      if(on) found = true;
+    });
+    if(!found) return;
+    panels.forEach(function(p){ p.classList.toggle('active', p.id === id); });
+    if(push){ history.pushState({panel:id}, '', '#'+id); }
+  }
+  // section deep-links: clicking an in-page anchor opens the right tab, then scrolls
+  function panelOf(el){ var p = el.closest ? el.closest('.panel') : null; return p ? p.id : null; }
+  tabs.forEach(function(t){ t.addEventListener('click', function(){ show(t.dataset.panel, true); window.scrollTo({top:0,behavior:'smooth'}); }); });
+  document.addEventListener('click', function(e){
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if(!a) return;
+    var id = a.getAttribute('href').slice(1);
+    var target = document.getElementById(id);
+    if(!target) return;
+    var pid = panelOf(target) || (target.classList.contains('panel') ? target.id : null);
+    if(pid){ e.preventDefault(); show(pid, true); if(!target.classList.contains('panel')){ setTimeout(function(){ target.scrollIntoView({behavior:'smooth', block:'start'}); }, 40); } }
+  });
+  window.addEventListener('popstate', function(){ var id=(location.hash||'#overview').slice(1); var t=document.getElementById(id); show(t && t.classList.contains('panel') ? id : (t?panelOf(t):'overview') || 'overview', false); if(t && !t.classList.contains('panel')) setTimeout(function(){t.scrollIntoView();},40); });
+  // initial
+  var initial = (location.hash||'#overview').slice(1);
+  var el = document.getElementById(initial);
+  if(el && el.classList.contains('panel')) show(initial, false);
+  else if(el){ var pid = panelOf(el); if(pid){ show(pid,false); setTimeout(function(){el.scrollIntoView();},60);} }
+  else show('overview', false);
+})();
+</script>
+</body>
+</html>
