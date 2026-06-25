@@ -33,7 +33,7 @@ export function BuildingRecipes({ buildingId }: BuildingRecipesProps) {
 
   return (
     <section id="building-recipes">
-      <div className="wiki-section-heading mb-2">Recipes crafted here</div>
+      <h2 className="wiki-section-heading mb-2">Recipes crafted here</h2>
       <RelationRefGrid links={links} />
     </section>
   );

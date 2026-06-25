@@ -77,9 +77,9 @@ function CostExportModal({ report, onClose }: { report: CostReport; onClose: () 
     >
       <div className="wiki-cost-modal" onClick={(e) => e.stopPropagation()}>
         <div className="wiki-cost-modal__head">
-          <div className="wiki-section-heading" style={{ border: "none", margin: 0, padding: 0 }}>
+          <h2 className="wiki-section-heading" style={{ border: "none", margin: 0, padding: 0 }}>
             Export {report.count} change{report.count === 1 ? "" : "s"}
-          </div>
+          </h2>
           <button className="wiki-cost-modal__close" onClick={onClose} aria-label="Close export">
             ✕
           </button>

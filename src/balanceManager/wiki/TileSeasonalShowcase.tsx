@@ -226,7 +226,7 @@ export function TileSeasonalShowcase({ tileKey }: { tileKey: string }) {
   return (
     <section id="seasonal-art">
       <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
-        <div className="wiki-section-heading">Idle Animations &amp; Transitions</div>
+        <h2 className="wiki-section-heading">Idle Animations &amp; Transitions</h2>
         {variants.length > 1 && <IconVariantToggle value={effective} onChange={setVariant} />}
       </div>
 

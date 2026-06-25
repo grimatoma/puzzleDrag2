@@ -153,7 +153,7 @@ export function TileUnlock({ tileId }: TileUnlockProps) {
 
   return (
     <section id="tile-unlock">
-      <div className="wiki-section-heading mb-2">How to unlock</div>
+      <h2 className="wiki-section-heading mb-2">How to unlock</h2>
 
       <div
         style={{

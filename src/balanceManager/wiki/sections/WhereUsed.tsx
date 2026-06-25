@@ -132,7 +132,7 @@ export function WhereUsed({ itemId }: WhereUsedProps) {
 
   return (
     <section id="used-in">
-      <div className="wiki-section-heading mb-2">Used in</div>
+      <h2 className="wiki-section-heading mb-2">Used in</h2>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {KIND_ORDER.filter((kind) => groups.has(kind)).map((kind) => (
           <div key={kind}>

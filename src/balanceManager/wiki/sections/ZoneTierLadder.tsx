@@ -65,7 +65,7 @@ export function ZoneTierLadder({ zoneId, zone }: ZoneTierLadderProps) {
 
   return (
     <section id="zone-tier-ladder">
-      <div className="wiki-section-heading mb-2">Settlement tiers &amp; upgrade costs</div>
+      <h2 className="wiki-section-heading mb-2">Settlement tiers &amp; upgrade costs</h2>
 
       {isTiered ? (
         <>

@@ -96,7 +96,7 @@ export function DailyRewardsTrack({ day }: DailyRewardsTrackProps) {
 
   return (
     <section id="daily-reward">
-      <div className="wiki-section-heading mb-2">Reward</div>
+      <h2 className="wiki-section-heading mb-2">Reward</h2>
 
       <div
         style={{

@@ -148,7 +148,7 @@ export function ToolAcquisition({ toolId }: ToolAcquisitionProps) {
 
   return (
     <section id="tool-acquisition">
-      <div className="wiki-section-heading mb-2">How to get it</div>
+      <h2 className="wiki-section-heading mb-2">How to get it</h2>
       <div
         style={{
           padding: "12px 14px",

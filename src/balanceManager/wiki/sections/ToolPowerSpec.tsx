@@ -161,7 +161,7 @@ export function ToolPowerSpec({ power }: ToolPowerSpecProps) {
 
   return (
     <section id="tool-power-spec">
-      <div className="wiki-section-heading mb-2">Specification</div>
+      <h2 className="wiki-section-heading mb-2">Specification</h2>
 
       <div
         style={{

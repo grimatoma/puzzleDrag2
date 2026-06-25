@@ -153,7 +153,7 @@ export function KeeperEncounter({ keeper }: KeeperEncounterProps) {
 
   return (
     <section id="keeper-encounter">
-      <div className="wiki-section-heading mb-2">Keeper encounter</div>
+      <h2 className="wiki-section-heading mb-2">Keeper encounter</h2>
 
       {/* Header strip: emoji + title + appears-after */}
       <div
