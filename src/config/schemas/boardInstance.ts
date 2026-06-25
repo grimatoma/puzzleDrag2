@@ -73,9 +73,6 @@ export const farmSeasonDropsPatchSchema = schemaTypeName(
     .describe("Partial per-season drop patches merged into the live table"),
 );
 
-/** @deprecated Use farmSeasonDropsSchema — kept for wiki/schema re-exports. */
-export const seasonDropsSchema = farmSeasonDropsSchema;
-
 /** Assert a complete season drop row at compile time. */
 export function farmSeasonDropRow(row: FarmSeasonDropRow): FarmSeasonDropRow {
   return row;

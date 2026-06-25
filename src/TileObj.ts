@@ -27,7 +27,7 @@ export interface TileRes {
     dark?: string | number;
   } | null;
   value?: number;
-  /** @deprecated see constants.ts */
+  /** Resource key this tile chains into (its production output). See constants.ts. */
   next?: string | null;
 }
 

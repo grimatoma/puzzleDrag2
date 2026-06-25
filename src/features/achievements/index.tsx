@@ -65,9 +65,6 @@ function getCounterValue(state: GameState, counter: string): number {
   return (ach?.counters?.[counter] ?? 0);
 }
 
-// Legacy metric lookup kept for reference (not currently rendered)
-// function getMetricValue(state, eventKey) { ... }
-
 // ─── Trophy card ─────────────────────────────────────────────────────────────
 
 interface TrophyCardProps {

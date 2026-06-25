@@ -27,16 +27,6 @@ export type {
   ToolItemEntry,
 } from "../config/schemas/item.js";
 
-/** @deprecated Use `Tile | Resource | Tool` or kind-specific types. */
-export type Item = import("../config/schemas/item.js").ItemEntry;
-
-/** @deprecated Use `Tile`. */
-export type TileItem = import("../config/schemas/item.js").TileItemEntry;
-/** @deprecated Use `Resource`. */
-export type ResourceItem = import("../config/schemas/item.js").ResourceItemEntry;
-/** @deprecated Use `Tool`. */
-export type ToolItem = import("../config/schemas/item.js").ToolItemEntry;
-
 // ── Ability ───────────────────────────────────────────────────────────────
 
 export interface AbilityParam {
