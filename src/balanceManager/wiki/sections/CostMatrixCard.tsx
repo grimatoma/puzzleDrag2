@@ -28,7 +28,7 @@ export function CostMatrixCard({ matrix, editable, id }: CostMatrixCardProps) {
   return (
     <section id={id} className="wiki-cost-card flex flex-col gap-2">
       <div>
-        <div className="wiki-section-heading mb-1">{matrix.title}</div>
+        <h2 className="wiki-section-heading mb-1">{matrix.title}</h2>
         <p className="text-[11px] italic m-0" style={{ color: COLORS.inkSubtle }}>
           {matrix.subtitle}
         </p>

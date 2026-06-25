@@ -14,6 +14,7 @@ import { BOSSES } from "../features/bosses/data.js";
 import { ZONES, ZONE_IDS } from "../features/zones/data.js";
 import { getToolPower } from "../config/toolPowers.js";
 import { SYSTEMS } from "./wiki/systems.js";
+import { CONCEPTS } from "./wiki/concepts.js";
 
 function asArrayValues<T = unknown>(obj: unknown): T[] {
   if (Array.isArray(obj)) return obj as T[];
@@ -46,6 +47,23 @@ const KIND_TO_TAB: Record<string, string> = {
   tile: "tiles",
   resource: "resources",
   tool: "tools",
+};
+
+// Player-facing wiki concepts the hand-built loops below don't already cover.
+// Indexed generically from the shared CONCEPTS inventory (concepts.ts) so the
+// palette matches the wiki's catalog without re-deriving each data source — and
+// can't silently drift when a concept gains entries. Dev/meta concepts (views,
+// modals, categories, board kinds, tool powers, keepers, …) stay out.
+const EXTRA_CONCEPT_IDS = ["abilities", "boons", "hazards", "achievements", "dailyRewards", "seasons"] as const;
+
+// Extra-concept id → singular `kind` used for the palette's coloured badge.
+const CONCEPT_KIND: Record<string, string> = {
+  abilities: "ability",
+  boons: "boon",
+  hazards: "hazard",
+  achievements: "achievement",
+  dailyRewards: "dailyReward",
+  seasons: "season",
 };
 
 /**
@@ -137,6 +155,24 @@ export function buildCommandIndex({ items = ITEMS, npcs = NPCS, buildings = BUIL
       label: s.name, sublabel: `system · ${s.key}`,
       keywords: stringList(s.key, s.name, "system", "mechanic") });
   }
+  // Extra player-facing concepts, pulled live from the shared CONCEPTS
+  // inventory so the palette covers the wiki's catalog without re-deriving each
+  // data source. Each concept's `id` is its wiki tab; entries carry `key`/`name`.
+  const conceptById = new Map(CONCEPTS.map((c) => [c.id, c]));
+  for (const conceptId of EXTRA_CONCEPT_IDS) {
+    const concept = conceptById.get(conceptId);
+    if (!concept) continue;
+    const kind = CONCEPT_KIND[conceptId] || conceptId;
+    for (const raw of concept.getEntries()) {
+      const entry = asRec(raw);
+      const key = typeof entry.key === "string" ? entry.key : null;
+      if (!key) continue;
+      const name = typeof entry.name === "string" ? entry.name : key;
+      push({ id: key, kind, tab: conceptId,
+        label: name, sublabel: `${concept.label.toLowerCase()} · ${key}`,
+        keywords: stringList(key, name, conceptId, kind) });
+    }
+  }
   return entries;
 }
 
@@ -158,6 +194,7 @@ export function scoreEntry(entry: CommandEntry, query: string): number {
   if (!q) return 0;
   const tokens = q.split(/\s+/).filter(Boolean);
   const label = String(entry.label || "").toLowerCase();
+  const labelWords = label.split(/\s+/).filter(Boolean);
   const sublabel = String(entry.sublabel || "").toLowerCase();
   const kind = String(entry.kind || "").toLowerCase();
   const haystack = [label, sublabel, kind, ...(entry.keywords || []).map((k) => String(k).toLowerCase())];
@@ -167,6 +204,9 @@ export function scoreEntry(entry: CommandEntry, query: string): number {
     let tokScore = 0;
     if (label === tok) tokScore = Math.max(tokScore, 220);
     else if (label.startsWith(tok)) tokScore = Math.max(tokScore, 140);
+    // A token that starts a *later* word ("store" → "Powder Store") beats an
+    // incidental mid-word substring but not a whole-label prefix.
+    else if (labelWords.some((w) => w.startsWith(tok))) tokScore = Math.max(tokScore, 115);
     else if (label.includes(tok)) tokScore = Math.max(tokScore, 90);
     if (kind === tok) tokScore = Math.max(tokScore, 110);
     if (sublabel.includes(tok)) tokScore = Math.max(tokScore, 60);
@@ -179,18 +219,54 @@ export function scoreEntry(entry: CommandEntry, query: string): number {
   return score;
 }
 
+/** Stable "tab:id" key for an entry — the unit recents are stored/looked up by. */
+export function entryKey(entry: CommandEntry): string {
+  return `${entry.tab}:${entry.id}`;
+}
+
+// Additive bonus when an entry is in the recents list. Small enough to only
+// break ties / nudge near-equal matches, never to override a clearly better
+// text match.
+const RECENT_BONUS = 25;
+
 /**
- * Search the index. Returns up to `limit` entries sorted by descending score,
- * with the original index order as a stable tiebreaker.
+ * Search the index, optionally boosting entries whose `entryKey` is in
+ * `recentKeys`. Returns up to `limit` entries sorted by descending score, with
+ * the original index order as a stable tiebreaker.
  */
-export function searchCommandIndex(index: CommandEntry[], query: string, limit = 12): CommandEntry[] {
+export function rankWithRecents(index: CommandEntry[], query: string, recentKeys: string[] = [], limit = 12): CommandEntry[] {
   const q = String(query ?? "").trim();
   if (!q || !Array.isArray(index)) return [];
+  const recent = new Set(Array.isArray(recentKeys) ? recentKeys : []);
   const ranked: { score: number; order: number; entry: CommandEntry }[] = [];
   for (let i = 0; i < index.length; i += 1) {
-    const score = scoreEntry(index[i], q);
-    if (score > 0) ranked.push({ score, order: i, entry: index[i] });
+    const base = scoreEntry(index[i], q);
+    if (base <= 0) continue;
+    const boost = recent.has(entryKey(index[i])) ? RECENT_BONUS : 0;
+    ranked.push({ score: base + boost, order: i, entry: index[i] });
   }
   ranked.sort((a, b) => (b.score - a.score) || (a.order - b.order));
   return ranked.slice(0, limit).map((r) => r.entry);
+}
+
+/** Search the index with no recency boost (the plain ranking). */
+export function searchCommandIndex(index: CommandEntry[], query: string, limit = 12): CommandEntry[] {
+  return rankWithRecents(index, query, [], limit);
+}
+
+/**
+ * Resolve recents "tab:id" keys back to live CommandEntry objects, in recents
+ * order, dropping any that no longer exist in the index. Powers the palette's
+ * empty-query state and WikiHome's "Jump back in" row.
+ */
+export function resolveRecents(index: CommandEntry[], recentKeys: string[], limit = 8): CommandEntry[] {
+  if (!Array.isArray(index) || !Array.isArray(recentKeys)) return [];
+  const byKey = new Map(index.map((e) => [entryKey(e), e]));
+  const out: CommandEntry[] = [];
+  for (const k of recentKeys) {
+    const e = byKey.get(k);
+    if (e) out.push(e);
+    if (out.length >= limit) break;
+  }
+  return out;
 }

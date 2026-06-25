@@ -7,16 +7,12 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" sizes="any" />
     <title>Hearthwood Vale — Game Wiki</title>
-    <!-- Display serif: Fraunces (variable, warm character) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,700;0,9..144,800;1,9..144,400&family=IBM+Plex+Sans:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap"
-      rel="stylesheet"
-    />
+    <!-- Fonts (Fraunces / IBM Plex Sans / JetBrains Mono) are self-hosted and
+         bundled via @fontsource — imported in src/balanceEntry.tsx. No external
+         font CDN, so first paint isn't render-blocked on a third-party request. -->
     <style>
-      html, body { margin: 0; padding: 0; background: #e8dcc4; min-height: 100vh; }
-      #root { width: 100%; min-height: 100vh; }
+      html, body { margin: 0; padding: 0; background: #e8dcc4; min-height: 100vh; min-height: 100dvh; }
+      #root { width: 100%; min-height: 100vh; min-height: 100dvh; }
     </style>
   </head>
   <body>

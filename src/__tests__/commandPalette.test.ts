@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import {
   buildCommandIndex, scoreEntry, searchCommandIndex,
+  rankWithRecents, resolveRecents, entryKey,
 } from "../balanceManager/commandPalette.js";
 import { CONCEPTS } from "../balanceManager/wiki/concepts.js";
 
@@ -24,11 +25,22 @@ describe("buildCommandIndex", () => {
     }
   });
 
-  it("never emits a non-concept tab (no items/biomes/keepers/story/flags tabs)", () => {
+  it("never emits a non-concept tab (no items/biomes/story/flags tabs)", () => {
     const idx = buildCommandIndex();
     const tabs = new Set(idx.map((e) => e.tab));
-    for (const bogus of ["items", "biomes", "keepers", "achievements", "story", "flags"]) {
+    // Genuinely-invalid tabs only — whether a *valid* concept (keepers,
+    // achievements, …) is indexed is a coverage choice, guarded separately by
+    // the "ONLY valid concept ids" test above.
+    for (const bogus of ["items", "biomes", "story", "flags"]) {
       expect(tabs.has(bogus)).toBe(false);
+    }
+  });
+
+  it("covers the extended player concepts (abilities/boons/hazards/achievements/dailyRewards/seasons)", () => {
+    const idx = buildCommandIndex();
+    const tabs = new Set(idx.map((e) => e.tab));
+    for (const t of ["abilities", "boons", "hazards", "achievements", "dailyRewards", "seasons"]) {
+      expect(tabs.has(t)).toBe(true);
     }
   });
 
@@ -127,6 +139,13 @@ describe("scoreEntry", () => {
     expect(scoreEntry(entry, "iron")).toBeGreaterThan(scoreEntry(entry, "hinge"));
   });
 
+  it("scores a word-boundary match above a mid-word substring", () => {
+    const e = { id: "powder_store", kind: "building", tab: "buildings",
+      label: "Powder Store", sublabel: "building", keywords: [] };
+    // "store" starts the 2nd word; "owd" is only a mid-word substring of "Powder".
+    expect(scoreEntry(e, "store")).toBeGreaterThan(scoreEntry(e, "owd"));
+  });
+
   it("scores a kind match when query is the kind name", () => {
     expect(scoreEntry(entry, "recipe")).toBeGreaterThan(0);
   });
@@ -164,5 +183,47 @@ describe("searchCommandIndex", () => {
 
   it("returns an empty array when the query matches no entries", () => {
     expect(searchCommandIndex(idx, "nothing-here-xyz")).toEqual([]);
+  });
+});
+
+describe("entryKey", () => {
+  it("joins tab and id with a colon", () => {
+    expect(entryKey({ id: "powder_store", kind: "building", tab: "buildings",
+      label: "Powder Store", sublabel: "", keywords: [] })).toBe("buildings:powder_store");
+  });
+});
+
+describe("rankWithRecents", () => {
+  const idx = [
+    { id: "a", kind: "building", tab: "buildings", label: "Forge House", sublabel: "", keywords: [] },
+    { id: "b", kind: "building", tab: "buildings", label: "Forge Hall", sublabel: "", keywords: [] },
+  ];
+
+  it("matches searchCommandIndex when no recents are supplied", () => {
+    expect(rankWithRecents(idx, "forge").map((e) => e.id))
+      .toEqual(searchCommandIndex(idx, "forge").map((e) => e.id));
+  });
+
+  it("boosts a recent entry above an equal-scoring non-recent one", () => {
+    // Both match "forge" as a whole-label prefix → equal base score; the stable
+    // tiebreaker keeps "a" first until "b" is marked recent.
+    expect(searchCommandIndex(idx, "forge")[0].id).toBe("a");
+    expect(rankWithRecents(idx, "forge", ["buildings:b"])[0].id).toBe("b");
+  });
+});
+
+describe("resolveRecents", () => {
+  const idx = [
+    { id: "a", kind: "building", tab: "buildings", label: "Forge House", sublabel: "", keywords: [] },
+    { id: "grass", kind: "tile", tab: "tiles", label: "Grass", sublabel: "", keywords: [] },
+  ];
+
+  it("resolves keys to entries in recents order, dropping unknowns", () => {
+    const out = resolveRecents(idx, ["tiles:grass", "buildings:a", "buildings:gone"]);
+    expect(out.map((e) => e.id)).toEqual(["grass", "a"]);
+  });
+
+  it("caps to the limit", () => {
+    expect(resolveRecents(idx, ["tiles:grass", "buildings:a"], 1).map((e) => e.id)).toEqual(["grass"]);
   });
 });
