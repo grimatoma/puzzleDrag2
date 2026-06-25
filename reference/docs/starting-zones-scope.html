@@ -200,8 +200,8 @@
       <div class="grid two">
         <div class="card farm">
           <div class="h">Town 1 — Hearthwood Vale</div>
-          <p class="muted" style="margin:0 0 8px">The hub &amp; tutorial. Pure farm. The only town with a
-            Workshop and Mill — your base of operations.</p>
+          <p class="muted" style="margin:0 0 8px">The hub &amp; tutorial. Pure farm — where Workshop, Mill &amp; the
+            bakery first unlock. Unlocks are global, so they then carry to every town.</p>
           <div class="big">4 tiers <small>3 → 6 → 9 → 12 plots · max 3 houses</small></div>
           <ul style="margin-top:10px">
             <li>Board: <span class="chip farm">farm</span> — grass, grain, trees, birds, veg, fruit, herd</li>
@@ -289,13 +289,13 @@
           <thead><tr><th>Tier</th><th class="num">Plots</th><th>Tier-up cost (PROPOSED)</th><th>Newly unlocked</th><th class="num">Houses</th></tr></thead>
           <tbody>
             <tr><td class="name">0 · Camp</td><td class="num">4</td><td class="muted">— start —</td><td>Hearth <span class="free">(free)</span>, Bakery, Mining Camp</td><td class="num">0</td></tr>
-            <tr><td class="name">1 · Diggings</td><td class="num">7</td><td class="cost">10 plank · 12 bread · 10 block</td><td>Granary, Forge, House</td><td class="num">1</td></tr>
-            <tr><td class="name">2 · Boomtown</td><td class="num">10</td><td class="cost">16 plank · 14 bread · 12 block · 8 iron_bar</td><td>Sawmill, Powder Store, Smokehouse, Chapel, Caravan Post, House</td><td class="num">2</td></tr>
+            <tr><td class="name">1 · Diggings</td><td class="num">7</td><td class="cost">10 plank · 12 bread · 10 brick</td><td>Granary, Forge, House</td><td class="num">1</td></tr>
+            <tr><td class="name">2 · Boomtown</td><td class="num">10</td><td class="cost">16 plank · 14 bread · 12 brick · 8 iron_bar</td><td>Sawmill, Powder Store, Smokehouse, Chapel, Caravan Post, House</td><td class="num">2</td></tr>
           </tbody>
         </table>
       </div>
       <p class="muted">Bigger than a pure-farm second town because it carries two boards. Its tier-ups demand
-        <em class="k">block/iron</em> — which only its own mine produces — so growth is gated by actually digging.</p>
+        <em class="k">brick/iron</em> — which only its own mine produces — so growth is gated by actually digging.</p>
     </section>
 
     <section id="buildings">
@@ -303,10 +303,17 @@
       <p>Thirteen building types across both towns. Costs re-pointed onto <em class="k">in-scope resources</em> and
         sequenced so early (pre-mine) buildings cost farm goods only; metal-costed buildings naturally gate behind
         having a mine. <span class="chip new">CHANGED</span> marks a power or cost altered from current code.</p>
+      <div class="note tip">
+        <div class="h">Unlocks are global</div>
+        <p style="margin:0">Once <em class="k">any</em> town's tier ladder unlocks a building type, you can build it at
+          <em class="k">every</em> town you own (plots permitting) — it is never re-locked per zone. The
+          <em class="k">Unlocked by</em> + <em class="k">Tier</em> columns show only where each type <em>first</em> becomes
+          available; a "Both · 3 / 2" entry unlocks at whichever of the two ladders you reach first.</p>
+      </div>
       <div class="tbl-wrap">
         <table>
           <caption>Building roster — PROPOSED powers &amp; build costs</caption>
-          <thead><tr><th>Building</th><th>Power (what it does)</th><th>Build cost</th><th>Town(s)</th><th class="num">Tier</th></tr></thead>
+          <thead><tr><th>Building</th><th>Power (what it does)</th><th>Build cost</th><th>Unlocked by</th><th class="num">Tier</th></tr></thead>
           <tbody>
             <tr><td class="name">Hearth</td><td>Anchor; lights the town. No mechanical effect.</td><td class="free">free</td><td>Both</td><td class="num">0</td></tr>
             <tr><td class="name">Mill</td><td>−1 flour on the Bread recipe</td><td class="cost">8 plank · 6 hay</td><td>Town 1</td><td class="num">0</td></tr>
@@ -314,14 +321,14 @@
             <tr><td class="name">Granary</td><td>+1 session turn · +300 storage cap</td><td class="cost">12 bread · 6 plank · 4 soup <span class="chip new">CHANGED</span></td><td>Both</td><td class="num">1</td></tr>
             <tr><td class="name">Larder</td><td>Crafting station — preserves · +1 mine-food turn</td><td class="cost">12 bread · 4 plank · 6 jam <span class="chip new">CHANGED</span></td><td>Town 1</td><td class="num">1</td></tr>
             <tr><td class="name">Silo</td><td>Preserves the farm board layout between sessions</td><td class="cost">6 plank · 8 bread</td><td>Town 1</td><td class="num">2</td></tr>
-            <tr><td class="name">Sawmill</td><td>+1 plank per tree chain</td><td class="cost">12 plank · 8 block <span class="chip new">CHANGED</span></td><td>Both</td><td class="num">2</td></tr>
-            <tr><td class="name">Workshop</td><td>Crafting station — hand tools</td><td class="cost">10 plank · 6 block · 5 iron_bar</td><td>Town 1</td><td class="num">2</td></tr>
-            <tr><td class="name">Caravan Post</td><td>Unlocks the sell-market</td><td class="cost">20 plank · 10 block · 5 iron_bar</td><td>Both</td><td class="num">3 / 2</td></tr>
-            <tr><td class="name">Chapel</td><td>+50 coins at season end</td><td class="cost">20 bread · 12 block · 6 preserve <span class="chip new">CHANGED</span></td><td>Both</td><td class="num">3 / 2</td></tr>
+            <tr><td class="name">Sawmill</td><td>+1 plank per tree chain</td><td class="cost">12 plank · 8 brick <span class="chip new">CHANGED</span></td><td>Both</td><td class="num">2</td></tr>
+            <tr><td class="name">Workshop</td><td>Crafting station — hand tools</td><td class="cost">10 plank · 6 brick · 5 iron_bar</td><td>Town 1</td><td class="num">2</td></tr>
+            <tr><td class="name">Caravan Post</td><td>Unlocks the sell-market</td><td class="cost">20 plank · 10 brick · 5 iron_bar</td><td>Both</td><td class="num">3 / 2</td></tr>
+            <tr><td class="name">Chapel</td><td>+50 coins at season end</td><td class="cost">20 bread · 12 brick · 6 preserve <span class="chip new">CHANGED</span></td><td>Both</td><td class="num">3 / 2</td></tr>
             <tr><td class="name">Mining Camp</td><td>+1 turn to every mine expedition</td><td class="cost">10 bread · 6 plank <span class="chip new">CHANGED</span></td><td>Town 2</td><td class="num">0</td></tr>
             <tr><td class="name">Forge</td><td>Crafting station — basic metalwork</td><td class="cost">6 plank · 10 iron_bar · 4 coke <span class="chip new">CHANGED</span></td><td>Town 2</td><td class="num">1</td></tr>
-            <tr><td class="name">Powder Store</td><td>Stamps out 2 Bombs every season</td><td class="cost">12 iron_bar · 6 coke · 8 block <span class="chip new">CHANGED</span></td><td>Town 2</td><td class="num">2</td></tr>
-            <tr><td class="name">Smokehouse <span class="chip new">NEW</span></td><td>Crafting station — cured meat (processed ration)</td><td class="cost">8 plank · 6 block · 4 coke</td><td>Town 2</td><td class="num">2</td></tr>
+            <tr><td class="name">Powder Store</td><td>Stamps out 2 Bombs every season</td><td class="cost">12 iron_bar · 6 coke · 8 brick <span class="chip new">CHANGED</span></td><td>Town 2</td><td class="num">2</td></tr>
+            <tr><td class="name">Smokehouse <span class="chip new">NEW</span></td><td>Crafting station — cured meat (processed ration)</td><td class="cost">8 plank · 6 brick · 4 coke</td><td>Town 2</td><td class="num">2</td></tr>
             <tr><td class="name">House <span class="chip new">NEW</span></td><td>+3 villager capacity (population → workers)</td><td class="cost">8 plank · 6 bread · 4 eggs</td><td>Both</td><td class="num">any</td></tr>
           </tbody>
         </table>
@@ -367,25 +374,27 @@
       <h2><span class="ix">08</span> Tile families in scope — resource &amp; thresholds</h2>
       <div class="tbl-wrap">
         <table>
-          <caption>In-scope families · resource produced · bloom threshold (chain length to upgrade)</caption>
-          <thead><tr><th>Family</th><th>Board</th><th>Resource</th><th class="num">Bloom @</th><th>Cross-collect partner</th></tr></thead>
+          <caption>Tiles in scope, grouped by board · resource · chain length to upgrade</caption>
+          <thead><tr><th>Tile family</th><th>Resource</th><th class="num">Chain to upgrade</th><th>Cross-collect partner</th></tr></thead>
           <tbody>
-            <tr><td class="name">Grass</td><td><span class="chip farm">farm</span></td><td>hay_bundle</td><td class="num">6</td><td>grain</td></tr>
-            <tr><td class="name">Grain</td><td><span class="chip farm">farm</span></td><td>flour</td><td class="num">5</td><td>grass</td></tr>
-            <tr><td class="name">Trees</td><td><span class="chip farm">farm</span></td><td>plank</td><td class="num">6</td><td>birds</td></tr>
-            <tr><td class="name">Birds</td><td><span class="chip farm">farm</span></td><td>eggs</td><td class="num">6</td><td>trees</td></tr>
-            <tr><td class="name">Vegetables</td><td><span class="chip farm">farm</span></td><td>soup</td><td class="num">6</td><td>grain</td></tr>
-            <tr><td class="name">Fruits</td><td><span class="chip farm">farm</span></td><td>pie · jam</td><td class="num">7</td><td>trees</td></tr>
-            <tr><td class="name">Herd <span class="chip new">NEW</span></td><td><span class="chip farm">farm</span></td><td>meat</td><td class="num">5</td><td>vegetables</td></tr>
-            <tr><td class="name">Stone</td><td><span class="chip mine">mine</span></td><td>block</td><td class="num">8</td><td>—</td></tr>
-            <tr><td class="name">Iron ore</td><td><span class="chip mine">mine</span></td><td>iron_bar</td><td class="num">6</td><td>—</td></tr>
-            <tr><td class="name">Coal</td><td><span class="chip mine">mine</span></td><td>coke</td><td class="num">7</td><td>—</td></tr>
-            <tr><td class="name">Dirt</td><td><span class="chip mine">mine</span></td><td>dirt</td><td class="num">—</td><td>—</td></tr>
+            <tr><td colspan="4" style="background:var(--paper-2);font-weight:700;font-size:11.5px;letter-spacing:.07em;color:var(--gold-deep)">🌾 FARM</td></tr>
+            <tr><td class="name">Grass</td><td>hay_bundle</td><td class="num">6</td><td>grain</td></tr>
+            <tr><td class="name">Grain</td><td>flour</td><td class="num">5</td><td>grass</td></tr>
+            <tr><td class="name">Trees</td><td>plank</td><td class="num">6</td><td>birds</td></tr>
+            <tr><td class="name">Birds</td><td>eggs</td><td class="num">6</td><td>trees</td></tr>
+            <tr><td class="name">Vegetables</td><td>soup</td><td class="num">6</td><td>grain</td></tr>
+            <tr><td class="name">Fruits</td><td>pie · jam</td><td class="num">7</td><td>trees</td></tr>
+            <tr><td class="name">Herd <span class="chip new">NEW</span></td><td>meat</td><td class="num">5</td><td>vegetables</td></tr>
+            <tr><td colspan="4" style="background:var(--paper-2);font-weight:700;font-size:11.5px;letter-spacing:.07em;color:var(--gold-deep)">⛏ MINE</td></tr>
+            <tr><td class="name">Stone</td><td>brick</td><td class="num">8</td><td>—</td></tr>
+            <tr><td class="name">Iron ore</td><td>iron_bar</td><td class="num">6</td><td>—</td></tr>
+            <tr><td class="name">Coal</td><td>coke</td><td class="num">7</td><td>—</td></tr>
+            <tr><td class="name">Dirt</td><td>dirt</td><td class="num">—</td><td>—</td></tr>
           </tbody>
         </table>
       </div>
       <p class="muted">Ore→bar is automatic (the chain pipeline promotes <code>ore→iron_bar</code>, <code>coal→coke</code>,
-        <code>stone→block</code>) — no smelter building needed.</p>
+        <code>stone→brick</code>) — no smelter building needed.</p>
     </section>
 
     <section id="starters">
@@ -394,21 +403,21 @@
         <div class="card farm">
           <div class="h">Starter deck — 7 default tiles</div>
           <ul>
-            <li><em class="k">Grass</em> → hay (lights the hearth)</li>
-            <li><em class="k">Corn</em> (grain) → flour → bread</li>
-            <li><em class="k">Oak</em> (trees) → planks</li>
-            <li><em class="k">Pheasant</em> (birds) → eggs</li>
-            <li><em class="k">Carrot</em> (veg) → soup</li>
-            <li><em class="k">Apple</em> (fruits) → pie / jam</li>
-            <li><em class="k">Pig</em> (herd) → meat · free move on chain 6</li>
+            <li><em class="k">Grass</em> → hay · upgrade @ 6</li>
+            <li><em class="k">Corn</em> (grain) → flour · upgrade @ 5</li>
+            <li><em class="k">Oak</em> (trees) → plank · upgrade @ 6</li>
+            <li><em class="k">Pheasant</em> (birds) → eggs · upgrade @ 6</li>
+            <li><em class="k">Carrot</em> (veg) → soup · upgrade @ 6</li>
+            <li><em class="k">Apple</em> (fruits) → pie / jam · upgrade @ 7</li>
+            <li><em class="k">Pig</em> (herd) → meat · upgrade @ 5 · free move on chain 6</li>
           </ul>
         </div>
         <div class="card mine">
           <div class="h">Town 2 mine — 4 default tiles</div>
           <ul>
-            <li><em class="k">Stone</em> → block</li>
-            <li><em class="k">Ore</em> → iron_bar</li>
-            <li><em class="k">Coal</em> → coke</li>
+            <li><em class="k">Stone</em> → brick · upgrade @ 8</li>
+            <li><em class="k">Ore</em> → iron_bar · upgrade @ 6</li>
+            <li><em class="k">Coal</em> → coke · upgrade @ 7</li>
             <li><em class="k">Dirt</em> → dirt (for fertilizer)</li>
           </ul>
         </div>
@@ -446,7 +455,7 @@
     <section id="recipes">
       <h2><span class="ix">10</span> Recipes in scope — 11 of 50</h2>
       <p><em class="k">Grouped by output type.</em> A recipe becomes available the moment its <em class="k">station
-        building</em> exists and you hold the inputs — so tools needing <code>block</code>/<code>iron</code> can't be made
+        building</em> exists and you hold the inputs — so tools needing <code>brick</code>/<code>iron</code> can't be made
         until Town 2's mine yields them. <span class="chip new">CHANGED</span> the <em class="k">Supplies</em> item is gone —
         any food is a mining ration now (see the Mine tab).</p>
       <div class="tbl-wrap">
@@ -461,7 +470,7 @@
             <tr><td class="name">Cured Meat <span class="chip new">NEW</span></td><td>Smokehouse</td><td class="cost">2 meat · 1 coke</td><td>cured_meat</td><td class="num">45</td><td>Smokehouse (Town 2)</td></tr>
             <tr><td colspan="6" style="background:var(--paper-2);font-weight:700;font-size:11.5px;letter-spacing:.07em;color:var(--gold-deep)">🛠 TOOLS — single-use board-breakers</td></tr>
             <tr><td class="name">Rake</td><td>Workshop</td><td class="cost">1 plank</td><td>rake</td><td class="num">—</td><td>Workshop built</td></tr>
-            <tr><td class="name">Fertilizer</td><td>Workshop</td><td class="cost">1 hay · 1 dirt</td><td>fertilizer</td><td class="num">—</td><td>Workshop + mine</td></tr>
+            <tr><td class="name">Fertilizer</td><td>Workshop</td><td class="cost">20 dirt</td><td>fertilizer</td><td class="num">—</td><td>Workshop + mine</td></tr>
             <tr><td class="name">Sickle</td><td>Workshop</td><td class="cost">1 plank · 1 iron_bar</td><td>sickle</td><td class="num">—</td><td>Workshop + mine</td></tr>
             <tr><td class="name">Plough</td><td>Workshop</td><td class="cost">2 plank · 1 iron_bar</td><td>plough</td><td class="num">—</td><td>Workshop + mine</td></tr>
             <tr><td class="name">Fruit Picker</td><td>Workshop</td><td class="cost">2 plank</td><td>fruit_picker</td><td class="num">—</td><td>Workshop built</td></tr>
