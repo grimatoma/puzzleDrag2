@@ -23,6 +23,7 @@ import { computeWorkerEffects } from "./features/workers/aggregate.js";
 import { TILE_TYPES, CATEGORIES, TILE_TYPES_MAP } from "./features/tileCollection/data.js";
 import { discoverTileTypesFromChain, discoverTileTypesFromBuilding, discoverTileTypesFromZone } from "./features/tileCollection/effects.js";
 import { rollQuests } from "./features/quests/data.js";
+import { accessibleBoardKinds } from "./features/cartography/data.js";
 import { awardXp, XP_PER_LEVEL } from "./features/almanac/data.js";
 import * as crafting from "./features/crafting/slice.js";
 import * as quests from "./features/quests/slice.js";
@@ -1108,7 +1109,10 @@ function coreReducer(state: GameState, action: Action): GameState {
       // monotonically-increasing session counter (state.market.season carries
       // it forward) so quest content still varies session-to-session.
       const sessionCounter = (state.market?.season ?? 0) + 1;
-      const rerolledQuests = rollQuests(state.saveSeed ?? "default", sessionCounter, "Spring");
+      // Only commission quests for biomes the player has travelled to, so the
+      // board never asks for fish/mine goods before those zones are reachable.
+      const accessibleBiomes = accessibleBoardKinds(state.mapVisited ?? ["home"]);
+      const rerolledQuests = rollQuests(state.saveSeed ?? "default", sessionCounter, "Spring", accessibleBiomes);
       const afterSeasonWithFields = {
         ...afterSeason,
         farm: afterSeasonFarm,

@@ -588,3 +588,19 @@ export const KIND_LABELS: Record<MapNodeKind, string> = {
   event: "Wayside Event",
   capital: "The Old Capital",
 };
+
+/**
+ * The set of board biomes a player can actually play, derived from the nodes
+ * they have travelled to. A node grants whatever board(s) it carries (the home
+ * village carries a farm board; non-playable event/boss/capital nodes carry
+ * none). Used to gate content — e.g. quests — to resources the player can reach.
+ */
+export function accessibleBoardKinds(visited: readonly string[]): BoardKind[] {
+  const kinds = new Set<BoardKind>();
+  for (const id of visited) {
+    const node = MAP_NODES.find((n: MapNode) => n.id === id);
+    if (!node) continue;
+    for (const k of Object.keys(node.boards)) kinds.add(k as BoardKind);
+  }
+  return [...kinds];
+}
