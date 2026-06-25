@@ -544,26 +544,27 @@
 
     <section id="worker-roster">
       <h2><span class="ix">13</span> Workers in scope</h2>
-      <p>Hired by type; each hire shaves a tile off its family's chain (or trims a recipe), stacking up to
-        <code>maxCount</code>. Every hire costs coins (ramping) <em class="k">plus 1 villager</em> from housing — so your
-        <a href="#buildings">House</a> cap is the real ceiling on how many hands you field. Cost shown is the first hire;
-        <code>+step</code> is the per-hire ramp.</p>
+      <p>Hired by type. Each hire shaves <em class="k">one tile</em> off its family's chain — but never below the
+        min chain of <em class="k">3</em>, so a family that chains at N supports at most <em class="k">N−3</em> of its
+        worker (hay chains at 6 → max 3 Peasants; fruit at 7 → max 4). Every hire costs <em class="k">1 villager</em>
+        (from housing) plus coins <em>and</em> resources, and <em class="k">both ramp</em> on each successive hire.
+        Deeper-progression families — <em class="k">vegetables, fruit, herd</em> — cost far more to staff. First-hire values shown.</p>
       <div class="tbl-wrap">
         <table>
-          <caption>In-scope worker types · first-hire cost · effect (max 10 each)</caption>
-          <thead><tr><th>Worker</th><th>Effect</th><th class="num">1st hire</th><th class="num">+ / hire</th><th>Resource</th></tr></thead>
+          <caption>In-scope worker types — effect · max (chain−3) · first-hire cost; coins &amp; resources both ramp per hire</caption>
+          <thead><tr><th>Worker</th><th>Effect</th><th class="num">Max</th><th class="num">1st coins</th><th class="num">+coins/hire</th><th>Resource (1st)</th></tr></thead>
           <tbody>
-            <tr><td class="name">Peasant</td><td>−1 hay (grass) chain</td><td class="num">40c</td><td class="num">+20c</td><td class="cost">2 grass</td></tr>
-            <tr><td class="name">Farmer</td><td>−1 grain chain</td><td class="num">50c</td><td class="num">+25c</td><td class="cost">2 grass</td></tr>
-            <tr><td class="name">Lumberjack</td><td>−1 tree chain</td><td class="num">60c</td><td class="num">+30c</td><td class="cost">2 oak</td></tr>
-            <tr><td class="name">Poultryman</td><td>−1 egg (bird) chain</td><td class="num">55c</td><td class="num">+25c</td><td class="cost">2 eggs</td></tr>
-            <tr><td class="name">Vegetable Picker</td><td>−1 vegetable chain</td><td class="num">50c</td><td class="num">+25c</td><td class="cost">2 carrot</td></tr>
-            <tr><td class="name">Fruit Picker</td><td>−1 fruit chain</td><td class="num">60c</td><td class="num">+30c</td><td class="cost">2 apple</td></tr>
-            <tr><td class="name">Herder <span class="chip new">NEW</span></td><td>−1 herd chain</td><td class="num">55c</td><td class="num">+25c</td><td class="cost">2 meat</td></tr>
-            <tr><td class="name">Baker</td><td>−1 flour on Bread recipe</td><td class="num">75c</td><td class="num">×1.4</td><td class="cost">1 flour · 1 eggs</td></tr>
-            <tr><td class="name">Miner</td><td>−1 stone chain <span class="chip mine">T2</span></td><td class="num">75c</td><td class="num">+35c</td><td class="cost">2 stone</td></tr>
-            <tr><td class="name">Iron Miner</td><td>−1 ore chain <span class="chip mine">T2</span></td><td class="num">70c</td><td class="num">+35c</td><td class="cost">2 ore</td></tr>
-            <tr><td class="name">Coal Miner</td><td>−1 coal chain <span class="chip mine">T2</span></td><td class="num">70c</td><td class="num">+35c</td><td class="cost">2 coal</td></tr>
+            <tr><td class="name">Peasant</td><td>−1 grass chain</td><td class="num">3</td><td class="num">40c</td><td class="num">+20c</td><td class="cost">2 grass</td></tr>
+            <tr><td class="name">Farmer</td><td>−1 grain chain</td><td class="num">2</td><td class="num">50c</td><td class="num">+25c</td><td class="cost">2 grass</td></tr>
+            <tr><td class="name">Lumberjack</td><td>−1 tree chain</td><td class="num">3</td><td class="num">60c</td><td class="num">+30c</td><td class="cost">2 oak</td></tr>
+            <tr><td class="name">Poultryman</td><td>−1 bird chain</td><td class="num">3</td><td class="num">60c</td><td class="num">+30c</td><td class="cost">2 eggs</td></tr>
+            <tr><td class="name">Vegetable Picker</td><td>−1 veg chain</td><td class="num">3</td><td class="num">120c</td><td class="num">+60c</td><td class="cost">4 carrot</td></tr>
+            <tr><td class="name">Fruit Picker</td><td>−1 fruit chain</td><td class="num">4</td><td class="num">160c</td><td class="num">+80c</td><td class="cost">4 apple</td></tr>
+            <tr><td class="name">Herder <span class="chip new">NEW</span></td><td>−1 herd chain</td><td class="num">2</td><td class="num">140c</td><td class="num">+70c</td><td class="cost">4 meat</td></tr>
+            <tr><td class="name">Baker</td><td>−1 flour on Bread (floor 1)</td><td class="num">2</td><td class="num">80c</td><td class="num">+40c</td><td class="cost">1 flour · 1 eggs</td></tr>
+            <tr><td class="name">Miner</td><td>−1 stone chain <span class="chip mine">T2</span></td><td class="num">5</td><td class="num">75c</td><td class="num">+35c</td><td class="cost">2 stone</td></tr>
+            <tr><td class="name">Iron Miner</td><td>−1 ore chain <span class="chip mine">T2</span></td><td class="num">3</td><td class="num">90c</td><td class="num">+45c</td><td class="cost">2 ore</td></tr>
+            <tr><td class="name">Coal Miner</td><td>−1 coal chain <span class="chip mine">T2</span></td><td class="num">4</td><td class="num">100c</td><td class="num">+50c</td><td class="cost">2 coal</td></tr>
           </tbody>
         </table>
       </div>
@@ -575,8 +576,8 @@
     <section id="population">
       <h2><span class="ix">14</span> Population math</h2>
       <div class="grid two">
-        <div class="card farm"><div class="h">Town 1</div><div class="big">9 pop<small>3 houses × 3 villagers</small></div><p class="muted" style="margin:8px 0 0">≤ 9 total worker hires across all types.</p></div>
-        <div class="card mine"><div class="h">Town 2</div><div class="big">6 pop<small>2 houses × 3 villagers</small></div><p class="muted" style="margin:8px 0 0">≤ 6 total worker hires.</p></div>
+        <div class="card farm"><div class="h">Town 1</div><div class="big">9 pop<small>3 houses × 3 villagers</small></div><p class="muted" style="margin:8px 0 0">≤ 9 total hires — and each type also caps at chain−3.</p></div>
+        <div class="card mine"><div class="h">Town 2</div><div class="big">6 pop<small>2 houses × 3 villagers</small></div><p class="muted" style="margin:8px 0 0">≤ 6 total hires — per-type chain−3 cap also applies.</p></div>
       </div>
       <p class="muted">Per-house villager grant (3) and the per-town house cap are the two knobs that set the worker ceiling —
         tune these against the chain-reduction power above.</p>
