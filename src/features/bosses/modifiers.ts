@@ -13,6 +13,8 @@ export interface BossModifierParams {
   boost?: string[];
   factor?: number;
   burnAfter?: number;
+  /** heat_tiles: how many fresh heat tiles ignite each turn (and seed the board). */
+  spawnPerTurn?: number;
 }
 
 export interface BossModifier {
@@ -39,6 +41,20 @@ export interface ModifierState {
   heat?: HeatEntry[];
   boost?: string[];
   factor?: number;
+}
+
+/**
+ * Pick `want` distinct cells from a rows×cols grid, shuffled with `rng`.
+ * Fisher-Yates over a row-major pool — deterministic for a given rng sequence.
+ */
+function pickDistinctCells(rows: number, cols: number, want: number, rng: () => number): CellCoord[] {
+  const all: CellCoord[] = [];
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) all.push({ row: r, col: c });
+  for (let i = all.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = all[i]; all[i] = all[j]; all[j] = tmp;
+  }
+  return all.slice(0, Math.min(Math.max(0, want), all.length));
 }
 
 /**
@@ -71,20 +87,19 @@ export function applyModifierToFreshGrid(grid: ModifierGridCell[][] | null | und
   if (type === "rubble_blocks" || type === "hide_resources") {
     const want: number = (params.count ?? params.hidden ?? 0);
     const flag: "rubble" | "hidden" = type === "rubble_blocks" ? "rubble" : "hidden";
-    // Build a pool of all grid positions, shuffle with rng, take 'want'
-    const allCells: CellCoord[] = [];
-    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) allCells.push({ row: r, col: c });
-    // Fisher-Yates shuffle using rng
-    for (let i = allCells.length - 1; i > 0; i--) {
-      const j = Math.floor(rng() * (i + 1));
-      const tmp = allCells[i]; allCells[i] = allCells[j]; allCells[j] = tmp;
-    }
-    const cells = allCells.slice(0, Math.min(want, allCells.length));
+    const cells = pickDistinctCells(rows, cols, want, rng);
     for (const { row: r, col: c } of cells) grid[r][c][flag] = true;
     return type === "rubble_blocks" ? { rubble: cells } : { hidden: cells };
   }
 
-  if (type === "heat_tiles") return { heat: [] };
+  if (type === "heat_tiles") {
+    // Seed the board with the per-turn allotment so the drake is visibly active
+    // from turn one; tickModifier ignites further tiles each turn.
+    const seed = params.spawnPerTurn ?? params.count ?? 0;
+    const cells = pickDistinctCells(rows, cols, seed, rng);
+    for (const { row: r, col: c } of cells) grid[r][c].heat = true;
+    return { heat: cells.map(({ row, col }) => ({ row, col, age: 0 })) };
+  }
 
   if (type === "respawn_boost") return { boost: params.boost, factor: params.factor };
 
@@ -103,7 +118,9 @@ export interface TickModifierResult { newState: GameState }
 
 /**
  * tickModifier — advances modifier state one turn.
- * For heat_tiles: increments ages, burns at burnAfter threshold.
+ * For heat_tiles: ages every heat tile, burns a random stored resource for any
+ * tile that has been alight past `burnAfter` (then the tile burns out), and
+ * ignites `spawnPerTurn` fresh tiles on still-cool cells so the heat spreads.
  * Returns { newState }.
  */
 export function tickModifier(state: GameState, modifier: BossModifier): TickModifierResult {
@@ -126,6 +143,24 @@ export function tickModifier(state: GameState, modifier: BossModifier): TickModi
       }
     } else {
       surviving.push(h);
+    }
+  }
+
+  // Ignite this turn's fresh tiles on cells that aren't already alight.
+  const spawnPerTurn = modifier.params.spawnPerTurn ?? 0;
+  if (spawnPerTurn > 0) {
+    const rows = state.grid?.length ?? 6;
+    const cols = state.grid?.[0]?.length ?? 6;
+    const occupied = new Set(surviving.map((h) => `${h.row},${h.col}`));
+    const free: CellCoord[] = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+      if (!occupied.has(`${r},${c}`)) free.push({ row: r, col: c });
+    }
+    const want = Math.min(spawnPerTurn, free.length);
+    for (let i = 0; i < want; i++) {
+      const j = Math.floor(Math.random() * free.length);
+      const cell = free.splice(j, 1)[0];
+      surviving.push({ row: cell.row, col: cell.col, age: 0 });
     }
   }
 
