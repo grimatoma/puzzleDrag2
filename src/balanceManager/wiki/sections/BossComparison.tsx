@@ -40,7 +40,7 @@ export function BossComparison() {
 
   return (
     <section id="boss-comparison">
-      <div className="wiki-section-heading mb-2">Boss comparison</div>
+      <h2 className="wiki-section-heading mb-2">Boss comparison</h2>
       <div
         className="wiki-table-scroll"
         style={{

@@ -116,7 +116,7 @@ export function AchievementCard({ achievement }: AchievementCardProps) {
 
   return (
     <section id="achievement">
-      <div className="wiki-section-heading mb-2">Achievement</div>
+      <h2 className="wiki-section-heading mb-2">Achievement</h2>
 
       <div
         style={{

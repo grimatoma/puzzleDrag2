@@ -97,7 +97,7 @@ export function BuildingGrants({ buildingId }: BuildingGrantsProps) {
 
   return (
     <section id="building-grants">
-      <div className="wiki-section-heading mb-2">Tools produced</div>
+      <h2 className="wiki-section-heading mb-2">Tools produced</h2>
       <div
         style={{
           padding: "12px 14px",

@@ -45,7 +45,7 @@ export function NpcGifts({ npcId }: NpcGiftsProps) {
 
   return (
     <section id="npc-gifts">
-      <div className="wiki-section-heading mb-2">Gift preferences</div>
+      <h2 className="wiki-section-heading mb-2">Gift preferences</h2>
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
         <GiftRow heading="Loves" items={loves} />
         <GiftRow heading="Likes" items={likes} />

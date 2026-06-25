@@ -44,7 +44,7 @@ export function BuildingAbilities({ conceptId, entityKey, entity }: BuildingAbil
 
   return (
     <section id="host-abilities">
-      <div className="wiki-section-heading mb-2">{heading}</div>
+      <h2 className="wiki-section-heading mb-2">{heading}</h2>
       <RelationRefGrid links={links} />
     </section>
   );

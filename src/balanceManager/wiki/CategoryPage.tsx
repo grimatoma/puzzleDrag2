@@ -154,9 +154,9 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
       <div className="wiki-concept-hero">
         {/* Title row */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="wiki-concept-title">
+          <h1 className="wiki-concept-title" style={{ margin: 0 }}>
             {concept.label}
-          </span>
+          </h1>
           <StatusBadge status={status} />
         </div>
 
@@ -192,9 +192,9 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
       {conceptId === "tiles" ? (
         <div data-testid="wiki-entry-gallery" className="flex flex-col gap-4">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="wiki-section-heading">
+            <h2 className="wiki-section-heading">
               Entries ({entries.length})
-            </div>
+            </h2>
             <IconVariantToggle value={tileIconVariant} onChange={setTileIconVariant} />
           </div>
           {groupTileEntries(entries).map((subGroup) => (
@@ -235,9 +235,9 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
         </div>
       ) : conceptId === "tools" ? (
         <div data-testid="wiki-entry-gallery" className="flex flex-col gap-4">
-          <div className="wiki-section-heading">
+          <h2 className="wiki-section-heading">
             Entries ({entries.length})
-          </div>
+          </h2>
           {groupToolEntries(entries).map((group) => (
             <section key={group.boardKind} className="flex flex-col gap-3">
               {/* Board-kind band heading — icon + label, ember accent */}
@@ -264,9 +264,9 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
         </div>
       ) : (
         <div data-testid="wiki-entry-gallery">
-          <div className="wiki-section-heading mb-2">
+          <h2 className="wiki-section-heading mb-2">
             Entries ({galleryEntries.length})
-          </div>
+          </h2>
           {isResources && (
             <div
               role="group"
