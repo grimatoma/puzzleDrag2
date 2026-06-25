@@ -142,13 +142,19 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
     const cssW = host.clientWidth || COLS * TILE + 80;
     const cssH = host.clientHeight || ROWS * TILE + 80;
 
+    // Guards the async-boot race: if the component unmounts while phaser is
+    // still dynamically importing, the cleanup below runs while gameRef is null,
+    // then the game is created afterward and never destroyed. `cancelled` lets
+    // the boot bail (or tear the game back down) so no orphaned WebGL context
+    // leaks.
+    let cancelled = false;
     (async () => {
       try {
         const [{ default: Phaser }, { GameScene }] = await Promise.all([
           import("phaser"),
           import("./src/GameScene.js"),
         ]);
-        if (!hostRef.current) return; // unmounted while loading
+        if (cancelled || !hostRef.current) return; // unmounted/cancelled while loading
         gameRef.current = new Phaser.Game({
           type: Phaser.AUTO,
           width: cssW * dpr,
@@ -248,6 +254,12 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
             },
           },
         });
+        // Unmounted during the synchronous-construct → boot window: tear it down.
+        if (cancelled) {
+          gameRef.current?.__resizeObserver?.disconnect();
+          gameRef.current?.destroy(true);
+          gameRef.current = null;
+        }
       } catch (err) {
         console.error("Failed to load Phaser:", err);
         setLoading(false);
@@ -256,6 +268,7 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
     })();
 
     return () => {
+      cancelled = true;
       gameRef.current?.__resizeObserver?.disconnect();
       gameRef.current?.destroy(true);
       gameRef.current = null;
