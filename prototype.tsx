@@ -128,7 +128,11 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
 
   useEffect(() => {
     if (!hostRef.current || gameRef.current) return;
-    runSelfTests();
+    // Dev-only smoke check. Its invariants assume a pristine state, but
+    // createInitialState() restores from localStorage — so on a returning
+    // player's save (e.g. an active farm run) it logs a misleading
+    // console.assert. Gate to dev so production consoles stay clean.
+    if (import.meta.env.DEV) runSelfTests();
     const host = hostRef.current;
     // Render the canvas at the device pixel ratio so tiles aren't bilinearly
     // upscaled by the browser on retina/mobile screens. The game's internal

@@ -141,11 +141,22 @@ const HEADING_STYLES: Record<string, React.CSSProperties> = {
  * @param keyPrefix  — A string key prefix for stable React list keys.
  * @returns A React node, or null to indicate the node should be dropped.
  */
+// React rejects raw text (incl. indentation whitespace) as a direct child of
+// table-structure elements (validateDOMNesting). Authored HTML is pretty-printed,
+// so the parsed DOM has whitespace text nodes between <table>/<tbody>/<tr> — drop them.
+const TABLE_CONTEXT_TAGS = new Set(["table", "thead", "tbody", "tfoot", "tr", "colgroup"]);
+function isTableContext(parent: Node | null): boolean {
+  const tag = (parent as Element | null)?.tagName?.toLowerCase();
+  return !!tag && TABLE_CONTEXT_TAGS.has(tag);
+}
+
 function convertNode(node: Node, keyPrefix: string): React.ReactNode {
   // ── Text node ─────────────────────────────────────────────────────────────
   if (node.nodeType === Node.TEXT_NODE) {
     const text = (node as Text).data;
     if (!text) return null;
+    // Whitespace-only text inside a table structure is invalid DOM nesting.
+    if (!text.trim() && isTableContext(node.parentNode)) return null;
 
     // If the text contains [[…]], parse and convert wikilinks.
     if (text.includes("[[")) {

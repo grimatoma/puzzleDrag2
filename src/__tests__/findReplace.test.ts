@@ -108,6 +108,26 @@ describe("applyReplacements", () => {
     expect(beat.lines[0].text).toBe("X X X");
   });
 
+  it("replaces matches in a later field even when an earlier field matched further right (regex lastIndex reset)", () => {
+    // Regression: the gate `re.test(item.text)` uses a global regex whose
+    // stateful lastIndex carried across fields. A first field matching far to
+    // the right left lastIndex past the start of a later, shorter field, so the
+    // later field's match was a false negative and never got replaced.
+    const d = draftWith({
+      newBeats: [{
+        id: "x", title: "x",
+        lines: [
+          { speaker: null, text: "aaaaaaaaaaaaaaaaaaaa hearth" }, // match far right
+          { speaker: null, text: "hearth" },                       // match at index 0
+        ],
+      }],
+    });
+    const next = applyReplacements(d, "hearth", "flame");
+    const beat = effectiveBeat("x", next);
+    expect(beat.lines[0].text).toBe("aaaaaaaaaaaaaaaaaaaa flame");
+    expect(beat.lines[1].text).toBe("flame"); // stayed "hearth" before the fix
+  });
+
   it("preserves choice ids and speaker fields", () => {
     const d = draftWith({
       newBeats: [{
