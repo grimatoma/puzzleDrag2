@@ -32,11 +32,20 @@ const MINE_HAZARD_IDS = new Set(HAZARDS.map((h) => h.id));
 
 type Rec = Record<string, unknown> | null;
 
+/**
+ * A "tone" tags a fact by what KIND of key detail it is, so the gallery card
+ * can colour-code it (powers vs produced goods vs inputs vs unlocks). Omitted
+ * for plain descriptive metadata (level, cost, biome, …), which renders neutral.
+ */
+export type FactTone = "power" | "craft" | "ingredient" | "unlock";
+
 export interface Fact {
   label: string;
   value: string;
   /** Optional icon key to render alongside the fact value. */
   iconKey?: string;
+  /** Optional colour tone for the gallery card chip (see {@link FactTone}). */
+  tone?: FactTone;
 }
 
 /** Coerce a value to a display string. Objects are JSON-stringified. */
@@ -195,7 +204,7 @@ function abilityFacts(abilities: unknown): Fact[] {
     }
     byLabel.get(phrase.label)!.push(phrase.value);
   }
-  return order.map((label) => ({ label, value: byLabel.get(label)!.join(", ") }));
+  return order.map((label) => ({ label, value: byLabel.get(label)!.join(", "), tone: "power" as const }));
 }
 
 /**
@@ -209,9 +218,9 @@ export function infoboxFacts(conceptId: string, key: string, e: Rec): Fact[] {
 
   const f: Fact[] = [];
 
-  const add = (label: string, v: unknown): void => {
+  const add = (label: string, v: unknown, tone?: FactTone): void => {
     if (v !== undefined && v !== null) {
-      f.push({ label, value: str(v) });
+      f.push({ label, value: str(v), ...(tone ? { tone } : {}) });
     }
   };
 
@@ -264,13 +273,13 @@ export function infoboxFacts(conceptId: string, key: string, e: Rec): Fact[] {
     case "recipes": {
       // Output + a simplified ingredient list lead; station / tier follow.
       // Fields: item (output), inputs (ingredients), station, tier (optional)
-      if (e["item"] != null) add("Output", itemLabel(e["item"]));
+      if (e["item"] != null) add("Output", itemLabel(e["item"]), "craft");
       const inputs = e["inputs"];
       if (inputs != null && typeof inputs === "object") {
         const parts = Object.entries(inputs as Record<string, unknown>).map(
           ([k, v]) => `${str(v)} ${itemLabel(k)}`,
         );
-        if (parts.length > 0) add("Ingredients", parts.join(", "));
+        if (parts.length > 0) add("Ingredients", parts.join(", "), "ingredient");
       }
       add("Station", e["station"]);
       if (e["tier"] != null) add("Tier", e["tier"]);
@@ -283,9 +292,9 @@ export function infoboxFacts(conceptId: string, key: string, e: Rec): Fact[] {
       // level and cost. Fields: abilities, unlocked tiles, station, lv, cost
       f.push(...abilityFacts(e["abilities"]));
       const unlocks = buildingUnlocksValue(key);
-      if (unlocks != null) add("Unlocks", unlocks);
+      if (unlocks != null) add("Unlocks", unlocks, "unlock");
       const crafts = buildingCraftsValue(key);
-      if (crafts != null) add("Crafts", crafts);
+      if (crafts != null) add("Crafts", crafts, "craft");
       add("Level", e["lv"]);
       // Summarise cost as a short string
       const cost = e["cost"];

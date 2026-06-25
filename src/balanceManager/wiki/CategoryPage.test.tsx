@@ -443,6 +443,19 @@ describe("CategoryPage — power/ingredient fact chips", () => {
     expect(facts.some((t) => t.includes("Bread"))).toBe(true);
   });
 
+  it("colour-codes key-detail chips with a data-tone (power / craft)", () => {
+    const { container } = renderPage("buildings");
+    const gallery = container.querySelector("[data-testid='wiki-entry-gallery']")!;
+    expect(gallery.querySelector('.wiki-card-fact[data-tone="power"]')).not.toBeNull();
+    expect(gallery.querySelector('.wiki-card-fact[data-tone="craft"]')).not.toBeNull();
+  });
+
+  it("colour-codes recipe ingredient chips with data-tone='ingredient'", () => {
+    const { container } = renderPage("recipes");
+    const gallery = container.querySelector("[data-testid='wiki-entry-gallery']")!;
+    expect(gallery.querySelector('.wiki-card-fact[data-tone="ingredient"]')).not.toBeNull();
+  });
+
   it("tiles — cards surface ability powers and omit the redundant 'Kind' chip", () => {
     const { container } = renderPage("tiles");
     const facts = galleryFactTexts(container);

@@ -845,41 +845,65 @@
 /* ── Entity card fact chips ──────────────────────────────────────────────────── */
 /*
  * Rendered below the entity name on every gallery card that carries `facts`.
- * Keep these tiny and muted — they are supplemental, not primary content.
+ * These are the entity's KEY DETAILS (its powers, what it crafts, what it
+ * costs to make, what it unlocks) — not throwaway tags — so they read as bold,
+ * colour-coded pills. A fact's `data-tone` picks its hue; plain descriptive
+ * facts (level, biome, …) stay in the neutral style below.
  */
 
 .wiki-root .wiki-card-facts {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 3px 4px;
+  gap: 4px;
   width: 100%;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .wiki-root .wiki-card-fact {
+  /* Default tone for neutral (untoned) descriptive chips. */
+  --wiki-fact-tone: var(--wiki-ink-subtle);
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 5px;
-  border-radius: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
   font-family: var(--wiki-font-body);
-  font-size: 9px;
-  font-weight: 500;
-  color: var(--wiki-ink-subtle);
-  background: color-mix(in srgb, var(--wiki-parchment-deep) 70%, var(--wiki-border));
-  border: 1px solid color-mix(in srgb, var(--wiki-border) 50%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--wiki-ink);
+  background: color-mix(in srgb, var(--wiki-parchment-deep) 55%, var(--wiki-border));
+  border: 1px solid color-mix(in srgb, var(--wiki-border) 65%, transparent);
   white-space: nowrap;
-  line-height: 1.4;
+  line-height: 1.45;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .wiki-root .wiki-card-fact__label {
-  color: color-mix(in srgb, var(--wiki-ink-subtle) 70%, var(--wiki-ink));
-  font-weight: 600;
+  color: var(--wiki-ink-subtle);
+  font-weight: 700;
   margin-right: 1px;
+}
+
+/* Key-detail tones — each kind of headline fact gets its own hue (drawn from
+   the wiki section palette) so a glance tells powers from produced goods from
+   inputs from unlocks. The colour flows through one --wiki-fact-tone var. */
+.wiki-root .wiki-card-fact[data-tone="power"]      { --wiki-fact-tone: #c9980a; } /* gold — abilities / boons */
+.wiki-root .wiki-card-fact[data-tone="craft"]      { --wiki-fact-tone: #4f9e57; } /* green — produced / crafted */
+.wiki-root .wiki-card-fact[data-tone="ingredient"] { --wiki-fact-tone: #4a72a8; } /* blue — inputs / ingredients */
+.wiki-root .wiki-card-fact[data-tone="unlock"]     { --wiki-fact-tone: #8a6fb0; } /* violet — unlocks new content */
+
+.wiki-root .wiki-card-fact[data-tone] {
+  font-weight: 700;
+  color: var(--wiki-ink);
+  background: color-mix(in srgb, var(--wiki-fact-tone) 16%, var(--wiki-parchment));
+  border-color: color-mix(in srgb, var(--wiki-fact-tone) 55%, var(--wiki-border));
+}
+
+.wiki-root .wiki-card-fact[data-tone] .wiki-card-fact__label {
+  color: color-mix(in srgb, var(--wiki-fact-tone) 68%, var(--wiki-ink));
 }
 
 /* ── Reference section (collapsible developer-only wrapper) ──────────────────── */
