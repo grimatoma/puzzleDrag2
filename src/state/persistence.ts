@@ -42,6 +42,8 @@ export function loadSavedState(): SavedState | null {
   } catch (e) { console.warn("[hearth] save data corrupt, starting fresh:", e); return null; }
 }
 
+let _warnedPersistFail = false;
+
 export function persistStateNow(state: GameState): void {
   try {
     const out: Record<string, unknown> = {};
@@ -52,7 +54,21 @@ export function persistStateNow(state: GameState): void {
       out.inventory = parseZoneInventories(out.inventory);
     }
     localStorage.setItem(SAVE_KEY, JSON.stringify(out));
-  } catch { /* storage unavailable (private browsing / quota) */ }
+  } catch (e) {
+    // Storage unavailable (private browsing) or full (quota). Persist runs every
+    // frame, so warn ONCE rather than spamming — but never go silent: a swallowed
+    // quota error means the player's progress isn't being saved.
+    if (!_warnedPersistFail) {
+      _warnedPersistFail = true;
+      const quota = e instanceof Error && /quota/i.test(`${e.name} ${e.message}`);
+      console.warn(
+        quota
+          ? "[hearth] storage quota exceeded — progress may not be saved"
+          : "[hearth] could not persist save (storage unavailable):",
+        e,
+      );
+    }
+  }
 }
 
 let _pendingPersist: GameState | null = null;

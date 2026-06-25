@@ -136,6 +136,9 @@ export function applyReplacements(draft: StoryDraft, query: string, replacement:
     let nextBeat = beat;
     let changed = false;
     for (const item of iterateText(beat, id)) {
+      // `re` may be global (g flag), making .test() stateful via lastIndex.
+      // Reset before each field or later fields get false-negative matches.
+      re.lastIndex = 0;
       if (!re.test(item.text)) continue;
       nextBeat = replaceField(nextBeat, item.field, item.index, transform);
       changed = true;
