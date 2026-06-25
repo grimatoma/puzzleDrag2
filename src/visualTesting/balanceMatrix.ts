@@ -14,9 +14,14 @@ export const BALANCE_VISUAL_SCENARIOS = [
   { id: 'balance-building-powder-store', hash: '#/buildings/buildings:powder_store', diff: domDiff },
 ];
 
+// Desktop smoke set: kept deliberately small and DOM-only. The recipes/ability/
+// building scenes were removed because they render entity icons via Canvas, and
+// canvas raster is not portable across machines (GPU/font rasterization differs
+// CI vs local, and `animations:'disabled'` does not freeze canvas) — so those
+// goldens were permanently red on CI regardless of content. They also churn on
+// every icon/roster edit. The narrative page is plain DOM text, so it is stable
+// and portable. The full BALANCE_VISUAL_SCENARIOS set (incl. the canvas pages)
+// still runs via `test:visual:all` for local review.
 export const BALANCE_VISUAL_SMOKE_SCENARIO_IDS = [
   'balance-narrative-page',
-  'balance-recipes-category',
-  'balance-ability-article',
-  'balance-building-powder-store',
 ];

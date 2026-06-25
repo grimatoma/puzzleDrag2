@@ -7,12 +7,19 @@ test('menu opens, settings/about tabs work', async ({ page }) => {
   await expect(page.getByText('🔥 Hearthlands')).toBeVisible();
 
   // Tab buttons are on the menu's MainTab. Settings/About each replace the
-  // main tab, so we go back between switches.
-  await page.getByRole('button', { name: '⚙ Settings' }).click();
+  // main tab, so we go back between switches. Gate each click on the target
+  // button being visible first — the main tab re-mounts on every Back, and
+  // clicking a tab mid-transition is what made this spec flake under CI load.
+  const settingsBtn = page.getByRole('button', { name: '⚙ Settings' });
+  await expect(settingsBtn).toBeVisible();
+  await settingsBtn.click();
   await expect(page.getByText('Sound Effects')).toBeVisible();
   await page.getByRole('button', { name: '← Back' }).click();
 
-  await page.getByRole('button', { name: 'ℹ About' }).click();
+  // Wait for the main tab to come back before reaching for the About tab.
+  await expect(settingsBtn).toBeVisible();
+  const aboutBtn = page.getByRole('button', { name: 'ℹ About' });
+  await aboutBtn.click();
   await expect(page.getByText(/Hearthlands · v/)).toBeVisible();
 });
 
