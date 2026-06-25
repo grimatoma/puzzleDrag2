@@ -88,9 +88,20 @@ describe("8.1 — Boss board modifiers", () => {
     expect(tileIsChainable({ frozen: false })).toBe(true);
   });
 
-  it("heat_tiles: age 1 → 2 → burn 1 random inventory unit", () => {
-    const ed = requireBoss("ember_drake");
+  it("heat_tiles: seeds spawnPerTurn tiles on a fresh grid", () => {
+    const ed = requireBoss("ember_drake"); // params: { spawnPerTurn: 1, burnAfter: 2 }
+    const grid = makeTestGrid(6, 6);
+    const r = applyModifierToFreshGrid(grid, ed.modifier, () => 0.5);
+    expect(r.heat).toHaveLength(1);
+    const seeded = r.heat![0];
+    expect(seeded.age).toBe(0);
+    expect(grid[seeded.row][seeded.col].heat).toBe(true);
+  });
+
+  it("heat_tiles: ages each turn, burns a stored resource past burnAfter, then the tile burns out", () => {
+    const ed = requireBoss("ember_drake"); // burnAfter: 2, spawnPerTurn: 1
     let s = mergeTestState({
+      grid: makeTestGrid(6, 6),
       inventory: { home: { tile_grass_grass: 5, tile_tree_oak: 3 } },
       boss: {
         id: "ember_drake",
@@ -101,10 +112,35 @@ describe("8.1 — Boss board modifiers", () => {
       },
     });
     s = tickModifier(s, ed.modifier).newState;
-    expect(bossBag(s)?.modifierState?.heat?.[0].age).toBe(2);
+    // The original tile aged 1 → 2 (survives) and one fresh tile ignited.
+    const heat1 = bossBag(s)?.modifierState?.heat ?? [];
+    expect(heat1.find((h) => h.row === 2 && h.col === 3)?.age).toBe(2);
+    expect(heat1).toHaveLength(2);
     s = tickModifier(s, ed.modifier).newState;
+    // The original is now age 3 (> burnAfter): it scorches exactly one stored
+    // unit and is removed. No surviving tile is ever older than burnAfter.
     expect(inv(s).tile_grass_grass + inv(s).tile_tree_oak).toBe(7);
-    expect(bossBag(s)?.modifierState?.heat).toHaveLength(0);
+    const heat2 = bossBag(s)?.modifierState?.heat ?? [];
+    expect(heat2.some((h) => h.age > (ed.modifier.params.burnAfter as number))).toBe(false);
+  });
+
+  it("heat_tiles: spreads spawnPerTurn fresh tiles each turn", () => {
+    const ed = requireBoss("ember_drake"); // spawnPerTurn: 1
+    let s = mergeTestState({
+      grid: makeTestGrid(6, 6),
+      inventory: { home: {} },
+      boss: {
+        id: "ember_drake",
+        target: { resource: "iron_bar", amount: 3 },
+        progress: 0,
+        turnsRemaining: 10,
+        modifierState: { heat: [] },
+      },
+    });
+    s = tickModifier(s, ed.modifier).newState;
+    expect(bossBag(s)?.modifierState?.heat).toHaveLength(1);
+    s = tickModifier(s, ed.modifier).newState;
+    expect(bossBag(s)?.modifierState?.heat).toHaveLength(2); // both still cool (age ≤ burnAfter)
   });
 
   it("rubble_blocks: 4 rubble cells, not chainable", () => {

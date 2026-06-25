@@ -167,6 +167,20 @@ describe("boss slice — CHAIN_COLLECTED progress + auto-resolve", () => {
     expect(bossOf(s1)?.progress).toBe(5);
   });
 
+  it("CHAIN_COLLECTED with no resource key does NOT credit a resource-specific boss", () => {
+    // Regression: the guard once credited the boss for any *unkeyed* collection
+    // (`!resourceKey`), so unrelated gains leaked into progress. A boss with a
+    // specific target resource must only advance on that resource.
+    const s0 = baseState({
+      boss: { key: "frostmaw", resource: "tile_tree_oak", targetCount: 30, progress: 5, turnsLeft: 5 },
+    });
+    const s1 = bossReduce(s0, {
+      type: "CHAIN_COLLECTED",
+      payload: { gained: 4 }, // no resource / resourceKey / key
+    } as Action);
+    expect(bossOf(s1)?.progress).toBe(5);
+  });
+
   it("CHAIN_COLLECTED that hits target auto-resolves with a win", () => {
     const s0 = baseState({
       boss: { key: "frostmaw", resource: "tile_tree_oak", targetCount: 10, progress: 7, turnsLeft: 5 },
