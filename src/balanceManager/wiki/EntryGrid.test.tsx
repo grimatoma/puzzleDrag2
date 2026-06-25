@@ -165,6 +165,25 @@ describe("EntryGrid — fact chips", () => {
     expect(body).toContain("Biome:");
     expect(body).toContain("Farm");
   });
+
+  it("applies data-tone for colour-coded chips and omits it for plain facts", () => {
+    const entries: WikiEntry[] = [
+      {
+        key: "test",
+        name: "Test",
+        facts: [
+          { label: "Turns", value: "+1/session", tone: "power" },
+          { label: "Level", value: "1" },
+        ],
+      },
+    ];
+    const { container } = renderWithView("player", entries);
+    expect(container.querySelector('.wiki-card-fact[data-tone="power"]')).not.toBeNull();
+    // The untoned chip carries no data-tone attribute.
+    const chips = Array.from(container.querySelectorAll(".wiki-card-fact"));
+    const plain = chips.find((c) => (c.textContent ?? "").includes("Level"));
+    expect(plain?.getAttribute("data-tone")).toBeNull();
+  });
 });
 
 // ─── Placeholder visual (no iconKey, no emoji) ─────────────────────────────────

@@ -67,6 +67,7 @@ function enrichEntry(conceptId: string, entry: WikiEntry): WikiEntry {
     value: f.value,
     label: f.label,
     iconKey: f.iconKey,
+    tone: f.tone,
   }));
   return { ...entry, facts };
 }

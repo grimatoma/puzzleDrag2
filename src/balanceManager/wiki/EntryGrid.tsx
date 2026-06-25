@@ -25,6 +25,12 @@ export interface WikiEntryFact {
   value: string;
   /** Optional icon key to render before the value text. */
   iconKey?: string;
+  /**
+   * Optional colour tone — tags this chip as a kind of key detail so the card
+   * can colour-code it (e.g. "power", "craft", "ingredient", "unlock"). Plain
+   * descriptive facts omit it and render in the neutral chip style.
+   */
+  tone?: string;
 }
 
 export interface WikiEntry {
@@ -205,7 +211,11 @@ export default function EntryGrid({
                 {visibleFacts.length > 0 && (
                   <div className="wiki-card-facts" style={{ justifyContent: "flex-start" }}>
                     {visibleFacts.map((fact, i) => (
-                      <span key={fact.label ?? fact.value ?? i} className="wiki-card-fact">
+                      <span
+                        key={fact.label ?? fact.value ?? i}
+                        className="wiki-card-fact"
+                        data-tone={fact.tone || undefined}
+                      >
                         {fact.iconKey && (
                           <Icon iconKey={fact.iconKey} size={12} style={{ flexShrink: 0 }} />
                         )}
