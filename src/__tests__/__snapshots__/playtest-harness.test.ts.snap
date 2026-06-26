@@ -439,38 +439,7 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       "note": "MARKET_PRICES lists block/iron_bar/coke/bread as buyable and BUY_RESOURCE does not itself check the caravan post, but the buy UI is shown only once caravan_post is built (Inventory.tsx) — and caravan_post costs block+iron_bar. So the market is a latent escape valve that is itself mine-gated. Opening it (an early buyable starter good, or ungating the buy UI) is the cheapest lever.",
     },
     "softlock": null,
-    "walls": [
-      {
-        "wall": {
-          "missing": [
-            {
-              "key": "gold_bar",
-              "reason": "no source reachable from this settlement's board or stations",
-            },
-          ],
-          "reachedName": "Smeltworks",
-          "reachedTier": 4,
-          "toName": "Foundry City",
-          "toTier": 5,
-        },
-        "zone": "quarry",
-      },
-      {
-        "wall": {
-          "missing": [
-            {
-              "key": "gold_bar",
-              "reason": "no source reachable from this settlement's board or stations",
-            },
-          ],
-          "reachedName": "Gem Galleries",
-          "reachedTier": 2,
-          "toName": "Deephold",
-          "toTier": 3,
-        },
-        "zone": "caves",
-      },
-    ],
+    "walls": [],
   },
   "zones": [
     {
@@ -507,14 +476,9 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
         "zone": "home",
       },
       "id": "quarry",
-      "maxSelfTier": 4,
+      "maxSelfTier": 5,
       "reachableFromFreshSave": true,
-      "wall": {
-        "missing": [
-          "gold_bar",
-        ],
-        "toName": "Foundry City",
-      },
+      "wall": null,
     },
     {
       "gate": {
@@ -522,14 +486,9 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
         "zone": "quarry",
       },
       "id": "caves",
-      "maxSelfTier": 2,
+      "maxSelfTier": 3,
       "reachableFromFreshSave": true,
-      "wall": {
-        "missing": [
-          "gold_bar",
-        ],
-        "toName": "Deephold",
-      },
+      "wall": null,
     },
     {
       "gate": null,

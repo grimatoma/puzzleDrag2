@@ -89,7 +89,7 @@ describe("buildResourceCostMatrix", () => {
 
   it("reads recipe inputs for crafted resources", () => {
     const crown = row(buildResourceCostMatrix(), "gemcrown");
-    expect(crown.cells.gold_bar.original).toBe(2);
+    expect(crown.cells.gold_bar.original).toBe(1);
     expect(crown.cells.gold_bar.editPath).toBe("RECIPES.rec_gemcrown.inputs.gold_bar");
     expect(crown.group).toMatch(/^Crafted/);
   });
