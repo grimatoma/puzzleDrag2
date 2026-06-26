@@ -34,11 +34,6 @@ import { conceptHeadlineStats } from "./conceptStats.js";
 import { getEntity } from "./conceptEntities.js";
 import { infoboxFacts } from "./infoboxFacts.js";
 import { groupToolEntries } from "./toolGrouping.js";
-// Direct import — the graph is inside a collapsed section (graphOpen=false by
-// default) so it only renders when the user opens it. No lazy() needed since
-// the collapsed-by-default guard already ensures the graph isn't built until
-// the user expands the section.
-import RecipeGraph from "./RecipeGraph.jsx";
 import { EconomyRollup } from "./sections/EconomyRollup.jsx";
 import { BossComparison } from "./sections/BossComparison.jsx";
 import { WorkerComparison } from "./sections/WorkerComparison.jsx";
@@ -83,9 +78,6 @@ export interface CategoryPageProps {
 export function CategoryPage({ conceptId }: CategoryPageProps) {
   const { navigate } = useBalanceNav();
   const { view } = useWikiView();
-
-  // Tracks whether the recipe graph section is open (collapsed by default)
-  const [graphOpen, setGraphOpen] = useState(false);
 
   // Tiles page only: which icon representation the entry cards bake. "canvas"
   // (the general procedural icon) is the default; "pixel" swaps in each tile's
@@ -324,82 +316,6 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
           dev page stacks all three and exports the staged changes. */}
       {COST_MATRIX_CONCEPTS.has(conceptId) && (
         <LiveCostMatrix matrixId={conceptId as CostMatrixId} editable={view === "developer"} />
-      )}
-
-      {/* ── 4b. Recipe relationship graph (recipes concept only) ─────────── */}
-      {conceptId === "recipes" && (
-        <section>
-          {/* Native <details> for collapsible — collapsed by default so the
-              heavy graph only initialises when the user opens the section.
-              We use a controlled state toggle so RecipeGraph is only mounted
-              when open (avoids building the graph on every page view). */}
-          <details
-            open={graphOpen}
-            onToggle={(e) => setGraphOpen((e.currentTarget as HTMLDetailsElement).open)}
-            style={{ borderRadius: 8, overflow: "hidden" }}
-          >
-            <summary
-              onClick={(e) => {
-                // Explicitly mirror the native toggle into React state so the
-                // mount/unmount of RecipeGraph is React-controlled and
-                // testable even in jsdom (which doesn't fully emulate the
-                // native details/summary toggle behaviour).
-                e.preventDefault();
-                setGraphOpen((prev) => !prev);
-              }}
-              style={{
-                cursor: "pointer",
-                listStyle: "none",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "8px 12px",
-                background: COLORS.parchmentDeep,
-                border: `1px solid ${COLORS.border}`,
-                borderRadius: graphOpen ? "8px 8px 0 0" : 8,
-                fontSize: 13,
-                fontWeight: 600,
-                color: COLORS.ink,
-                userSelect: "none",
-              }}
-            >
-              {/* Chevron indicator */}
-              <span
-                aria-hidden
-                style={{
-                  display: "inline-block",
-                  width: 12,
-                  height: 12,
-                  fontSize: 10,
-                  lineHeight: "12px",
-                  textAlign: "center",
-                  transform: graphOpen ? "rotate(90deg)" : "rotate(0deg)",
-                  transition: "transform 150ms ease",
-                  color: COLORS.inkSubtle,
-                  flexShrink: 0,
-                }}
-              >
-                ▶
-              </span>
-              Recipe relationship graph
-            </summary>
-
-            {/* Only mount RecipeGraph when the section is open */}
-            {graphOpen && (
-              <div
-                style={{
-                  padding: 12,
-                  background: COLORS.parchment,
-                  border: `1px solid ${COLORS.border}`,
-                  borderTop: "none",
-                  borderRadius: "0 0 8px 8px",
-                }}
-              >
-                <RecipeGraph />
-              </div>
-            )}
-          </details>
-        </section>
       )}
 
       {/* ── 5. Field reference — hidden in player view, always at bottom ──── */}
