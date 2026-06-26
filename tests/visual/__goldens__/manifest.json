@@ -74,6 +74,17 @@
       "Compare UI and canvas output to the golden image."
     ]
   },
+  "desktop/crafting-menu.png": {
+    "scenarioId": "crafting-menu",
+    "routeHash": "#/crafting",
+    "view": null,
+    "actions": [],
+    "expectation": "Scenario crafting-menu renders correctly at #/crafting.",
+    "checklist": [
+      "Open #/crafting.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
   "desktop/inventory-grid-all.png": {
     "scenarioId": "inventory-grid-all",
     "routeHash": "#/inventory",

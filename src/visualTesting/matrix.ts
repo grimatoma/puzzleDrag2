@@ -113,6 +113,7 @@ const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
   { id: "achievements-trophies-mixed", state: "rich", hash: "#/achievements/trophies", diff: domDiff },
   { id: "achievements-collection-mixed", state: "rich", hash: "#/achievements/collection", diff: domDiff },
 
+  { id: "crafting-menu", state: "rich", hash: "#/crafting", diff: domDiff, skipProjects: ["iphone-portrait"] },
   { id: "crafting-locked-station", state: "fresh", hash: "#/crafting/bakery", diff: domDiff },
   { id: "crafting-bakery", state: "rich", hash: "#/crafting/bakery", diff: domDiff },
 
@@ -186,6 +187,7 @@ const expectationOverrideById: Record<string, string> = {
   "story-prompt": "The act1_arrival story modal is open with narrative text.",
   "story-win": "The act3 win/victory story beat is presented.",
   "town-market-news": "A market-news ticker bubble (e.g. Wood Shortage) is visible over the town.",
+  "crafting-menu": "The crafting building menu (drill-down level 1): a card per workshop with its ready/placed status.",
   // Retargeted to their real feature views
   "townsfolk-castle": "The Castle contribution view: the three needs with contribute progress and buttons.",
   "townsfolk-bosses": "The Bosses gallery view listing the boss roster.",
@@ -233,6 +235,7 @@ export const VISUAL_DESKTOP_SMOKE_SCENARIO_IDS = [
   "board-farm-chain-2-short",
   "board-mine-idle",
   "inventory-grid-all",
+  "crafting-menu",
   "crafting-bakery",
   "tiles-farm-grass",
   "map-current-home",

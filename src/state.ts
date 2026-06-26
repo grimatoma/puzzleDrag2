@@ -757,7 +757,13 @@ function coreReducer(state: GameState, action: Action): GameState {
       // armed tool deselects (with charge refunded). Tap-target arms had no
       // charge to refund; instant/rune/fertilizer arms get their charge back.
       const base = next === "board" ? state : disarmAllTools(state);
-      return { ...base, view: next, viewParams, craftingTab: action.craftingTab ?? (next === "crafting" ? base.craftingTab : null) };
+      // craftingTab is the drill-down station inside the Craft view. An
+      // explicit value on the action (a station id, or `null` from the in-view
+      // "back to buildings" control / a town building tap) always wins.
+      // Otherwise the current station is preserved across navigation so the
+      // drill-down survives switching to another tab and coming back.
+      const craftingTab = action.craftingTab !== undefined ? action.craftingTab : (base.craftingTab ?? null);
+      return { ...base, view: next, viewParams, craftingTab };
     }
     case "SET_VIEW_PARAMS":
       return { ...state, viewParams: { ...(state.viewParams ?? {}), ...(action.params ?? {}) } };
@@ -898,9 +904,15 @@ function coreReducer(state: GameState, action: Action): GameState {
       const incomingViewParams: Record<string, unknown> = r.viewParams ?? {};
       const next: GameState = { ...base, view, viewParams: incomingViewParams };
       if (view === "crafting") {
-        next.craftingTab = (incomingViewParams.tab as string | undefined) ?? base.craftingTab ?? null;
+        // Respect the URL exactly: `#/crafting` (no tab) is the building menu,
+        // `#/crafting/<station>` is the drill-down. Don't fall back to the
+        // remembered station here, or browser-back from a station could never
+        // reach the menu.
+        next.craftingTab = (incomingViewParams.tab as string | undefined) ?? null;
       } else {
-        next.craftingTab = null;
+        // Leaving Craft via the URL preserves the last station so returning to
+        // the tab restores the drill-down (it isn't encoded on other routes).
+        next.craftingTab = base.craftingTab ?? null;
       }
       next.modal = modal;
       if (modal === "menu") {
