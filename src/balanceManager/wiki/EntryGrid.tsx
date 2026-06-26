@@ -4,6 +4,13 @@ import Icon from "../../ui/Icon.jsx";
 import type { IconVariant } from "../../textures/iconRegistry.js";
 import { COLORS, hexToCss } from "../shared.jsx";
 import { useWikiView } from "./wikiView.js";
+import { reachabilityOf } from "../../game/reachability.js";
+
+// Grey wash applied to cards for entities the player has no unlock path to. The
+// hexes live in wikiTheme.css as --wiki-locked-*; referencing the CSS vars here
+// keeps the inline background/border in sync with the .--unreached CSS rules.
+const LOCKED_BG = "var(--wiki-locked-bg)";
+const LOCKED_BORDER = "var(--wiki-locked-border)";
 
 type CardSize = "s" | "m" | "l";
 // Cards lay out horizontally (visual on the left, details on the right). For
@@ -61,6 +68,7 @@ export default function EntryGrid({
   onSelect,
   renderVisual,
   iconVariant = "auto",
+  conceptId,
 }: {
   entries: WikiEntry[] | null | undefined;
   emptyLabel?: ReactNode;
@@ -78,6 +86,12 @@ export default function EntryGrid({
    * `"auto"` (live game behaviour). Used by the tiles page's canvas/pixel toggle.
    */
   iconVariant?: IconVariant;
+  /**
+   * Concept these entries belong to. When provided, each card's reachability is
+   * derived (via `reachabilityOf`) and entries with no unlock path ("not yet
+   * reachable") get a grey wash. Omit for concepts that aren't reachability-gated.
+   */
+  conceptId?: string;
 }) {
   const { view } = useWikiView();
   const [size, setSize] = useState<CardSize>("m");
@@ -128,6 +142,11 @@ export default function EntryGrid({
       {entries.map((entry: WikiEntry) => {
         const bar = colorBarStyle(entry.color);
         const isSelectable = onSelect != null;
+        // Grey only entities with NO unlock path ("unreachable"). "gated"
+        // (reachable via research / buy / daily) stays normal — it's reachable,
+        // just not on the default board. `reachabilityOf` is null for un-gated concepts.
+        const reach = conceptId ? reachabilityOf(conceptId, entry.key) : null;
+        const unreached = reach === "unreachable";
         // Visual: use iconKey if set, else emoji if set, else a muted initial placeholder
         const cardVisual = (() => {
           if (entry.iconKey) {
@@ -237,10 +256,12 @@ export default function EntryGrid({
             <button
               key={entry.key}
               type="button"
-              className="wiki-entry-card rounded-lg border flex flex-col cursor-pointer text-left w-full p-0 focus-visible:outline-2 focus-visible:outline-offset-2"
+              className={`wiki-entry-card rounded-lg border flex flex-col cursor-pointer text-left w-full p-0 focus-visible:outline-2 focus-visible:outline-offset-2${
+                unreached ? " wiki-entry-card--unreached" : ""
+              }`}
               style={{
-                background: COLORS.parchment,
-                borderColor: COLORS.border,
+                background: unreached ? LOCKED_BG : COLORS.parchment,
+                borderColor: unreached ? LOCKED_BORDER : COLORS.border,
                 minHeight: cfg.minHeight,
                 outlineColor: COLORS.ember,
               }}
@@ -255,10 +276,12 @@ export default function EntryGrid({
         return (
           <div
             key={entry.key}
-            className="wiki-entry-card rounded-lg border flex flex-col"
+            className={`wiki-entry-card rounded-lg border flex flex-col${
+              unreached ? " wiki-entry-card--unreached" : ""
+            }`}
             style={{
-              background: COLORS.parchment,
-              borderColor: COLORS.border,
+              background: unreached ? LOCKED_BG : COLORS.parchment,
+              borderColor: unreached ? LOCKED_BORDER : COLORS.border,
               minHeight: cfg.minHeight,
             }}
             title={entry.key}

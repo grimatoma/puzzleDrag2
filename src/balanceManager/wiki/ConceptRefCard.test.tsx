@@ -14,6 +14,7 @@ import {
 } from "./ConceptRefCard.jsx";
 import { getEntity } from "./conceptEntities.js";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
+import { findUnreachable } from "../../game/reachability.js";
 
 afterEach(() => cleanup());
 
@@ -110,6 +111,38 @@ describe("RecipeRelationsFlow", () => {
   });
 });
 
+
+describe("ConceptRefCard — not-yet-reachable greying", () => {
+  it("adds the --unreached class for a card whose entity has no unlock path", () => {
+    const unreachableBuilding = findUnreachable().buildings[0];
+    // Guard: this assertion only makes sense if the configured game actually has
+    // an unreachable building. If everything is reachable, there's nothing to grey.
+    if (unreachableBuilding == null) return;
+    const { container } = renderCard({
+      conceptId: "buildings",
+      entityKey: unreachableBuilding,
+      variant: "card",
+    });
+    expect(container.querySelector(".wiki-concept-ref-card--unreached")).not.toBeNull();
+  });
+
+  it("does NOT grey a reachable entity", () => {
+    // chapel is reachable in the configured game (used by the building test above).
+    const { container } = renderCard({ conceptId: "buildings", entityKey: "chapel", variant: "card" });
+    expect(container.querySelector(".wiki-concept-ref-card--unreached")).toBeNull();
+  });
+
+  it("greys the inline variant for an unreachable entity", () => {
+    const unreachableBuilding = findUnreachable().buildings[0];
+    if (unreachableBuilding == null) return;
+    const { container } = renderCard({
+      conceptId: "buildings",
+      entityKey: unreachableBuilding,
+      variant: "inline",
+    });
+    expect(container.querySelector(".wiki-concept-ref-inline--unreached")).not.toBeNull();
+  });
+});
 
 describe("ConceptRefCard — ability with host context", () => {
   it("renders instance params for grant_tool on powder_store", () => {

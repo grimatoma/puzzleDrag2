@@ -25,6 +25,7 @@ export default function MemberTiles({ conceptId, entityKey }) {
       <EntryGrid
         entries={tiles}
         onSelect={(key) => navigate(wikiNavTarget("tiles", key))}
+        conceptId="tiles"
       />
     </section>
   );

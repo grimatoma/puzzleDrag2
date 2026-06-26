@@ -227,6 +227,7 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
                     entries={catGroup.entries}
                     onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
                     iconVariant={tileIconVariant}
+                    conceptId={conceptId}
                   />
                 </div>
               ))}
@@ -258,6 +259,7 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
               <EntryGrid
                 entries={group.entries}
                 onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+                conceptId={conceptId}
               />
             </section>
           ))}
@@ -298,6 +300,7 @@ export function CategoryPage({ conceptId }: CategoryPageProps) {
           <EntryGrid
             entries={galleryEntries}
             onSelect={(key) => navigate(wikiNavTarget(conceptId, key))}
+            conceptId={conceptId}
             renderVisual={
               conceptId === "buildings"
                 ? (entry) => (
