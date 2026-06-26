@@ -121,11 +121,21 @@ export function applyUpdate(): void {
   }
 }
 
-// Manually poke the SW to check for a new deploy right now.
-export function checkForUpdate(): void {
-  registration?.update().catch(() => {
-    /* offline or transient */
-  });
+// Manually poke the SW to check for a new deploy right now. Resolves once the
+// check settles so callers can show accurate "checking…" feedback; never
+// rejects (offline/transient failures resolve quietly). If there's no
+// registration yet (SW still installing, or disabled in dev) we kick `start()`
+// so the watcher comes up and resolve without throwing.
+export function checkForUpdate(): Promise<void> {
+  start();
+  const reg = registration;
+  if (!reg) return Promise.resolve();
+  return reg.update().then(
+    () => {},
+    () => {
+      /* offline or transient */
+    },
+  );
 }
 
 // React binding: returns whether a new build is installed and waiting.

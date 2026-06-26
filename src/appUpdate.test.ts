@@ -85,4 +85,33 @@ describe("appUpdate watcher", () => {
     mod.checkForUpdate();
     expect(reg.update).toHaveBeenCalled();
   });
+
+  it("checkForUpdate resolves once the check settles", async () => {
+    const reg = makeRegistration();
+    installServiceWorker(reg, true);
+
+    const mod = await import("./appUpdate.js");
+    renderHook(() => mod.useAppUpdateReady());
+    await waitFor(() =>
+      expect((navigator.serviceWorker.getRegistration as ReturnType<typeof vi.fn>)).toHaveBeenCalled(),
+    );
+    await Promise.resolve();
+
+    await expect(mod.checkForUpdate()).resolves.toBeUndefined();
+  });
+
+  it("checkForUpdate resolves (does not reject) when the SW update fails", async () => {
+    const reg = makeRegistration();
+    reg.update = vi.fn().mockRejectedValue(new Error("offline"));
+    installServiceWorker(reg, true);
+
+    const mod = await import("./appUpdate.js");
+    renderHook(() => mod.useAppUpdateReady());
+    await waitFor(() =>
+      expect((navigator.serviceWorker.getRegistration as ReturnType<typeof vi.fn>)).toHaveBeenCalled(),
+    );
+    await Promise.resolve();
+
+    await expect(mod.checkForUpdate()).resolves.toBeUndefined();
+  });
 });
