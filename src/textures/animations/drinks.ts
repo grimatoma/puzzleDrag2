@@ -525,18 +525,20 @@ function animJuice(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.fillStyle = juice;
   ctx.fillRect(-12, -8, 24, 30);
 
-  // rising bubbles — bigger, streaming, growing toward the top.
+  // rising bubbles — more of them, faster, streaming and growing toward the top
+  // so the fizz reads at a glance (was too sparse/slow to notice).
   const juiceBubbles: Array<[number, number, number]> = [
-    [-5, 1.3, 0.1], [3, 1.5, 0.5], [-1, 1.1, 0.75], [6, 1.3, 0.3], [1, 1.0, 0.95],
+    [-5, 1.4, 0.1], [3, 1.6, 0.5], [-1, 1.2, 0.75], [6, 1.4, 0.3], [1, 1.1, 0.95],
+    [-7, 1.1, 0.62], [4, 1.3, 0.18], [-3, 1.0, 0.4], [7, 1.2, 0.86],
   ];
   juiceBubbles.forEach(([bx, br, phase]) => {
-    const p = loopPhase(t, 2.1, phase);
+    const p = loopPhase(t, 1.5, phase); // faster rise
     const y = 16 - p * 24;
     const grow = 1 + p * 0.4;
-    const a = 0.7 * Math.min(1, (1 - p) * 3.2);
+    const a = 0.78 * Math.min(1, (1 - p) * 3.2);
     ctx.fillStyle = `rgba(255,237,194,${a})`;
     ctx.beginPath();
-    ctx.arc(bx + Math.sin(t * 3 + phase * 7) * 0.9, y, br * grow, 0, TAU);
+    ctx.arc(bx + Math.sin(t * 3.4 + phase * 7) * 1.1, y, br * grow, 0, TAU);
     ctx.fill();
   });
 
@@ -576,11 +578,11 @@ function animJuice(ctx: CanvasRenderingContext2D, t: number): void {
 
   // Orange slice on the rim — NODS: an eased dip + tilt with a little overshoot,
   // as if it keeps starting to slide and catching itself.
-  const nodPhase = loopPhase(t, 3.2);
+  const nodPhase = loopPhase(t, 2.6);
   const nodDip = nodPhase < 0.45 ? easeOutBack(nodPhase / 0.45, 1.8) : easeInOutSine(1 - (nodPhase - 0.45) / 0.55);
   ctx.save();
-  ctx.translate(-9, -12 + nodDip * 1.8);
-  ctx.rotate(-0.3 - nodDip * 0.14); // dips its outer edge as it nods
+  ctx.translate(-9, -12 + nodDip * 3.4); // bigger dip so the nod reads at a glance
+  ctx.rotate(-0.3 - nodDip * 0.28); // dips its outer edge as it nods
   // peel
   ctx.fillStyle = "#ff9420";
   ctx.beginPath();
@@ -688,22 +690,30 @@ function animSmoothie(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.fill();
   });
 
-  // surface ellipse
+  // surface ellipse — wobbles: the level bobs AND tilts so it reads as a thick
+  // churning surface rather than a frozen disc (the missing "unmistakable" cue).
+  const smTilt = Math.sin(t * 2.0) * 0.07;
+  const smY = -8 + Math.sin(t * 1.6) * 0.8;
   ctx.fillStyle = "#ffa8cc";
   ctx.beginPath();
-  ctx.ellipse(0, -8 + Math.sin(t * 1.3) * 0.4, 9.6, 2.6, 0, 0, TAU);
+  ctx.ellipse(0, smY, 9.6 + Math.sin(t * 2.4) * 0.7, 2.6, smTilt, 0, TAU);
+  ctx.fill();
+  // a lighter crest sliding across the surface with the tilt.
+  ctx.fillStyle = "rgba(255,210,232,0.7)";
+  ctx.beginPath();
+  ctx.ellipse(Math.sin(t * 2.0) * 3.5, smY - 0.6, 4, 1.2, smTilt, 0, TAU);
   ctx.fill();
 
   // berry seed flecks — SETTLE: each falls on an eased loop, slowing toward the
-  // bottom, with a narrow horizontal drift (was a fast wide swim).
-  ctx.fillStyle = "rgba(120,16,50,0.6)";
+  // bottom, with a slow swirl drift so the churn reads (was near-static).
+  ctx.fillStyle = "rgba(120,16,50,0.65)";
   for (let i = 0; i < 9; i++) {
     const ph = (i * 0.37) % 1;
-    const fall = easeOutCubic(loopPhase(t, 5.0, ph)); // fast top, slow bottom
+    const fall = easeOutCubic(loopPhase(t, 4.0, ph)); // faster, fast top slow bottom
     const fy = -6 + fall * 13; // -6..7, decelerating
-    const fx = -7 + i * 1.75 + Math.sin(i * 1.3 + t * 0.5) * 1.2; // narrow drift
+    const fx = -7 + i * 1.75 + Math.sin(i * 1.3 + t * 1.2) * 1.8; // visible swirl drift
     ctx.beginPath();
-    ctx.arc(fx, fy, 0.95, 0, TAU);
+    ctx.arc(fx, fy, 1.0, 0, TAU);
     ctx.fill();
   }
   ctx.restore();
@@ -833,8 +843,9 @@ function animWater(ctx: CanvasRenderingContext2D, t: number): void {
   ];
   ice.forEach(([ix, iy, rot, ph]) => {
     ctx.save();
-    ctx.translate(ix + Math.sin(t * 1.4 + ph) * 0.7, iy + Math.sin(t * 1.9 + ph) * 0.8);
-    ctx.rotate(rot + Math.sin(t * 1.6 + ph) * 0.08);
+    // bigger bob + rock so the ice visibly clinks/jostles (was easy to miss).
+    ctx.translate(ix + Math.sin(t * 1.4 + ph) * 1.1, iy + Math.sin(t * 1.9 + ph) * 1.3);
+    ctx.rotate(rot + Math.sin(t * 1.6 + ph) * 0.14);
     // back/under face (cooler tone) — offset so a corner of it shows.
     ctx.fillStyle = "rgba(150,195,225,0.5)";
     ctx.beginPath();
@@ -925,7 +936,6 @@ function animWine(ctx: CanvasRenderingContext2D, t: number): void {
 
   // Glass rock: a slow eased tilt about the foot.
   const glassTilt = Math.sin(t * 1.0) * 0.05; // radians
-  const bowlSwing = breathe(t, 3.0, 1.0); // lateral settle of the slosh phase
 
   groundShadow(ctx, glassTilt * 30, 22, 12, 4, 0, 0.22);
 
@@ -979,8 +989,9 @@ function animWine(ctx: CanvasRenderingContext2D, t: number): void {
 
   // Wall-climbing slosh: the surface tilts OPPOSITE the glass (phase-lagged), and
   // we draw it as a tilted polygon whose high side rides up the leading wall.
-  const surfTilt = -glassTilt * 1.6 + Math.sin(t * 1.3 - 0.5) * 0.06; // lags glass
-  const cy = -8 + Math.cos(t * 1.3) * 0.5;
+  // A bit more amplitude so the swirl reads as an active drink, not a still pour.
+  const surfTilt = -glassTilt * 1.6 + Math.sin(t * 1.3 - 0.5) * 0.1; // lags glass
+  const cy = -8 + Math.cos(t * 1.3) * 0.7;
   const dx = 12;
   const dyL = -Math.sin(surfTilt) * dx; // left-edge lift
   const dyR = Math.sin(surfTilt) * dx; // right-edge lift
@@ -992,10 +1003,12 @@ function animWine(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.lineTo(-dx, 8);
   ctx.closePath();
   ctx.fill();
-  // surface highlight band riding the tilt
-  ctx.fillStyle = "rgba(220,80,110,0.5)";
+  // surface highlight band — a traveling glint that sweeps across the surface as
+  // the wine swirls (the clearest "this is moving" cue at a glance).
+  const glintX = Math.sin(t * 1.3 - 0.5) * 6.5;
+  ctx.fillStyle = "rgba(235,110,140,0.6)";
   ctx.beginPath();
-  ctx.ellipse(bowlSwing * 2, cy - 0.5, 4, 1.2, surfTilt, 0, TAU);
+  ctx.ellipse(glintX, cy - 0.5, 4.5, 1.3, surfTilt, 0, TAU);
   ctx.fill();
   // a brighter crest where the wine piles against the leading wall.
   const crestX = surfTilt > 0 ? 9 : -9;
@@ -1091,26 +1104,36 @@ function animMilk(ctx: CanvasRenderingContext2D, t: number): void {
   milk.addColorStop(0.5, "#fbf8f2");
   milk.addColorStop(1, "#ede6d8");
   ctx.fillStyle = milk;
-  ctx.fillRect(-12, -4, 26, 26);
+  ctx.fillRect(-12, -6, 26, 28); // top a touch above the surface so the bob never gaps
 
-  // milk surface — settles with the bob (counter-phase so it sloshes a touch).
-  const surfY = -4 - bob * 0.5;
-  ctx.fillStyle = "#ffffff";
+  // Milk SURFACE — bobs clearly (the level sways) and TILTS a touch so the white
+  // milk isn't a frozen white-on-white slab. A cool shadow band just under the
+  // surface line gives the level real contrast against the opaque milk (the old
+  // white-on-white ellipse was invisible — the core "dead" defect).
+  const slosh = Math.sin(t * 1.9) * 0.06; // surface tilt (radians), the lead motion
+  const surfY = -4 - bob * 0.7; // bigger level sway so the bob actually reads
+  // shaded trough just below the surface — this is what makes the level visible.
+  ctx.fillStyle = "rgba(196,210,222,0.55)";
   ctx.beginPath();
-  ctx.ellipse(0, surfY, 11, 3, 0, 0, TAU);
+  ctx.ellipse(0, surfY + 1.6, 10.6, 2.4, slosh, 0, TAU);
   ctx.fill();
-  // CREAM MENISCUS — a slightly creamier ring that climbs the inner walls as the
-  // milk settles (reads as the liquid wetting the glass; the missing life).
+  // milk surface disc — faintly cool so it reads as a meniscus, not blank milk.
+  ctx.fillStyle = "#f4f7fb";
+  ctx.beginPath();
+  ctx.ellipse(0, surfY, 11, 3, slosh, 0, TAU);
+  ctx.fill();
+  // CREAM MENISCUS — a creamy rim that climbs the inner walls as the milk
+  // settles (reads as the liquid wetting the glass); darker so it's visible.
   const climb = (bob + 0.7) * 0.5; // 0..~0.7, rises with the settle
-  ctx.strokeStyle = `rgba(255,250,235,${0.5 + capPop * 0.2})`;
+  ctx.strokeStyle = `rgba(214,224,234,${0.7 + capPop * 0.2})`;
   ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.ellipse(0, surfY, 10.4, 2.6 + climb, 0, 0, TAU);
+  ctx.ellipse(0, surfY, 10.4, 2.6 + climb, slosh, 0, TAU);
   ctx.stroke();
-  // cream tint just under the surface against the lit wall.
-  ctx.fillStyle = "rgba(255,252,240,0.5)";
+  // bright crest catching the light on the rising side of the slosh.
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
   ctx.beginPath();
-  ctx.ellipse(-5, surfY + 1.4, 3.4, 1.6, -0.2, 0, TAU);
+  ctx.ellipse(-4 + slosh * 40, surfY - 0.6, 3.6, 1.3, slosh, 0, TAU);
   ctx.fill();
   ctx.restore();
 
@@ -1129,7 +1152,7 @@ function animMilk(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.save();
   bottlePath(ctx);
   ctx.clip();
-  glint(ctx, loopPhase(t, 3.6), { span: 13, width: 5, angle: -0.5, intensity: 0.3, length: 30 });
+  glint(ctx, loopPhase(t, 3.6), { span: 14, width: 6, angle: -0.5, intensity: 0.42, length: 34 });
   ctx.restore();
 
   // Neck collar

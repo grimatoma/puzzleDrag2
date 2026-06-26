@@ -450,50 +450,87 @@ function drawSiftingScreen(ctx: CanvasRenderingContext2D) {
 function drawCoalHammer(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 16);
   woodHandle(ctx, 10, 20, -8, -14, 4);
-  // Head — chunky black hammer
+  // Head — a chunky cluster of black coal lumps bound to the handle top, NOT a
+  // flat metal slab. The faceted, knobbly silhouette plus the cool coal glints
+  // distinguish it from the silver/gold hammer siblings.
   ctx.save(); ctx.translate(-10, -16);
-  const g = ctx.createLinearGradient(0, 0, 0, 12);
-  g.addColorStop(0, "#5a5060"); g.addColorStop(0.5, "#2a2030"); g.addColorStop(1, "#0a0508");
-  ctx.fillStyle = g;
-  ctx.fillRect(-8, 0, 18, 12);
-  ctx.strokeStyle = "#0a0008"; ctx.lineWidth = 1.6;
-  ctx.strokeRect(-8, 0, 18, 12);
-  // Coal-flake glints on the head
-  ctx.fillStyle = "rgba(140,80,180,0.45)";
-  ctx.beginPath(); ctx.arc(-3, 4, 1.4, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(4, 8, 1.0, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(6, 3, 0.9, 0, Math.PI*2); ctx.fill();
+  // a few overlapping angular coal chunks, each shaded so it reads as a lump
+  const lumps: [number, number, number][] = [
+    [-3, 4, 7],   // big central chunk
+    [6, 6, 5.2],  // right chunk
+    [-1, 9, 4.4], // lower chunk
+    [3, 1, 4.0],  // upper-right chunk
+    [-5, 0, 3.6], // upper-left chunk
+  ];
+  lumps.forEach(([cx, cy, r]) => {
+    const g = ctx.createRadialGradient(cx - r*0.35, cy - r*0.35, 0.5, cx, cy, r);
+    g.addColorStop(0, "#48404f"); g.addColorStop(0.55, "#241b2c"); g.addColorStop(1, "#0a0508");
+    ctx.fillStyle = g;
+    // angular lump (faceted heptagon) rather than a smooth ball
+    ctx.beginPath();
+    for (let i = 0; i < 7; i++) {
+      const a = (i / 7) * Math.PI * 2 + cx * 0.3;
+      const rr = r * (i % 2 === 0 ? 1 : 0.78);
+      const px = cx + Math.cos(a) * rr, py = cy + Math.sin(a) * rr;
+      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+    }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = "#0a0008"; ctx.lineWidth = 1.1; ctx.stroke();
+  });
+  // cool specular glints catching the coal facets
+  ctx.fillStyle = "rgba(150,135,185,0.55)";
+  [[-5, 1, 1.2], [4, 3, 1.0], [-2, 6, 1.1], [8, 5, 0.9]].forEach(([x, y, r]) => {
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  });
   ctx.restore();
 }
 
 function drawGoldPick(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 18);
   woodHandle(ctx, -10, 18, 12, -16, 4);
-  ctx.save(); ctx.translate(12, -16);
-  // Golden pick head — curved both ways
-  const g = ctx.createLinearGradient(-14, 0, 18, 0);
+  // Golden pick HEAD — a symmetric crescent: two arms sweeping out from the
+  // central eye/socket, each tapering to a sharp downward point. This crescent
+  // silhouette reads unmistakably as a pickaxe, distinct from the flat-bar
+  // hammer siblings.
+  ctx.save(); ctx.translate(9, -16);
+  const g = ctx.createLinearGradient(-18, -8, 18, 8);
   g.addColorStop(0, "#a85410"); g.addColorStop(0.5, "#ffd34c"); g.addColorStop(1, "#7a4810");
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.moveTo(-14, -2); ctx.lineTo(14, -2); ctx.lineTo(18, 2); ctx.lineTo(14, 6); ctx.lineTo(-14, 6); ctx.lineTo(-18, 2);
+  // sharp left point
+  ctx.moveTo(-19, 10);
+  ctx.lineTo(-18, 7);
+  // top edge sweeping up to the central crown, then down to the right point
+  ctx.quadraticCurveTo(-8, -3, 0, -6);
+  ctx.quadraticCurveTo(8, -3, 18, 7);
+  // sharp right point
+  ctx.lineTo(19, 10);
+  // underside sweeping back to the left point, dipping under the eye
+  ctx.quadraticCurveTo(8, 2, 0, 2);
+  ctx.quadraticCurveTo(-8, 2, -19, 10);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#5a3008"; ctx.lineWidth = 1.6; ctx.stroke();
-  // Gold sheen
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.fillRect(-12, -1, 24, 1.5);
-  // Sparkles
+  // eye / socket where the handle passes through the crown
+  ctx.fillStyle = "#7a4810";
+  ctx.beginPath(); ctx.ellipse(0, -1, 2.6, 3.4, 0, 0, Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#5a3008"; ctx.lineWidth = 1.0; ctx.stroke();
+  // gold sheen running along the top crest of both arms
+  ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.lineWidth = 1.4; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-15, 5); ctx.quadraticCurveTo(-7, -2, -3, -4);
+  ctx.moveTo(3, -4); ctx.quadraticCurveTo(7, -2, 15, 5);
+  ctx.stroke();
+  // sparkle at the right spike tip
   ctx.fillStyle = "#fffce0";
-  [[-10, 0], [10, 4]].forEach(([x, y]) => {
-    ctx.beginPath();
-    for (let i = 0; i < 4; i++) {
-      const a = (i / 4) * Math.PI * 2;
-      const r = i % 2 === 0 ? 1.2 : 0.3;
-      const px = x + Math.cos(a) * r, py = y + Math.sin(a) * r;
-      if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-    }
-    ctx.closePath(); ctx.fill();
-  });
+  ctx.beginPath();
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2;
+    const r = i % 2 === 0 ? 1.4 : 0.35;
+    const px = 17 + Math.cos(a) * r, py = 8 + Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  }
+  ctx.closePath(); ctx.fill();
   ctx.restore();
 }
 
@@ -570,29 +607,58 @@ function drawCoalTransmuter(ctx: CanvasRenderingContext2D) {
   g.addColorStop(0, "#fff4a0"); g.addColorStop(0.4, "#f86040"); g.addColorStop(1, "#1a0a14");
   ctx.fillStyle = g;
   ctx.beginPath(); ctx.ellipse(0, 6, 14, 3, 0, 0, Math.PI*2); ctx.fill();
-  // Coal lumps
+  // Coal lumps in the vessel (the raw material being transmuted).
   ctx.fillStyle = "#1a0a14";
   [[-6, 4, 2.4], [4, 5, 2.0], [-1, 3, 1.8], [9, 6, 1.4]].forEach(([x, y, r]) => {
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
     ctx.strokeStyle = "#0a0008"; ctx.lineWidth = 0.6; ctx.stroke();
   });
-  // Rising embers — a tapering column tied to the glowing coal (grounded plume).
-  ctx.fillStyle = "#f8a020";
-  [[-3, -1, 1.4], [2, -4, 1.2], [-1, -8, 1.0], [3, -11, 0.9], [-2, -14, 0.8]].forEach(([x, y, r]) => {
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
-  });
-  ctx.fillStyle = "#fff4a0";
-  [[-3, -1, 0.6], [2, -4, 0.5]].forEach(([x, y, r]) => {
-    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
-  });
-  // Faint heat glow rising from the embers (keeps the cue connected, not floating).
-  const heat = ctx.createLinearGradient(0, 6, 0, -16);
-  heat.addColorStop(0, "rgba(248,160,32,0.30)");
-  heat.addColorStop(1, "rgba(248,160,32,0)");
+
+  // Transmutation plume: a tight, vertically-aligned column of magic motes
+  // rising from the coal up to a forming gem — the "coal turning to gem" cue
+  // that separates this from the plain crucible.
+  const heat = ctx.createLinearGradient(0, 6, 0, -20);
+  heat.addColorStop(0, "rgba(120,200,255,0.30)");
+  heat.addColorStop(1, "rgba(120,200,255,0)");
   ctx.fillStyle = heat;
   ctx.beginPath();
-  ctx.moveTo(-7, 4); ctx.lineTo(7, 4); ctx.lineTo(3, -16); ctx.lineTo(-3, -16);
+  ctx.moveTo(-5, 4); ctx.lineTo(5, 4); ctx.lineTo(2, -20); ctx.lineTo(-2, -20);
   ctx.closePath(); ctx.fill();
+  // Motes climbing the centre line, warm at the coal end shifting cool as they
+  // rise toward the gem (the transmutation in progress).
+  const motes: [number, number, number, string][] = [
+    [-1, 0, 1.4, "#f8a020"], [1, -4, 1.2, "#f8c060"],
+    [-1, -8, 1.0, "#bfe0ff"], [1, -12, 0.9, "#9fd0ff"], [0, -15, 0.7, "#cfe8ff"],
+  ];
+  motes.forEach(([x, y, r, c]) => {
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
+  });
+
+  // The forming GEM at the crown of the plume — a small cut blue-cyan crystal.
+  ctx.save(); ctx.translate(0, -20);
+  // glow behind the gem
+  const gemGlow = ctx.createRadialGradient(0, 0, 0.5, 0, 0, 8);
+  gemGlow.addColorStop(0, "rgba(150,220,255,0.55)"); gemGlow.addColorStop(1, "rgba(150,220,255,0)");
+  ctx.fillStyle = gemGlow;
+  ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill();
+  // faceted gem body
+  const gemG = ctx.createLinearGradient(0, -6, 0, 6);
+  gemG.addColorStop(0, "#dff4ff"); gemG.addColorStop(0.5, "#4aa6e6"); gemG.addColorStop(1, "#1c5c9c");
+  ctx.fillStyle = gemG;
+  ctx.beginPath();
+  ctx.moveTo(0, -6); ctx.lineTo(4.5, -1.5); ctx.lineTo(2.5, 6); ctx.lineTo(-2.5, 6); ctx.lineTo(-4.5, -1.5);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = "#10406e"; ctx.lineWidth = 1.0; ctx.stroke();
+  // facet lines + table
+  ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(-4.5, -1.5); ctx.lineTo(4.5, -1.5);
+  ctx.moveTo(0, -6); ctx.lineTo(-2.5, 6); ctx.moveTo(0, -6); ctx.lineTo(2.5, 6);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.beginPath(); ctx.moveTo(-1.4, -4.4); ctx.lineTo(1.4, -4.4); ctx.lineTo(0.6, -1.8); ctx.lineTo(-0.6, -1.8); ctx.closePath(); ctx.fill();
+  ctx.restore();
 }
 
 export const ICONS = {

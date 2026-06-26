@@ -154,16 +154,25 @@ function fallDebris(
 //    striking face and a shadow that squashes on impact.
 // ----------------------------------------------------------------------------
 function animHammer(ctx: CanvasRenderingContext2D, t: number): void {
-  // Strike beat: rest cocked, a sharp swing, then a damped bounce-back.
+  // Strike beat: rest cocked, a sharp swing down, then recoil all the way back
+  // to the cocked rest before the cycle wraps — so frame-0 and frame-end match
+  // (no loop hitch). swing 0 = cocked/raised, 1 = struck.
   const period = 1.4;
   const ph = loopPhase(t, period);
-  // swing 0 = cocked/raised, 1 = struck. Anticipation dip then overshoot+settle.
-  const swing = 0.5 + 0.5 * windupOvershoot(ph < 0.7 ? ph / 0.7 : 1, 0.22, 2.6);
+  let swing: number;
+  if (ph < 0.5) {
+    // Wind up (anticipation dip) then snap down to the strike with overshoot.
+    swing = windupOvershoot(ph / 0.5, 0.3, 2.6);
+  } else {
+    // Recoil bounce back up to the fully cocked rest (returns to 0 at ph→1).
+    swing = 1 - easeOutCubic((ph - 0.5) / 0.5);
+  }
+  swing = clamp01(swing);
   const rest = -0.16; // resting back-tilt (cocked)
   const ang = rest + swing * 0.72; // rotates down toward the work
 
-  // Impact lands as the head bottoms out (end of the wind-up).
-  const impact = beat(t, period, 0.16, -0.06);
+  // Impact lands as the head bottoms out (the strike, ≈ ph 0.5).
+  const impact = beat(t, period, 0.14, -0.5);
 
   // Pivot is the handle BASE, down by the grip, recentred slightly up/left.
   const pivotX = -2;
@@ -186,42 +195,60 @@ function animHammer(ctx: CanvasRenderingContext2D, t: number): void {
   headG.addColorStop(0, "#e8e8f0");
   headG.addColorStop(0.45, "#9a9aa4");
   headG.addColorStop(1, "#3a3a42");
+  // Striking face block (right) — the flat hammer face.
   ctx.fillStyle = headG;
   ctx.beginPath();
   ctx.moveTo(2, -7);
-  ctx.lineTo(15, -6);
-  ctx.lineTo(15, 6);
+  ctx.lineTo(15, -6.5);
+  ctx.lineTo(15, 6.5);
   ctx.lineTo(2, 7);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#1a1a1e";
   ctx.lineWidth = 2;
   ctx.stroke();
+  // Claw (left) — two distinct curved prongs that curl DOWN with an open
+  // V-notch between them (background shows through), so it reads as a claw
+  // hammer rather than an axe blade.
   ctx.fillStyle = headG;
   ctx.beginPath();
+  // upper outline of the claw neck/back
   ctx.moveTo(2, -6);
-  ctx.lineTo(2, 6);
-  ctx.bezierCurveTo(-8, 7, -16, 3, -18, -4);
-  ctx.lineTo(-13, -5);
-  ctx.bezierCurveTo(-11, 0, -7, 2, -3, 1);
-  ctx.lineTo(-3, -1);
-  ctx.bezierCurveTo(-7, -2, -11, -4, -13, -8);
-  ctx.lineTo(-18, -7);
-  ctx.bezierCurveTo(-15, -4, -10, -6, 2, -6);
+  ctx.bezierCurveTo(-6, -7, -12, -7, -16, -3);
+  // outer (lower) edge of the FAR prong, curling to a point
+  ctx.bezierCurveTo(-18, -1, -18.5, 3, -17, 6);
+  ctx.lineTo(-14.5, 4.5);
+  // back UP the inner edge of the far prong toward the notch
+  ctx.bezierCurveTo(-14, 1.5, -13, -1, -11, -2.5);
+  // the V-notch valley between the two prongs
+  ctx.lineTo(-9, -0.5);
+  ctx.bezierCurveTo(-7.5, 1.5, -6.5, 4, -6, 7);
+  // outer (lower) edge of the NEAR prong down to its point
+  ctx.lineTo(-3.5, 7);
+  ctx.bezierCurveTo(-3, 4, -1.5, 1, 2, 0);
+  ctx.lineTo(2, -6);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#1a1a1e";
   ctx.lineWidth = 1.6;
   ctx.stroke();
+  // Deepen the notch valley with a dark seam so the two prongs separate clearly.
   ctx.strokeStyle = "#1a1a1e";
-  ctx.lineWidth = 1.4;
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(-18, -5.5);
-  ctx.lineTo(-12, -6.5);
+  ctx.moveTo(-9, -0.5);
+  ctx.lineTo(-10.5, -5);
   ctx.stroke();
   metalGleam(ctx, 9, -2, 6);
   ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.fillRect(4, -5, 9, 1.4);
+  // Soft highlight along the claw back.
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, -5);
+  ctx.bezierCurveTo(-6, -5.6, -11, -5.6, -14.5, -2);
+  ctx.stroke();
 
   // Spark on the rotated striking face (local to the head, so it travels with
   // the swing instead of floating in icon space).
@@ -240,7 +267,9 @@ function animHammer(ctx: CanvasRenderingContext2D, t: number): void {
 function animSaw(ctx: CanvasRenderingContext2D, t: number): void {
   const period = 1.0;
   const ph = loopPhase(t, period);
-  // Asymmetric stroke: fast power push (cut), slow draw-back. drive −1..1.
+  // Asymmetric push-pull SAW STROKE: a fast power push that cuts (drive→+1),
+  // then a slow draw-back (drive→−1). Both ends settle at −1 so the cycle
+  // returns to its start frame — no teleport on loop.
   let stroke: number;
   if (ph < 0.4) {
     stroke = lerp(-1, 1, easeOutCubic(ph / 0.4)); // fast forward power stroke
@@ -249,7 +278,11 @@ function animSaw(ctx: CanvasRenderingContext2D, t: number): void {
   }
   // Catch-judder: a quick stutter mid-cut when the teeth bite.
   const judder = beat(t, period, 0.1, -0.34) * 0.7 * Math.sin(t * 70);
-  const dx = stroke * 5.5 + judder;
+  const dx = stroke * 6.5 + judder; // along the blade — the sawing slide
+  // Working DIG: on the forward power stroke the leading teeth bite down into
+  // the kerf, easing back off on the draw — so it reads as cutting INTO wood,
+  // not the whole tool sliding flat. Couples to the positive (cutting) drive.
+  const dig = Math.max(0, stroke) * 1.3;
 
   // Re-frame: was sitting ~8.8 low and ~3.6 right; lift + nudge left so the
   // kerf (teeth line) sits near the ground baseline and the blade is in-frame.
@@ -258,7 +291,7 @@ function animSaw(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.save();
   ctx.translate(-3.6, -8.8);
   ctx.rotate(-0.12);
-  ctx.translate(dx, 0);
+  ctx.translate(dx, dig);
 
   // Blade (points up-right).
   ctx.save();
@@ -341,10 +374,15 @@ function animSaw(ctx: CanvasRenderingContext2D, t: number): void {
 //    grinding spark at the tip.
 // ----------------------------------------------------------------------------
 function animDrill(ctx: CanvasRenderingContext2D, t: number): void {
-  // Body breathes a hair with the motor; the bit gets the high-freq jitter.
-  const bx = Math.sin(t * 39) * 0.35;
-  const by = Math.cos(t * 33) * 0.3;
+  // High-freq motor tremor — the whole tool buzzes while running.
+  const bx = Math.sin(t * 44) * 0.6;
+  const by = Math.cos(t * 38) * 0.5;
   const spin = loopPhase(t, 0.16); // fast rotation phase for the bit/chuck
+  // Per-cycle axial THRUST/recoil: the drill bites in (pushes toward the bit)
+  // then kicks back, on a seamless loop, so the body visibly works.
+  const period = 0.9;
+  const thrust = beat(t, period, 0.42, 0); // 0 rest → 1 bite, eased both ways
+  const push = thrust * 2.2; // design units the body drives toward the bit (+x)
 
   // Re-frame: worst framing (off ≈ 5.2,7.9) — lift up and nudge left.
   groundShadow(ctx, -2, 23, 17, 4, 0, 0.24);
@@ -352,6 +390,7 @@ function animDrill(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.save();
   ctx.translate(-5.2, -7.9);
   ctx.rotate(-0.08);
+  ctx.translate(push, 0); // axial thrust/recoil of the whole tool
 
   // Body (steady — only a faint motor tremor).
   ctx.save();
@@ -732,19 +771,35 @@ function animWrench(ctx: CanvasRenderingContext2D, t: number): void {
 }
 
 // ----------------------------------------------------------------------------
-// 6. SCREWDRIVER — sells AXIAL rotation (handle ribs cycle across the barrel,
-//    not a whole-tool tilt) with a press-down anticipation and a thick
-//    tip-tick ring at the bit.
+// 6. SCREWDRIVER — DRIVES a screw: the handle ratchets back and forth about the
+//    shaft axis (a wrist drive — wind back slow, snap forward fast) while the
+//    barrel ribs cycle WITH the twist, with a press-down anticipation and a
+//    thick tip-tick ring that flares on each driving snap.
 // ----------------------------------------------------------------------------
 function animScrewdriver(ctx: CanvasRenderingContext2D, t: number): void {
   const period = 1.0;
   const ph = loopPhase(t, period);
-  const spin = loopPhase(t, 0.34); // axial rotation phase (ribs cycle on this)
+  // Ratcheting wrist drive: slow wind-back (re-grip) then a fast forward snap
+  // that turns the screw. `twist` −1..+1 = handle rock about the shaft axis;
+  // returns to its start each cycle so the loop is seamless.
+  let twist: number;
+  if (ph < 0.6) {
+    // Wind the handle back (re-grip), eased, building anticipation.
+    const u = ph / 0.6;
+    twist = lerp(0.85, -1, easeInOutSine(u));
+  } else {
+    // Fast forward drive with a touch of overshoot — the turning bite.
+    const u = (ph - 0.6) / 0.4;
+    twist = lerp(-1, 0.85, easeOutBack(u, 1.6));
+  }
+  // Axial spin of the barrel ribs tracks the twist so the markings turn WITH the
+  // handle (forward on the drive) rather than free-running.
+  const spin = loopPhase(twist * 0.18 + 0.5, 1);
   // Press anticipation: a small wind-back then a push DOWN along the shaft.
   const press = windupOvershoot(ph < 0.6 ? ph / 0.6 : 1, 0.2, 1.8);
   const drop = press * 1.6; // axial press depth
-  // Each engaged turn ticks the screw.
-  const tick = beat(t, period, 0.12, 0.0);
+  // The screw ticks over on the forward driving snap.
+  const tick = beat(t, period, 0.12, -0.62);
 
   groundShadow(ctx, 0, 23, 9, 3.5, -drop * 0.3, 0.22);
 
@@ -752,6 +807,13 @@ function animScrewdriver(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.translate(-1.2, -2.2); // off=(1.2,2.2)
   ctx.rotate(0.5);
   ctx.translate(0, drop); // axial press
+
+  // Handle group ROCKS about the shaft/handle junction (≈ 0,-2) — the visible
+  // driving twist. The steel shaft + screw tip stay on-axis below.
+  ctx.save();
+  ctx.translate(0, -2);
+  ctx.rotate(twist * 0.32);
+  ctx.translate(0, 2);
 
   // Handle (bulbous, ribbed). The ribs scroll around the barrel = axial spin.
   const hG = ctx.createLinearGradient(-6, 0, 6, 0);
@@ -804,6 +866,7 @@ function animScrewdriver(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.beginPath();
   ctx.ellipse(-3, -12, 1.6, 6, 0, 0, TAU);
   ctx.fill();
+  ctx.restore(); // end handle twist — shaft & tip stay on-axis
 
   // Steel shaft.
   const sG = ctx.createLinearGradient(-3, 0, 3, 0);
@@ -892,11 +955,13 @@ function animPaintbrush(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.ellipse(tipX, 24, 4, 1.8, 0, 0, TAU);
   ctx.fill();
 
-  // The brush travels with the stroke and lifts slightly on the return.
+  // The brush travels a little with the stroke and lifts slightly on the
+  // return — kept small so the BRISTLE FLEX (below) is the headline motion, not
+  // a whole-sprite slide.
   ctx.save();
-  ctx.translate(pos * 4.2, -lift);
+  ctx.translate(pos * 2.6, -lift);
   // Lean INTO the drag (leads), then the bristles drag behind (follow-through).
-  ctx.rotate(dir * 0.1 * clamp01(speed));
+  ctx.rotate(dir * 0.12 * clamp01(speed));
 
   woodHandle(ctx, 0, -22, 0, -2, 5);
 
@@ -919,8 +984,9 @@ function animPaintbrush(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.fillStyle = "rgba(255,255,255,0.45)";
   ctx.fillRect(-4, -3, 1.6, 7);
 
-  // Bristles — splay AGAINST the travel direction (drag), more at speed.
-  const splay = -dir * (1.6 + clamp01(speed) * 2.4);
+  // Bristles — splay/whip AGAINST the travel direction (drag), more at speed.
+  // This bristle-tip flex is the primary motion read (vs nudging the sprite).
+  const splay = -dir * (2.2 + clamp01(speed) * 4.2);
   const brG = ctx.createLinearGradient(0, 5, 0, 22);
   brG.addColorStop(0, "#6a4a20");
   brG.addColorStop(0.4, "#3a82d8");

@@ -144,50 +144,55 @@ function drawTurnip(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.ellipse(0, 22, 18, 4, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Body — round, white at bottom, magenta/purple at top
-  const body = ctx.createRadialGradient(-4, 4, 2, 0, 6, 18);
+  // Body — bright white bulb, slightly wider than tall, with a small pointed base
+  const body = ctx.createRadialGradient(-5, 9, 2, -1, 8, 20);
   body.addColorStop(0, "#ffffff");
-  body.addColorStop(0.5, "#f4d8e0");
-  body.addColorStop(1, "#c8a8b4");
+  body.addColorStop(0.6, "#fbeef2");
+  body.addColorStop(1, "#d8c2cc");
   ctx.fillStyle = body;
   ctx.beginPath();
-  ctx.arc(0, 6, 16, 0, Math.PI * 2);
+  // Wide shoulder, rounded sides, narrowing to a small base
+  ctx.moveTo(0, -8);
+  ctx.bezierCurveTo(-16, -8, -18, 8, -10, 16);
+  ctx.bezierCurveTo(-5, 21, -2, 22, 0, 24);
+  ctx.bezierCurveTo(2, 22, 5, 21, 10, 16);
+  ctx.bezierCurveTo(18, 8, 16, -8, 0, -8);
+  ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#5a3a48";
+  ctx.strokeStyle = "#6a4a58";
   ctx.lineWidth = 2;
   ctx.stroke();
-  // Magenta cap at the top (clipped)
+  // Strong magenta/purple shoulder cap, sharply bounded against the white lower half (clipped)
   ctx.save();
   ctx.beginPath();
-  ctx.arc(0, 6, 16, 0, Math.PI * 2);
+  ctx.moveTo(0, -8);
+  ctx.bezierCurveTo(-16, -8, -18, 8, -10, 16);
+  ctx.bezierCurveTo(-5, 21, -2, 22, 0, 24);
+  ctx.bezierCurveTo(2, 22, 5, 21, 10, 16);
+  ctx.bezierCurveTo(18, 8, 16, -8, 0, -8);
+  ctx.closePath();
   ctx.clip();
-  const cap = ctx.createLinearGradient(0, -10, 0, 4);
-  cap.addColorStop(0, "#c84a8a");
-  cap.addColorStop(0.6, "#a83878");
-  cap.addColorStop(1, "rgba(168,56,120,0)");
+  const cap = ctx.createLinearGradient(0, -10, 0, 6);
+  cap.addColorStop(0, "#b8286e");
+  cap.addColorStop(0.7, "#a02062");
+  cap.addColorStop(0.95, "#c25088");
+  cap.addColorStop(1, "rgba(194,80,136,0)");
   ctx.fillStyle = cap;
   ctx.beginPath();
-  ctx.ellipse(0, -2, 18, 12, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, -3, 19, 11, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
-  // Vertical line on body
-  ctx.strokeStyle = "rgba(120,60,90,0.4)";
-  ctx.lineWidth = 1;
+  // Tight crisp highlight low on the white belly (no pillow bloom, clear of the cap edge)
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
   ctx.beginPath();
-  ctx.moveTo(0, -8);
-  ctx.lineTo(0, 22);
-  ctx.stroke();
-  // Highlight (soft, restrained)
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
-  ctx.beginPath();
-  ctx.ellipse(-6, 4, 2.6, 5.5, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(-7, 11, 1.8, 4, -0.3, 0, Math.PI * 2);
   ctx.fill();
-  // Root tap at bottom
-  ctx.strokeStyle = "#5a3a48";
-  ctx.lineWidth = 2;
+  // Small pointed root at the bottom
+  ctx.strokeStyle = "#6a4a58";
+  ctx.lineWidth = 1.8;
   ctx.beginPath();
-  ctx.moveTo(0, 20);
-  ctx.lineTo(2, 26);
+  ctx.moveTo(0, 23);
+  ctx.lineTo(1, 28);
   ctx.stroke();
   // Greens — short stalks then broad pointed leaves
   ctx.strokeStyle = "#3a6014";
@@ -230,41 +235,45 @@ function drawBeet(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.ellipse(0, 22, 16, 4, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Body — deep magenta-red bulb
-  const body = ctx.createRadialGradient(-3, -2, 1, 0, 4, 18);
-  body.addColorStop(0, "#e0508a");
-  body.addColorStop(0.5, "#a82058");
-  body.addColorStop(1, "#48081f");
+  // Body — deep cool red-purple, pointed beet root (broad shoulder, tapering to a tip)
+  const body = ctx.createRadialGradient(-3, -4, 1, 0, 0, 22);
+  body.addColorStop(0, "#c43872");
+  body.addColorStop(0.5, "#8a1448");
+  body.addColorStop(1, "#380418");
   ctx.fillStyle = body;
   ctx.beginPath();
+  // Broad rounded shoulder at the top
   ctx.moveTo(0, -8);
-  ctx.bezierCurveTo(-14, -8, -18, 6, -12, 16);
-  ctx.bezierCurveTo(-6, 22, 6, 22, 12, 16);
-  ctx.bezierCurveTo(18, 6, 14, -8, 0, -8);
+  ctx.bezierCurveTo(-15, -8, -17, 4, -12, 12);
+  // Left flank tapering inward toward the tip
+  ctx.bezierCurveTo(-9, 18, -4, 22, 0, 28);
+  // Right flank back up from the tip to the shoulder
+  ctx.bezierCurveTo(4, 22, 9, 18, 12, 12);
+  ctx.bezierCurveTo(17, 4, 15, -8, 0, -8);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#280410";
+  ctx.strokeStyle = "#1f0210";
   ctx.lineWidth = 2;
   ctx.stroke();
-  // Concentric rings (beet's distinctive grain)
-  ctx.strokeStyle = "rgba(255,200,220,0.45)";
+  // Concentric rings (beet's distinctive grain), following the tapered form
+  ctx.strokeStyle = "rgba(255,190,215,0.4)";
   ctx.lineWidth = 0.9;
   [4, 8, 12].forEach((r) => {
     ctx.beginPath();
-    ctx.arc(-1, 4, r, -0.6, Math.PI - 0.3);
+    ctx.arc(-1, 2, r, -0.6, Math.PI - 0.3);
     ctx.stroke();
   });
   // Highlight
-  ctx.fillStyle = "rgba(255,255,255,0.5)";
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
   ctx.beginPath();
-  ctx.ellipse(-5, -2, 2.4, 6, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(-5, -3, 2.2, 6, -0.3, 0, Math.PI * 2);
   ctx.fill();
-  // Tap root
-  ctx.strokeStyle = "#280410";
-  ctx.lineWidth = 2.4;
+  // Thin tap root extending from the pointed tip
+  ctx.strokeStyle = "#1f0210";
+  ctx.lineWidth = 1.8;
   ctx.beginPath();
-  ctx.moveTo(0, 18);
-  ctx.quadraticCurveTo(2, 22, 4, 26);
+  ctx.moveTo(0, 27);
+  ctx.quadraticCurveTo(1, 31, 3, 34);
   ctx.stroke();
   // Magenta stems
   ctx.strokeStyle = "#a82058";
@@ -359,66 +368,70 @@ function drawCucumber(ctx: CanvasRenderingContext2D) {
 }
 
 function drawSquash(ctx: CanvasRenderingContext2D) {
+  // Butternut squash — long curved neck on the upper-left, round bulb lower-right.
+  // The squash body outline, reused for fill, stroke and rib clip.
+  const trace = () => {
+    ctx.beginPath();
+    // Top of neck (under the stem)
+    ctx.moveTo(-13, -22);
+    // Left side of neck, curving down and right into the bulb shoulder
+    ctx.bezierCurveTo(-15, -14, -12, -2, -9, 6);
+    // Bulb left flank
+    ctx.bezierCurveTo(-16, 12, -16, 24, -2, 24);
+    // Bulb bottom-right and up the round flank
+    ctx.bezierCurveTo(14, 24, 16, 8, 7, 4);
+    // Right side of neck rising back to the top
+    ctx.bezierCurveTo(0, 0, -3, -12, -5, -22);
+    // Cap across the top of the neck
+    ctx.bezierCurveTo(-7, -24, -11, -24, -13, -22);
+    ctx.closePath();
+  };
   // Shadow
   ctx.fillStyle = "rgba(0,0,0,0.25)";
   ctx.beginPath();
-  ctx.ellipse(2, 22, 22, 4.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(2, 24, 18, 4.5, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Body — pear/butternut shape (round bottom, narrow neck)
-  const body = ctx.createRadialGradient(-4, 4, 2, 0, 8, 22);
-  body.addColorStop(0, "#ffd28a");
-  body.addColorStop(0.6, "#e09038");
-  body.addColorStop(1, "#8a4810");
+  // Body — warm butternut tan-orange, lit toward the bulb
+  const body = ctx.createRadialGradient(-2, 12, 2, 2, 14, 24);
+  body.addColorStop(0, "#ffc878");
+  body.addColorStop(0.55, "#e8932e");
+  body.addColorStop(1, "#9a5410");
   ctx.fillStyle = body;
-  ctx.beginPath();
-  // Neck
-  ctx.moveTo(-4, -18);
-  ctx.bezierCurveTo(-6, -8, -6, -2, -8, 2);
-  // Bulb left
-  ctx.bezierCurveTo(-18, 6, -18, 22, 0, 22);
-  // Bulb right
-  ctx.bezierCurveTo(18, 22, 18, 6, 8, 2);
-  // Neck back up
-  ctx.bezierCurveTo(6, -2, 6, -8, 4, -18);
-  // Top
-  ctx.bezierCurveTo(2, -20, -2, -20, -4, -18);
-  ctx.closePath();
+  trace();
   ctx.fill();
-  ctx.strokeStyle = "#4a2008";
+  ctx.strokeStyle = "#5a2c08";
   ctx.lineWidth = 2;
   ctx.stroke();
-  // Vertical ribs (clipped)
+  // Vertical ribs, following the neck-into-bulb flow (clipped to body)
   ctx.save();
-  ctx.beginPath();
-  ctx.moveTo(-4, -18);
-  ctx.bezierCurveTo(-6, -8, -6, -2, -8, 2);
-  ctx.bezierCurveTo(-18, 6, -18, 22, 0, 22);
-  ctx.bezierCurveTo(18, 22, 18, 6, 8, 2);
-  ctx.bezierCurveTo(6, -2, 6, -8, 4, -18);
-  ctx.bezierCurveTo(2, -20, -2, -20, -4, -18);
-  ctx.closePath();
+  trace();
   ctx.clip();
-  ctx.strokeStyle = "rgba(74,32,8,0.5)";
+  ctx.strokeStyle = "rgba(90,44,8,0.45)";
   ctx.lineWidth = 1;
-  [-10, -3, 4, 11].forEach((x) => {
+  [-9, -3, 3, 9].forEach((x) => {
     ctx.beginPath();
-    ctx.moveTo(x, -18);
-    ctx.bezierCurveTo(x - 2, 0, x, 12, x + (x < 0 ? -1 : 1), 22);
+    ctx.moveTo(x - 4, -20);
+    ctx.bezierCurveTo(x - 5, -4, x, 12, x + 1, 24);
     ctx.stroke();
   });
   ctx.restore();
-  // Highlight
-  ctx.fillStyle = "rgba(255,250,200,0.45)";
+  // Highlight along the upper-left neck
+  ctx.fillStyle = "rgba(255,250,205,0.45)";
   ctx.beginPath();
-  ctx.ellipse(-7, 6, 3, 8, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(-9, -6, 2.4, 9, 0.12, 0, Math.PI * 2);
+  ctx.fill();
+  // Soft sheen on the bulb
+  ctx.fillStyle = "rgba(255,250,205,0.3)";
+  ctx.beginPath();
+  ctx.ellipse(-2, 12, 4, 6, -0.3, 0, Math.PI * 2);
   ctx.fill();
   // Stem
   ctx.fillStyle = "#5a3a14";
   ctx.beginPath();
-  ctx.moveTo(-3, -18);
-  ctx.lineTo(3, -18);
-  ctx.lineTo(2, -24);
-  ctx.lineTo(-2, -24);
+  ctx.moveTo(-12, -22);
+  ctx.lineTo(-6, -22);
+  ctx.lineTo(-7, -28);
+  ctx.lineTo(-11, -27);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#2a1808";
@@ -496,67 +509,81 @@ function drawPepper(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.ellipse(0, 22, 14, 4, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Body — bell pepper, glossy red
-  const body = ctx.createRadialGradient(-4, -2, 2, 0, 6, 20);
+  // Body — blocky bell pepper, glossy red. Recessed shoulder at the top,
+  // wide blocky sides, three rounded lobes bulging along the bottom.
+  const trace = () => {
+    ctx.beginPath();
+    // Recessed shoulder dips down at the centre top where the stem sits
+    ctx.moveTo(-12, -9);
+    ctx.bezierCurveTo(-9, -6, -3, -6, 0, -8);
+    ctx.bezierCurveTo(3, -6, 9, -6, 12, -9);
+    // Right shoulder bulging out
+    ctx.bezierCurveTo(17, -6, 18, 6, 15, 13);
+    // Bottom: right lobe
+    ctx.bezierCurveTo(13, 21, 9, 22, 7, 17);
+    // dip between right and middle lobe, middle lobe
+    ctx.bezierCurveTo(5, 14, 4, 22, 0, 22);
+    // dip, left lobe
+    ctx.bezierCurveTo(-4, 22, -5, 14, -7, 17);
+    ctx.bezierCurveTo(-9, 22, -13, 21, -15, 13);
+    // Left shoulder back up
+    ctx.bezierCurveTo(-18, 6, -17, -6, -12, -9);
+    ctx.closePath();
+  };
+  const body = ctx.createRadialGradient(-4, 2, 2, 0, 6, 22);
   body.addColorStop(0, "#ff6868");
   body.addColorStop(0.5, "#c8181a");
   body.addColorStop(1, "#5a0408");
   ctx.fillStyle = body;
-  ctx.beginPath();
-  // 4 lobed shape
-  ctx.moveTo(-2, -10);
-  ctx.bezierCurveTo(-16, -6, -16, 14, -10, 20);
-  ctx.bezierCurveTo(-6, 22, -2, 16, 0, 18);
-  ctx.bezierCurveTo(2, 16, 6, 22, 10, 20);
-  ctx.bezierCurveTo(16, 14, 16, -6, 2, -10);
-  ctx.closePath();
+  trace();
   ctx.fill();
   ctx.strokeStyle = "#3a0408";
   ctx.lineWidth = 2;
   ctx.stroke();
-  // Lobe creases
-  ctx.strokeStyle = "rgba(58,4,8,0.55)";
+  // Lobe creases — define the three bottom bulges and run up the body
+  ctx.strokeStyle = "rgba(58,4,8,0.5)";
   ctx.lineWidth = 1.2;
+  [
+    [-7, -7, -8, 6, -7, 16],
+    [7, -7, 8, 6, 7, 16],
+  ].forEach(([x1, y1, x2, y2, x3, y3]) => {
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.bezierCurveTo(x2, y2, x3, y3 - 3, x3, y3);
+    ctx.stroke();
+  });
+  // Specular highlight — broad glossy band on the lit left lobe
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
   ctx.beginPath();
-  ctx.moveTo(-5, -8);
-  ctx.bezierCurveTo(-6, 6, -3, 14, -2, 20);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(5, -8);
-  ctx.bezierCurveTo(6, 6, 3, 14, 2, 20);
-  ctx.stroke();
-  // Specular highlight
-  ctx.fillStyle = "rgba(255,255,255,0.65)";
-  ctx.beginPath();
-  ctx.ellipse(-5, 0, 2.4, 7, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(-7, 2, 2.6, 7, -0.25, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.4)";
+  ctx.fillStyle = "rgba(255,255,255,0.35)";
   ctx.beginPath();
-  ctx.ellipse(6, 4, 1.4, 4, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(6, 5, 1.6, 4.5, -0.2, 0, Math.PI * 2);
   ctx.fill();
-  // Stem cap (green calyx)
+  // Stem cap (green calyx) nestled in the recessed shoulder
   ctx.fillStyle = "#5a8a26";
   ctx.beginPath();
-  ctx.moveTo(-6, -8);
-  ctx.bezierCurveTo(-8, -14, 8, -14, 6, -8);
-  ctx.bezierCurveTo(2, -10, -2, -10, -6, -8);
+  ctx.moveTo(-7, -7);
+  ctx.bezierCurveTo(-8, -12, 8, -12, 7, -7);
+  ctx.bezierCurveTo(3, -9, -3, -9, -7, -7);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#2e4810";
   ctx.lineWidth = 1.4;
   ctx.stroke();
-  // Stem
-  ctx.strokeStyle = "#5a3a14";
-  ctx.lineWidth = 3;
+  // Short green stem
+  ctx.strokeStyle = "#3a6014";
+  ctx.lineWidth = 3.4;
   ctx.beginPath();
-  ctx.moveTo(0, -12);
-  ctx.lineTo(0, -22);
+  ctx.moveTo(0, -10);
+  ctx.lineTo(1, -17);
   ctx.stroke();
-  ctx.strokeStyle = "#a87a3a";
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = "#7cb840";
+  ctx.lineWidth = 1.3;
   ctx.beginPath();
-  ctx.moveTo(0, -12);
-  ctx.lineTo(0, -22);
+  ctx.moveTo(0, -10);
+  ctx.lineTo(1, -17);
   ctx.stroke();
 }
 

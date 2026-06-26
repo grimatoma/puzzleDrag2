@@ -70,34 +70,53 @@ function drawBlock(ctx: CanvasRenderingContext2D) {
   ctx.stroke();
 }
 
-// Iron ore — cold-grey rock body with bright metallic iron flecks.
+// Iron ore — warm brown-grey rock shot through with rusty oxidation and
+// metallic iron nodules embedded along the facets (distinct from silver ore).
 function drawMineIronOre(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(2,22,22,4,0,0,Math.PI*2); ctx.fill();
+  // Warm brown-grey body so it is unmistakably not the cool silver ore.
   const grad = ctx.createLinearGradient(0,-22,0,22);
-  grad.addColorStop(0,"#c8ccd0"); grad.addColorStop(0.5,"#7a7e84"); grad.addColorStop(1,"#3a3e44");
+  grad.addColorStop(0,"#b8a89a"); grad.addColorStop(0.5,"#7a6a5c"); grad.addColorStop(1,"#3e342c");
   ctx.fillStyle = grad;
   ctx.beginPath(); ctx.moveTo(-21,4); ctx.lineTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(18,-14); ctx.lineTo(23,2); ctx.lineTo(15,19); ctx.lineTo(-6,22); ctx.lineTo(-19,14); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#1a1d20"; ctx.lineWidth = 2.2; ctx.stroke();
-  // Highlight facet (catches the light)
-  ctx.fillStyle = "rgba(255,255,255,0.28)";
-  ctx.beginPath(); ctx.moveTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(-2,-6); ctx.closePath(); ctx.fill();
-  // Metallic iron seam — silver-blue band running across the rock.
-  const seam = ctx.createLinearGradient(-20,0,20,0);
-  seam.addColorStop(0,"#7a8a96"); seam.addColorStop(0.5,"#dfe4eb"); seam.addColorStop(1,"#5a6470");
-  ctx.fillStyle = seam;
-  ctx.beginPath(); ctx.moveTo(-18,-2); ctx.bezierCurveTo(-6,-8,6,4,20,0); ctx.lineTo(20,3); ctx.bezierCurveTo(6,9,-6,-3,-18,2); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#2a3a48"; ctx.lineWidth = 0.8; ctx.stroke();
-  // Specular streak on the seam
-  ctx.strokeStyle = "rgba(255,255,255,0.75)"; ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(-15,0); ctx.bezierCurveTo(-4,-5,4,5,16,1); ctx.stroke();
-  // Pyrite-style metallic flecks scattered across the body.
-  ctx.fillStyle = "#e0e6ec";
-  [[8,8],[-10,12],[4,-14],[-14,-8],[14,-6],[-4,4]].forEach(([sx,sy])=>{
-    ctx.beginPath(); ctx.arc(sx,sy,1.2,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#241c16"; ctx.lineWidth = 2.2; ctx.stroke();
+  // Facet edges define the stone planes the ore is embedded in.
+  ctx.strokeStyle = "rgba(36,28,22,0.6)"; ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(2,-22); ctx.lineTo(-2,-4); ctx.lineTo(-21,4);
+  ctx.moveTo(-2,-4); ctx.lineTo(18,-14);
+  ctx.moveTo(-2,-4); ctx.lineTo(23,2);
+  ctx.moveTo(-2,-4); ctx.lineTo(15,19);
+  ctx.moveTo(-2,-4); ctx.lineTo(-6,22);
+  ctx.stroke();
+  // Highlight facet (catches the light), warm tone.
+  ctx.fillStyle = "rgba(255,244,225,0.3)";
+  ctx.beginPath(); ctx.moveTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(-2,-4); ctx.closePath(); ctx.fill();
+  // Metallic iron nodules embedded along the facets — angular clumps that
+  // follow the stone, not a single ribbon laid on top.
+  const nodule = (nx: number, ny: number, s: number) => {
+    const g = ctx.createRadialGradient(nx-s*0.4, ny-s*0.4, s*0.2, nx, ny, s);
+    g.addColorStop(0,"#cfd4da"); g.addColorStop(0.6,"#8a8e94"); g.addColorStop(1,"#4a4e54");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(nx-s, ny); ctx.lineTo(nx-s*0.3, ny-s); ctx.lineTo(nx+s*0.8, ny-s*0.4);
+    ctx.lineTo(nx+s, ny+s*0.5); ctx.lineTo(nx, ny+s); ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "rgba(30,24,18,0.7)"; ctx.lineWidth = 0.7; ctx.stroke();
+  };
+  nodule(-7, 3, 6);
+  nodule(7, -2, 5);
+  nodule(2, 12, 4.5);
+  // Bright specular dots on the nodules.
+  ctx.fillStyle = "rgba(255,255,255,0.8)";
+  [[-9,1,1.2],[5,-4,1.0],[0,10,0.9]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
+  // Rusty orange oxidation flecks — iron's signature tell.
+  ctx.fillStyle = "#c2622a";
+  [[12,8],[-14,-6],[15,-7],[-10,13],[8,-13]].forEach(([sx,sy])=>{
+    ctx.beginPath(); ctx.arc(sx,sy,1.3,0,Math.PI*2); ctx.fill();
   });
-  // Darker pits to make the flecks read as embedded
-  ctx.fillStyle = "rgba(20,24,30,0.6)";
-  [[9,9],[-9,13],[5,-13]].forEach(([sx,sy])=>{
+  ctx.fillStyle = "rgba(255,170,90,0.7)";
+  [[12.5,7.5],[-13.5,-6.5],[15.5,-7.5]].forEach(([sx,sy])=>{
     ctx.beginPath(); ctx.arc(sx,sy,0.5,0,Math.PI*2); ctx.fill();
   });
 }
@@ -174,10 +193,33 @@ function drawCoke(ctx: CanvasRenderingContext2D) {
   const glow = ctx.createRadialGradient(0,0,1,0,0,14);
   glow.addColorStop(0,"rgba(255,160,40,0.95)"); glow.addColorStop(0.5,"rgba(220,80,20,0.55)"); glow.addColorStop(1,"rgba(60,10,0,0)");
   ctx.fillStyle = glow; hex6(13); ctx.fill();
-  ctx.strokeStyle = "#ffa040"; ctx.lineWidth = 1.4;
-  ctx.beginPath(); ctx.moveTo(-6,-8); ctx.lineTo(2,-2); ctx.lineTo(-3,5); ctx.lineTo(7,9); ctx.stroke();
-  ctx.strokeStyle = "#ffe390"; ctx.lineWidth = 0.6;
-  ctx.beginPath(); ctx.moveTo(-6,-8); ctx.lineTo(2,-2); ctx.lineTo(-3,5); ctx.lineTo(7,9); ctx.stroke();
+  // Cluster of charred coke lumps with hot glowing cracks between them.
+  const lumps: [number, number, number][] = [
+    [-5,-6,5], [5,-4,4.6], [-3,3,4.8], [6,5,4], [-7,3,3.4], [1,8,3.4],
+  ];
+  // Dark charred lump bodies first.
+  ctx.fillStyle = "#241a16";
+  ctx.strokeStyle = "#120b08"; ctx.lineWidth = 0.8;
+  lumps.forEach(([lx,ly,lr])=>{ ctx.beginPath(); ctx.arc(lx,ly,lr,0,Math.PI*2); ctx.fill(); ctx.stroke(); });
+  // Top-light sheen on the upper lumps so they read as 3D coal chunks.
+  ctx.fillStyle = "rgba(120,90,80,0.55)";
+  [[-6,-8,2.2],[4,-6,2.0],[-4,1,2.0]].forEach(([hx,hy,hr])=>{ ctx.beginPath(); ctx.arc(hx,hy,hr,0,Math.PI*2); ctx.fill(); });
+  // Hot glowing cracks winding through the seams between the lumps.
+  ctx.strokeStyle = "rgba(255,150,40,0.95)"; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(-9,-2); ctx.lineTo(-2,-1); ctx.lineTo(2,-4); ctx.lineTo(9,-3);
+  ctx.moveTo(-2,-1); ctx.lineTo(0,4); ctx.lineTo(4,8);
+  ctx.moveTo(0,4); ctx.lineTo(-5,7);
+  ctx.stroke();
+  // Bright yellow core of the cracks.
+  ctx.strokeStyle = "rgba(255,230,150,0.9)"; ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(-9,-2); ctx.lineTo(-2,-1); ctx.lineTo(2,-4); ctx.lineTo(9,-3);
+  ctx.moveTo(-2,-1); ctx.lineTo(0,4); ctx.lineTo(4,8);
+  ctx.stroke();
+  // A couple of bright ember highlights on lump edges.
+  ctx.fillStyle = "rgba(255,180,60,0.85)";
+  [[-4,-2,1.1],[3,2,1.0],[7,-1,0.9],[-2,6,0.9]].forEach(([ex,ey,er])=>{ ctx.beginPath(); ctx.arc(ex,ey,er,0,Math.PI*2); ctx.fill(); });
   // Specular gleam along the upper-left facet edge (attached to the body,
   // not floating above it).
   ctx.strokeStyle = "rgba(255,255,255,0.5)"; ctx.lineWidth = 1.4;
@@ -244,69 +286,127 @@ function drawGold(ctx: CanvasRenderingContext2D) {
   const grad = ctx.createRadialGradient(-6,-10,2,0,0,26);
   grad.addColorStop(0,"#fff8b8"); grad.addColorStop(0.4,"#ffd34c"); grad.addColorStop(0.8,"#c08a18"); grad.addColorStop(1,"#7a4f08");
   ctx.fillStyle = grad;
+  // Irregular faceted nugget silhouette (raw gold chunk, not a smooth sphere).
   ctx.beginPath();
-  ctx.moveTo(-22,0);
-  ctx.bezierCurveTo(-22,-14,-10,-22,2,-22);
-  ctx.bezierCurveTo(14,-22,18,-14,22,-10);
-  ctx.bezierCurveTo(26,-2,22,8,18,14);
-  ctx.bezierCurveTo(14,22,0,24,-8,22);
-  ctx.bezierCurveTo(-18,18,-24,10,-22,0);
+  ctx.moveTo(-20,-2);
+  ctx.lineTo(-13,-15);
+  ctx.lineTo(-1,-21);
+  ctx.lineTo(10,-18);
+  ctx.lineTo(15,-9);
+  ctx.lineTo(23,-3);
+  ctx.lineTo(19,9);
+  ctx.lineTo(10,16);
+  ctx.lineTo(1,22);
+  ctx.lineTo(-9,19);
+  ctx.lineTo(-18,11);
   ctx.closePath(); ctx.fill();
   ctx.strokeStyle = "#5e3a08"; ctx.lineWidth = 2.2; ctx.stroke();
-  ctx.fillStyle = "rgba(122,79,8,0.55)";
-  [[8,-2,4,3],[-8,6,5,3.5],[4,12,3.5,2.5],[-12,-8,3,2.5]].forEach(([dx,dy,drx,dry])=>{ ctx.beginPath(); ctx.ellipse(dx,dy,drx,dry,0.3,0,Math.PI*2); ctx.fill(); });
+  // Internal facet edges — angular planes that read as a crystalline metal
+  // chunk. Two small hubs (not one) so it doesn't read as a radial pie.
+  ctx.strokeStyle = "rgba(122,79,8,0.6)"; ctx.lineWidth = 1.3;
+  ctx.beginPath();
+  ctx.moveTo(-1,-21); ctx.lineTo(-5,-3); ctx.lineTo(-20,-2);
+  ctx.moveTo(-5,-3); ctx.lineTo(15,-9);
+  ctx.moveTo(15,-9); ctx.lineTo(8,4); ctx.lineTo(19,9);
+  ctx.moveTo(8,4); ctx.lineTo(1,22);
+  ctx.moveTo(-5,-3); ctx.lineTo(-6,11); ctx.lineTo(-18,11);
+  ctx.moveTo(-6,11); ctx.lineTo(1,22);
+  ctx.stroke();
+  // Angular facet cavities (recessed planes), not round pits — kept subtle.
+  ctx.fillStyle = "rgba(122,79,8,0.42)";
+  ctx.beginPath(); ctx.moveTo(9,-7); ctx.lineTo(16,-6); ctx.lineTo(13,2); ctx.lineTo(8,1); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-15,3); ctx.lineTo(-7,1); ctx.lineTo(-7,10); ctx.lineTo(-15,9); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-3,13); ctx.lineTo(5,11); ctx.lineTo(1,20); ctx.lineTo(-4,17); ctx.closePath(); ctx.fill();
+  // Bright metallic highlight edge on the lit upper-left facet.
   ctx.fillStyle = "rgba(255,255,200,0.85)";
-  ctx.beginPath(); ctx.ellipse(-8,-12,5,8,-0.4,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,230,0.6)";
-  ctx.beginPath(); ctx.ellipse(-12,-6,1.5,4,-0.3,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,180,0.85)";
-  [[10,-8,1.4],[14,4,1.2],[-2,16,1.0],[6,-16,0.9]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
-  ctx.strokeStyle = "rgba(255,255,200,0.55)"; ctx.lineWidth = 1.6;
-  ctx.beginPath(); ctx.arc(0,-2,12,Math.PI*1.18,Math.PI*1.5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-13,-15); ctx.lineTo(-1,-21); ctx.lineTo(-4,-4); ctx.lineTo(-12,-6); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,230,0.55)";
+  ctx.beginPath(); ctx.moveTo(-1,-21); ctx.lineTo(8,-17); ctx.lineTo(2,-9); ctx.lineTo(-4,-12); ctx.closePath(); ctx.fill();
+  // Crisp specular sparkles on the facet ridges.
+  ctx.fillStyle = "rgba(255,255,180,0.9)";
+  [[12,-7,1.3],[15,4,1.1],[-1,15,1.0],[6,-15,0.9],[-15,0,0.9]].forEach(([sx,sy,sr])=>{ ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill(); });
 }
 
-// Silver ore — cold grey rock body with a bright white-silver vein.
+// Silver ore — bright, cool blue-grey rock with a single clean white-silver
+// vein and crystalline flakes (vein motif kept; iron uses nodules instead).
 function drawMineSilver(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.25)"; ctx.beginPath(); ctx.ellipse(2,22,22,4,0,0,Math.PI*2); ctx.fill();
+  // Cooler, brighter blue-grey body to contrast the warm iron ore.
   const grad = ctx.createLinearGradient(0,-22,0,22);
-  grad.addColorStop(0,"#d6dbe2"); grad.addColorStop(0.5,"#9aa0a8"); grad.addColorStop(1,"#5a6068");
+  grad.addColorStop(0,"#eaf0f6"); grad.addColorStop(0.5,"#aeb8c4"); grad.addColorStop(1,"#697482");
   ctx.fillStyle = grad;
   ctx.beginPath(); ctx.moveTo(-21,4); ctx.lineTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(18,-14); ctx.lineTo(23,2); ctx.lineTo(15,19); ctx.lineTo(-6,22); ctx.lineTo(-19,14); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#3a3e44"; ctx.lineWidth = 2.2; ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.3)";
+  ctx.strokeStyle = "#39434f"; ctx.lineWidth = 2.2; ctx.stroke();
+  // Bright lit facet, near-white with a cool cast.
+  ctx.fillStyle = "rgba(255,255,255,0.45)";
   ctx.beginPath(); ctx.moveTo(-16,-17); ctx.lineTo(2,-22); ctx.lineTo(-2,-6); ctx.closePath(); ctx.fill();
-  // Bright silver vein
+  // Bright silver vein — whiter and cooler than before.
   const seam = ctx.createLinearGradient(-20,0,20,0);
-  seam.addColorStop(0,"#aab2bc"); seam.addColorStop(0.5,"#ffffff"); seam.addColorStop(1,"#7a828c");
+  seam.addColorStop(0,"#c4d0dc"); seam.addColorStop(0.5,"#ffffff"); seam.addColorStop(1,"#8898a8");
   ctx.fillStyle = seam;
   ctx.beginPath(); ctx.moveTo(-18,-2); ctx.bezierCurveTo(-6,-8,6,4,20,0); ctx.lineTo(20,3); ctx.bezierCurveTo(6,9,-6,-3,-18,2); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#4a525c"; ctx.lineWidth = 0.8; ctx.stroke();
-  ctx.strokeStyle = "rgba(255,255,255,0.85)"; ctx.lineWidth = 1;
+  ctx.strokeStyle = "#5a6a7c"; ctx.lineWidth = 0.8; ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,0.95)"; ctx.lineWidth = 1.1;
   ctx.beginPath(); ctx.moveTo(-15,0); ctx.bezierCurveTo(-4,-5,4,5,16,1); ctx.stroke();
-  ctx.fillStyle = "#eef2f6";
-  [[8,8],[-10,12],[4,-14],[-14,-8],[14,-6]].forEach(([sx,sy])=>{ ctx.beginPath(); ctx.arc(sx,sy,1.1,0,Math.PI*2); ctx.fill(); });
+  // Crystalline silver flakes — small diamond facets, not round dots.
+  ctx.fillStyle = "#ffffff";
+  [[8,9],[-11,11],[5,-14],[-14,-7],[13,-7]].forEach(([sx,sy])=>{
+    ctx.beginPath();
+    ctx.moveTo(sx,sy-2); ctx.lineTo(sx+1.6,sy); ctx.lineTo(sx,sy+2); ctx.lineTo(sx-1.6,sy); ctx.closePath();
+    ctx.fill();
+  });
+  // Tiny blue-grey shadow under each flake so they read as raised crystals.
+  ctx.fillStyle = "rgba(80,100,120,0.55)";
+  [[8.4,9.6],[-10.6,11.6],[5.4,-13.4]].forEach(([sx,sy])=>{ ctx.beginPath(); ctx.arc(sx,sy,0.6,0,Math.PI*2); ctx.fill(); });
 }
 
-// Silver bar — poured metallic ingot, cooler/brighter than the iron bar.
+// Silver bar — a small stack of poured metallic ingots in 3/4 view, so the
+// trapezoidal ingot cross-section reads unmistakably as a bar (not a crate).
 function drawSilverBar(ctx: CanvasRenderingContext2D) {
-  ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(0,18,22,5,0,0,Math.PI*2); ctx.fill();
-  // Front face (trapezoid)
-  const front = ctx.createLinearGradient(0,-4,0,16);
-  front.addColorStop(0,"#dde2e8"); front.addColorStop(1,"#8a929c");
-  ctx.fillStyle = front;
-  ctx.beginPath(); ctx.moveTo(-20,0); ctx.lineTo(20,0); ctx.lineTo(16,16); ctx.lineTo(-16,16); ctx.closePath(); ctx.fill();
-  ctx.strokeStyle = "#3a4048"; ctx.lineWidth = 2; ctx.stroke();
-  // Top face
-  const top = ctx.createLinearGradient(0,-14,0,0);
-  top.addColorStop(0,"#fcffff"); top.addColorStop(1,"#c2cad2");
-  ctx.fillStyle = top;
-  ctx.beginPath(); ctx.moveTo(-20,0); ctx.lineTo(-14,-12); ctx.lineTo(14,-12); ctx.lineTo(20,0); ctx.closePath(); ctx.fill(); ctx.stroke();
-  // Top edge highlight
-  ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 1.4;
-  ctx.beginPath(); ctx.moveTo(-12,-10); ctx.lineTo(12,-10); ctx.stroke();
-  // Stamp
-  ctx.strokeStyle = "rgba(40,46,52,0.7)"; ctx.lineWidth = 1.6;
-  ctx.beginPath(); ctx.arc(0,8,4,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle = "rgba(0,0,0,0.3)"; ctx.beginPath(); ctx.ellipse(2,24,24,5,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle = "#3a4048"; ctx.lineWidth = 2; ctx.lineJoin = "round";
+  // Draw one ingot in 3/4 view at (ox,oy). depth = perspective offset.
+  const ingot = (ox: number, oy: number) => {
+    const dx = 7, dy = -7;           // back-corner perspective offset
+    const halfTop = 13, halfBot = 17; // trapezoid: wider at the base
+    // Front face (trapezoid, wider at the bottom)
+    const front = ctx.createLinearGradient(0,oy-8,0,oy+10);
+    front.addColorStop(0,"#e6ebf1"); front.addColorStop(0.5,"#b6bec8"); front.addColorStop(1,"#7c848e");
+    ctx.fillStyle = front;
+    ctx.beginPath();
+    ctx.moveTo(ox-halfTop, oy-8);
+    ctx.lineTo(ox+halfTop, oy-8);
+    ctx.lineTo(ox+halfBot, oy+10);
+    ctx.lineTo(ox-halfBot, oy+10);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Right side face (the receding end of the bar)
+    const side = ctx.createLinearGradient(ox+halfTop,0,ox+halfTop+dx,0);
+    side.addColorStop(0,"#9aa2ac"); side.addColorStop(1,"#5e656e");
+    ctx.fillStyle = side;
+    ctx.beginPath();
+    ctx.moveTo(ox+halfTop, oy-8);
+    ctx.lineTo(ox+halfTop+dx, oy-8+dy);
+    ctx.lineTo(ox+halfBot+dx, oy+10+dy);
+    ctx.lineTo(ox+halfBot, oy+10);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Top face (parallelogram) — brightest, catches the light
+    const top = ctx.createLinearGradient(0,oy-8+dy,0,oy-8);
+    top.addColorStop(0,"#ffffff"); top.addColorStop(1,"#cdd4dc");
+    ctx.fillStyle = top;
+    ctx.beginPath();
+    ctx.moveTo(ox-halfTop, oy-8);
+    ctx.lineTo(ox-halfTop+dx, oy-8+dy);
+    ctx.lineTo(ox+halfTop+dx, oy-8+dy);
+    ctx.lineTo(ox+halfTop, oy-8);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // Top edge highlight along the front lip
+    ctx.strokeStyle = "rgba(255,255,255,0.9)"; ctx.lineWidth = 1.3;
+    ctx.beginPath(); ctx.moveTo(ox-halfTop+2, oy-7); ctx.lineTo(ox+halfTop-2, oy-7); ctx.stroke();
+    ctx.strokeStyle = "#3a4048"; ctx.lineWidth = 2;
+  };
+  // Bottom ingot, then a single ingot resting on top — a clear stack.
+  ingot(-4, 11);
+  ingot(-1, -7);
 }
 
 export const ICONS = {

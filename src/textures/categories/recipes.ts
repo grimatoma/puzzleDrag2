@@ -79,12 +79,24 @@ function drawWaterPump(ctx: CanvasRenderingContext2D) {
   ctx.lineWidth = 3;
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.moveTo(2, -12);
+  ctx.moveTo(1, -13);
   ctx.bezierCurveTo(8, -18, 14, -20, 18, -16);
   ctx.stroke();
-  ctx.fillStyle = "#3a3a40";
+  // pivot mount: a metal collar bolted into the body where the handle hinges
+  ctx.fillStyle = "#5a5a62";
   ctx.beginPath();
-  ctx.arc(2, -12, 1.6, 0, Math.PI * 2);
+  ctx.ellipse(0, -13, 4, 3.2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#2a2a30";
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  ctx.fillStyle = "#1a1a20";
+  ctx.beginPath();
+  ctx.arc(1, -13, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(220,224,232,0.7)";
+  ctx.beginPath();
+  ctx.ellipse(-1.2, -14, 1.4, 0.9, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = "#a8d4ec";
   ctx.beginPath();
@@ -97,9 +109,13 @@ function drawWaterPump(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.ellipse(-18, 9.5, 1, 0.6, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  const sheen = ctx.createLinearGradient(-7, -10, -2, -10);
+  sheen.addColorStop(0, "rgba(255,255,255,0)");
+  sheen.addColorStop(0.5, "rgba(255,235,225,0.4)");
+  sheen.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = sheen;
   ctx.beginPath();
-  ctx.ellipse(-4, -8, 1.5, 6, -0.1, 0, Math.PI * 2);
+  ctx.ellipse(-4.5, -7, 2.4, 7, -0.18, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -241,23 +257,40 @@ function drawHoneyroll(ctx: CanvasRenderingContext2D) {
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   });
-  const dripGrad = ctx.createLinearGradient(14, 0, 18, 18);
+  // Honey drizzle that visibly oozes off the top of the roll, drapes over the
+  // right edge and pools into a hanging drop — one connected ribbon, not a
+  // detached teardrop.
+  const dripGrad = ctx.createLinearGradient(4, -8, 16, 20);
   dripGrad.addColorStop(0, "#fff080");
   dripGrad.addColorStop(0.5, "#f0b820");
   dripGrad.addColorStop(1, "#a86808");
   ctx.fillStyle = dripGrad;
   ctx.beginPath();
-  ctx.moveTo(12, 6);
-  ctx.bezierCurveTo(18, 8, 20, 12, 18, 18);
-  ctx.bezierCurveTo(15, 20, 13, 16, 12, 12);
+  // start on top surface of the roll
+  ctx.moveTo(2, -7);
+  ctx.bezierCurveTo(8, -8, 13, -4, 15, 2);
+  // outer side of the ribbon down over the right rim into a drop
+  ctx.bezierCurveTo(17, 6, 18, 12, 16, 18);
+  ctx.bezierCurveTo(13, 21, 11, 16, 11, 12);
+  // inner side of the ribbon back up across the roll surface
+  ctx.bezierCurveTo(9, 8, 8, 4, 7, 0);
+  ctx.bezierCurveTo(6, -3, 4, -5, 2, -7);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#7a4408";
   ctx.lineWidth = 1.2;
   ctx.stroke();
+  // glossy highlight running along the ribbon
+  ctx.strokeStyle = "rgba(255,255,255,0.6)";
+  ctx.lineWidth = 1.4;
+  ctx.lineCap = "round";
+  ctx.beginPath();
+  ctx.moveTo(5, -5);
+  ctx.bezierCurveTo(11, -4, 14, 2, 14, 9);
+  ctx.stroke();
   ctx.fillStyle = "rgba(255,255,255,0.6)";
   ctx.beginPath();
-  ctx.ellipse(15, 10, 1, 2.4, -0.3, 0, Math.PI * 2);
+  ctx.ellipse(14, 14, 1, 2.2, -0.2, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = "rgba(255,250,200,0.55)";
   ctx.beginPath();
@@ -642,106 +675,124 @@ function drawIronHinge(ctx: CanvasRenderingContext2D) {
 
 function drawIronframe(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 20, 4);
-  const barGrad = ctx.createLinearGradient(0, -14, 0, 14);
+  // Open square iron frame: a thick border with a genuinely hollow centre
+  // (background shows through) and a bolt at each corner — reads as structural
+  // ironwork rather than a solid mechanical mount.
+  const barGrad = ctx.createLinearGradient(0, -16, 0, 16);
   barGrad.addColorStop(0, "#a8b4c0");
   barGrad.addColorStop(0.5, "#6a7a86");
   barGrad.addColorStop(1, "#2a3040");
   ctx.fillStyle = barGrad;
-  rr(ctx, -16, -16, 32, 32, 4);
-  ctx.fill();
+  // Build both rounded rects as one path (rr calls beginPath internally, so
+  // inline the subpaths here) and fill with even-odd to punch out the centre.
+  const rrSub = (x: number, y: number, w: number, h: number, r: number) => {
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+  };
+  ctx.beginPath();
+  rrSub(-16, -16, 32, 32, 4); // outer
+  rrSub(-9, -9, 18, 18, 2);   // inner hole
+  ctx.fill("evenodd");
+  // Outer + inner edges
   ctx.strokeStyle = "#1a1c28";
-  ctx.lineWidth = 2.5;
+  ctx.lineWidth = 2.2;
+  ctx.beginPath();
+  rr(ctx, -16, -16, 32, 32, 4);
   ctx.stroke();
-  ctx.fillStyle = "#2a2c36";
-  rr(ctx, -12, -12, 24, 24, 2);
-  ctx.fill();
   ctx.strokeStyle = "#0a0c14";
-  ctx.lineWidth = 1.4;
+  ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  rr(ctx, -9, -9, 18, 18, 2);
   ctx.stroke();
-  ctx.strokeStyle = "rgba(255,255,255,0.35)";
-  ctx.lineWidth = 0.8;
+  // Inner-bevel shading so the opening reads as a recessed window
+  ctx.strokeStyle = "rgba(0,0,0,0.4)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(-8, 8);
+  ctx.lineTo(-8, -8);
+  ctx.lineTo(8, -8);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,255,255,0.3)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(8, -8);
+  ctx.lineTo(8, 8);
+  ctx.lineTo(-8, 8);
+  ctx.stroke();
+  // Top specular along the upper outer rail
+  ctx.strokeStyle = "rgba(255,255,255,0.4)";
+  ctx.lineWidth = 0.9;
   ctx.beginPath();
   ctx.moveTo(-14, -15);
   ctx.lineTo(14, -15);
   ctx.stroke();
-  ctx.strokeStyle = "#1a1c28";
-  ctx.lineWidth = 1.6;
-  ctx.lineCap = "round";
-  const corners = [
-    { x: -12, y: -12, dx: 1, dy: 1 },
-    { x: 12, y: -12, dx: -1, dy: 1 },
-    { x: -12, y: 12, dx: 1, dy: -1 },
-    { x: 12, y: 12, dx: -1, dy: -1 },
+  // Corner bolts
+  const bolts = [
+    [-12.5, -12.5],
+    [12.5, -12.5],
+    [-12.5, 12.5],
+    [12.5, 12.5],
   ];
-  corners.forEach(({ x, y, dx, dy }) => {
+  bolts.forEach(([x, y]) => {
+    const bg = ctx.createRadialGradient(x - 0.8, y - 0.8, 0.4, x, y, 3);
+    bg.addColorStop(0, "#d0d8e0");
+    bg.addColorStop(0.55, "#6a7682");
+    bg.addColorStop(1, "#1a1c28");
+    ctx.fillStyle = bg;
     ctx.beginPath();
-    ctx.moveTo(x + 5 * dx, y + 1 * dy);
-    ctx.bezierCurveTo(x + 5 * dx, y + 4 * dy, x + 1 * dx, y + 4 * dy, x + 1 * dx, y + 1 * dy);
-    ctx.bezierCurveTo(x + 1 * dx, y, x + 3 * dx, y, x + 3 * dx, y + 2 * dy);
-    ctx.stroke();
-  });
-  const sides = [
-    { x: 0, y: -16, rot: 0 },
-    { x: 0, y: 16, rot: Math.PI },
-    { x: -16, y: 0, rot: -Math.PI / 2 },
-    { x: 16, y: 0, rot: Math.PI / 2 },
-  ];
-  sides.forEach(({ x, y, rot }) => {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(rot);
-    ctx.fillStyle = "#7a8894";
-    ctx.beginPath();
-    ctx.moveTo(0, -3);
-    ctx.bezierCurveTo(-3, -3, -4, 0, -2, 1);
-    ctx.bezierCurveTo(0, 2, 0, 2, 0, 4);
-    ctx.bezierCurveTo(0, 2, 0, 2, 2, 1);
-    ctx.bezierCurveTo(4, 0, 3, -3, 0, -3);
-    ctx.closePath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "#1a1c28";
-    ctx.lineWidth = 0.8;
+    ctx.strokeStyle = "#0a0c14";
+    ctx.lineWidth = 0.9;
     ctx.stroke();
-    ctx.restore();
+    // hex/slot detail
+    ctx.strokeStyle = "#1a1c28";
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(x - 1.6, y);
+    ctx.lineTo(x + 1.6, y);
+    ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.6)";
+    ctx.beginPath();
+    ctx.arc(x - 0.9, y - 0.9, 0.7, 0, Math.PI * 2);
+    ctx.fill();
   });
-  const bossGrad = ctx.createRadialGradient(-0.8, -0.8, 0.5, 0, 0, 3.5);
-  bossGrad.addColorStop(0, "#c8d0d8");
-  bossGrad.addColorStop(0.5, "#6a7682");
-  bossGrad.addColorStop(1, "#1a1c28");
-  ctx.fillStyle = bossGrad;
-  ctx.beginPath();
-  ctx.arc(0, 0, 3.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#0a0c14";
-  ctx.lineWidth = 0.8;
-  ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.beginPath();
-  ctx.arc(-1, -1, 0.8, 0, Math.PI * 2);
-  ctx.fill();
+  // Long highlight stripe down the left rail
   ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.beginPath();
-  ctx.ellipse(-14, -4, 1.4, 8, -0.05, 0, Math.PI * 2);
+  ctx.ellipse(-14, -2, 1.4, 7, -0.05, 0, Math.PI * 2);
   ctx.fill();
 }
 
 function drawCobblepath(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
-  ctx.fillStyle = "#2a2418";
-  rr(ctx, -22, -14, 44, 32, 3);
-  ctx.fill();
-  ctx.strokeStyle = "#1a1408";
-  ctx.lineWidth = 1.4;
-  ctx.stroke();
+  // No tray: an irregular sandy-earth patch shows through the gaps as grout,
+  // letting the cobbles read as a paved ground surface rather than a platter.
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(-20, -10);
+  ctx.bezierCurveTo(-23, 0, -22, 10, -16, 16);
+  ctx.bezierCurveTo(-6, 19, 8, 19, 18, 15);
+  ctx.bezierCurveTo(23, 8, 23, -4, 18, -12);
+  ctx.bezierCurveTo(6, -16, -10, -15, -20, -10);
+  ctx.closePath();
+  ctx.clip();
+  // Earth/grout fill between the stones
+  ctx.fillStyle = "#73643f";
+  ctx.fillRect(-24, -18, 48, 40);
   const stones = [
-    { x: -14, y: -8, rx: 6, ry: 5, rot: 0.2 },
-    { x: 0, y: -10, rx: 7, ry: 5, rot: -0.15 },
-    { x: 13, y: -7, rx: 6, ry: 5, rot: 0.1 },
-    { x: -12, y: 4, rx: 8, ry: 6, rot: -0.1 },
-    { x: 3, y: 5, rx: 8, ry: 6.5, rot: 0.15 },
-    { x: 16, y: 6, rx: 6, ry: 5.5, rot: -0.1 },
-    { x: -6, y: 14, rx: 7, ry: 4.5, rot: 0.05 },
-    { x: 10, y: 14, rx: 7, ry: 4.5, rot: -0.05 },
+    { x: -13, y: -9, rx: 7, ry: 6, rot: 0.2 },
+    { x: 1, y: -10, rx: 8, ry: 6, rot: -0.15 },
+    { x: 14, y: -8, rx: 7, ry: 6, rot: 0.1 },
+    { x: -14, y: 3, rx: 8, ry: 6.5, rot: -0.1 },
+    { x: 1, y: 4, rx: 8.5, ry: 7, rot: 0.15 },
+    { x: 15, y: 4, rx: 7.5, ry: 6.5, rot: -0.1 },
+    { x: -9, y: 14, rx: 8, ry: 5.5, rot: 0.05 },
+    { x: 8, y: 14, rx: 8, ry: 5.5, rot: -0.05 },
   ];
   stones.forEach(({ x, y, rx, ry, rot }) => {
     const grad = ctx.createRadialGradient(x - rx * 0.3, y - ry * 0.3, 0.5, x, y, Math.max(rx, ry));
@@ -755,120 +806,117 @@ function drawCobblepath(ctx: CanvasRenderingContext2D) {
     ctx.beginPath();
     ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = "#3a342a";
-    ctx.lineWidth = 1.2;
+    ctx.strokeStyle = "#4a443a";
+    ctx.lineWidth = 1;
     ctx.stroke();
-    ctx.fillStyle = "rgba(255,255,255,0.45)";
+    ctx.fillStyle = "rgba(255,255,255,0.4)";
     ctx.beginPath();
     ctx.ellipse(-rx * 0.4, -ry * 0.45, rx * 0.45, ry * 0.25, -0.2, 0, Math.PI * 2);
     ctx.fill();
     ctx.restore();
   });
-  ctx.fillStyle = "rgba(90,128,40,0.7)";
-  [[-7, -3, 1.6, 0.6], [8, 0, 1.4, 0.5], [-3, 9, 1.2, 0.5], [13, -2, 1, 0.5], [-2, -15, 1.4, 0.5]].forEach(([x, y, rx, ry]) => {
+  // Moss tufts sprouting from the grout gaps
+  ctx.fillStyle = "rgba(90,128,40,0.8)";
+  [[-7, -2, 1.6, 0.7], [8, -2, 1.4, 0.6], [-3, 9, 1.4, 0.6], [-19, 2, 1.2, 0.6]].forEach(([x, y, rx, ry]) => {
     ctx.beginPath();
     ctx.ellipse(x, y, rx, ry, 0.2, 0, Math.PI * 2);
     ctx.fill();
   });
-  ctx.fillStyle = "rgba(140,180,80,0.7)";
-  [[-7, -3.4, 0.5], [8, -0.3, 0.4], [-3, 8.7, 0.4]].forEach(([x, y, r]) => {
+  ctx.fillStyle = "rgba(140,180,80,0.8)";
+  [[-7, -2.4, 0.6], [8, -2.4, 0.5], [-3, 8.6, 0.5]].forEach(([x, y, r]) => {
     ctx.beginPath();
     ctx.arc(x, y, r, 0, Math.PI * 2);
     ctx.fill();
   });
+  ctx.restore();
 }
 
 function drawGoldring(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 4);
   ctx.save();
-  ctx.rotate(-0.5);
-  const ringGrad = ctx.createLinearGradient(0, -8, 0, 8);
+  ctx.rotate(-0.4);
+  // Band drawn as a true open annulus (even-odd) so the centre hole shows
+  // through to the background and the form reads instantly as a ring.
+  const ringGrad = ctx.createLinearGradient(0, -10, 0, 10);
   ringGrad.addColorStop(0, "#fff5b0");
   ringGrad.addColorStop(0.3, "#ffd34c");
   ringGrad.addColorStop(0.7, "#c89818");
   ringGrad.addColorStop(1, "#7a5408");
   ctx.fillStyle = ringGrad;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.ellipse(0, 1, 15, 10, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 1, 9.5, 5.5, 0, 0, Math.PI * 2);
+  ctx.fill("evenodd");
+  // Outer + inner edges of the band
   ctx.strokeStyle = "#5a3808";
   ctx.lineWidth = 1.6;
+  ctx.beginPath();
+  ctx.ellipse(0, 1, 15, 10, 0, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 14, 9, 0, 0, Math.PI * 2);
-  ctx.clip();
-  ctx.fillStyle = "#3a2408";
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 9, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
   ctx.strokeStyle = "#7a5408";
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = 1.4;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 9, 5, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 1, 9.5, 5.5, 0, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.strokeStyle = "rgba(120,80,8,0.7)";
-  ctx.lineWidth = 1;
+  // Subtle inner-hole shading rim so the hole reads as recessed
+  ctx.strokeStyle = "rgba(120,80,8,0.55)";
+  ctx.lineWidth = 0.8;
   ctx.beginPath();
-  ctx.ellipse(0, -2.5, 13, 1.4, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 1.8, 9, 5, 0, 0, Math.PI * 2);
   ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(0, 2.5, 13, 1.4, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(255,250,200,0.6)";
-  ctx.lineWidth = 0.6;
-  ctx.beginPath();
-  ctx.ellipse(0, -3, 12.6, 1, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(0, 2, 12.6, 1, 0, 0, Math.PI * 2);
-  ctx.stroke();
+  // Bright running highlight on the upper-left of the band
   ctx.strokeStyle = "rgba(255,255,255,0.7)";
-  ctx.lineWidth = 1.8;
+  ctx.lineWidth = 2;
   ctx.lineCap = "round";
   ctx.beginPath();
-  ctx.ellipse(0, 0, 13, 8, 0, Math.PI * 1.1, Math.PI * 1.5);
+  ctx.ellipse(0, 1, 12.2, 7.5, 0, Math.PI * 1.05, Math.PI * 1.55);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(255,250,200,0.5)";
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.ellipse(0, 1, 12.2, 7.5, 0, Math.PI * 0.1, Math.PI * 0.45);
   ctx.stroke();
   ctx.restore();
-  const gemGrad = ctx.createRadialGradient(-1, -10, 0.5, 0, -8, 6);
+  // Smaller mounted gem at the top of the band
+  const gemGrad = ctx.createRadialGradient(-0.8, -10, 0.4, 0, -9, 4.5);
   gemGrad.addColorStop(0, "#ffffff");
   gemGrad.addColorStop(0.4, "#d8f0ff");
   gemGrad.addColorStop(1, "#5a8aa8");
   ctx.fillStyle = gemGrad;
   ctx.beginPath();
-  ctx.moveTo(0, -14);
-  ctx.lineTo(4, -8);
-  ctx.lineTo(0, -2);
-  ctx.lineTo(-4, -8);
+  ctx.moveTo(0, -13);
+  ctx.lineTo(2.8, -8.5);
+  ctx.lineTo(0, -4);
+  ctx.lineTo(-2.8, -8.5);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#3a4a5a";
-  ctx.lineWidth = 1;
+  ctx.lineWidth = 0.9;
   ctx.stroke();
   ctx.strokeStyle = "rgba(255,255,255,0.85)";
-  ctx.lineWidth = 0.8;
+  ctx.lineWidth = 0.7;
   ctx.beginPath();
-  ctx.moveTo(0, -14);
-  ctx.lineTo(0, -2);
-  ctx.moveTo(-4, -8);
-  ctx.lineTo(4, -8);
+  ctx.moveTo(0, -13);
+  ctx.lineTo(0, -4);
+  ctx.moveTo(-2.8, -8.5);
+  ctx.lineTo(2.8, -8.5);
   ctx.stroke();
   ctx.fillStyle = "rgba(255,255,255,0.9)";
   ctx.beginPath();
-  ctx.arc(-1.4, -10, 0.8, 0, Math.PI * 2);
+  ctx.arc(-1, -9.5, 0.7, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = "#7a5408";
+  // Small prongs/shoulders where the gem meets the band
+  ctx.fillStyle = "#a87808";
   ctx.beginPath();
-  ctx.moveTo(-3, -4);
-  ctx.lineTo(-5, -2);
-  ctx.lineTo(-2, 0);
+  ctx.moveTo(-2.6, -8);
+  ctx.lineTo(-4, -5.5);
+  ctx.lineTo(-1.5, -5);
   ctx.closePath();
   ctx.fill();
   ctx.beginPath();
-  ctx.moveTo(3, -4);
-  ctx.lineTo(5, -2);
-  ctx.lineTo(2, 0);
+  ctx.moveTo(2.6, -8);
+  ctx.lineTo(4, -5.5);
+  ctx.lineTo(1.5, -5);
   ctx.closePath();
   ctx.fill();
 }
@@ -1217,119 +1265,135 @@ function drawChowder(ctx: CanvasRenderingContext2D) {
 }
 
 function drawFishOilBottled(ctx: CanvasRenderingContext2D) {
-  drawShadow(ctx, 14, 4);
-  const glassGrad = ctx.createLinearGradient(-8, 0, 8, 0);
-  glassGrad.addColorStop(0, "rgba(240,236,220,0.75)");
-  glassGrad.addColorStop(0.5, "rgba(220,210,180,0.55)");
-  glassGrad.addColorStop(1, "rgba(150,140,110,0.75)");
+  drawShadow(ctx, 20, 4);
+  // Recentred + scaled up: cork at top, bulb body centred on the box.
+  // Glass body (rounded flask), centre of mass near origin.
+  const glassGrad = ctx.createLinearGradient(-14, 0, 14, 0);
+  glassGrad.addColorStop(0, "rgba(240,236,220,0.78)");
+  glassGrad.addColorStop(0.5, "rgba(220,210,180,0.58)");
+  glassGrad.addColorStop(1, "rgba(150,140,110,0.78)");
   ctx.fillStyle = glassGrad;
   ctx.beginPath();
-  ctx.moveTo(-4, -8);
-  ctx.lineTo(-4, -2);
-  ctx.lineTo(-10, 8);
-  ctx.bezierCurveTo(-10, 18, 10, 18, 10, 8);
-  ctx.lineTo(4, -2);
-  ctx.lineTo(4, -8);
+  ctx.moveTo(-6, -18);
+  ctx.lineTo(-6, -8);
+  ctx.lineTo(-15, 4);
+  ctx.bezierCurveTo(-15, 18, 15, 18, 15, 4);
+  ctx.lineTo(6, -8);
+  ctx.lineTo(6, -18);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#3a3020";
-  ctx.lineWidth = 1.6;
+  ctx.lineWidth = 1.8;
   ctx.stroke();
   ctx.save();
   ctx.beginPath();
-  ctx.moveTo(-4, -8);
-  ctx.lineTo(-4, -2);
-  ctx.lineTo(-10, 8);
-  ctx.bezierCurveTo(-10, 18, 10, 18, 10, 8);
-  ctx.lineTo(4, -2);
-  ctx.lineTo(4, -8);
+  ctx.moveTo(-6, -18);
+  ctx.lineTo(-6, -8);
+  ctx.lineTo(-15, 4);
+  ctx.bezierCurveTo(-15, 18, 15, 18, 15, 4);
+  ctx.lineTo(6, -8);
+  ctx.lineTo(6, -18);
   ctx.closePath();
   ctx.clip();
-  const oilGrad = ctx.createLinearGradient(0, 0, 0, 18);
+  const oilGrad = ctx.createLinearGradient(0, -6, 0, 18);
   oilGrad.addColorStop(0, "#fff080");
   oilGrad.addColorStop(0.45, "#e8d050");
   oilGrad.addColorStop(1, "#7a6018");
   ctx.fillStyle = oilGrad;
-  ctx.fillRect(-12, 0, 24, 22);
+  ctx.fillRect(-16, -6, 32, 28);
   ctx.fillStyle = "rgba(255,255,255,0.65)";
   ctx.beginPath();
-  ctx.ellipse(0, 0, 8, 1.5, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, -6, 9, 1.8, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = "rgba(255,240,160,0.5)";
   ctx.beginPath();
-  ctx.ellipse(-3, 2, 3, 0.8, 0, 0, Math.PI * 2);
+  ctx.ellipse(-4, -2, 4, 1, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.restore();
+  // Specular highlights on glass
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.beginPath();
-  ctx.ellipse(-7, 6, 1.6, 7, -0.1, 0, Math.PI * 2);
+  ctx.ellipse(-10, 4, 2, 9, -0.1, 0, Math.PI * 2);
   ctx.fill();
   ctx.fillStyle = "rgba(255,255,255,0.3)";
   ctx.beginPath();
-  ctx.ellipse(7, 8, 1, 4, -0.1, 0, Math.PI * 2);
+  ctx.ellipse(10, 6, 1.4, 6, -0.1, 0, Math.PI * 2);
   ctx.fill();
-  const corkGrad = ctx.createLinearGradient(0, -12, 0, -8);
+  // Cork
+  const corkGrad = ctx.createLinearGradient(0, -24, 0, -18);
   corkGrad.addColorStop(0, "#c89058");
   corkGrad.addColorStop(0.5, "#8a5828");
   corkGrad.addColorStop(1, "#4a2a10");
   ctx.fillStyle = corkGrad;
-  rr(ctx, -4, -12, 8, 5, 1);
+  rr(ctx, -6, -24, 12, 7, 1.5);
   ctx.fill();
   ctx.strokeStyle = "#3a1c08";
-  ctx.lineWidth = 1.2;
+  ctx.lineWidth = 1.4;
   ctx.stroke();
   ctx.strokeStyle = "rgba(60,28,8,0.6)";
-  ctx.lineWidth = 0.5;
+  ctx.lineWidth = 0.6;
   ctx.beginPath();
-  ctx.moveTo(-3, -10);
-  ctx.lineTo(3, -10);
+  ctx.moveTo(-4.5, -21);
+  ctx.lineTo(4.5, -21);
   ctx.stroke();
+  // Glass neck highlight band
   ctx.strokeStyle = "#a87838";
-  ctx.lineWidth = 1.4;
-  for (let y = -6; y <= -3; y += 1.2) {
+  ctx.lineWidth = 1.5;
+  for (let y = -16; y <= -10; y += 1.6) {
     ctx.beginPath();
-    ctx.moveTo(-4, y);
-    ctx.bezierCurveTo(-2, y - 0.3, 2, y + 0.3, 4, y);
+    ctx.moveTo(-6, y);
+    ctx.bezierCurveTo(-3, y - 0.4, 3, y + 0.4, 6, y);
     ctx.stroke();
   }
-  ctx.strokeStyle = "#7a5018";
-  ctx.lineWidth = 0.8;
+  // Oval paper label across the bulb with a fish silhouette on it
+  const labelGrad = ctx.createLinearGradient(0, -2, 0, 14);
+  labelGrad.addColorStop(0, "#f6e8c0");
+  labelGrad.addColorStop(1, "#d8c088");
+  ctx.fillStyle = labelGrad;
   ctx.beginPath();
-  ctx.moveTo(3, -5);
-  ctx.bezierCurveTo(8, -3, 10, 0, 9, 4);
+  ctx.ellipse(0, 6, 11, 8, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#8a6828";
+  ctx.lineWidth = 1.2;
   ctx.stroke();
-  ctx.fillStyle = "#f0e0a8";
+  // Fish motif on the label
+  ctx.fillStyle = "#4a6a82";
   ctx.beginPath();
-  ctx.moveTo(7, 2);
-  ctx.lineTo(13, 4);
-  ctx.lineTo(12, 10);
-  ctx.lineTo(6, 8);
+  ctx.ellipse(-1, 5, 7, 3.4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(6, 5);
+  ctx.lineTo(11, 2);
+  ctx.lineTo(11, 8);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#7a5018";
-  ctx.lineWidth = 0.7;
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(120,80,20,0.7)";
-  ctx.lineWidth = 0.4;
-  ctx.setLineDash([0.8, 0.6]);
+  ctx.strokeStyle = "#2a4456";
+  ctx.lineWidth = 0.8;
   ctx.beginPath();
-  ctx.moveTo(7, 2.4);
-  ctx.lineTo(12.6, 4.4);
-  ctx.lineTo(11.6, 9.6);
-  ctx.lineTo(6.4, 7.6);
+  ctx.ellipse(-1, 5, 7, 3.4, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(6, 5);
+  ctx.lineTo(11, 2);
+  ctx.lineTo(11, 8);
   ctx.closePath();
   ctx.stroke();
-  ctx.setLineDash([]);
-  // Painted scribble standing in for label text (no fillText)
-  ctx.strokeStyle = "#7a3818";
-  ctx.lineWidth = 0.8;
-  ctx.lineCap = "round";
+  // Fish eye + gill
+  ctx.fillStyle = "#fafaf0";
   ctx.beginPath();
-  ctx.moveTo(8, 5);
-  ctx.lineTo(11.5, 5.6);
-  ctx.moveTo(8.2, 7);
-  ctx.lineTo(11, 7.5);
-  ctx.stroke();
+  ctx.arc(-5, 4, 1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "#1a2a36";
+  ctx.beginPath();
+  ctx.arc(-5, 4, 0.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Oil-drip dots below the fish suggesting the label content
+  ctx.fillStyle = "#e8d050";
+  [[-2, 9.5], [2, 9.5]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+  });
 }
 
 function drawLantern(ctx: CanvasRenderingContext2D) {

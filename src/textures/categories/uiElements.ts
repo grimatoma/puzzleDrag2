@@ -145,66 +145,71 @@ function drawCancel(ctx: CanvasRenderingContext2D) {
 }
 
 function drawBuildHammer(ctx: CanvasRenderingContext2D) {
-  drawShadow(ctx, 14, 3);
-  const handle = ctx.createLinearGradient(-12, 14, 6, -4);
+  drawShadow(ctx, 13, 3);
+  // Upright claw hammer, centred. Wood handle runs down the middle; the head
+  // sits across the top with a flat striking face (right) and a forked V-claw
+  // (left) so the silhouette reads unmistakably as a hammer.
+  const handle = ctx.createLinearGradient(-4, 0, 4, 0);
   handle.addColorStop(0, "#7a4a18");
   handle.addColorStop(0.5, "#c08a48");
   handle.addColorStop(1, "#5a3008");
-  ctx.strokeStyle = handle;
-  ctx.lineWidth = 4.5;
-  ctx.lineCap = "round";
-  ctx.beginPath();
-  ctx.moveTo(-11, 13);
-  ctx.lineTo(5, -3);
+  ctx.fillStyle = handle;
+  rr(ctx, -3, -7, 6, 23, 2.5);
+  ctx.fill();
+  ctx.strokeStyle = "#3a1c08";
+  ctx.lineWidth = 2;
+  rr(ctx, -3, -7, 6, 23, 2.5);
   ctx.stroke();
-  ctx.strokeStyle = "rgba(60,28,4,0.55)";
-  ctx.lineWidth = 0.8;
-  [-1.4, 0, 1.4].forEach((o) => {
+  ctx.strokeStyle = "rgba(60,28,4,0.5)";
+  ctx.lineWidth = 0.7;
+  [-1, 1].forEach((o) => {
     ctx.beginPath();
-    ctx.moveTo(-10 + o, 12 - o);
-    ctx.lineTo(4 + o, -2 - o);
+    ctx.moveTo(o, -5);
+    ctx.lineTo(o, 14);
     ctx.stroke();
   });
-  ctx.fillStyle = "#3a1808";
-  ctx.beginPath();
-  ctx.save();
-  ctx.translate(2, 0);
-  ctx.rotate(-0.78);
-  ctx.fillRect(-3, -3, 6, 6);
-  ctx.restore();
-  const head = ctx.createLinearGradient(0, -16, 0, -2);
+  // Head: metal-grey, light from above. Flat striking face on the right,
+  // a downward-curving forked claw on the left.
+  const head = ctx.createLinearGradient(0, -14, 0, 4);
   head.addColorStop(0, "#d0d6dc");
   head.addColorStop(0.5, "#8a929a");
   head.addColorStop(1, "#3a3e44");
   ctx.fillStyle = head;
-  ctx.save();
-  ctx.translate(3, -5);
-  ctx.rotate(-0.78);
   ctx.beginPath();
-  ctx.moveTo(-10, -5);
-  ctx.lineTo(8, -5);
-  ctx.lineTo(9, 5);
-  ctx.lineTo(-10, 5);
-  ctx.quadraticCurveTo(-13, 3, -13, 0);
-  ctx.quadraticCurveTo(-13, -3, -10, -5);
+  // outer (lower) edge of the claw, sweeping down-left to the tips
+  ctx.moveTo(-3, 1);
+  ctx.quadraticCurveTo(-9, 3, -14, 9);
+  ctx.lineTo(-12, 9.5);
+  ctx.quadraticCurveTo(-9, 5, -6, 4);
+  // back up the inner notch then out to the second prong tip
+  ctx.quadraticCurveTo(-10, 7, -10.5, 11);
+  ctx.lineTo(-8.5, 10);
+  ctx.quadraticCurveTo(-7, 4, -2, -2);
+  // up over the top of the head toward the striking face
+  ctx.quadraticCurveTo(-1, -8, 4, -8);
+  ctx.lineTo(10, -8);
+  ctx.quadraticCurveTo(13, -8, 13, -4);
+  ctx.lineTo(13, -1);
+  ctx.quadraticCurveTo(13, 3, 10, 3);
+  ctx.lineTo(4, 3);
+  ctx.quadraticCurveTo(0, 3, -3, 1);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#1a1c20";
   ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.strokeStyle = "#1a1c20";
-  ctx.lineWidth = 1.4;
+  // bevel line at the striking face
+  ctx.strokeStyle = "rgba(26,28,32,0.7)";
+  ctx.lineWidth = 1.2;
   ctx.beginPath();
-  ctx.moveTo(-10, -2);
-  ctx.lineTo(-13, -1);
-  ctx.moveTo(-10, 2);
-  ctx.lineTo(-13, 1);
+  ctx.moveTo(9.5, -7);
+  ctx.lineTo(9.5, 2);
   ctx.stroke();
+  // specular highlight along the top of the head
   ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.beginPath();
-  ctx.ellipse(-2, -3, 6, 1.4, 0, 0, Math.PI * 2);
+  ctx.ellipse(4, -6, 6, 1.3, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.restore();
 }
 
 function drawPin(ctx: CanvasRenderingContext2D) {
@@ -657,10 +662,11 @@ function drawBackpack(ctx: CanvasRenderingContext2D) {
   ctx.moveTo(-6, -10);
   ctx.bezierCurveTo(-6, -16, 6, -16, 6, -10);
   ctx.stroke();
+  // Brighter khaki canvas body so it reads clearly on dark UI.
   const body = ctx.createLinearGradient(-12, 0, 12, 0);
-  body.addColorStop(0, "#9aa848");
-  body.addColorStop(0.5, "#5a6a28");
-  body.addColorStop(1, "#2a3a10");
+  body.addColorStop(0, "#d6c878");
+  body.addColorStop(0.5, "#9aa050");
+  body.addColorStop(1, "#5a662a");
   ctx.fillStyle = body;
   ctx.beginPath();
   ctx.moveTo(-11, -8);
@@ -672,24 +678,27 @@ function drawBackpack(ctx: CanvasRenderingContext2D) {
   ctx.bezierCurveTo(-8, -10, -11, -10, -11, -8);
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#1a2208";
+  ctx.strokeStyle = "#2a3210";
   ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.fillStyle = "#5a3a18";
+  // Top flap, lighter tan leather.
+  ctx.fillStyle = "#7a5424";
   rr(ctx, -10, -12, 20, 5, 1);
   ctx.fill();
-  ctx.strokeStyle = "#2a1804";
+  ctx.strokeStyle = "#3a2408";
   ctx.lineWidth = 1.2;
   rr(ctx, -10, -12, 20, 5, 1);
   ctx.stroke();
-  ctx.fillStyle = "#3a4818";
+  // Front pocket, a clearly lighter panel.
+  ctx.fillStyle = "#b0aa5e";
   rr(ctx, -8, 2, 16, 9, 1.5);
   ctx.fill();
-  ctx.strokeStyle = "#1a2208";
+  ctx.strokeStyle = "#3a4416";
   ctx.lineWidth = 1.2;
   rr(ctx, -8, 2, 16, 9, 1.5);
   ctx.stroke();
-  ctx.strokeStyle = "#5a3a18";
+  // Compression straps, lighter leather so they don't muddy.
+  ctx.strokeStyle = "#8a5e28";
   ctx.lineWidth = 2.4;
   ctx.beginPath();
   ctx.moveTo(-5, -10);
@@ -697,16 +706,17 @@ function drawBackpack(ctx: CanvasRenderingContext2D) {
   ctx.moveTo(5, -10);
   ctx.lineTo(5, 4);
   ctx.stroke();
-  ctx.fillStyle = "#e0c068";
-  rr(ctx, -6.4, 3, 2.8, 2.4, 0.4);
+  // Brass buckles.
+  ctx.fillStyle = "#ffd860";
+  rr(ctx, -6.4, 3, 2.8, 2.6, 0.5);
   ctx.fill();
-  rr(ctx, 3.6, 3, 2.8, 2.4, 0.4);
+  rr(ctx, 3.6, 3, 2.8, 2.6, 0.5);
   ctx.fill();
-  ctx.strokeStyle = "#5a3a18";
-  ctx.lineWidth = 0.7;
-  rr(ctx, -6.4, 3, 2.8, 2.4, 0.4);
+  ctx.strokeStyle = "#7a5008";
+  ctx.lineWidth = 0.9;
+  rr(ctx, -6.4, 3, 2.8, 2.6, 0.5);
   ctx.stroke();
-  rr(ctx, 3.6, 3, 2.8, 2.4, 0.4);
+  rr(ctx, 3.6, 3, 2.8, 2.6, 0.5);
   ctx.stroke();
   ctx.fillStyle = "#a87038";
   rr(ctx, -12, -16, 24, 4, 1.5);
@@ -804,53 +814,62 @@ function drawMap(ctx: CanvasRenderingContext2D) {
 
 function drawPeople(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 14, 3);
-  ctx.fillStyle = "rgba(74,42,28,0.85)";
+  // Two figures, centred as a pair. Rear figure up-and-right with a FULL head
+  // and shoulders (its own outline) so it reads as a second person, not a
+  // smudge; front figure down-and-left, overlapping it.
+  // --- Rear figure: warm terracotta tunic + skin head.
+  const backSkin = ctx.createRadialGradient(5, -10, 1, 6, -8, 7);
+  backSkin.addColorStop(0, "#f4cca0");
+  backSkin.addColorStop(1, "#b07c50");
+  ctx.fillStyle = backSkin;
   ctx.beginPath();
-  ctx.arc(4, -6, 3.6, 0, Math.PI * 2);
+  ctx.arc(6, -8, 4, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#2a1408";
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = "#3a1c08";
+  ctx.lineWidth = 1.4;
   ctx.stroke();
-  const back = ctx.createLinearGradient(4, -3, 4, 12);
-  back.addColorStop(0, "#a85838");
+  const back = ctx.createLinearGradient(6, -3, 6, 14);
+  back.addColorStop(0, "#d08050");
+  back.addColorStop(0.5, "#a85838");
   back.addColorStop(1, "#5a2410");
   ctx.fillStyle = back;
   ctx.beginPath();
-  ctx.moveTo(-2, 12);
-  ctx.bezierCurveTo(-2, 0, 10, 0, 10, 12);
+  ctx.moveTo(-1, 14);
+  ctx.bezierCurveTo(-1, -2, 13, -2, 13, 14);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#2a1408";
-  ctx.lineWidth = 1.4;
+  ctx.lineWidth = 1.6;
   ctx.stroke();
-  const skin = ctx.createRadialGradient(-5, -10, 1, -4, -8, 8);
+  // --- Front figure: blue tunic + skin head, overlapping the rear one.
+  const skin = ctx.createRadialGradient(-6, -8, 1, -5, -6, 8);
   skin.addColorStop(0, "#f8d8b0");
   skin.addColorStop(1, "#a87858");
   ctx.fillStyle = skin;
   ctx.beginPath();
-  ctx.arc(-4, -8, 4.5, 0, Math.PI * 2);
+  ctx.arc(-5, -6, 4.7, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = "#3a1c08";
   ctx.lineWidth = 1.4;
   ctx.stroke();
   ctx.fillStyle = "#3a1c08";
   ctx.beginPath();
-  ctx.arc(-5, -9.5, 0.6, 0, Math.PI * 2);
-  ctx.arc(-2.6, -9.5, 0.6, 0, Math.PI * 2);
+  ctx.arc(-6.2, -7.4, 0.6, 0, Math.PI * 2);
+  ctx.arc(-3.6, -7.4, 0.6, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = "#3a1c08";
   ctx.lineWidth = 0.8;
   ctx.beginPath();
-  ctx.arc(-4, -7, 1.2, 0.1, Math.PI - 0.1);
+  ctx.arc(-5, -5, 1.2, 0.1, Math.PI - 0.1);
   ctx.stroke();
-  const tunic = ctx.createLinearGradient(-4, -3, -4, 12);
+  const tunic = ctx.createLinearGradient(-5, -1, -5, 14);
   tunic.addColorStop(0, "#7a9ec8");
   tunic.addColorStop(0.5, "#4a78a8");
   tunic.addColorStop(1, "#1f3858");
   ctx.fillStyle = tunic;
   ctx.beginPath();
-  ctx.moveTo(-12, 14);
-  ctx.bezierCurveTo(-12, -2, 4, -2, 4, 14);
+  ctx.moveTo(-12, 15);
+  ctx.bezierCurveTo(-12, -1, 2, -1, 2, 15);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#0a1c30";
@@ -859,12 +878,12 @@ function drawPeople(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "rgba(0,0,0,0.4)";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(-4, -2);
-  ctx.lineTo(-4, 6);
+  ctx.moveTo(-5, -1);
+  ctx.lineTo(-5, 7);
   ctx.stroke();
   ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.beginPath();
-  ctx.ellipse(-8, 4, 1.5, 4, -0.1, 0, Math.PI * 2);
+  ctx.ellipse(-9, 5, 1.5, 4, -0.1, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -1113,7 +1132,6 @@ function drawScale(ctx: CanvasRenderingContext2D) {
   ctx.lineTo(0, 14);
   ctx.stroke();
   ctx.save();
-  ctx.rotate(-0.05);
   const beam = ctx.createLinearGradient(0, -10, 0, -6);
   beam.addColorStop(0, "#c08a48");
   beam.addColorStop(0.5, "#8a5828");
@@ -1144,34 +1162,48 @@ function drawScale(ctx: CanvasRenderingContext2D) {
   ctx.moveTo(11, -7);
   ctx.lineTo(11, -2);
   ctx.stroke();
-  const panL = ctx.createRadialGradient(-10, -1, 1, -10, 0, 8);
-  panL.addColorStop(0, "#c8cfd6");
-  panL.addColorStop(1, "#3a3e44");
-  ctx.fillStyle = panL;
-  ctx.beginPath();
-  ctx.ellipse(-10, 0, 6, 2, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#1a1c20";
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(-10, -0.6, 6, 1.6, 0, 0, Math.PI);
-  ctx.fillStyle = "#1a1c20";
-  ctx.fill();
-  const panR = ctx.createRadialGradient(10, -1, 1, 10, 0, 8);
-  panR.addColorStop(0, "#c8cfd6");
-  panR.addColorStop(1, "#3a3e44");
-  ctx.fillStyle = panR;
-  ctx.beginPath();
-  ctx.ellipse(10, 0, 6, 2, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#1a1c20";
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.ellipse(10, -0.6, 6, 1.6, 0, 0, Math.PI);
-  ctx.fillStyle = "#1a1c20";
-  ctx.fill();
+  // Pans: bright dished cups. Each is a shallow bowl with a light steel
+  // interior, a clear bright rim, and a soft cup shadow at the base.
+  const drawPan = (cx: number) => {
+    // outer bowl (the underside / depth)
+    const bowl = ctx.createLinearGradient(cx, -1, cx, 5);
+    bowl.addColorStop(0, "#b6bdc4");
+    bowl.addColorStop(1, "#5a626a");
+    ctx.fillStyle = bowl;
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, 0);
+    ctx.quadraticCurveTo(cx, 7, cx + 6, 0);
+    ctx.quadraticCurveTo(cx, 3, cx - 6, 0);
+    ctx.closePath();
+    ctx.fill();
+    // dished interior, light steel
+    const cup = ctx.createRadialGradient(cx - 2, -1, 1, cx, 0, 7);
+    cup.addColorStop(0, "#eef1f4");
+    cup.addColorStop(0.6, "#aeb6be");
+    cup.addColorStop(1, "#6a727a");
+    ctx.fillStyle = cup;
+    ctx.beginPath();
+    ctx.ellipse(cx, 0, 6, 2.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // bright rim
+    ctx.strokeStyle = "#dfe4e9";
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.ellipse(cx, 0, 6, 2.2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.strokeStyle = "#2a3038";
+    ctx.lineWidth = 0.7;
+    ctx.beginPath();
+    ctx.ellipse(cx, 0, 6, 2.2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+    // glint
+    ctx.fillStyle = "rgba(255,255,255,0.8)";
+    ctx.beginPath();
+    ctx.ellipse(cx - 2, -0.8, 2, 0.7, -0.2, 0, Math.PI * 2);
+    ctx.fill();
+  };
+  drawPan(-10);
+  drawPan(10);
   ctx.restore();
   ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.beginPath();
@@ -1181,73 +1213,93 @@ function drawScale(ctx: CanvasRenderingContext2D) {
 
 function drawDevTools(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 16, 3);
+  // --- Screwdriver (drawn underneath), one connected tool: gold handle ->
+  // metal ferrule -> grey shaft -> flat tip, all colinear at -45deg.
   ctx.save();
   ctx.rotate(-0.78);
-  const shaft = ctx.createLinearGradient(0, -2, 0, 2);
+  // gold handle (down-left)
+  const handle = ctx.createLinearGradient(0, -4, 0, 4);
+  handle.addColorStop(0, "#ffe080");
+  handle.addColorStop(0.5, "#e0a020");
+  handle.addColorStop(1, "#7a5008");
+  ctx.fillStyle = handle;
+  rr(ctx, -21, -4, 13, 8, 3);
+  ctx.fill();
+  ctx.strokeStyle = "#3a1c00";
+  ctx.lineWidth = 1.4;
+  rr(ctx, -21, -4, 13, 8, 3);
+  ctx.stroke();
+  ctx.strokeStyle = "rgba(58,28,0,0.5)";
+  ctx.lineWidth = 0.7;
+  [-17.5, -14.5, -11.5].forEach((x) => {
+    ctx.beginPath();
+    ctx.moveTo(x, -3.5);
+    ctx.lineTo(x, 3.5);
+    ctx.stroke();
+  });
+  // metal ferrule bridging handle and shaft (closes the old gap)
+  const ferrule = ctx.createLinearGradient(0, -3, 0, 3);
+  ferrule.addColorStop(0, "#e8ecf0");
+  ferrule.addColorStop(0.5, "#9aa2aa");
+  ferrule.addColorStop(1, "#4a5158");
+  ctx.fillStyle = ferrule;
+  rr(ctx, -9, -3, 5, 6, 1);
+  ctx.fill();
+  ctx.strokeStyle = "#1a1c20";
+  ctx.lineWidth = 1;
+  rr(ctx, -9, -3, 5, 6, 1);
+  ctx.stroke();
+  // grey shaft (up-right)
+  const shaft = ctx.createLinearGradient(0, -2.4, 0, 2.4);
   shaft.addColorStop(0, "#d0d6dc");
   shaft.addColorStop(0.5, "#8a929a");
   shaft.addColorStop(1, "#3a3e44");
   ctx.fillStyle = shaft;
-  rr(ctx, -2, -3, 18, 6, 1.5);
+  rr(ctx, -5, -2.4, 21, 4.8, 1.2);
   ctx.fill();
   ctx.strokeStyle = "#1a1c20";
-  ctx.lineWidth = 1.4;
-  rr(ctx, -2, -3, 18, 6, 1.5);
+  ctx.lineWidth = 1.3;
+  rr(ctx, -5, -2.4, 21, 4.8, 1.2);
   ctx.stroke();
-  ctx.fillStyle = "#1a1c20";
+  // flat driver tip
+  ctx.fillStyle = "#23262c";
   ctx.beginPath();
-  ctx.moveTo(16, -3);
-  ctx.lineTo(20, -1);
-  ctx.lineTo(20, 1);
-  ctx.lineTo(16, 3);
+  ctx.moveTo(15, -2.4);
+  ctx.lineTo(20, -1.2);
+  ctx.lineTo(20, 1.2);
+  ctx.lineTo(15, 2.4);
   ctx.closePath();
   ctx.fill();
   ctx.fillStyle = "rgba(255,255,255,0.55)";
   ctx.beginPath();
-  ctx.rect(0, -2.4, 14, 0.8);
+  ctx.rect(-3, -1.9, 16, 0.8);
   ctx.fill();
   ctx.restore();
-  ctx.save();
-  ctx.rotate(-0.78);
-  const handle = ctx.createLinearGradient(0, -3, 0, 3);
-  handle.addColorStop(0, "#ffd860");
-  handle.addColorStop(0.5, "#e0a020");
-  handle.addColorStop(1, "#7a5008");
-  ctx.fillStyle = handle;
-  rr(ctx, -20, -3.5, 12, 7, 2);
-  ctx.fill();
-  ctx.strokeStyle = "#3a1c00";
-  ctx.lineWidth = 1.4;
-  rr(ctx, -20, -3.5, 12, 7, 2);
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(58,28,0,0.5)";
-  ctx.lineWidth = 0.7;
-  [-17, -14, -11].forEach((x) => {
-    ctx.beginPath();
-    ctx.moveTo(x, -3);
-    ctx.lineTo(x, 3);
-    ctx.stroke();
-  });
-  ctx.restore();
+  // --- Wrench (drawn on top), cooler/darker steel + a soft cast shadow at the
+  // crossover so it clearly layers over the screwdriver instead of muddying.
   ctx.save();
   ctx.rotate(0.78);
-  const wrench = ctx.createLinearGradient(0, -3.5, 0, 3.5);
-  wrench.addColorStop(0, "#d0d6dc");
-  wrench.addColorStop(0.5, "#6a727a");
-  wrench.addColorStop(1, "#2a3038");
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  rr(ctx, -7, -1, 14, 7, 3);
+  ctx.fill();
+  const wrench = ctx.createLinearGradient(0, -4, 0, 4);
+  wrench.addColorStop(0, "#aeb6be");
+  wrench.addColorStop(0.5, "#5a626a");
+  wrench.addColorStop(1, "#23282e");
   ctx.fillStyle = wrench;
   rr(ctx, -6, -3, 12, 6, 1);
   ctx.fill();
-  ctx.strokeStyle = "#1a1c20";
-  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = "#0e1014";
+  ctx.lineWidth = 1.8;
   rr(ctx, -6, -3, 12, 6, 1);
   ctx.stroke();
+  // open-end head (left)
   ctx.fillStyle = wrench;
   ctx.beginPath();
   ctx.arc(-11, 0, 6, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#1a1c20";
-  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = "#0e1014";
+  ctx.lineWidth = 1.8;
   ctx.stroke();
   ctx.fillStyle = "#0a0e12";
   ctx.beginPath();
@@ -1259,12 +1311,13 @@ function drawDevTools(ctx: CanvasRenderingContext2D) {
   }
   ctx.closePath();
   ctx.fill();
+  // open-end jaw (right)
   ctx.fillStyle = wrench;
   ctx.beginPath();
   ctx.arc(11, 0, 5.5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.strokeStyle = "#1a1c20";
-  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = "#0e1014";
+  ctx.lineWidth = 1.8;
   ctx.stroke();
   ctx.fillStyle = "#0a0e12";
   ctx.beginPath();

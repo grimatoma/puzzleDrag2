@@ -113,45 +113,51 @@ function drawBlackberry(ctx: CanvasRenderingContext2D) {
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#33550f"; ctx.lineWidth = 0.6; ctx.stroke();
-  // Backing oval defines the overall blackberry silhouette so gaps between
-  // drupelets read as texture, not holes.
-  ctx.fillStyle = "#1a0420";
-  ctx.beginPath();
-  ctx.ellipse(0, 6, 11, 13, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#08000c"; ctx.lineWidth = 1.6; ctx.stroke();
-  // Many small drupelets, hex-packed, clipped to the body oval. This is
-  // the key fix: blackberries are clusters of ~30 tiny drupelets, not
-  // 6 large round balls (which read as grapes).
-  ctx.save();
-  ctx.beginPath();
-  ctx.ellipse(0, 6, 10.5, 12.5, 0, 0, Math.PI * 2);
-  ctx.clip();
-  const dr = 2.4;
-  for (let row = -5; row <= 5; row++) {
-    const oy = -6 + row * 2.6;
-    const offset = (row % 2 === 0) ? 0 : dr * 0.95;
-    for (let col = -5; col <= 5; col++) {
-      const ox = col * 2.4 + offset;
-      if ((ox / 10.5) ** 2 + ((oy - 6) / 12.5) ** 2 > 1.0) continue;
-      const grad = ctx.createRadialGradient(
-        ox - dr * 0.4, oy - dr * 0.4, 0.3, ox, oy, dr
-      );
-      grad.addColorStop(0, "#7a4a8a");
-      grad.addColorStop(0.55, "#2a0a3a");
-      grad.addColorStop(1, "#0a0014");
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(ox, oy, dr, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = "#08000c"; ctx.lineWidth = 0.6; ctx.stroke();
-      ctx.fillStyle = "rgba(220,180,255,0.7)";
-      ctx.beginPath();
-      ctx.arc(ox - dr * 0.4, oy - dr * 0.5, dr * 0.22, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-  ctx.restore();
+  // A blackberry is a CLUSTER of fused drupelets, not a smooth ovoid. We place
+  // a hand-authored set of overlapping spheres of varied size and position so
+  // the silhouette is genuinely lumpy and each drupelet catches the light
+  // individually. No backing oval / dot-grid (that reads as a plum or grape).
+  // [x, y, radius] — clustered tight, larger near the lit upper-left, smaller
+  // toward the shaded lower edge; outline contributes the bumpy rim.
+  const drupelets: Array<[number, number, number]> = [
+    // top crown row (just under the calyx)
+    [-5, -6, 3.6], [1, -7, 3.4], [6, -5, 3.4],
+    // upper-mid
+    [-8, -1, 4.0], [-2, -2, 4.2], [4, -1, 4.0], [9, 0, 3.4],
+    // mid
+    [-9, 4, 3.8], [-3, 4, 4.2], [3, 4, 4.2], [9, 5, 3.6],
+    // lower-mid
+    [-7, 9, 3.8], [-1, 10, 4.0], [5, 9, 3.8], [10, 9, 2.8],
+    // bottom taper
+    [-4, 14, 3.4], [2, 15, 3.4], [7, 13, 3.0],
+    [-1, 18, 2.8],
+  ];
+  // First pass: dark outlines/seating so adjacent drupelets read fused.
+  drupelets.forEach(([dx, dy, r]) => {
+    ctx.fillStyle = "#0a0014";
+    ctx.beginPath();
+    ctx.arc(dx, dy, r + 0.7, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // Second pass: each drupelet as a small shaded sphere with its own highlight.
+  drupelets.forEach(([dx, dy, r]) => {
+    const grad = ctx.createRadialGradient(
+      dx - r * 0.4, dy - r * 0.45, 0.4, dx, dy, r
+    );
+    grad.addColorStop(0, "#6e3a86");
+    grad.addColorStop(0.5, "#2a0a3c");
+    grad.addColorStop(1, "#0c0114");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(dx, dy, r, 0, Math.PI * 2);
+    ctx.fill();
+    // tiny specular dot, brightest on the upper-left drupelets
+    const hi = 0.85 - (dy + 10) * 0.018;
+    ctx.fillStyle = `rgba(225,190,255,${Math.max(0.3, hi)})`;
+    ctx.beginPath();
+    ctx.arc(dx - r * 0.4, dy - r * 0.45, r * 0.26, 0, Math.PI * 2);
+    ctx.fill();
+  });
 }
 
 function drawRambutan(ctx: CanvasRenderingContext2D) {
@@ -215,13 +221,15 @@ function drawStarfruit(ctx: CanvasRenderingContext2D) {
   ctx.save();
   ctx.rotate(-0.05);
   const points = 5;
-  const outer = 23, inner = 8.5;
-  const rounding = 3.2; // tip softness
+  const outer = 23, inner = 10.5; // plumper lobes (less spiky than a reward star)
+  const rounding = 4.0; // softer, fruit-like tips
+  // Yellow-GREEN carambola flesh (ripe-on-the-edge): green toward the ridges,
+  // warm yellow in the centre, so it reads as a waxy tropical fruit, not gold.
   const grad = ctx.createRadialGradient(-7, -8, 4, 0, 2, 26);
-  grad.addColorStop(0, "#f8e27a");
-  grad.addColorStop(0.5, "#f0cf42");
-  grad.addColorStop(0.82, "#d6a91e");
-  grad.addColorStop(1, "#9c7410");
+  grad.addColorStop(0, "#f4f6b0");
+  grad.addColorStop(0.45, "#dce964");
+  grad.addColorStop(0.78, "#aacc38");
+  grad.addColorStop(1, "#6c8c18");
   ctx.fillStyle = grad;
   ctx.beginPath();
   // -Math.PI/2 puts a point straight up.
@@ -253,21 +261,27 @@ function drawStarfruit(ctx: CanvasRenderingContext2D) {
   }
   ctx.closePath();
   ctx.fill();
-  ctx.strokeStyle = "#6e5012"; ctx.lineWidth = 2.2; ctx.stroke();
-  // Inner star ridge lines from centre toward each tip to read the cross-section.
-  ctx.strokeStyle = "rgba(110,80,18,0.55)"; ctx.lineWidth = 1.3;
+  ctx.strokeStyle = "#4e6a10"; ctx.lineWidth = 2.2; ctx.stroke();
+  // Each ridge runs from the centre out to a TIP and is shaded as a rounded rib:
+  // a bright crest line flanked by soft shadow valleys, so the fruit reads as a
+  // 3D ridged carambola rather than a flat faceted star.
   for (let i = 0; i < points; i++) {
     const ang = -Math.PI / 2 + (i * 2 * Math.PI) / points;
-    ctx.beginPath();
-    ctx.moveTo(0, 1);
-    ctx.lineTo(Math.cos(ang) * (outer - 5), Math.sin(ang) * (outer - 5) + 1);
-    ctx.stroke();
+    const tipX = Math.cos(ang) * (outer - rounding), tipY = Math.sin(ang) * (outer - rounding) + 1;
+    // bright waxy crest down the centre of each lobe
+    ctx.strokeStyle = "rgba(244,250,200,0.8)"; ctx.lineWidth = 1.6;
+    ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(tipX, tipY); ctx.stroke();
+    // valley lines toward the notches either side of this ridge for depth
+    const vAngA = -Math.PI / 2 + ((i * 2 + 1) * Math.PI) / points;
+    const vx = Math.cos(vAngA) * (inner + 4), vy = Math.sin(vAngA) * (inner + 4) + 1;
+    ctx.strokeStyle = "rgba(58,84,10,0.45)"; ctx.lineWidth = 1.1;
+    ctx.beginPath(); ctx.moveTo(0, 1); ctx.lineTo(vx, vy); ctx.stroke();
   }
-  // Translucent core seeds hint
-  ctx.fillStyle = "rgba(180,140,30,0.4)";
-  ctx.beginPath(); ctx.arc(0, 1, 3, 0, Math.PI * 2); ctx.fill();
-  // Sheen highlight (upper-left)
-  ctx.fillStyle = "rgba(255,255,255,0.45)";
+  // Slightly darker green core so the centre reads as the seed cavity.
+  ctx.fillStyle = "rgba(110,150,30,0.45)";
+  ctx.beginPath(); ctx.arc(0, 1, 3.2, 0, Math.PI * 2); ctx.fill();
+  // Waxy sheen highlight (upper-left)
+  ctx.fillStyle = "rgba(255,255,255,0.4)";
   ctx.beginPath(); ctx.ellipse(-7, -7, 3.2, 5, -0.5, 0, Math.PI * 2); ctx.fill();
   ctx.restore();
 }
@@ -280,33 +294,56 @@ function drawCoconut(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = grad;
   ctx.beginPath(); ctx.arc(0,4,19,0,Math.PI*2); ctx.fill();
   ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 2.2; ctx.stroke();
+  // Coarse fibrous husk: long combed coir fibres that sweep top-to-bottom and
+  // splay gently outward (the way a coconut's brown hair lies), rather than a
+  // dense uniform radial burst (which read as a pollen/urchin spike-ball).
+  // Long, overlapping, gently-curved strokes of varied length + tone.
   ctx.save();
-  ctx.beginPath(); ctx.arc(0,4,19,0,Math.PI*2); ctx.clip();
-  ctx.strokeStyle = "rgba(255,210,160,0.55)"; ctx.lineWidth = 0.9;
-  for (let i = 0; i < 50; i++) {
-    const a = (i / 50) * Math.PI * 2;
-    const innerR = 5 + ((i*7) % 12);
-    const outerR = innerR + 5;
+  ctx.beginPath(); ctx.arc(0,4,18,0,Math.PI*2); ctx.clip();
+  ctx.lineCap = "round";
+  // Dense field of combed coir: a deterministic pseudo-random scatter of long,
+  // gently fanning downward strokes. Dark base layer then a sparser light layer
+  // so the husk reads as packed fibre, not a few isolated sticks. The whole husk
+  // is brushed before drawing the pores, so the round form reads first.
+  const rnd = (n: number) => {
+    const s = Math.sin(n * 12.9898) * 43758.5453;
+    return s - Math.floor(s); // 0..1
+  };
+  const drawFibre = (x: number, topY: number, len: number, fan: number, w: number, style: string) => {
+    ctx.strokeStyle = style;
+    ctx.lineWidth = w;
     ctx.beginPath();
-    ctx.moveTo(Math.cos(a)*innerR, Math.sin(a)*innerR + 4);
-    ctx.lineTo(Math.cos(a)*outerR, Math.sin(a)*outerR + 4);
+    ctx.moveTo(x, topY);
+    ctx.quadraticCurveTo(x + fan * 0.45, topY + len * 0.5, x + fan, topY + len);
     ctx.stroke();
+  };
+  // Dense, low-contrast, mostly-vertical short hairs so the husk reads as a
+  // textured surface rather than a bundle of separate twigs. Slight outward
+  // lean (small fan) follows the curve of the sphere.
+  for (let i = 0; i < 120; i++) {
+    const x = -17 + rnd(i + 1) * 34;
+    const topY = -16 + rnd(i + 50) * 30;
+    const len = 6 + rnd(i + 100) * 7;
+    const fan = (x / 18) * (0.8 + rnd(i + 150) * 1.4);
+    drawFibre(x, topY + 4, len, fan, 1.0, "rgba(62,38,16,0.4)");
   }
-  ctx.strokeStyle = "rgba(20,12,4,0.4)"; ctx.lineWidth = 1.0;
-  for (let i = 0; i < 30; i++) {
-    const a = (i / 30) * Math.PI * 2 + 0.1;
-    const innerR = 6 + ((i*11) % 10);
-    const outerR = innerR + 5;
-    ctx.beginPath();
-    ctx.moveTo(Math.cos(a)*innerR, Math.sin(a)*innerR + 4);
-    ctx.lineTo(Math.cos(a)*outerR, Math.sin(a)*outerR + 4);
-    ctx.stroke();
+  for (let i = 0; i < 60; i++) {
+    const x = -16 + rnd(i + 200) * 32;
+    const topY = -15 + rnd(i + 250) * 28;
+    const len = 5 + rnd(i + 300) * 6;
+    const fan = (x / 18) * (0.8 + rnd(i + 350) * 1.2);
+    drawFibre(x, topY + 4, len, fan, 0.9, "rgba(214,170,120,0.4)");
   }
   ctx.restore();
-  ctx.fillStyle = "#1a0e04";
-  [[-5,-2],[5,-2],[0,4]].forEach(([ex,ey])=>{ ctx.beginPath(); ctx.arc(ex,ey,2.4,0,Math.PI*2); ctx.fill(); });
-  ctx.fillStyle = "rgba(255,210,160,0.5)";
-  ctx.beginPath(); ctx.ellipse(-7,-10,4,7,-0.4,0,Math.PI*2); ctx.fill();
+  // Three germination pores clustered together as a small detail near the top,
+  // NOT spread into a centered face. Tight triangle, upper area, off-centre.
+  ctx.fillStyle = "#150b03";
+  [[-3,-8],[3,-8],[0,-3]].forEach(([ex,ey])=>{ ctx.beginPath(); ctx.arc(ex,ey,2.2,0,Math.PI*2); ctx.fill(); });
+  // subtle pale rim on the pores so they read as recessed eyes/holes
+  ctx.strokeStyle = "rgba(255,210,160,0.35)"; ctx.lineWidth = 0.8;
+  [[-3,-8],[3,-8],[0,-3]].forEach(([ex,ey])=>{ ctx.beginPath(); ctx.arc(ex,ey,2.2,0,Math.PI*2); ctx.stroke(); });
+  ctx.fillStyle = "rgba(255,225,185,0.3)";
+  ctx.beginPath(); ctx.ellipse(-9,-6,3,5,-0.4,0,Math.PI*2); ctx.fill();
 }
 
 function drawLemon(ctx: CanvasRenderingContext2D) {
@@ -339,19 +376,60 @@ function drawLemon(ctx: CanvasRenderingContext2D) {
 function drawJackfruit(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = "rgba(0,0,0,0.28)";
   ctx.beginPath(); ctx.ellipse(2,22,22,5,0,0,Math.PI*2); ctx.fill();
-  const grad = ctx.createRadialGradient(-6,-4,3,0,6,26);
-  grad.addColorStop(0,"#f4ec90"); grad.addColorStop(0.55,"#bca834"); grad.addColorStop(1,"#5e5008");
+  const grad = ctx.createRadialGradient(-6,-6,3,0,8,28);
+  grad.addColorStop(0,"#f4ec90"); grad.addColorStop(0.55,"#a89630"); grad.addColorStop(1,"#4e4206");
+  // Oblong, slightly lumpy jackfruit body (taller than wide, the giant pod
+  // shape) so it does not read as a round melon. Traced via ctx (not Path2D,
+  // which is unavailable in the canvas test environment) so it can be filled,
+  // stroked and clipped against in turn.
+  const traceBody = () => {
+    ctx.beginPath();
+    ctx.moveTo(0, -18);
+    ctx.bezierCurveTo(-9, -18, -16, -10, -16, 0);
+    ctx.bezierCurveTo(-16, 12, -10, 23, 0, 23);
+    ctx.bezierCurveTo(11, 23, 17, 11, 16, -1);
+    ctx.bezierCurveTo(15, -10, 9, -18, 0, -18);
+    ctx.closePath();
+  };
+  traceBody();
   ctx.fillStyle = grad;
-  ctx.beginPath(); ctx.ellipse(0,4,18,18,0,0,Math.PI*2); ctx.fill();
+  ctx.fill();
   ctx.strokeStyle = "#3a2e08"; ctx.lineWidth = 2.2; ctx.stroke();
   ctx.save();
-  ctx.beginPath(); ctx.ellipse(0,4,17,17,0,0,Math.PI*2); ctx.clip();
-  const cells = [[-10,-8],[-2,-10],[6,-9],[12,-3],[-13,-2],[-6,-3],[2,-3],[10,1],[-12,6],[-5,5],[3,6],[11,8],[-8,12],[0,13],[8,14],[-3,19],[5,19]];
-  cells.forEach(([cx,cy])=>{
-    ctx.fillStyle = "rgba(58,46,8,0.55)";
-    ctx.beginPath(); ctx.moveTo(cx,cy-3); ctx.lineTo(cx+3,cy); ctx.lineTo(cx,cy+3); ctx.lineTo(cx-3,cy); ctx.closePath(); ctx.fill();
-    ctx.fillStyle = "rgba(255,250,180,0.55)";
-    ctx.beginPath(); ctx.moveTo(cx,cy-2); ctx.lineTo(cx+1.5,cy-0.5); ctx.lineTo(cx,cy); ctx.lineTo(cx-1.5,cy-0.5); ctx.closePath(); ctx.fill();
+  traceBody();
+  ctx.clip();
+  // Raised conical knobs: each is a small bump with its own top-left highlight
+  // and bottom-right shadow so the rind reads as 3D spiky pods, not a flat
+  // diamond lattice. Hex-ish stagger fills the oblong body.
+  const knobs: Array<[number, number]> = [];
+  for (let row = 0; row < 7; row++) {
+    const ky = -14 + row * 5.6;
+    const stag = (row % 2) * 2.6;
+    for (let col = -2; col <= 2; col++) {
+      knobs.push([col * 5.2 + stag, ky]);
+    }
+  }
+  knobs.forEach(([kx, ky]) => {
+    const kr = 2.7;
+    // base shadow under/right of the knob
+    ctx.fillStyle = "rgba(46,36,4,0.55)";
+    ctx.beginPath();
+    ctx.ellipse(kx + 0.7, ky + 0.9, kr, kr * 0.95, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // knob body, lit from upper-left
+    const kg = ctx.createRadialGradient(kx - 1, ky - 1.2, 0.3, kx, ky, kr);
+    kg.addColorStop(0, "#fbf3b0");
+    kg.addColorStop(0.55, "#c4ab38");
+    kg.addColorStop(1, "#7a6810");
+    ctx.fillStyle = kg;
+    ctx.beginPath();
+    ctx.arc(kx, ky, kr, 0, Math.PI * 2);
+    ctx.fill();
+    // crisp little tip highlight
+    ctx.fillStyle = "rgba(255,252,210,0.85)";
+    ctx.beginPath();
+    ctx.arc(kx - 0.8, ky - 1.0, kr * 0.32, 0, Math.PI * 2);
+    ctx.fill();
   });
   ctx.restore();
   ctx.strokeStyle = "#3a200a"; ctx.lineWidth = 3;

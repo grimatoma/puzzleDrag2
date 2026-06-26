@@ -25,7 +25,6 @@ import {
   twinkle,
   easeInOutSine,
   easeOutCubic,
-  easeOutBack,
   sparkle,
 } from "./_anim.js";
 
@@ -263,10 +262,12 @@ function animSnowCloud(ctx: CanvasRenderingContext2D, t: number): void {
 //    Math.random) so successive strikes LOOK re-randomized while staying
 //    deterministic & seamless.
 // ---------------------------------------------------------------------------
-function lightningJag(cycle: number): Array<[number, number]> {
+function lightningJag(cycle: number, crackle = 0): Array<[number, number]> {
   // A vertical zig-zag from the cloud (y≈0) down to y≈24, x jittered by a hash
-  // of the cycle so each strike traces a different path. Returns spine points;
-  // the ribbon is built around them by the caller.
+  // of the cycle so each strike traces a different path. `crackle` (a phase in
+  // radians) adds a small per-frame wobble to each node so the filament visibly
+  // jitters its PATH (not just its brightness) between strikes. Returns spine
+  // points; the ribbon is built around them by the caller.
   const pts: Array<[number, number]> = [];
   const steps = 5;
   for (let i = 0; i <= steps; i++) {
@@ -276,34 +277,42 @@ function lightningJag(cycle: number): Array<[number, number]> {
     const n =
       Math.sin(cycle * 12.9898 + i * 78.233) * 0.6 +
       Math.sin(cycle * 4.1 + i * 1.7) * 0.4;
-    const x = 2 + n * 5 * (1 - fy * 0.25); // narrows toward the tip
+    // Live crackle: a tiny node-specific shiver so the bolt path is never frozen.
+    const jitter = i === 0 || i === steps ? 0 : Math.sin(crackle * 1.3 + i * 2.1) * 1.1;
+    const x = 2 + n * 5 * (1 - fy * 0.25) + jitter; // narrows toward the tip
     pts.push([x, y]);
   }
   return pts;
 }
 
 function animLightning(ctx: CanvasRenderingContext2D, t: number): void {
-  const period = 1.9;
+  // Shorter period than before (1.9s → 1.4s) so strikes come more often and the
+  // strip has fewer dead frames — the review's "between flashes effectively
+  // frozen" note.
+  const period = 1.4;
   const ph = loopPhase(t, period);
   const cycle = Math.floor((t / period) % 1024); // which strike — drives the jag
 
-  // Envelope: charge (0..0.55) → snap (0.55..0.62) → afterglow decay → rest.
+  // Envelope: charge (0..0.5) → snap (0.5..0.58) → afterglow decay → rest. The
+  // snap is positioned a touch earlier so the bright frames land mid-cycle.
   let strike: number;
   let charge: number;
-  if (ph < 0.55) {
-    charge = easeInOutSine(ph / 0.55); // building tension
+  if (ph < 0.5) {
+    charge = easeInOutSine(ph / 0.5); // building tension
     strike = 0;
-  } else if (ph < 0.62) {
+  } else if (ph < 0.58) {
     charge = 1;
-    strike = easeOutCubic((ph - 0.55) / 0.07); // snap to full
+    strike = easeOutCubic((ph - 0.5) / 0.08); // snap to full
   } else {
-    charge = clamp01(1 - (ph - 0.62) / 0.2);
-    strike = Math.max(0, 1 - (ph - 0.62) / 0.32); // afterglow tail
+    charge = clamp01(1 - (ph - 0.58) / 0.2);
+    strike = Math.max(0, 1 - (ph - 0.58) / 0.34); // afterglow tail
   }
   // A couple of sub-flickers riding the afterglow so the strike feels electric.
   const flick = strike > 0.05 ? strike * (0.7 + 0.3 * Math.abs(Math.sin(t * 47 + cycle))) : 0;
   const drift = Math.sin(t * 0.9) * 1.6;
-  const jag = lightningJag(cycle);
+  // Crackle the filament's path continuously (live phase = t), so even the dim
+  // resting bolt visibly squirms rather than holding a frozen zig-zag.
+  const jag = lightningJag(cycle, t * 9 + cycle);
 
   ctx.save();
   ctx.translate(drift, 0);
@@ -373,12 +382,21 @@ function animLightning(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.moveTo(jag[0][0], jag[0][1]);
     for (let i = 1; i < jag.length; i++) ctx.lineTo(jag[i][0], jag[i][1]);
     ctx.stroke();
-    // A forked branch off the mid node for extra spark.
+    // Forked branches off two nodes for extra spark — side they shoot off
+    // alternates by cycle so successive strikes look re-randomized.
+    const sign = cycle % 2 ? 1 : -1;
     const m = jag[3];
     ctx.beginPath();
     ctx.moveTo(jag[2][0], jag[2][1]);
-    ctx.lineTo(m[0] + 4 + (cycle % 3) - 1, m[1] - 1);
-    ctx.lineTo(m[0] + 7 + (cycle % 2), m[1] + 4);
+    ctx.lineTo(m[0] + sign * (4 + (cycle % 3)), m[1] - 1);
+    ctx.lineTo(m[0] + sign * (7 + (cycle % 2)), m[1] + 4);
+    ctx.stroke();
+    // A second, shorter fork higher up the bolt on the opposite side.
+    const u = jag[2];
+    ctx.beginPath();
+    ctx.moveTo(jag[1][0], jag[1][1]);
+    ctx.lineTo(u[0] - sign * (3 + (cycle % 2)), u[1] - 1);
+    ctx.lineTo(u[0] - sign * (5 + (cycle % 3)), u[1] + 2);
     ctx.stroke();
   }
   ctx.globalAlpha = 1;
@@ -386,34 +404,47 @@ function animLightning(ctx: CanvasRenderingContext2D, t: number): void {
 }
 
 // ---------------------------------------------------------------------------
-// 4. Comet — REBUILT. The head is ANCHORED in-frame and visible at t=0 (a
-//    bloomed core, NOT a magnifying-glass ring); it bobs gently and the tail
-//    flickers & tapers. A streak/dash is a PERIODIC EVENT (a quick lunge that
-//    stretches the tail and slings sparkles) — never an empty rest frame.
+// 4. Comet — REBUILT to STREAK THROUGH SPACE. The head now TRAVELS diagonally
+//    across the cell on a seamless loop (enters top-right, shoots to the
+//    bottom-left, fades out, wraps), with the tail trailing BEHIND it along the
+//    travel axis. The old version held the head in place and only pulsed the
+//    tail length (read as a breathing blob, the major review note). Tail still
+//    flickers & tapers; sparkles trail in its wake; the whole streak fades in at
+//    entry and out at exit so the wrap is invisible.
 // ---------------------------------------------------------------------------
 function animComet(ctx: CanvasRenderingContext2D, t: number): void {
-  // Head sits up-right of centre, drifting on a small Lissajous so it always
-  // reads as a hovering comet (anchored — never flies off-screen).
-  const hx = 6 + Math.sin(t * 0.8) * 2.2;
-  const hy = -6 + Math.sin(t * 1.1 + 1.0) * 1.8;
-
-  // Lunge beat: rest, then a quick dart along the tail axis that stretches the
-  // tail and brightens everything (the "shooting" moment).
-  const lunge = beat(t, 3.0, 0.5);
-  const dash = easeOutBack(lunge, 1.6); // overshoot on the dart
-  const headDX = dash * 3.0; // head leaps forward a touch on the lunge
-  const headDY = -dash * 2.0;
+  // Travel: one diagonal pass top-right → bottom-left per period, looped.
+  const period = 3.2;
+  const p = loopPhase(t, period); // 0..1 position along the pass
+  // Path endpoints (a little past the box edges so it sweeps fully through).
+  const startX = 26;
+  const startY = -24;
+  const endX = -26;
+  const endY = 24;
+  const travel = easeInOutSine(p); // ease across so it lingers mid-frame
+  const hx = lerp(startX, endX, travel);
+  const hy = lerp(startY, endY, travel);
+  // Fade in over the first ~18% of the pass and out over the last ~18% so the
+  // head never pops in/out at the wrap; full bright across the middle.
+  const enter = clamp01(p / 0.18);
+  const exit = clamp01((1 - p) / 0.18);
+  const presence = Math.min(enter, exit);
 
   ctx.save();
-  ctx.rotate(0.3);
-  ctx.translate(hx + headDX, hy + headDY);
+  ctx.globalAlpha = presence;
+  // Orient the whole comet so the tail points back along the travel direction
+  // (the path runs down-left, i.e. atan2(dy,dx) of the velocity).
+  ctx.translate(hx, hy);
+  ctx.rotate(Math.atan2(endY - startY, endX - startX));
 
-  // Tail axis points back-left (down-left in this rotated frame). Length flickers
-  // and EXTENDS on the lunge. Built as a tapering quad fanning from the head.
+  // In this rotated frame +x is the travel direction, so the tail runs along -x.
+  // Length flickers for an electric shimmer and the head's speed (fastest mid-
+  // pass) stretches it a touch.
+  const speed = Math.sin(p * Math.PI); // 0 at ends, 1 mid-pass
   const flick = 0.85 + Math.sin(t * 9) * 0.1 + Math.sin(t * 5.3) * 0.05;
-  const tailLen = (20 + dash * 16) * flick;
+  const tailLen = (22 + speed * 12) * flick;
   const tx = -tailLen;
-  const ty = tailLen * 0.92;
+  const ty = 0;
   const tail = ctx.createLinearGradient(0, 0, tx, ty);
   tail.addColorStop(0, "rgba(150,215,255,0.85)");
   tail.addColorStop(0.4, "rgba(90,160,240,0.40)");
@@ -440,8 +471,9 @@ function animComet(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.fill();
 
   // Bloomed head — soft outer bloom + bright core, NO hard ring/stroke (the old
-  // 1.4px stroke read as a magnifying-glass rim). Pure radial falloff.
-  const bloomR = 12 + dash * 2 + Math.sin(t * 5) * 0.8;
+  // 1.4px stroke read as a magnifying-glass rim). Pure radial falloff; swells a
+  // touch at peak speed mid-pass.
+  const bloomR = 12 + speed * 2 + Math.sin(t * 5) * 0.8;
   const bloom = ctx.createRadialGradient(0, 0, 1.5, 0, 0, bloomR);
   bloom.addColorStop(0, "rgba(220,245,255,0.9)");
   bloom.addColorStop(0.45, "rgba(150,210,255,0.45)");
@@ -465,19 +497,20 @@ function animComet(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.arc(-1.4, -1.6, 2.4, 0, TAU);
   ctx.fill();
 
-  // Sparkles flung along the tail; they accelerate outward on the lunge and
-  // twinkle (clean 4-point stars, staggered).
+  // Sparkles shed in the comet's WAKE — strung back along the tail (-x) with a
+  // little vertical scatter, twinkling (clean 4-point stars, staggered). They
+  // sit further back when the comet moves faster, so it sheds a longer trail.
   const sparks: Array<[number, number, number]> = [
-    [-9, 9, 0.0],
-    [-15, 15, 0.4],
-    [-4, 5, 0.7],
-    [-20, 19, 0.2],
+    [-10, -2.5, 0.0],
+    [-16, 2.0, 0.4],
+    [-6, 2.8, 0.7],
+    [-22, -1.5, 0.2],
   ];
   sparks.forEach(([sx, sy, off], idx) => {
-    const fling = 1 + dash * 0.6;
+    const trail = 1 + speed * 0.5;
     const tw = twinkle(t, 1.6, off + idx * 0.13);
     const a = (0.3 + 0.6 * tw) * (0.4 + flick * 0.4);
-    sparkle(ctx, sx * fling, sy * fling, 1.4 + tw * 1.1, a, "220,240,255");
+    sparkle(ctx, sx * trail, sy, 1.4 + tw * 1.1, a, "220,240,255");
   });
 
   ctx.restore();
@@ -494,14 +527,19 @@ function animSunCloud(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.save();
   ctx.translate(-6, -8);
 
-  // Rays rotate slowly; length pulses in time with the sun's breathe.
+  // Rays rotate (a bit faster than before so the turn reads at a glance) and
+  // their lengths pulse on the sun's heartbeat. Alternate spokes pulse out of
+  // phase so the corona visibly shimmers as it spins (the review's "no
+  // detectable change" fix) instead of a uniform breathing ring.
   ctx.save();
-  ctx.rotate(t * 0.3);
+  ctx.rotate(t * 0.5);
   ctx.strokeStyle = "#f5b820";
   ctx.lineWidth = 2;
   for (let i = 0; i < 8; i++) {
     const a = (i / 8) * TAU;
-    const pulse = 1 + heart * 0.16; // synced (was a free 2.5Hz wobble)
+    // Even/odd spokes breathe in counter-phase for a twinkling corona.
+    const ph = i % 2 ? -heart : heart;
+    const pulse = 1 + ph * 0.26;
     const inner = 12;
     const outer = 17 * pulse;
     ctx.beginPath();
@@ -511,8 +549,8 @@ function animSunCloud(ctx: CanvasRenderingContext2D, t: number): void {
   }
   ctx.restore();
 
-  // Sun disc — breathes on the same heartbeat.
-  const sb = 1 + heart * 0.04;
+  // Sun disc — breathes on the same heartbeat (a touch deeper so it reads).
+  const sb = 1 + heart * 0.06;
   const sun = ctx.createRadialGradient(-3, -3, 2, 0, 0, 11 * sb);
   sun.addColorStop(0, "#fff3a0");
   sun.addColorStop(0.6, "#ffce40");
@@ -526,9 +564,10 @@ function animSunCloud(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.stroke();
   ctx.restore();
 
-  // Foreground cloud drifts on an arc (rises slightly as it slides right).
-  const dx = Math.sin(t * 0.8) * 2.5;
-  const dy = -Math.abs(Math.sin(t * 0.8)) * 0.8 + Math.sin(t * 1.6) * 0.4;
+  // Foreground cloud drifts on an arc (rises slightly as it slides right) — a
+  // bit more travel than before so the drift is legible at a glance.
+  const dx = Math.sin(t * 0.8) * 3.6;
+  const dy = -Math.abs(Math.sin(t * 0.8)) * 1.1 + Math.sin(t * 1.6) * 0.5;
   ctx.save();
   ctx.translate(dx, dy);
   const body = ctx.createLinearGradient(0, -4, 0, 16);
@@ -557,16 +596,18 @@ function animSunCloud(ctx: CanvasRenderingContext2D, t: number): void {
 
 // ---------------------------------------------------------------------------
 // 6. Rainbow — REBUILT end-clouds (clean puffs, no X-stroke) that bounce gently
-//    out of phase; a soft sheen DRAWS ON along the arc (a moving bright window)
-//    over a subtle overall shimmer.
+//    out of phase; a clear glossy GLINT travels along the arc. The glint is now
+//    an ADDITIVE pass that brightens each band in its OWN hue (was a white
+//    overlay that desaturated the bands — the review note), so the highlight
+//    reads as a luminous sweep without washing the colours to chrome.
 // ---------------------------------------------------------------------------
 function animRainbow(ctx: CanvasRenderingContext2D, t: number): void {
   const bands = ["#e23b3b", "#ef8d2e", "#f5c842", "#5aa84a", "#3a78c8", "#7a3ec0"];
   const cx = 0;
   const cy = 12;
 
-  // Subtle overall shimmer.
-  const shimmer = 0.85 + Math.sin(t * 1.4) * 0.12;
+  // Subtle overall shimmer (whole-arc breathe).
+  const shimmer = 0.86 + Math.sin(t * 1.4) * 0.1;
 
   // Base bands.
   ctx.lineWidth = 3.2;
@@ -579,28 +620,34 @@ function animRainbow(ctx: CanvasRenderingContext2D, t: number): void {
   });
   ctx.globalAlpha = 1;
 
-  // Sheen window sweeping along the arc (PI..2PI), eased there-and-back so it
-  // "draws on" and retreats seamlessly rather than teleporting.
-  const sweep = pingPong(t, 4.2); // 0..1 eased
+  // Travelling GLINT: a bright window sweeps the full arc (PI..2PI) at a steady
+  // pace and loops seamlessly (loopPhase, not pingPong, so it always travels the
+  // same way like light running along the bow). Two additive passes — a wide
+  // hue-preserving lift in each band's own colour, then a tight near-white core
+  // — give a glossy crest that is unmistakable yet keeps the ROYGBIV reading.
+  const sweep = loopPhase(t, 3.4); // 0..1, wraps cleanly
   const centerA = Math.PI + sweep * Math.PI;
-  const win = Math.PI * 0.16;
-  ctx.lineWidth = 3.6;
-  bands.forEach((_, i) => {
+  const win = Math.PI * 0.18;
+  ctx.save();
+  ctx.globalCompositeOperation = "lighter";
+  bands.forEach((c, i) => {
     const r = 21 - i * 3.2;
-    // Two passes for a feathered core; intensity peaks mid-window.
-    ctx.strokeStyle = "rgba(255,255,255,0.5)";
-    ctx.globalAlpha = 0.5;
+    // Wide pass: brighten the band in its OWN hue (keeps saturation).
+    ctx.strokeStyle = c;
+    ctx.globalAlpha = 0.55;
+    ctx.lineWidth = 3.4;
     ctx.beginPath();
     ctx.arc(cx, cy, r, centerA - win, centerA + win);
     ctx.stroke();
-    ctx.strokeStyle = "rgba(255,255,255,0.85)";
-    ctx.globalAlpha = 0.6;
-    ctx.lineWidth = 1.8;
+    // Tight crest: a slim warm-white core right at the window centre.
+    ctx.strokeStyle = "rgba(255,250,235,0.7)";
+    ctx.globalAlpha = 0.7;
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.arc(cx, cy, r, centerA - win * 0.4, centerA + win * 0.4);
+    ctx.arc(cx, cy, r, centerA - win * 0.32, centerA + win * 0.32);
     ctx.stroke();
-    ctx.lineWidth = 3.6;
   });
+  ctx.restore();
   ctx.globalAlpha = 1;
 
   // End clouds — rebuilt clean puffs, bobbing out of phase so the rainbow feels
