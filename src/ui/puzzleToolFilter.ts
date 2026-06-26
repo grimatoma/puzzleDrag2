@@ -8,6 +8,7 @@ import { isFireHazardEnabled, RATS_HAZARD_ENABLED } from "../featureFlags.js";
 import { settlementHazards } from "../features/zones/data.js";
 import type { GameState } from "../types/state.js";
 import { TOOL_CATALOG, TOOL_BY_KEY, type ToolBoardKind, type ToolEntry } from "./toolRegistry.js";
+import { isToolReachable } from "../game/reachability.js";
 
 /** Spawn-roll ids used by farm/mine hazard systems (after normalization). */
 const IMPLEMENTED_SPAWN_IDS = new Set([
@@ -106,10 +107,14 @@ export function isToolVisibleOnPuzzleBoard(state: GameState, toolKey: string): b
   return hazardTargets.some((t) => spawnable.has(t));
 }
 
-/** Tools shown on the puzzle board — filtered by active biome and spawnable hazards. */
+/** Tools shown on the puzzle board — filtered by reachability, active biome, and spawnable hazards. */
 export function visiblePuzzleTools(state: GameState): ToolEntry[] {
   const toolsState = (state.tools ?? {}) as Record<string, number>;
-  return TOOL_CATALOG.filter((t) => isToolVisibleOnPuzzleBoard(state, t.key)).map((t) => ({
+  return TOOL_CATALOG.filter(
+    (t) =>
+      (isToolReachable(t.key) || (toolsState[t.key] || 0) > 0) &&
+      isToolVisibleOnPuzzleBoard(state, t.key),
+  ).map((t) => ({
     ...t,
     count: toolsState[t.key] || 0,
   }));

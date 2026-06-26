@@ -24,6 +24,7 @@ const LegacyIcon = _LegacyIconRaw as unknown as React.ComponentType<{ iconKey: s
 import { BIOMES } from "../constants.js";
 import { TOOL_BY_KEY, isTapTargetTool, DEFAULT_TOOL_PINS } from "./toolRegistry.js";
 import { visiblePuzzleTools } from "./puzzleToolFilter.js";
+import { isResourceReachable } from "../game/reachability.js";
 import type { ToolEntry } from "./toolRegistry.js";
 import { isFillBiasArmed } from "../state/fillBias.js";
 import { lazy, Suspense } from "react";
@@ -208,10 +209,10 @@ interface BiomeResource {
 }
 
 function IdleView({ inventory, biomeKey, cap }: { inventory: Inventory; biomeKey: string; cap: number }) {
-  // The mock shows a 4-column grid of resource chips. Trim to the first 12
-  // resources of the biome so the grid stays tight and predictable.
+  // Only show resources that are reachable in the configured game, then cap at
+  // 12 so the 4-column grid stays tight and predictable.
   const list = useMemo<BiomeResource[]>(() => {
-    return (BIOMES[biomeKey]?.resources ?? []).slice(0, 12);
+    return (BIOMES[biomeKey]?.resources ?? []).filter((r) => isResourceReachable(r.key)).slice(0, 12);
   }, [biomeKey]);
   const ownedCount = list.filter((r) => (inventory?.[r.key] ?? 0) > 0).length;
   return (
