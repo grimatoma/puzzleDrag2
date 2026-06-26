@@ -14,7 +14,6 @@ type AudioGameState = Partial<Pick<GameState, "turnsUsed" | "level" | "bubble" |
   fish?: { tide?: string } | null;
   settings?: {
     sfxOn?: boolean;
-    musicOn?: boolean;
     hapticsOn?: boolean;
   } | null;
 };
@@ -24,13 +23,10 @@ type AudioGameState = Partial<Pick<GameState, "turnsUsed" | "level" | "bubble" |
  * Wire into the App component: useAudio(state)
  */
 export function useAudio(state: AudioGameState | null | undefined): void {
-  // Sync sfx/music toggles from settings whenever they change
+  // Sync the sfx toggle from settings whenever it changes
   useEffect(() => {
-    setEnabled({
-      sfx: state?.settings?.sfxOn !== false,
-      music: state?.settings?.musicOn === true,
-    });
-  }, [state?.settings?.sfxOn, state?.settings?.musicOn]);
+    setEnabled({ sfx: state?.settings?.sfxOn !== false });
+  }, [state?.settings?.sfxOn]);
 
   // Track previous state to detect changes
   const prev = useRef<AudioGameState>(state ?? {});

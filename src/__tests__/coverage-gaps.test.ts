@@ -13,7 +13,7 @@ import { mergeTestState, unsafeGameState, testAction, tutorialOf } from "../test
 
 // ─── settings/slice.js ──────────────────────────────────────────────────────
 describe("settings slice — coverage gaps", () => {
-  const baseSettings = () => ({ sfxOn: true, musicOn: true, hapticsOn: true });
+  const baseSettings = () => ({ sfxOn: true, hapticsOn: true });
   const baseState = (over: Record<string, unknown> = {}) =>
     mergeTestState({ settings: baseSettings(), ...over });
 
