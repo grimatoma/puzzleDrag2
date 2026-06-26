@@ -41,7 +41,6 @@ export function clearTutorialSeen() {
 
 const DEFAULT_SETTINGS = {
   sfxOn: true,
-  musicOn: true,
   hapticsOn: true,
   tutorialDisabled: false,
   pixelSpriteOverride: false,

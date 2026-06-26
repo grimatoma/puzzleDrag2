@@ -10,7 +10,6 @@ declare global {
 
 interface EnabledState {
   sfx: boolean;
-  music: boolean;
 }
 
 interface SoundStep {
@@ -28,7 +27,7 @@ interface SoundDef {
 }
 
 let ctx: AudioContext | null = null;
-let enabled: EnabledState = { sfx: true, music: false };
+let enabled: EnabledState = { sfx: true };
 
 function getCtx(): AudioContext {
   if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext!)();
@@ -47,10 +46,6 @@ export function unlock(): void {
 // Each sound is an array of steps; each step is one oscillator note.
 // gap: ms of silence before the NEXT step starts (cumulative offset).
 const SOUNDS: Record<string, SoundDef> = {
-  // Short rising bleep: 200Hz → 400Hz, sine, 80ms
-  chainStart: {
-    steps: [{ freq: 200, freqEnd: 400, dur: 80, type: 'sine', gain: 0.07 }],
-  },
   // Bright triple bleep: 440-554-660 Hz, square, 50ms each, 30ms gap
   chainCollect: {
     steps: [
@@ -99,7 +94,7 @@ const SOUNDS: Record<string, SoundDef> = {
       { freq: 2400, dur: 80, type: 'sine', gain: 0.05, gap: 0, delay: 0.120 },
     ],
   },
-  // Tool armed — crisp two-note ready blip, distinct from chainStart's slide
+  // Tool armed — crisp two-note ready blip, distinct from the chain tick's slide
   toolArmed: {
     steps: [
       { freq: 520, dur: 55, type: 'triangle', gain: 0.06, gap: 65 },

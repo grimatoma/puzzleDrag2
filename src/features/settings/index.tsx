@@ -174,7 +174,6 @@ function MainTab({ dispatch }: { dispatch: Dispatch }) {
 // --- Settings tab ---
 const AUDIO_ROWS = [
   { key: 'sfxOn',     label: 'Sound Effects' },
-  { key: 'musicOn',   label: 'Music' },
   { key: 'hapticsOn', label: 'Haptics' },
 ];
 const GRAPHICS_ROWS = [
