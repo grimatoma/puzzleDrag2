@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="puzzleDrag2 build status & decision log — what is built, half-wired, or still to build; the open balance numbers; the dated decision log; and the index of docs this canonical set superseded.">
+<title>puzzleDrag2 — Build Status &amp; Decision Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>Build Status &amp; Decision Log</h1>
+    <p class="sub">The one place implementation state lives: what is built, half-wired, or still to build; the open numbers; the decisions we've made and when; and the map of what this canonical set replaced. <b>This page is allowed to talk about the code</b> — the rest of the set states design.</p>
+    <p class="meta">Canonical · save schema v47 · the bridge from "intended design" to "scoped task"</p>
+  </header>
+
+  <div class="canon"><span>🛠️</span><div><b>Design here is the target; code is the runtime.</b> Where a row says a system is half-wired or to-build, the design pages describe the <em>intended</em> end state — this page records how far the build has gotten and links the brief that closes the gap.</div></div>
+
+  <nav class="docnav" aria-label="Design docs">
+    <a href="index.html">Overview &amp; Scope</a>
+    <a href="progression.html">Progression</a>
+    <a href="towns.html">Settlement Atlas</a>
+    <a href="economy.html">Economy &amp; Balance</a>
+    <a href="systems.html">Systems</a>
+    <a href="meta.html">Meta &amp; Money</a>
+    <a href="status.html" class="here">Build status</a>
+  </nav>
+
+  <main>
+    <section id="status">
+      <h2>Build status</h2>
+      <p><span class="s-done">■ built</span> &nbsp; <span class="s-wip">■ half-wired</span> &nbsp; <span class="s-todo">■ to build</span></p>
+      <table>
+        <thead><tr><th>System</th><th>State</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Core loop · chain → refine → grow</td><td><span class="s-done">built</span></td><td>The whole game runs on it.</td></tr>
+          <tr><td>Tier ladders · resource-gated, plot growth</td><td><span class="s-done">built</span></td><td>Per-zone; home re-costed onto farm goods (2026-06-23).</td></tr>
+          <tr><td>Progression oracle + baseline</td><td><span class="s-done">built</span></td><td>Code-derived reachability + softlock check; <a href="../balance/progression-timeline.html">dashboard</a>.</td></tr>
+          <tr><td>Boon system + keeper paths</td><td><span class="s-done">built</span></td><td>Six catalogs; effects frozen to economic passives for now.</td></tr>
+          <tr><td>Civic economy (Town Hall)</td><td><span class="s-done">built</span></td><td>v1; tithe + provisions; offline accrual; persisted.</td></tr>
+          <tr><td>Building-ability specials</td><td><span class="s-done">built</span></td><td>14+ effect types via the aggregator; assignment per zone is design work.</td></tr>
+          <tr><td>Save migration ladder</td><td><span class="s-done">built</span></td><td>Schema v47; live migrations, no wipes.</td></tr>
+          <tr><td>Market sell (live <code>applyTrade</code>)</td><td><span class="s-done">built</span></td><td>±drift; the orphaned <code>MARKET/SELL</code> path is dead code to delete.</td></tr>
+          <tr><td>Boss board modifiers</td><td><span class="s-wip">half-wired</span></td><td><code>min_chain</code> + <code>respawn_boost</code> live; freeze/rubble/hidden/heat overlays wiped by fresh-board rebuild. <a href="../projects/03-live-boss-board-modifiers.md">proj 03</a>.</td></tr>
+          <tr><td>Daily streak</td><td><span class="s-wip">half-wired</span></td><td>Reducer ships; needs a <code>LOGIN_TICK</code> dispatch on app-mount.</td></tr>
+          <tr><td>Old Capital finale</td><td><span class="s-wip">half-wired</span></td><td>Node is a stub; real terminal beat fires on a legacy festival-larder condition. <a href="../projects/12-endgame-finale-and-goals-hub.md">proj 12</a>.</td></tr>
+          <tr><td>Goals hub</td><td><span class="s-todo">to build</span></td><td>Aggregate streak + Almanac + tier-up + quests into one panel.</td></tr>
+          <tr><td>Workers → chain length</td><td><span class="s-todo">to build</span></td><td>Today reduce income threshold, not on-board chain length. Top open lever.</td></tr>
+          <tr><td>Non-linear founding + reachability gate</td><td><span class="s-todo">to build</span></td><td>Remove the "finish first town" gate &amp; the <code>requiresZoneTier</code> prereqs; gate on reach + coins. The model in <a href="progression.html#gates">Progression</a>.</td></tr>
+          <tr><td>Price unification</td><td><span class="s-todo">to build</span></td><td>One sell price per key. <a href="../projects/13-economy-unify-price-model.md">proj 13</a>.</td></tr>
+          <tr><td>Board-feel boons</td><td><span class="s-todo">to build</span></td><td>Make Coexist vs Drive-Out a real choice. <a href="../projects/04-roguelite-board-altering-boons.md">proj 04</a>.</td></tr>
+          <tr><td>Additive board stacking · Villager/currency split</td><td><span class="s-todo">to build</span></td><td>The structural seams that let towns stack boards and split the three currencies cleanly.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="numbers">
+      <h2>Open numbers</h2>
+      <p>The balance levers still unset — detailed in <a href="economy.html#open">Economy → Open questions</a>: coin pacing (too fast), worker→chain magnitudes, the crafting-substance gate, late-arc ladder costs (towns 4–7 + frontier are provisional), and value-spread compression.</p>
+    </section>
+
+    <section id="log">
+      <h2>Decision log</h2>
+      <ul class="log">
+        <li><span class="d">2026-06-22</span> Balance Profile generated; goals + KPI bands captured. Campaign pacing harness + code-derived progression oracle added; the softlock surfaced. The game-design prose set consolidated; the Zone Atlas (10 zones, passes 1–2) built.</li>
+        <li><span class="d">2026-06-23</span> <b>Progression softlock fixed.</b> Home re-costed onto farm goods alone (Bakery off <code>block</code> → <code>hay_bundle</code>, unlocked at Outpost; Village/City off mine goods), so home climbs Outpost→City unaided. Oracle flips to no-softlock.</li>
+        <li><span class="d">2026-06-24</span> game-design split set finalized (the seven-town arc, build-status tracker, meta &amp; money).</li>
+        <li><span class="d">2026-06-26</span> <b>This consolidation.</b> Merged scope + balance + progression into this <code>design/</code> canon. Decisions: (1) one reconciled roster — 7 required + 5 optional frontier, Thornwild folded; (2) <b>non-linear founding + soft tier/board gates</b>; (3) finale = <b>complete the required spine → build the Monument</b>, retiring the 3-Hearth-Token gate and the <code>act3_win</code> festival-larder beat; (4) home ladder = <b>4 rungs</b> (Outpost→City); (5) the <b>no-softlock invariant</b> is canon; (6) one sell price per key. Superseded prose archived (below).</li>
+      </ul>
+    </section>
+
+    <section id="superseded">
+      <h2>What this set replaced</h2>
+      <p>These docs were folded into this canon and moved to <code>reference/docs/archive/</code> with a "superseded by" banner. <b>Tooling and live data were kept in place</b> (they regenerate and cannot drift), and this set links them.</p>
+      <table>
+        <thead><tr><th>Archived doc</th><th>Replaced by</th></tr></thead>
+        <tbody>
+          <tr><td><code>game-design/index.html</code></td><td><a href="index.html">design/index.html</a></td></tr>
+          <tr><td><code>game-design/systems.html</code></td><td><a href="systems.html">systems.html</a> + <a href="economy.html">economy.html</a></td></tr>
+          <tr><td><code>game-design/towns.html</code></td><td><a href="towns.html">towns.html</a> + <a href="progression.html">progression.html</a></td></tr>
+          <tr><td><code>game-design/buildings.html</code></td><td><a href="systems.html">systems.html</a></td></tr>
+          <tr><td><code>game-design/meta-money.html</code></td><td><a href="meta.html">meta.html</a></td></tr>
+          <tr><td><code>game-design/status.html</code></td><td><a href="status.html">status.html</a> (this page)</td></tr>
+          <tr><td><code>balance/index.html</code></td><td><a href="economy.html">economy.html</a> + <a href="progression.html">progression.html</a></td></tr>
+          <tr><td><code>starting-zones-scope.html</code></td><td><a href="economy.html#ladders">economy.html</a> (the baseline numbers)</td></tr>
+          <tr><td><code>civic-economy.html</code></td><td><a href="meta.html#civic">meta.html → Civic</a></td></tr>
+          <tr><td><code>strategy-review-2026.html</code>, <code>runthrough.html</code></td><td><a href="index.html#scope">index.html</a> / <a href="towns.html">towns.html</a></td></tr>
+          <tr><td><code>ux-redesign-2026.html</code></td><td>archived as UX reference (not design canon)</td></tr>
+          <tr><td><code>zones/{index,grounded,exotic}.html</code></td><td><a href="towns.html">towns.html</a> is design canon; the <a href="../zones/index.html">generator</a> stays as a layout/art tool</td></tr>
+        </tbody>
+      </table>
+      <div class="box"><b>Kept live (not archived):</b> <code>balance/profile.json</code>, <code>balance/progression.baseline.json</code>, <code>balance/progression-timeline.html</code> (auto-generated), the <code>zones/</code> generator, and all <code>projects/*</code> briefs. These are tooling/queue, not prose to merge.</div>
+    </section>
+  </main>
+
+  <footer>
+    puzzleDrag2 design canon · Build Status &amp; Decision Log · start at the <a href="index.html">Overview</a>.
+  </footer>
+</div>
+</body>
+</html>

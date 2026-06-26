@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="puzzleDrag2 economy & balance — the three currencies, the faucets↔sinks map, the core formulas, KPI targets, the value-spread problem, every per-zone cost table, worker & ration numbers, and the single-source price rule.">
+<title>puzzleDrag2 — Economy &amp; Balance</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>Economy &amp; Balance</h1>
+    <p class="sub">The numbers behind the design: what the currencies are, where value enters and leaves the system, the formulas that price a chain, the targets we tune toward, and every per-zone cost table. This is the prose mirror of the <a href="../balance/profile.json">Balance Profile</a> and the playtest harness — the live numbers are in code.</p>
+    <p class="meta">Canonical numbers · KPI band: ~1–2 weeks to mid-game · value-spread target ≤ 4×</p>
+  </header>
+
+  <div class="canon"><span>📊</span><div><b>Code is the runtime truth.</b> Formulas and constants here state design intent and current measured values; the authoritative numbers live in <code>src/constants.ts</code> + <code>src/config/balance/</code>, are measured by <code>npm&nbsp;run&nbsp;playtest</code>, and tracked in <a href="../balance/profile.json">profile.json</a>. Tune via the <code>game-balance</code> skill.</div></div>
+
+  <nav class="docnav" aria-label="Design docs">
+    <a href="index.html">Overview &amp; Scope</a>
+    <a href="progression.html">Progression</a>
+    <a href="towns.html">Settlement Atlas</a>
+    <a href="economy.html" class="here">Economy &amp; Balance</a>
+    <a href="systems.html">Systems</a>
+    <a href="meta.html">Meta &amp; Money</a>
+    <a href="status.html">Build status</a>
+  </nav>
+
+  <main>
+    <section id="currencies">
+      <h2>The three currencies</h2>
+      <table>
+        <thead><tr><th>Currency</th><th>Earned by</th><th>Spent on</th><th>Scope</th></tr></thead>
+        <tbody>
+          <tr><td><b>Materials</b> (resources)</td><td>chaining tiles → refining at stations</td><td>tier-ups, building construction, crafting, win tasks, hiring</td><td><b>per-town</b> — each settlement's stockpile is its own</td></tr>
+          <tr><td><b>Coins</b></td><td>per chain (linear in chain length × tile value); season-end bonus; selling at market</td><td>founding cost, session entry tolls, worker wages, tile unlocks, decorations</td><td><b>global</b> — travels with you</td></tr>
+          <tr><td><b>Villagers</b></td><td>raising Houses (each House = +3 capacity)</td><td>1 per worker hire (alongside coins + materials)</td><td><b>global</b> — the worker-currency</td></tr>
+        </tbody>
+        <caption>Materials are the real progression gate; coins are a soft secondary gate (today they arrive faster than progression needs — see <a href="#open">open questions</a>). Legacy runes / Hearth-Tokens persist as optional flavour, not core currency.</caption>
+      </table>
+      <h4>Resource families</h4>
+      <p><b>Farm:</b> hay_bundle, flour, plank, eggs, soup, pie, honey, meat, milk, horseshoe · <b>Mine:</b> block, dirt, iron_bar, coke, copper_bar, silver_bar, cut_gem (+ zone metals: obsidian, crystal, aether, gold_bar) · <b>Fish:</b> fish_fillet, fish_oil, pearls, sea_shells, cocoa, ink, jade.</p>
+    </section>
+
+    <section id="faucets">
+      <h2>Faucets ↔ sinks</h2>
+      <p>Balance is the conversation between where value <b>enters</b> the economy (faucets) and where it <b>leaves</b> (sinks). The resource axis is where the old softlock lived; keeping faucets ahead of the sinks that gate them is the <a href="progression.html#nosoftlock">no-softlock invariant</a>.</p>
+      <div class="grid">
+        <div class="card g"><h3>Faucets (value in)</h3><ul><li>Chain collection → materials (per <code>TILES_PER_RESOURCE</code> threshold)</li><li>Chain coins (linear in chain length)</li><li>Season-end bonus (+25 coins) &amp; Chapel (+50 at season end)</li><li>Daily rewards, civic tithes, timed depots, boons</li></ul></div>
+        <div class="card r"><h3>Sinks (value out)</h3><ul><li>Tier-up costs (materials; the main sink)</li><li>Founding cost (coins; exponential)</li><li>Session entry tolls (coins per visit)</li><li>Worker wages + hire ramps; crafting inputs; win-task baskets</li></ul></div>
+      </div>
+    </section>
+
+    <section id="formulas">
+      <h2>Core formulas</h2>
+      <table>
+        <thead><tr><th>Quantity</th><th>Formula</th><th>Notes</th></tr></thead>
+        <tbody>
+          <tr><td>Chain coins</td><td><code>max(1, floor(chainLength × tileValue)) + coinHookBonus</code>, ×<code>coin_gain_mult</code></td><td><b>Linear in chain length</b>, weighted by tile value — not by the resource's sell value.</td></tr>
+          <tr><td>Resource accrual</td><td><code>progress[res] += chainLength</code>; units = <code>floor(progress / TILES_PER_RESOURCE[tile])</code></td><td>Remainder carries forward. Every N chained tiles → 1 unit.</td></tr>
+          <tr><td>Realized value / tile</td><td><code>ITEMS[res].value / TILES_PER_RESOURCE[tile]</code></td><td>The dominance metric for the value-spread audit.</td></tr>
+          <tr><td>Founding cost (k-th town)</td><td><code>round(300 × 1.7^(k−1))</code></td><td>→ 300, 510, 867, 1474, 2506… The exponential coin sink that paces the frontier.</td></tr>
+          <tr><td>Net coins / run</td><td><code>chainCoins − entryToll + seasonBonus + buildingBonuses</code></td><td>Home: toll 50, season bonus 25 → break-even ≈ 25 coins.</td></tr>
+          <tr><td>Turn budget</td><td><code>max(1, floor((baseTurns + additive + bonus) × (fertilizer ? 2 : 1)))</code></td><td>Home <code>baseTurns = 10</code>. Granary +1, etc.</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="kpi">
+      <h2>KPI targets</h2>
+      <p>Bands worked backward from "mid-core player, ~2.5 sessions/day, steady ~1–2 weeks to mid-game." A run ≈ one farm visit (~10 turns).</p>
+      <table>
+        <thead><tr><th>Metric</th><th>Target</th><th>Current</th></tr></thead>
+        <tbody>
+          <tr><td>Time to mid-game (home City + 2nd town founded)</td><td class="num">20–35 runs</td><td>not yet validated cross-zone</td></tr>
+          <tr><td>home tier 1 · Hamlet</td><td class="num">3–8 runs</td><td>reachable ✓</td></tr>
+          <tr><td>home tier 2 · Village</td><td class="num">10–20 runs</td><td>reachable ✓</td></tr>
+          <tr><td>home tier 3 · City (mid-game)</td><td class="num">20–35 runs</td><td>reachable ✓</td></tr>
+          <tr><td>Coins per run</td><td class="num">40–140</td><td>too fast (≈2 runs to a founding price)</td></tr>
+          <tr><td>Family value-spread (max ÷ median)</td><td class="num">≤ 3–4×</td><td>≈ 10× (outlier ≈ 192×)</td></tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section id="spread">
+      <h2>The value-spread problem</h2>
+      <div class="box warn"><b>Realized value-per-tile spans ~10×</b> (pearls ≈ 133/tile vs pie ≈ 12.9/tile), with a worst-case outlier near 192×. Anything &gt;3× the median is flagged. <b>Target: compress to a 3–4× ceiling</b> so no single tile family dominates income and every board stays worth playing.</div>
+      <p>The harness already emits a compression change-list (<code>npm run playtest</code> → <code>change-list.json</code>), applied through the Dev Panel cost-matrix. Deep tuning is deferred until the cross-zone pacing sim crosses boards (currently farm-only). Two levers move it: <code>ITEMS[].value</code> (sell worth) and <code>TILES_PER_RESOURCE</code> (the income divisor).</p>
+    </section>
+
+    <section id="ladders">
+      <h2>Per-zone cost tables</h2>
+      <p>Tier-up costs are <b>resource-only</b> for home (farm goods) and <b>coins + resources</b> for the frontier. Founding adds an escalating coin cost; each session adds an entry toll. Full per-rung detail is on each town's card in the <a href="towns.html">Atlas</a>; the spine summary:</p>
+      <h4>Home — Hearthwood Vale (farm goods only)</h4>
+      <table>
+        <thead><tr><th>Rung</th><th>Plots</th><th>Houses</th><th>Tier-up cost</th></tr></thead>
+        <tbody>
+          <tr><td>Outpost (t0)</td><td class="num">3</td><td class="num">0</td><td>— start —</td></tr>
+          <tr><td>Hamlet (t1)</td><td class="num">6</td><td class="num">1</td><td class="num">3 hay · 5 plank · 10 bread · 4 eggs · 2 soup</td></tr>
+          <tr><td>Village (t2)</td><td class="num">9</td><td class="num">2</td><td class="num">12 eggs · 14 soup · 16 bread · 6 pie · 14 plank · 10 hay</td></tr>
+          <tr><td>City (t3)</td><td class="num">12</td><td class="num">3</td><td class="num">28 bread · 14 pie · 18 soup · 18 eggs · 18 plank · 12 flour</td></tr>
+        </tbody>
+      </table>
+      <h4>Frontier founding &amp; entry (current)</h4>
+      <table>
+        <thead><tr><th>Town</th><th>Founding (caravan)</th><th>Session entry toll</th><th>Rungs</th></tr></thead>
+        <tbody>
+          <tr><td>Hearthwood (home)</td><td class="num">—</td><td class="num">50 coins</td><td class="num">4</td></tr>
+          <tr><td>Two Rivers</td><td class="num">12 plank · 10 bread · 8 hay (resource caravan)</td><td class="num">100 coins</td><td class="num">4</td></tr>
+          <tr><td>Cinderhold / Glimmerdeep / Aetherreach</td><td class="num">coin cost (300×1.7^k curve)</td><td class="num">100–200 coins</td><td class="num">4–5</td></tr>
+          <tr><td>Gullcliff / Mirefen (fish)</td><td class="num">coin + reach</td><td class="num">50–100 coins</td><td class="num">4</td></tr>
+          <tr><td>Goldgrass (Capital)</td><td class="num">spine-complete gate</td><td class="num">—</td><td class="num">5</td></tr>
+        </tbody>
+        <caption>Frontier per-rung costs (coins + zone metals like obsidian/crystal/aether) are listed on each <a href="towns.html#frontier">Atlas card</a>. Two Rivers founding is a resource caravan, not coins — an intentional demand on farm production.</caption>
+      </table>
+    </section>
+
+    <section id="workers">
+      <h2>Workers &amp; hiring</h2>
+      <p>Each hire spends <b>1 Villager + coins + materials</b>; coins ramp linearly per successive hire and materials ramp every 3 hires. A worker reduces a family's chain-to-collect threshold, capped at <code>threshold − 3</code>.</p>
+      <table>
+        <thead><tr><th>Worker</th><th>Effect</th><th>Max</th><th>1st cost</th><th>+coins / hire</th></tr></thead>
+        <tbody>
+          <tr><td>Peasant</td><td>−1 grass chain</td><td class="num">3</td><td class="num">40c · 2 grass</td><td class="num">+20c</td></tr>
+          <tr><td>Farmer</td><td>−1 grain chain</td><td class="num">2</td><td class="num">50c · 2 grass</td><td class="num">+25c</td></tr>
+          <tr><td>Lumberjack</td><td>−1 tree chain</td><td class="num">3</td><td class="num">60c · 2 oak</td><td class="num">+30c</td></tr>
+          <tr><td>Poultryman</td><td>−1 bird chain</td><td class="num">3</td><td class="num">60c · 2 eggs</td><td class="num">+30c</td></tr>
+          <tr><td>Baker</td><td>−1 flour on Bread (floor 1)</td><td class="num">2</td><td class="num">80c · flour+eggs</td><td class="num">+40c</td></tr>
+          <tr><td>Miner</td><td>−1 stone chain</td><td class="num">5</td><td class="num">75c · 2 stone</td><td class="num">+35c</td></tr>
+          <tr><td>Iron / Coal Miner</td><td>−1 ore / coal chain</td><td class="num">3 / 4</td><td class="num">90 / 100c</td><td class="num">+45 / +50c</td></tr>
+        </tbody>
+        <caption>Deeper families (veg, fruit, herd) cost far more to staff (120–160c first hire). Five miners total ≈ 725 coins (verified linear sum). Population: 3 houses × 3 = 9 at home.</caption>
+      </table>
+      <div class="box warn"><b>Open wiring (critical).</b> Today a worker reduces the <em>income</em> threshold, not the on-board chain length (<code>effectiveMinChain</code> floors at 3 and reads only the boss). Routing Houses → Villagers → shorter chains is the top open balance lever — see <a href="status.html">Build status</a>.</div>
+    </section>
+
+    <section id="rations">
+      <h2>Rations → mine turns</h2>
+      <p>A mine spends <b>food</b> as expedition turns. Raw produce works; crafted food gives more turns per unit (a soft efficiency gradient, never a hard requirement). Minimum to set out: <b>12 turns</b> of packed food, plus the entry toll.</p>
+      <table>
+        <thead><tr><th>Food tier</th><th>Examples</th><th>Turns / unit</th><th>+ Mining Camp</th></tr></thead>
+        <tbody>
+          <tr><td>Raw produce</td><td>apple, eggs, soup, pie, jam, meat</td><td class="num">1</td><td class="num">2</td></tr>
+          <tr><td>Crafted staple</td><td>bread, preserve</td><td class="num">2</td><td class="num">3</td></tr>
+          <tr><td>Rich crafted</td><td>harvest pie, cured meat</td><td class="num">3</td><td class="num">4</td></tr>
+        </tbody>
+        <caption>No special "Supplies" item — any food works; processing buys efficiency. Larder adds +1 mine-food turn; bonuses stack.</caption>
+      </table>
+    </section>
+
+    <section id="price">
+      <h2>The price rule — one source of truth</h2>
+      <div class="box money"><b>Every sellable key has exactly one sell price:</b> <code>MARKET_PRICES[key].sell == ITEMS[key].value</code>. A key must pay the same coins whether the UI classifies it as a "resource" or an "item." This retires the historical 10× fork (three disagreeing price sources: <code>MARKET_PRICES</code>, <code>ITEMS.value</code>, and a <code>sellPriceFor</code> 10%-of-value path). Implementation is tracked as <a href="../projects/13-economy-unify-price-model.md">project 13</a>.</div>
+    </section>
+
+    <section id="open">
+      <h2>Open balance questions</h2>
+      <ul>
+        <li><b>Coin pacing.</b> Coins reach a founding price in ~2 runs — too fast. Make coins a softer secondary gate (e.g. a per-action / entry sink) once progression is the primary gate.</li>
+        <li><b>Workers → chain length.</b> Wire Houses → Villagers → shorter on-board chains (per-zone pool or global? magnitudes?). The top open lever.</li>
+        <li><b>Crafting substance.</b> Should deeper refines gate on real-time timer, in-game-time, or a "juice" resource? Designer lean: in-game-time gate; basics stay instant.</li>
+        <li><b>Late-arc numbers.</b> Towns 4–7 + frontier ladders are specced but unvalidated; the cross-zone pacing sim (currently farm-only) must cross boards to confirm.</li>
+        <li><b>Value-spread compression.</b> Land the harness change-list once the price rule (project 13) merges, so both tables move in lockstep.</li>
+      </ul>
+    </section>
+  </main>
+
+  <footer>
+    puzzleDrag2 design canon · Economy &amp; Balance · live data: <a href="../balance/profile.json">profile.json</a> · <a href="../balance/progression-timeline.html">progression dashboard</a> · <code>npm run playtest</code>.
+  </footer>
+</div>
+</body>
+</html>

@@ -1,5 +1,11 @@
 # docs/zones — the Zone Atlas (and zone build-out)
 
+> **Design canon moved.** The canonical settlement roster, gate model and per-town design now
+> live in [`docs/design/towns.html`](../design/towns.html) + [`progression.html`](../design/progression.html).
+> This folder stays a **layout / art generator** — the environments, growth topologies, tier-ladder
+> costs and per-zone Grow play-throughs the canon draws from. Edit zone data here; state design
+> decisions in the canon.
+
 Ten unique, AAA-bar settlement zones for puzzleDrag2. Each is a different **environment** and a
 different **logic of growth**, built on the [town-layout](../town-layout/) foundation (roads-first,
 the wilderness as the progress bar, a landmark that levels up in place) and taken somewhere new.
