@@ -325,7 +325,7 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
   // state.craftingTab, which the router projects onto `#/crafting/<station>`,
   // so each drill in/out is its own history entry (browser + button back both
   // work), and the station is preserved when switching to another tab and back.
-  const activeTab = (state.craftingTab && STATION_ORDER.includes(state.craftingTab) && stationBuilt(built, state.craftingTab))
+  const activeTab = (state.craftingTab && STATION_ORDER.includes(state.craftingTab))
     ? state.craftingTab
     : null;
   const openStation = (s: string) => dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: s });
@@ -351,11 +351,14 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
   const stationRecipes = recipesForStation(activeTab);
   const selectedRecipeEntry = stationRecipes.find(([key]) => key === selectedRecipeKey) ?? stationRecipes[0] ?? null;
 
-  // Header pill: how many recipes are craftable right now.
+  // Header pill: how many recipes are craftable right now (or "Locked" when
+  // the station hasn't been built — only reachable by deep-linking the URL).
   const craftableCount = stationRecipes.filter(([key, recipe]) =>
     canCraft(recipe, effectiveRecipeInputs(state, key, recipe.inputs), inventory, built, tier2Unlocked),
   ).length;
-  const headerPill = `${craftableCount}/${stationRecipes.length} ready`;
+  const headerPill = !stationBuilt(built, activeTab)
+    ? "Locked"
+    : `${craftableCount}/${stationRecipes.length} ready`;
 
   return (
     <FeaturePanel>
@@ -373,6 +376,13 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
 
       <StationHeader meta={meta} pill={headerPill} />
 
+      {!stationBuilt(built, activeTab) ? (
+        <div className="flex-1 grid place-items-center px-4">
+          <p className="hl-empty">
+            Build the {meta.label} in town to unlock these recipes.
+          </p>
+        </div>
+      ) : (
       <FeaturePanel.Body>
         <BrowserDetailLayout
           browser={
@@ -410,6 +420,7 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
           }
         />
       </FeaturePanel.Body>
+      )}
     </FeaturePanel>
   );
 }
