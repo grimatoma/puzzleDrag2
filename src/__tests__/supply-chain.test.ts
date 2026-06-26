@@ -62,12 +62,13 @@ describe("3.2 — Supply chain (grain → supplies → expedition rations)", () 
     expect(blocked.biomeKey).toBe("farm");
   });
 
-  it("EXPEDITION/DEPART: succeeds with 3+ supply rations", () => {
+  it("EXPEDITION/DEPART: succeeds with a full food pack (any food is a ration now)", () => {
+    // "Supplies" is gone — pack any food. 6 bread × 2 turns = 12 = MIN_EXPEDITION_TURNS.
     const entered = gameReducer(
-      withInv(readyMineState(), { supplies: 4 }, "quarry"),
-      { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { supplies: 3 } } },
+      withInv(readyMineState(), { bread: 6 }, "quarry"),
+      { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 6 } } },
     );
     expect(entered.biomeKey).toBe("mine");
-    expect(inv(entered).supplies).toBe(1);
+    expect(inv(entered).bread ?? 0).toBe(0);
   });
 });

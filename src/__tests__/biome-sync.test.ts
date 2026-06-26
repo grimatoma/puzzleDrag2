@@ -65,13 +65,13 @@ describe("QA-Pass4 Fix1 — EXPEDITION/DEPART syncs state.biome", () => {
         quarry: { founded: true, biome: "tundra" },
       },
     };
-    const s0 = { ...base, ...patchInventory(base, { bread: 5 }, "quarry") };
-    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 3 } } });
+    const s0 = { ...base, ...patchInventory(base, { bread: 6 }, "quarry") };
+    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 6 } } });
     expect(s1.biome).toBe("mine");
     expect(s1.biomeKey).toBe("mine");
   });
 
-  it("EXPEDITION/DEPART with supplies sets state.biome to 'mine'", () => {
+  it("EXPEDITION/DEPART with a full food pack sets state.biome to 'mine'", () => {
     const base = {
       ...createInitialState(),
       level: 5,
@@ -85,8 +85,8 @@ describe("QA-Pass4 Fix1 — EXPEDITION/DEPART syncs state.biome", () => {
         quarry: { founded: true, biome: "tundra" },
       },
     };
-    const s0 = { ...base, ...patchInventory(base, { supplies: 5 }, "quarry") };
-    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { supplies: 3 } } });
+    const s0 = { ...base, ...patchInventory(base, { bread: 4, cured_meat: 2 }, "quarry") };
+    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 4, cured_meat: 2 } } });
     expect(s1.biome).toBe("mine");
     expect(s1.biomeKey).toBe("mine");
   });

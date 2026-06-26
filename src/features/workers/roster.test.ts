@@ -15,8 +15,10 @@ describe("worker roster", () => {
     }
   });
 
-  it("sets each worker's reduction amount to the line step", () => {
-    expect((TYPE_WORKER_MAP.peasant.abilities[0].params as { amount: number }).amount).toBe(lineStep("grass"));
+  it("sets each worker's reduction amount to its step (scoped override or line default)", () => {
+    // Zones-1&2 scope: Peasant's grass bulk-step (2) is overridden to 1 so each hire shaves
+    // exactly one tile (cap math = chain − 3). Non-overridden lines use their line step.
+    expect((TYPE_WORKER_MAP.peasant.abilities[0].params as { amount: number }).amount).toBe(1);
     expect((TYPE_WORKER_MAP.fisherman.abilities[0].params as { amount: number }).amount).toBe(lineStep("fish"));
   });
 

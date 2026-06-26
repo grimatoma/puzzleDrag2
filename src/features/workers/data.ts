@@ -61,7 +61,7 @@ const BASE_WORKERS: WorkerDef[] = [
     role: "Farmer",
     look: { iconKey: "worker_farmer", color: "#4f8c3a" },
     hireCost: { coins: 50, coinsStep: 25, resources: { tile_grass_grass: 2 }, resourcesStepEvery: 3 },
-    maxCount: 10,
+    maxCount: 2, // grain chains at 5 → cap at chain − 3
     abilities: [
       { id: "threshold_reduce_category", params: { category: "grain", amount: 1 } },
     ],
@@ -74,7 +74,7 @@ const BASE_WORKERS: WorkerDef[] = [
     role: "Lumberjack",
     look: { iconKey: "worker_lumberjack", color: "#7a4f1f" },
     hireCost: { coins: 60, coinsStep: 30, resources: { tile_tree_oak: 2 }, resourcesStepEvery: 3 },
-    maxCount: 10,
+    maxCount: 3, // tree chains at 6 → cap at chain − 3
     abilities: [
       { id: "threshold_reduce_category", params: { category: "trees", amount: 1 } },
     ],
@@ -87,7 +87,7 @@ const BASE_WORKERS: WorkerDef[] = [
     role: "Miner",
     look: { iconKey: "worker_miner", color: "#7a8490" },
     hireCost: { coins: 75, coinsStep: 35, resources: { tile_mine_stone: 2 }, resourcesStepEvery: 3 },
-    maxCount: 10,
+    maxCount: 5, // stone chains at 8 → cap at chain − 3
     abilities: [
       { id: "threshold_reduce_category", params: { category: "mine_stone", amount: 1 } },
     ],
@@ -99,8 +99,8 @@ const BASE_WORKERS: WorkerDef[] = [
     name: "Baker",
     role: "Baker",
     look: { iconKey: "worker_baker", color: "#c89b6a" },
-    hireCost: { coins: 75, coinsMult: 1.4, resources: { flour: 1, eggs: 1 }, resourcesStepEvery: 3 },
-    maxCount: 10,
+    hireCost: { coins: 80, coinsStep: 40, resources: { flour: 1, eggs: 1 }, resourcesStepEvery: 3 },
+    maxCount: 2, // bread flour floors at 1; cap the crew at 2
     abilities: [
       { id: "recipe_input_reduce", params: { recipe: "bread", input: "flour", amount: 1 } },
     ],
@@ -113,19 +113,23 @@ interface LineWorkerMeta {
   id: WorkerTypeId; category: string; name: string; role: string;
   iconKey: string; color: string; coins: number; coinsStep: number;
   costResource: string; description: string; flavor: string;
+  /** Per-worker overrides for the zones-1&2 scope (else fall back to the line config). */
+  maxCount?: number;      // hire cap — set to (chain − 3) so a family never drops below min chain 3
+  step?: number;          // tiles shaved per hire (override the line's bulk step)
+  resourceAmount?: number; // resource units per first hire (deeper families cost more)
 }
 
 const LINE_WORKER_META: LineWorkerMeta[] = [
-  { id: WorkerTypeId.Peasant, category: "grass", name: "Peasant", role: "Hayward", iconKey: "worker_farmer", color: "#6fa838", coins: 40, coinsStep: 20, costResource: "tile_grass_grass", description: `Each Peasant shaves ${lineStep("grass")} tiles off the hay chain.`, flavor: "Hands that have bundled hay since before the mill turned." },
-  { id: WorkerTypeId.Poultryman, category: "bird", name: "Poultryman", role: "Poultryman", iconKey: "worker_farmer", color: "#d9a85c", coins: 55, coinsStep: 25, costResource: "eggs", description: "Each Poultryman trims a tile off the egg chain.", flavor: "Keeps the coop calm and the nests full." },
-  { id: WorkerTypeId.VegetablePicker, category: "vegetables", name: "Vegetable Picker", role: "Picker", iconKey: "worker_farmer", color: "#d97b32", coins: 50, coinsStep: 25, costResource: "tile_veg_carrot", description: "Each Picker trims a tile off the vegetable chain.", flavor: "First to the rows at dawn, basket already half full." },
-  { id: WorkerTypeId.FruitPicker, category: "fruits", name: "Fruit Picker", role: "Picker", iconKey: "worker_farmer", color: "#d44b48", coins: 60, coinsStep: 30, costResource: "tile_fruit_apple", description: "Each Picker trims a tile off the fruit chain.", flavor: "Knows which orchard ripens first by the smell of the wind." },
+  { id: WorkerTypeId.Peasant, category: "grass", name: "Peasant", role: "Hayward", iconKey: "worker_farmer", color: "#6fa838", coins: 40, coinsStep: 20, costResource: "tile_grass_grass", maxCount: 3, step: 1, description: "Each Peasant shaves a tile off the hay chain.", flavor: "Hands that have bundled hay since before the mill turned." },
+  { id: WorkerTypeId.Poultryman, category: "bird", name: "Poultryman", role: "Poultryman", iconKey: "worker_farmer", color: "#d9a85c", coins: 60, coinsStep: 30, costResource: "eggs", maxCount: 3, description: "Each Poultryman trims a tile off the egg chain.", flavor: "Keeps the coop calm and the nests full." },
+  { id: WorkerTypeId.VegetablePicker, category: "vegetables", name: "Vegetable Picker", role: "Picker", iconKey: "worker_farmer", color: "#d97b32", coins: 120, coinsStep: 60, costResource: "tile_veg_carrot", maxCount: 3, resourceAmount: 4, description: "Each Picker trims a tile off the vegetable chain.", flavor: "First to the rows at dawn, basket already half full." },
+  { id: WorkerTypeId.FruitPicker, category: "fruits", name: "Fruit Picker", role: "Picker", iconKey: "worker_farmer", color: "#d44b48", coins: 160, coinsStep: 80, costResource: "tile_fruit_apple", maxCount: 4, resourceAmount: 4, description: "Each Picker trims a tile off the fruit chain.", flavor: "Knows which orchard ripens first by the smell of the wind." },
   { id: WorkerTypeId.BeeKeeper, category: "flowers", name: "Bee Keeper", role: "Apiarist", iconKey: "worker_farmer", color: "#d96bb0", coins: 80, coinsStep: 40, costResource: "tile_flower_pansy", description: "Each Bee Keeper trims a tile off the flower-to-honey chain.", flavor: "Unhurried among the hives — the bees have never once stung her." },
-  { id: WorkerTypeId.Herder, category: "herd_animals", name: "Herder", role: "Herder", iconKey: "worker_farmer", color: "#c97e7a", coins: 55, coinsStep: 25, costResource: "meat", description: "Each Herder trims a tile off the herd chain.", flavor: "A whistle and a nod, and the whole drove turns." },
+  { id: WorkerTypeId.Herder, category: "herd_animals", name: "Herder", role: "Herder", iconKey: "worker_farmer", color: "#c97e7a", coins: 140, coinsStep: 70, costResource: "meat", maxCount: 2, resourceAmount: 4, description: "Each Herder trims a tile off the herd chain.", flavor: "A whistle and a nod, and the whole drove turns." },
   { id: WorkerTypeId.Dairywoman, category: "cattle", name: "Dairywoman", role: "Dairywoman", iconKey: "worker_farmer", color: "#9c6230", coins: 60, coinsStep: 30, costResource: "milk", description: "Each Dairywoman trims a tile off the cattle chain.", flavor: "Up before the cock, pails already scrubbed and waiting." },
   { id: WorkerTypeId.Wrangler, category: "mounts", name: "Wrangler", role: "Wrangler", iconKey: "worker_farmer", color: "#6f86b0", coins: 90, coinsStep: 45, costResource: "horseshoe", description: "Each Wrangler trims a tile off the mount chain.", flavor: "Breaks no horse — befriends it." },
-  { id: WorkerTypeId.IronMiner, category: "mine_iron_ore", name: "Iron Miner", role: "Miner", iconKey: "worker_miner", color: "#a3795a", coins: 70, coinsStep: 35, costResource: "tile_mine_iron_ore", description: "Each Iron Miner trims a tile off the ore chain.", flavor: "Reads a vein the way Mira reads a recipe." },
-  { id: WorkerTypeId.CoalMiner, category: "mine_coal", name: "Coal Miner", role: "Miner", iconKey: "worker_miner", color: "#4a4f57", coins: 70, coinsStep: 35, costResource: "tile_mine_coal", description: "Each Coal Miner trims a tile off the coal chain.", flavor: "Comes up black to the elbows and grinning." },
+  { id: WorkerTypeId.IronMiner, category: "mine_iron_ore", name: "Iron Miner", role: "Miner", iconKey: "worker_miner", color: "#a3795a", coins: 90, coinsStep: 45, costResource: "tile_mine_iron_ore", maxCount: 3, description: "Each Iron Miner trims a tile off the ore chain.", flavor: "Reads a vein the way Mira reads a recipe." },
+  { id: WorkerTypeId.CoalMiner, category: "mine_coal", name: "Coal Miner", role: "Miner", iconKey: "worker_miner", color: "#4a4f57", coins: 100, coinsStep: 50, costResource: "tile_mine_coal", maxCount: 4, description: "Each Coal Miner trims a tile off the coal chain.", flavor: "Comes up black to the elbows and grinning." },
   { id: WorkerTypeId.GemCutter, category: "mine_gem", name: "Gem-cutter", role: "Lapidary", iconKey: "worker_miner", color: "#9b59c4", coins: 110, coinsStep: 55, costResource: "tile_mine_gem", description: "Each Gem-cutter trims a tile off the gem chain.", flavor: "One steady tap, and the rough stone gives up its fire." },
   { id: WorkerTypeId.GoldMiner, category: "mine_gold", name: "Gold Miner", role: "Miner", iconKey: "worker_miner", color: "#e8c33a", coins: 120, coinsStep: 60, costResource: "tile_mine_gold", description: "Each Gold Miner trims a tile off the gold chain.", flavor: "Follows the glint deeper than the rest dare." },
   { id: WorkerTypeId.Digger, category: "special_dirt", name: "Digger", role: "Digger", iconKey: "worker_miner", color: "#7a5236", coins: 50, coinsStep: 25, costResource: "tile_special_dirt", description: `Each Digger shaves ${lineStep("special_dirt")} tiles off the dirt-clearing work.`, flavor: "Moves more earth in a morning than a mule in a day." },
@@ -136,9 +140,9 @@ function productionLineWorkers(): WorkerDef[] {
   return LINE_WORKER_META.map((m) => ({
     id: m.id, name: m.name, role: m.role,
     look: { iconKey: m.iconKey, color: m.color },
-    hireCost: { coins: m.coins, coinsStep: m.coinsStep, resources: { [m.costResource]: 2 }, resourcesStepEvery: 3 },
-    maxCount: PRODUCTION_LINES[m.category].maxCount,
-    abilities: [{ id: "threshold_reduce_category", params: { category: m.category, amount: lineStep(m.category) } }],
+    hireCost: { coins: m.coins, coinsStep: m.coinsStep, resources: { [m.costResource]: m.resourceAmount ?? 2 }, resourcesStepEvery: 3 },
+    maxCount: m.maxCount ?? PRODUCTION_LINES[m.category].maxCount,
+    abilities: [{ id: "threshold_reduce_category", params: { category: m.category, amount: m.step ?? lineStep(m.category) } }],
     description: m.description, flavor: m.flavor,
   }));
 }

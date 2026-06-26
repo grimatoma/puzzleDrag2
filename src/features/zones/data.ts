@@ -537,7 +537,9 @@ export function expeditionTurnsForFood(state: GameState | null | undefined, food
   if (built.larder) turns += 1;                                            // Larder: +1 (per tier — no tiers yet)
   if (built.smokehouse && (EXPEDITION_MEAT_FOODS as string[]).includes(foodKey)) turns += 1; // Smokehouse: +1 to meat
   const type = settlementTypeForZone(zoneId);
-  if (type === "mine" && built.mining_camp) turns += 1;                    // Mining Camp: +1 to all (mine only)
+  // Mining Camp: +1 to every mine ration. Board-based, not kind-based, so it also fires
+  // at a farm+mining frontier (Town 2) whose primary kind is "farm" but which mines a seam.
+  if (built.mining_camp && zoneHasBoard(zoneId, "mine")) turns += 1;
   if (type === "harbor" && (built.pier || built.harbor_dock)) turns += 1;  // Pier: +1 to all (harbor only)
   return turns;
 }

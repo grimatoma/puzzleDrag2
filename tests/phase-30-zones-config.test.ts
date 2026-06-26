@@ -124,7 +124,8 @@ describe("Phase 30 — zones slice (zone selection via CARTO/TRAVEL)", () => {
   });
 
   it("CARTO/TRAVEL to a discovered node updates activeZone and mapCurrent", () => {
-    const s = createInitialState();
+    // Zones-1&2 scope: meadow (Town 2) gates on home reaching its top tier — grow home first.
+    const s = { ...createInitialState(), settlements: { home: { founded: true, biome: "temperate_vale", tier: 3 } } };
     const next = rootReducer(s, { type: "CARTO/TRAVEL", nodeId: "meadow" });
     expect(next.activeZone).toBe("meadow");
     expect(next.mapCurrent).toBe("meadow");

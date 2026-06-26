@@ -124,6 +124,7 @@ export interface UtilityDef {
 
 export const UTILITIES: UtilityDef[] = [
   { id: "costMatrix",     label: "Cost matrix" },
+  { id: "unreachable",    label: "Unreachable" },
   { id: "icons",          label: "Icons" },
   { id: "animationsDemo", label: "Board animations" },
 ];

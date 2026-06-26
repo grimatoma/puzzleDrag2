@@ -38,10 +38,12 @@ describe("cartography lore", () => {
 });
 
 describe("map adjacency invariants", () => {
-  it("home is reachable from its three starting neighbours", () => {
+  it("home connects to the farm+mining frontier (zones-1&2 scope)", () => {
+    // Zones-1&2 scope: only home ↔ meadow remains; the home↔orchard and home↔harbor
+    // edges are unlinked so the rest of the map is stranded (kept, but unreachable).
     expect(isAdjacent("home", "meadow")).toBe(true);
-    expect(isAdjacent("home", "orchard")).toBe(true);
-    expect(isAdjacent("home", "harbor")).toBe(true);
+    expect(isAdjacent("home", "orchard")).toBe(false);
+    expect(isAdjacent("home", "harbor")).toBe(false);
   });
 
   it("the Old Capital sits beyond the deep ways", () => {

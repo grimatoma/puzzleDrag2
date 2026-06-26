@@ -134,22 +134,15 @@ exports[`campaign harness — drift guard > campaign metrics snapshot (a pacing 
         "have": 3,
         "key": "plank",
         "label": "Plank",
-        "need": 5,
+        "need": 8,
         "source": "farm",
       },
       {
         "have": 0,
         "key": "bread",
         "label": "Bread Loaf",
-        "need": 10,
+        "need": 6,
         "source": "crafted",
-      },
-      {
-        "have": 3,
-        "key": "eggs",
-        "label": "Eggs",
-        "need": 4,
-        "source": "farm",
       },
     ],
     "toName": "Hamlet",
@@ -399,27 +392,12 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
 {
   "oracle": {
     "freshSavePlayableBoards": [
-      "caves",
-      "forge",
-      "harbor",
       "home",
       "meadow",
-      "mirefen",
-      "orchard",
-      "quarry",
     ],
     "freshSaveReachable": [
-      "caves",
-      "crossroads",
-      "fairground",
-      "forge",
-      "harbor",
       "home",
       "meadow",
-      "mirefen",
-      "orchard",
-      "pit",
-      "quarry",
     ],
     "homeProducible": [
       "bread",
@@ -439,38 +417,7 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       "note": "MARKET_PRICES lists block/iron_bar/coke/bread as buyable and BUY_RESOURCE does not itself check the caravan post, but the buy UI is shown only once caravan_post is built (Inventory.tsx) — and caravan_post costs block+iron_bar. So the market is a latent escape valve that is itself mine-gated. Opening it (an early buyable starter good, or ungating the buy UI) is the cheapest lever.",
     },
     "softlock": null,
-    "walls": [
-      {
-        "wall": {
-          "missing": [
-            {
-              "key": "gold_bar",
-              "reason": "no source reachable from this settlement's board or stations",
-            },
-          ],
-          "reachedName": "Smeltworks",
-          "reachedTier": 4,
-          "toName": "Foundry City",
-          "toTier": 5,
-        },
-        "zone": "quarry",
-      },
-      {
-        "wall": {
-          "missing": [
-            {
-              "key": "gold_bar",
-              "reason": "no source reachable from this settlement's board or stations",
-            },
-          ],
-          "reachedName": "Gem Galleries",
-          "reachedTier": 2,
-          "toName": "Deephold",
-          "toTier": 3,
-        },
-        "zone": "caves",
-      },
-    ],
+    "walls": [],
   },
   "zones": [
     {
@@ -481,9 +428,12 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       "wall": null,
     },
     {
-      "gate": null,
+      "gate": {
+        "tier": 3,
+        "zone": "home",
+      },
       "id": "meadow",
-      "maxSelfTier": 0,
+      "maxSelfTier": 2,
       "reachableFromFreshSave": true,
       "wall": null,
     },
@@ -491,14 +441,14 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       "gate": null,
       "id": "orchard",
       "maxSelfTier": 0,
-      "reachableFromFreshSave": true,
+      "reachableFromFreshSave": false,
       "wall": null,
     },
     {
       "gate": null,
       "id": "crossroads",
       "maxSelfTier": 0,
-      "reachableFromFreshSave": true,
+      "reachableFromFreshSave": false,
       "wall": null,
     },
     {
@@ -508,7 +458,7 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       },
       "id": "quarry",
       "maxSelfTier": 4,
-      "reachableFromFreshSave": true,
+      "reachableFromFreshSave": false,
       "wall": {
         "missing": [
           "gold_bar",
@@ -523,7 +473,7 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       },
       "id": "caves",
       "maxSelfTier": 2,
-      "reachableFromFreshSave": true,
+      "reachableFromFreshSave": false,
       "wall": {
         "missing": [
           "gold_bar",
@@ -535,7 +485,7 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       "gate": null,
       "id": "fairground",
       "maxSelfTier": 0,
-      "reachableFromFreshSave": true,
+      "reachableFromFreshSave": false,
       "wall": null,
     },
     {
@@ -545,14 +495,14 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       },
       "id": "forge",
       "maxSelfTier": 0,
-      "reachableFromFreshSave": true,
+      "reachableFromFreshSave": false,
       "wall": null,
     },
     {
       "gate": null,
       "id": "pit",
       "maxSelfTier": 0,
-      "reachableFromFreshSave": true,
+      "reachableFromFreshSave": false,
       "wall": null,
     },
     {
@@ -562,14 +512,14 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
       },
       "id": "harbor",
       "maxSelfTier": 0,
-      "reachableFromFreshSave": true,
+      "reachableFromFreshSave": false,
       "wall": null,
     },
     {
       "gate": null,
       "id": "mirefen",
       "maxSelfTier": 3,
-      "reachableFromFreshSave": true,
+      "reachableFromFreshSave": false,
       "wall": null,
     },
     {

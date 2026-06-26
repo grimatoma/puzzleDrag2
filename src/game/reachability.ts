@@ -28,11 +28,14 @@
  * reachable-by-unlock yet stubbed, or wired yet unreachable. Keep them separate.
  */
 
-import { BUILDINGS, RECIPES, RESOURCES, TOOLS } from "../constants.js";
-import { MAP_NODES } from "../features/cartography/data.js";
+import { BUILDINGS, RECIPES, RESOURCES, TOOLS, TILES } from "../constants.js";
+import { MAP_NODES, MAP_EDGES, type MapNode } from "../features/cartography/data.js";
 import { TILE_TYPES } from "../features/tileCollection/data.js";
-import { boardProducedResources } from "./obtainable.js";
+import { producedResource } from "./producedResource.js";
 import { CIVIC_PROVISIONS } from "../features/civicEconomy/data.js";
+import { SCOPED_OUT } from "./scopedOut.js";
+import { TYPE_WORKER_MAP } from "../features/workers/data.js";
+import type { WorkerTypeId } from "../types/catalog/workers.js";
 
 /** Tri-state: a hard yes, a "behind an optional system" (research/buy/daily), or no. */
 export type Reachability = "reachable" | "gated" | "unreachable";
@@ -44,23 +47,70 @@ interface RecipeView {
 }
 
 interface ReachSets {
+  zones: Set<string>;
   buildings: Set<string>;
   resources: Set<string>;
   tools: Set<string>;
   tiles: Map<string, Reachability>;
+  /** Tile categories with ≥1 reachable tile — the gate for family-targeted workers. */
+  tileCategories: Set<string>;
+}
+
+// ── Zones (travel-graph reachability) ─────────────────────────────────────────
+
+/**
+ * Zones a player can actually reach from home: connected through `MAP_EDGES` AND
+ * with any `requiresZoneTier` gate satisfiable (the required zone is itself reachable
+ * and can climb to the required tier — `maxTier = tiers.length - 1`). The token-gated
+ * endgame zone is never reachable on the normal path. This mirrors the travel BFS in
+ * `src/playtest/progression.ts`, but stays structural (no economy): it answers "does a
+ * travel path EXIST", which is exactly what makes *unlinking* a zone — pulling its
+ * `MAP_EDGES` — drop everything that zone alone unlocked.
+ */
+function computeReachableZones(): Set<string> {
+  const byId = new Map(MAP_NODES.map((n) => [n.id, n]));
+  const adj = new Map<string, string[]>();
+  for (const [a, b] of MAP_EDGES) {
+    (adj.get(a) ?? adj.set(a, []).get(a)!).push(b);
+    (adj.get(b) ?? adj.set(b, []).get(b)!).push(a);
+  }
+  const maxTierOf = (id: string): number => {
+    const n = byId.get(id);
+    return n?.tiers?.length ? n.tiers.length - 1 : -1;
+  };
+  const reachable = new Set<string>(["home"]); // home is always the start
+  const gateOk = (n: MapNode): boolean => {
+    if (n.requiresHearthTokens) return false;
+    const g = (n as { requiresZoneTier?: { zone: string; tier: number } }).requiresZoneTier;
+    return !g || (reachable.has(g.zone) && maxTierOf(g.zone) >= g.tier);
+  };
+  // Fixpoint: a node's gate may name a zone reached later in the sweep.
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const n of MAP_NODES) {
+      if (reachable.has(n.id) || n.requiresHearthTokens) continue;
+      if (!(adj.get(n.id) ?? []).some((nb) => reachable.has(nb))) continue;
+      if (!gateOk(n)) continue;
+      reachable.add(n.id);
+      grew = true;
+    }
+  }
+  return reachable;
 }
 
 // ── Buildings ────────────────────────────────────────────────────────────────
 
 /**
- * Structurally reachable buildings: any building some zone's ladder (or flat
- * `buildings[]`) unlocks, with its `requires` prerequisite chain also reachable.
- * The endgame token-gated zone is skipped (it is outside the normal journey).
+ * Structurally reachable buildings: any building unlocked by a REACHABLE zone's ladder
+ * (or flat `buildings[]`), with its `requires` prerequisite chain also reachable, minus
+ * the SCOPED_OUT manifest. Only reachable zones contribute, so stranding a zone (cutting
+ * its `MAP_EDGES`) automatically removes the buildings it alone unlocked.
  */
-function computeReachableBuildings(): Set<string> {
+function computeReachableBuildings(reachableZones: Set<string>): Set<string> {
   const unlocked = new Set<string>();
   for (const node of MAP_NODES) {
-    if (node.requiresHearthTokens) continue; // endgame gate — not part of the normal path
+    if (!reachableZones.has(node.id)) continue;
     if (node.tiers && node.tiers.length) {
       for (const t of node.tiers) for (const b of t.unlocks) unlocked.add(b as string);
     } else {
@@ -80,6 +130,7 @@ function computeReachableBuildings(): Set<string> {
   };
   const out = new Set<string>();
   for (const id of unlocked) if (reachable(id, new Set())) out.add(id);
+  for (const id of SCOPED_OUT.buildings) out.delete(id); // manifest residue
   return out;
 }
 
@@ -98,6 +149,7 @@ function computeTileReachability(reachableBuildings: Set<string>): Map<string, R
   const resolve = (id: string, seen: Set<string>): Reachability => {
     const cached = memo.get(id);
     if (cached) return cached;
+    if (SCOPED_OUT.tiles.has(id)) { memo.set(id, "unreachable"); return "unreachable"; } // manifest residue
     const t = byId.get(id) as { discovery?: { method?: string; chainLengthOf?: string; buildingId?: string } } | undefined;
     if (!t) return "unreachable";
     if (seen.has(id)) return "unreachable"; // cycle guard
@@ -136,19 +188,37 @@ function distinctRecipes(): RecipeView[] {
 }
 
 /**
- * Resources reachable in the configured game: everything the board produces
- * (reusing obtainable.ts's board logic — per-tile override > family default, plus
- * the legacy `next` ripening) plus the fixpoint of recipe outputs whose STATION is
- * a reachable building AND whose inputs are all reachable. (The set may include tool
- * items, since a tool is just a recipe output — callers intersect with TOOLS.)
- *
- * Board production is NOT gated by tile-discovery reachability: the base family
- * resources all come from `default` tiles, and the few that come only via buy/
- * research/daily tiles are also produced by a default tile — gating there only
- * caused false orphans. Tile reachability is tracked separately for the tile badge.
+ * Resources a REACHABLE board tile produces: per-tile override > family default
+ * (`producedResource`) plus the legacy `next` ripening (e.g. Blackberry → jam) — both
+ * gated so only tiles that are themselves `reachable` contribute. This is the key to
+ * scoping: once a family's tiles are unlinked off `default` (flowers/cattle/mounts/
+ * deep-mine/fish), their products (honey/milk/horseshoe/cut_gem/gold_bar/fish goods)
+ * stop being board-produced, so recipes that consume them fall out too.
  */
-function computeReachableResources(reachableBuildings: Set<string>): Set<string> {
-  const obtainable = new Set<string>(boardProducedResources());
+function reachableBoardResources(tiles: Map<string, Reachability>): Set<string> {
+  const out = new Set<string>();
+  for (const t of TILE_TYPES as ReadonlyArray<{ id: string }>) {
+    if (tiles.get(t.id) !== "reachable") continue;
+    const res = producedResource({ key: t.id });
+    if (res) out.add(res);
+  }
+  for (const [key, tile] of Object.entries(TILES) as Array<[string, { next?: string | null }]>) {
+    if (tiles.get(key) !== "reachable") continue;
+    const next = tile?.next;
+    if (typeof next === "string" && Object.prototype.hasOwnProperty.call(RESOURCES, next)) out.add(next);
+  }
+  return out;
+}
+
+/**
+ * Resources reachable in the configured game: everything a reachable board tile
+ * produces (above) plus the fixpoint of recipe outputs whose STATION is a reachable
+ * building, whose inputs are all reachable, and which is not in the SCOPED_OUT manifest.
+ * (The set may include tool items, since a tool is just a recipe output — callers
+ * intersect with TOOLS.)
+ */
+function computeReachableResources(reachableBuildings: Set<string>, tiles: Map<string, Reachability>): Set<string> {
+  const obtainable = reachableBoardResources(tiles);
   obtainable.add("dirt"); // tile_special_dirt yields `dirt` via a custom handler (cf. progression.ts)
   const recipes = distinctRecipes();
   let grew = true;
@@ -156,6 +226,7 @@ function computeReachableResources(reachableBuildings: Set<string>): Set<string>
     grew = false;
     for (const r of recipes) {
       if (obtainable.has(r.item)) continue;
+      if (SCOPED_OUT.recipes.has(r.item)) continue; // manifest: in-scope station+inputs, deferred
       if (!reachableBuildings.has(r.station)) continue;
       if (!r.inputs.every((k) => obtainable.has(k))) continue;
       obtainable.add(r.item);
@@ -171,13 +242,15 @@ function computeReachableResources(reachableBuildings: Set<string>): Set<string>
   return obtainable;
 }
 
-/** Tools: reachable recipe outputs, plus tools granted by a reachable building. */
+/** Tools: reachable recipe outputs, plus tools granted by a reachable building, minus
+ *  the SCOPED_OUT manifest (a tool granted by a reachable building yet still deferred). */
 function computeReachableTools(reachableBuildings: Set<string>, resources: Set<string>): Set<string> {
   const out = new Set<string>();
   for (const key of Object.keys(TOOLS)) if (resources.has(key)) out.add(key);
   for (const [buildingId, grant] of Object.entries(CIVIC_PROVISIONS)) {
     if (reachableBuildings.has(buildingId)) out.add(grant.tool);
   }
+  for (const key of SCOPED_OUT.tools) out.delete(key); // manifest residue
   return out;
 }
 
@@ -186,17 +259,17 @@ function computeReachableTools(reachableBuildings: Set<string>, resources: Set<s
 let CACHE: ReachSets | null = null;
 function sets(): ReachSets {
   if (CACHE) return CACHE;
-  const buildings = computeReachableBuildings();
+  const zones = computeReachableZones();
+  const buildings = computeReachableBuildings(zones);
   const tiles = computeTileReachability(buildings);
-  const resources = computeReachableResources(buildings);
+  const resources = computeReachableResources(buildings, tiles);
   const tools = computeReachableTools(buildings, resources);
-  CACHE = { buildings, resources, tools, tiles };
+  const tileCategories = new Set<string>();
+  for (const t of TILE_TYPES as ReadonlyArray<{ id: string; category?: string }>) {
+    if (t.category && tiles.get(t.id) === "reachable") tileCategories.add(t.category);
+  }
+  CACHE = { zones, buildings, resources, tools, tiles, tileCategories };
   return CACHE;
-}
-
-/** Test-only: drop the memoized result (e.g. after mutating config in a test). */
-export function _resetReachabilityCache(): void {
-  CACHE = null;
 }
 
 // ── Per-entity predicates (the public API the consumers use) ──────────────────
@@ -221,13 +294,43 @@ export function isTileReachable(tileId: string): boolean {
   return tileReachability(tileId) === "reachable";
 }
 
+export function isZoneReachable(zoneId: string): boolean {
+  return sets().zones.has(zoneId);
+}
+
+/**
+ * A worker is reachable iff it is not in the SCOPED_OUT manifest AND the family/recipe
+ * its ability acts on is reachable. Family-targeted workers (Bee Keeper → flowers,
+ * Gem-cutter → mine_gem, …) derive out for free once their tile family is unreachable;
+ * the coin / rune / promotion workers, which gate on nothing out of scope, live in the
+ * manifest. Coin-only abilities with no tile/recipe target rely on the manifest alone.
+ */
+export function isWorkerReachable(workerId: string): boolean {
+  if (SCOPED_OUT.workers.has(workerId as WorkerTypeId)) return false;
+  const w = TYPE_WORKER_MAP[workerId as WorkerTypeId];
+  if (!w) return false;
+  const s = sets();
+  for (const ab of w.abilities ?? []) {
+    const p = (ab.params ?? {}) as { category?: string; fromCategory?: string; recipe?: string };
+    if (ab.id === "threshold_reduce_category" && p.category) {
+      if (!s.tileCategories.has(p.category)) return false;
+    } else if (ab.id === "chain_redirect_category" && p.fromCategory) {
+      if (!s.tileCategories.has(p.fromCategory)) return false;
+    } else if (ab.id === "recipe_input_reduce" && p.recipe) {
+      if (!isRecipeReachable(p.recipe)) return false;
+    }
+  }
+  return true;
+}
+
 /**
  * A recipe is reachable iff its station building is reachable and every input is
  * reachable. Accepts either the canonical `rec_*` key or an item-alias key.
  */
 export function isRecipeReachable(recipeKey: string): boolean {
-  const r = (RECIPES as Record<string, { station?: string; inputs?: Record<string, number> } | undefined>)[recipeKey];
+  const r = (RECIPES as Record<string, { item?: string; station?: string; inputs?: Record<string, number> } | undefined>)[recipeKey];
   if (!r || !r.station || !r.inputs) return false;
+  if (r.item && SCOPED_OUT.recipes.has(r.item)) return false; // manifest: in-scope station+inputs, deferred
   const s = sets();
   if (!s.buildings.has(r.station)) return false;
   return Object.keys(r.inputs).every((k) => s.resources.has(k));
@@ -245,6 +348,7 @@ export function reachabilityOf(conceptId: string, entityKey: string): Reachabili
     case "resources": return isResourceReachable(entityKey) ? "reachable" : "unreachable";
     case "tools": return isToolReachable(entityKey) ? "reachable" : "unreachable";
     case "tiles": return tileReachability(entityKey);
+    case "workers": return isWorkerReachable(entityKey) ? "reachable" : "unreachable";
     default: return null;
   }
 }
@@ -257,6 +361,7 @@ export interface UnreachableReport {
   tools: string[];
   resources: string[];
   tiles: string[]; // hard-unreachable only (gated tiles are expected, excluded)
+  workers: string[];
 }
 
 /**
@@ -287,5 +392,6 @@ export function findUnreachable(): UnreachableReport {
       .map((t) => t.id)
       .filter((id) => s.tiles.get(id) === "unreachable")
       .sort(),
+    workers: Object.keys(TYPE_WORKER_MAP).filter((id) => !isWorkerReachable(id)).sort(),
   };
 }

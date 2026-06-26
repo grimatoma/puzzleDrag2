@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { RECIPES, ITEMS } from "../../constants.js";
+import { isRecipeReachable } from "../../game/reachability.js";
 import { DECORATIONS } from "../decorations/data.js";
 import { effectiveRecipeInputs } from "./slice.js";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
@@ -342,6 +343,9 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
   const stationRecipes: Array<[string, RecipeDef]> = recipeEntries.filter((entry): entry is [string, RecipeDef] => {
     const r = entry[1];
     if (!r || typeof r !== "object" || (r as RecipeDef).station !== activeTab) return false;
+    // Static reachability: hide a recipe with no unlock path in the configured game
+    // (orphaned or scoped out). Shown otherwise, even if not yet unlocked here.
+    if (!isRecipeReachable(entry[0])) return false;
     const rDef = r as RecipeDef;
     if (seenRecipes.has(rDef)) return false;
     seenRecipes.add(rDef);

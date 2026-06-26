@@ -10,10 +10,12 @@ describe("inventory tags", () => {
     expect(tagsForItemKey("fertilizer")).toContain(INVENTORY_TAGS.TOOL);
   });
 
-  it("supports multi-tag food cargo items", () => {
-    const tags = tagsForItemKey("supplies");
-    expect(tags).toContain(INVENTORY_TAGS.FOOD);
-    expect(tags).toContain(INVENTORY_TAGS.CARGO);
+  it("tags rations as food and fish goods as cargo", () => {
+    // "Supplies" is gone — any edible item is a ration now (tagged food)...
+    expect(tagsForItemKey("bread")).toContain(INVENTORY_TAGS.FOOD);
+    expect(tagsForItemKey("cured_meat")).toContain(INVENTORY_TAGS.FOOD);
+    // ...while fish goods stay cargo to haul home.
+    expect(tagsForItemKey("fish_fillet")).toContain(INVENTORY_TAGS.CARGO);
   });
 
   it("falls back to generic item tag for unknown or plain items", () => {

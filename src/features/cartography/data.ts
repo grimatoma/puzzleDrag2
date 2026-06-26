@@ -236,68 +236,83 @@ export const MAP_NODES: MapNode[] = [
     boards: { farm: cloneFarmBoard(TEMPERATE_FARM_TEMPLATE) },
     entryCost: { coins: 50 },
     dangers: [],
+    // Town 1 (pure farm) in-scope roster — must equal the union of the tier `unlocks`
+    // below (superset invariant, test-enforced). The wider catalog (Inn, Forge, Portal,
+    // fishing/observatory buildings, Housing2/3 …) is UNLINKED: no reachable zone unlocks
+    // it, so derived reachability hides it. See reference/docs/starting-zones-scope.html.
     buildings: [
-      BuildingId.Hearth, BuildingId.Mill, BuildingId.Bakery, BuildingId.Inn, BuildingId.Granary, BuildingId.Larder,
-      BuildingId.Forge, BuildingId.CaravanPost, BuildingId.Kitchen, BuildingId.Workshop, BuildingId.PowderStore,
-      BuildingId.Portal, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3, BuildingId.Silo,
-      BuildingId.Barn, BuildingId.HarborDock, BuildingId.Fishmonger, BuildingId.Smokehouse,
-      BuildingId.ClockTower, BuildingId.Lighthouse, BuildingId.Apothecary, BuildingId.Sawmill,
-      BuildingId.Watchtower, BuildingId.Stable, BuildingId.Apiary, BuildingId.Chapel,
-      BuildingId.Brewery, BuildingId.Observatory,
+      BuildingId.Hearth, BuildingId.Mill, BuildingId.Bakery, BuildingId.Granary, BuildingId.Larder,
+      BuildingId.Housing, BuildingId.Workshop, BuildingId.Sawmill, BuildingId.Silo,
+      BuildingId.CaravanPost, BuildingId.Chapel,
     ],
-    plotCount: 20,
-    // ── Town 1 ladder · 4 rungs, Outpost→City — ported from
-    // reference/docs/town-layout/index.html (the roads-first growing-outpost mockup) and
-    // matching the authored maps in src/ui/town/townMaps.ts (test-enforced).
-    // Plots grow 3 → 6 → 12 → 20. Each rung absorbs one or two rungs of the old
-    // 6-rung PC2 Camp→Manor ladder: its `unlocks` are the union of the absorbed
-    // rungs (so the cumulative union still equals `buildings[]`, test-enforced)
-    // and its `upgradeCost` is FARM-ONLY (softlock fix, 2026-06-23): Town 1 climbs
-    // Outpost→City on farm goods alone — mine goods first appear in Town 2 — so the
+    plotCount: 12,
+    // ── Town 1 ladder · 4 rungs, Outpost→Town. Scoped for the zones-1&2 balance pass:
+    // plots grow 3 → 6 → 9 → 12 (tier ids kept outpost/hamlet/village/city for the
+    // authored town maps + tests). FARM-ONLY upgrade costs (softlock fix): Town 1 climbs
+    // on farm/crafted goods alone — mine goods first appear in Town 2 — so the
     // farm→bread→tier-up loop cannot deadlock. Costs are resource-only (coins=0).
     tiers: [
       {
         id: "outpost", name: "Outpost", plots: 3,
-        unlocks: [BuildingId.Hearth, BuildingId.Mill, BuildingId.Bakery, BuildingId.Granary, BuildingId.Inn],
+        unlocks: [BuildingId.Hearth, BuildingId.Mill, BuildingId.Bakery],
       },
       {
         id: "hamlet", name: "Hamlet", plots: 6,
-        unlocks: [BuildingId.Larder, BuildingId.Housing, BuildingId.Silo],
-        upgradeCost: { resources: { hay_bundle: 3, plank: 5, bread: 10, eggs: 4, soup: 2 } },
+        unlocks: [BuildingId.Granary, BuildingId.Larder, BuildingId.Housing],
+        upgradeCost: { resources: { plank: 8, hay_bundle: 10, bread: 6 } },
       },
       {
-        id: "village", name: "Village", plots: 12,
-        unlocks: [
-          BuildingId.Stable, BuildingId.Apiary, BuildingId.Sawmill, BuildingId.Watchtower,
-          BuildingId.Brewery, BuildingId.Chapel, BuildingId.Housing2, BuildingId.Apothecary, BuildingId.Kitchen,
-        ],
-        upgradeCost: { resources: { eggs: 12, soup: 14, bread: 16, pie: 6, plank: 14, hay_bundle: 10 } },
+        id: "village", name: "Village", plots: 9,
+        unlocks: [BuildingId.Workshop, BuildingId.Sawmill, BuildingId.Silo],
+        // FARM-ONLY, base-producible goods (softlock guard): preserve/jam are deep
+        // fruit-chain products the spine can't bank early, so the climb uses pie/soup.
+        upgradeCost: { resources: { plank: 12, bread: 14, pie: 6, eggs: 8 } },
       },
       {
-        id: "city", name: "City", plots: 20,
-        unlocks: [
-          BuildingId.Workshop, BuildingId.Forge, BuildingId.CaravanPost, BuildingId.Housing3, BuildingId.ClockTower,
-          BuildingId.PowderStore, BuildingId.Portal, BuildingId.Observatory, BuildingId.Lighthouse,
-          BuildingId.Barn, BuildingId.HarborDock, BuildingId.Fishmonger, BuildingId.Smokehouse,
-        ],
-        upgradeCost: { resources: { bread: 28, pie: 14, soup: 18, eggs: 18, plank: 18, flour: 12 } },
+        id: "city", name: "City", plots: 12,
+        unlocks: [BuildingId.CaravanPost, BuildingId.Chapel],
+        upgradeCost: { resources: { plank: 20, bread: 24, pie: 12, soup: 8 } },
       },
     ],
   },
   {
     id: "meadow", name: "Greenmeadow", kind: "farm", icon: "🌾",
     x: 24, y: 28, region: "farm",
-    description: "Sun-drenched fields. Easy harvests for new farmers.",
-    activities: ["Harvest farm tiles", "Common resources"],
-    boards: { farm: cloneFarmBoard(TEMPERATE_FARM_TEMPLATE) },
+    description: "The frontier — open fields with a stony seam at their edge. Town 2 farms AND mines.",
+    activities: ["Harvest farm tiles", "Work the mine seam", "Pack rations for expeditions"],
+    boards: { farm: cloneFarmBoard(TEMPERATE_FARM_TEMPLATE), mine: cloneMineBoard(MINE_BOARD_STANDARD) },
     entryCost: { coins: 50 },
-    dangers: [],
+    dangers: ["cave_in", "gas_vent", "mole"],
+    // ── Town 2 (farm + mining), the scoped frontier settlement. Gated on home reaching
+    // its top rung. buildings[] must equal the union of the tier `unlocks` below
+    // (superset invariant). Uses the PROCEDURAL town layout (not in TOWN_MAPS). Tier-ups
+    // demand brick/iron, which only its own mine produces — growth gates on digging.
+    requiresZoneTier: { zone: "home", tier: 3 },
     buildings: [
-      BuildingId.Hearth, BuildingId.Mill, BuildingId.Granary, BuildingId.Silo, BuildingId.Bakery, BuildingId.Larder,
-      BuildingId.Inn, BuildingId.Housing, BuildingId.Housing2, BuildingId.Housing3,
-      BuildingId.Stable, BuildingId.Apiary, BuildingId.Sawmill, BuildingId.Brewery, BuildingId.Watchtower,
+      BuildingId.Hearth, BuildingId.Bakery, BuildingId.MiningCamp, BuildingId.Granary, BuildingId.Forge,
+      BuildingId.Housing, BuildingId.Sawmill, BuildingId.PowderStore, BuildingId.Smokehouse,
+      BuildingId.Chapel, BuildingId.CaravanPost,
     ],
-    plotCount: 8,
+    plotCount: 10,
+    tiers: [
+      {
+        id: "camp", name: "Camp", plots: 4,
+        unlocks: [BuildingId.Hearth, BuildingId.Bakery, BuildingId.MiningCamp],
+      },
+      {
+        id: "diggings", name: "Diggings", plots: 7,
+        unlocks: [BuildingId.Granary, BuildingId.Forge, BuildingId.Housing],
+        upgradeCost: { resources: { plank: 10, bread: 12, block: 10 } },
+      },
+      {
+        id: "boomtown", name: "Boomtown", plots: 10,
+        unlocks: [
+          BuildingId.Sawmill, BuildingId.PowderStore, BuildingId.Smokehouse,
+          BuildingId.Chapel, BuildingId.CaravanPost,
+        ],
+        upgradeCost: { resources: { plank: 16, bread: 14, block: 12, iron_bar: 8 } },
+      },
+    ],
   },
   {
     id: "orchard", name: "Wild Orchard", kind: "farm", icon: "🍎",
@@ -541,10 +556,14 @@ export const MAP_NODES: MapNode[] = [
 
 export const MAP_EDGES: ReadonlyArray<readonly [string, string]> = [
   ["home", "meadow"],
-  ["home", "orchard"],
-  ["home", "harbor"],
+  // ── Zones-1&2 scope: the three edges that bridged {home, meadow} to the rest of the
+  // map are UNLINKED (commented, not deleted) so only home ↔ meadow is reachable. The
+  // zone nodes (orchard, harbor, crossroads, quarry, caves, forge, mirefen, …) and their
+  // remaining edges stay intact and dormant; restore these three lines to re-open the map.
+  // ["home", "orchard"],
+  // ["home", "harbor"],
+  // ["meadow", "crossroads"],
   ["harbor", "mirefen"],
-  ["meadow", "crossroads"],
   ["orchard", "crossroads"],
   ["crossroads", "quarry"],
   ["crossroads", "caves"],

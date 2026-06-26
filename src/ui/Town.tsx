@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { BUILDINGS, getItem } from "../constants.js";
+import { isBuildingReachable } from "../game/reachability.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
 import { ZONES, zoneHasBoard, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE, settlementTier, plotsForTier, unlockedBuildings, currentTierDef, maxTier, zoneTierGateReason } from "../features/zones/data.js";
 import { getTownMap } from "./town/townMaps.js";
@@ -310,7 +311,10 @@ export function TownView({ state, dispatch, active = true, onReady }: { state: G
   // biome. For un-tiered zones, unlockedBuildings returns the flat buildings[].
   const allowedBuildings = zoneConfig ? unlockedBuildings(mapCurrent, tier) : ALL_BUILDING_IDS;
   const eligibleBuildings = useMemo(
-    () => BUILDINGS.filter((b) => allowedBuildings.includes(b.id as import("../types/catalog/buildings.js").BuildingId) && (!b.biome || b.biome === biomeVariant)),
+    // `&& isBuildingReachable` = static reachability: never offer a building that no
+    // zone ever unlocks (orphaned/scoped-out). The unlock+biome filters above still
+    // gate by the player's current zone/tier.
+    () => BUILDINGS.filter((b) => allowedBuildings.includes(b.id as import("../types/catalog/buildings.js").BuildingId) && (!b.biome || b.biome === biomeVariant) && isBuildingReachable(b.id)),
     [allowedBuildings, biomeVariant],
   );
   const freePlots = plotCount - occupiedPlots;

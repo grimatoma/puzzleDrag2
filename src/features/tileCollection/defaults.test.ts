@@ -9,15 +9,18 @@ interface TileDef {
 
 /**
  * Progression invariant: the player starts with exactly ONE tile unlocked per
- * category, and earns the rest through buildings / chain-goals / daily / zones.
+ * IN-SCOPE category, and earns the rest through buildings / chain-goals / daily / zones.
  * `defaultTileCollectionSlice` (src/state/helpers.ts) seeds `discovered` from
  * `discovery.method === "default"` and makes the FIRST default per category the
- * active one — so more than one default in a category silently strands the
- * extras (they're discovered but never auto-activated), and zero defaults leaves
- * a category with no starting tile at all. This test pins that to exactly one.
+ * active one — so more than one default in a category silently strands the extras.
+ *
+ * Zones-1&2 scope: the flowers / cattle / mounts / fish / deep-mine / treasure
+ * categories are UNLINKED (their starter tiles flipped off `default` to a deferred
+ * building), so they intentionally have zero defaults until those zones re-open.
  */
 describe("tile starting defaults", () => {
   const tiles = TILE_TYPES as ReadonlyArray<TileDef>;
+  const UNLINKED_CATEGORIES = new Set(["flowers", "cattle", "mounts", "fish", "mine_gem", "mine_gold", "treasure"]);
 
   const defaultsByCategory = new Map<string, string[]>();
   for (const t of tiles) {
@@ -27,13 +30,14 @@ describe("tile starting defaults", () => {
     defaultsByCategory.set(t.category, list);
   }
 
-  it("every category has exactly one default-unlocked tile", () => {
+  it("every in-scope category has exactly one default tile; unlinked ones have none", () => {
     for (const category of CATEGORIES as readonly string[]) {
       const defaults = defaultsByCategory.get(category) ?? [];
+      const want = UNLINKED_CATEGORIES.has(category) ? 0 : 1;
       expect(
         defaults.length,
-        `category "${category}" should have exactly one default tile, got: [${defaults.join(", ")}]`,
-      ).toBe(1);
+        `category "${category}" should have ${want} default tile(s), got: [${defaults.join(", ")}]`,
+      ).toBe(want);
     }
   });
 

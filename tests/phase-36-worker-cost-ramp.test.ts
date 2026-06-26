@@ -1,6 +1,7 @@
 // Phase 36 — Sequential per-hire cost ramping for type-tier workers.
 // Both `coinsStep` (linear) and `coinsMult` (geometric) are config-driven
-// in `src/features/workers/data.js`.
+// in `src/features/workers/data.js`. Zones-1&2 scope caps each worker at
+// (chain − 3), so the ramp tests hire up to those caps (Farmer 2, Miner 5, Baker 2).
 import { describe, it, expect } from "vitest";
 import { rootReducer, createInitialState } from "../src/state.js";
 import { TYPE_WORKER_MAP, nextHireCost, nextHireResourceCost } from "../src/features/workers/data.js";
@@ -35,19 +36,16 @@ describe("Phase 36 — nextHireCost helper", () => {
   it("applies a linear ramp when coinsStep is set", () => {
     expect(FARMER.hireCost.coinsStep).toBe(25);
     expect(nextHireCost(FARMER, 0)).toBe(50); // 1st hire
-    expect(nextHireCost(FARMER, 1)).toBe(75); // 2nd hire
-    expect(nextHireCost(FARMER, 2)).toBe(100);
-    expect(nextHireCost(FARMER, 9)).toBe(50 + 25 * 9); // 10th hire (final)
+    expect(nextHireCost(FARMER, 1)).toBe(75); // 2nd hire (Farmer caps at 2)
+    expect(nextHireCost(MINER, 4)).toBe(75 + 35 * 4); // 5th Miner (final)
   });
 
   it("applies a geometric ramp when coinsMult is set", () => {
-    expect(BAKER.hireCost.coinsMult).toBe(1.4);
-    // round(75 * 1.4 ** 0) = 75
-    expect(nextHireCost(BAKER, 0)).toBe(75);
-    // round(75 * 1.4 ** 1) = 105
-    expect(nextHireCost(BAKER, 1)).toBe(105);
-    // round(75 * 1.4 ** 2) = 147
-    expect(nextHireCost(BAKER, 2)).toBe(147);
+    // No in-scope worker uses a geometric ramp, but the helper still supports it.
+    const geo = { hireCost: { coins: 75, coinsMult: 1.4 } };
+    expect(nextHireCost(geo, 0)).toBe(75);  // round(75 * 1.4 ** 0)
+    expect(nextHireCost(geo, 1)).toBe(105); // round(75 * 1.4 ** 1)
+    expect(nextHireCost(geo, 2)).toBe(147); // round(75 * 1.4 ** 2)
   });
 
   it("clamps a negative count input to 0", () => {
@@ -70,46 +68,45 @@ describe("Phase 36 — nextHireCost helper", () => {
 });
 
 describe("Phase 36 — WORKERS/HIRE deducts the ramped cost", () => {
-  it("first Farmer costs 50; second costs 75; third costs 100", () => {
+  it("first Farmer costs 50; second costs 75 (caps at 2)", () => {
     let s = workerState(1000);
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(s.coins).toBe(950);
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(s.coins).toBe(875);
+    // 3rd hire exceeds the chain−3 cap of 2 — rejected, coins unchanged.
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
-    expect(s.coins).toBe(775);
+    expect(s.coins).toBe(875);
+    expect(s.workers.hired.farmer).toBe(2);
   });
 
-  it("rejects when ramped cost exceeds coins", () => {
-    // 7 farmers cost 50+75+100+125+150+175+200 = 875. 8th costs 225.
-    let s = workerState(875 + 100);
-    for (let i = 0; i < 7; i++) {
-      s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
-    }
-    expect(s.workers.hired.farmer).toBe(7);
-    expect(s.coins).toBe(100);
-    // 8th needs 225 — rejected.
-    const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
-    expect(next.coins).toBe(100);
-    expect(next.workers.hired.farmer).toBe(7);
+  it("rejects when the ramped cost exceeds coins", () => {
+    let s = workerState(75); // exactly one Miner
+    s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "miner" } });
+    expect(s.workers.hired.miner).toBe(1);
+    expect(s.coins).toBe(0);
+    // 2nd Miner needs 110 — rejected.
+    const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "miner" } });
+    expect(next.coins).toBe(0);
+    expect(next.workers.hired.miner).toBe(1);
   });
 
-  it("Baker geometric ramp: 1st=75, 2nd=105", () => {
+  it("Baker ramps linearly: 1st=80, 2nd=120", () => {
     let s = workerState(1000);
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "baker" } });
-    expect(s.coins).toBe(925); // 1000 - 75
+    expect(s.coins).toBe(920); // 1000 - 80
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "baker" } });
-    expect(s.coins).toBe(820); // 925 - 105
+    expect(s.coins).toBe(800); // 920 - 120
   });
 
-  it("total cost of hiring all 10 farmers matches the linear sum", () => {
+  it("total cost of hiring all 5 Miners matches the linear sum", () => {
     let s = workerState(100000);
     const startCoins = s.coins;
-    for (let i = 0; i < 10; i++) {
-      s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
+    for (let i = 0; i < 5; i++) {
+      s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "miner" } });
     }
-    // Sum_{i=0..9} (50 + 25*i) = 10*50 + 25 * 45 = 500 + 1125 = 1625
-    expect(startCoins - s.coins).toBe(1625);
-    expect(s.workers.hired.farmer).toBe(10);
+    // Sum_{i=0..4} (75 + 35*i) = 5*75 + 35 * 10 = 375 + 350 = 725
+    expect(startCoins - s.coins).toBe(725);
+    expect(s.workers.hired.miner).toBe(5);
   });
 });

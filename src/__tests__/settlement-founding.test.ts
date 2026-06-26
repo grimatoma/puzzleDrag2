@@ -20,7 +20,7 @@ describe("fresh state — settlements", () => {
     const s = createInitialState();
     expect(s.settlements).toEqual({ home: { founded: true, tier: 0 } });
     expect(isSettlementFounded(s, "home")).toBe(true);
-    expect(isSettlementFounded(s, "meadow")).toBe(false);
+    expect(isSettlementFounded(s, "orchard")).toBe(false);
     expect(foundedSettlementCount(s)).toBe(1);
   });
 });
@@ -59,9 +59,9 @@ describe("FOUND_SETTLEMENT", () => {
   it("founds a zone, deducts the cost, and bumps the next cost", () => {
     let s = homeCompleted({ coins: 5000 });
     const cost = settlementFoundingCost(s).coins;
-    s = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "meadow" } });
-    expect(s.settlements.meadow).toMatchObject({ founded: true }); // Phase 5e adds a `biome`
-    expect(isSettlementFounded(s, "meadow")).toBe(true);
+    s = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } });
+    expect(s.settlements.orchard).toMatchObject({ founded: true }); // Phase 5e adds a `biome`
+    expect(isSettlementFounded(s, "orchard")).toBe(true);
     expect(s.coins).toBe(5000 - cost);
     expect(foundedSettlementCount(s)).toBe(2);
     expect(settlementFoundingCost(s).coins).toBeGreaterThan(cost);
@@ -75,20 +75,20 @@ describe("FOUND_SETTLEMENT", () => {
   it("rejects an already-founded zone (incl. home)", () => {
     const s = homeCompleted({ coins: 9999 });
     expect(rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "home" } })).toBe(s);
-    const s2 = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "meadow" } });
-    expect(rootReducer(s2, { type: "FOUND_SETTLEMENT", payload: { zoneId: "meadow" } })).toBe(s2);
+    const s2 = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } });
+    expect(rootReducer(s2, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } })).toBe(s2);
   });
 
   it("rejects when the player can't afford the cost", () => {
     const s = homeCompleted({ coins: 10 });
-    expect(rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "meadow" } })).toBe(s);
+    expect(rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } })).toBe(s);
   });
 
   it("rejects founding settlement #2 when no prior settlement is complete", () => {
     // Fresh state — home is auto-founded but not built up or keeper-faced.
     const s = { ...createInitialState(), coins: 9999 };
-    const result = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "meadow" } });
-    expect(result.settlements?.meadow).toBeUndefined();
+    const result = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } });
+    expect(result.settlements?.orchard).toBeUndefined();
     expect(result.coins).toBe(s.coins); // not deducted
     expect(result.bubble?.text).toMatch(/Complete your first settlement/i);
   });
@@ -112,14 +112,14 @@ describe("FOUND_SETTLEMENT", () => {
 
 describe("Founding enforcement — gameplay actions refuse at unfounded zones", () => {
   it("BUILD at an unfounded zone is a no-op (returns a 'Found first' bubble)", () => {
-    const s = { ...createInitialState(), coins: 9999, mapCurrent: "meadow", activeZone: "meadow" };
+    const s = { ...createInitialState(), coins: 9999, mapCurrent: "orchard", activeZone: "orchard" };
     const result = rootReducer(s, { type: "BUILD", building: { id: "hearth", name: "Hearth", cost: { coins: 0 } } });
-    expect(result.built.meadow).toBeUndefined();
+    expect(result.built.orchard).toBeUndefined();
     expect(result.bubble?.text).toMatch(/Found .* before you build/i);
   });
 
   it("FARM/ENTER at an unfounded zone refuses to start the session", () => {
-    const s = { ...createInitialState(), coins: 9999, mapCurrent: "meadow", activeZone: "meadow" };
+    const s = { ...createInitialState(), coins: 9999, mapCurrent: "orchard", activeZone: "orchard" };
     const result = rootReducer(s, { type: "FARM/ENTER", payload: { selectedTiles: [], useFertilizer: false } });
     expect(result.view).not.toBe("board");
     expect(result.coins).toBe(9999); // not deducted
@@ -188,7 +188,7 @@ describe("settlementCompleted", () => {
     });
     expect(completedSettlementCount(s)).toBe(1); // home, founded + half-built + keeper faced
     // meadow founded but not completed → still 1
-    const s2 = rootReducer({ ...s, coins: 9999 }, { type: "FOUND_SETTLEMENT", payload: { zoneId: "meadow" } });
+    const s2 = rootReducer({ ...s, coins: 9999 }, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } });
     expect(completedSettlementCount(s2)).toBe(1);
   });
 });

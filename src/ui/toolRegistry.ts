@@ -5,6 +5,7 @@
 import { ITEMS, getItem } from "../constants.js";
 import type { ToolPowerDefinition } from "../constants.js";
 import { isTapTargetPower } from "../config/toolPowers.js";
+import { isToolReachable } from "../game/reachability.js";
 
 const DEFAULT_PIN_KEYS = ["clear", "basic", "rare", "shuffle", "bomb"];
 const FARM_TOOL_KEYS = new Set([
@@ -93,7 +94,11 @@ export function isTapTargetTool(key: string): boolean {
 }
 
 export function visibleTools(toolsState: Record<string, number> = {}): ToolEntry[] {
-  return TOOL_CATALOG.map((t) => ({
+  // Static reachability: only surface a tool if something in the configured game can
+  // produce it (a reachable recipe's output or a reachable building's grant) —
+  // regardless of whether the player has unlocked/built it yet. The `|| count > 0`
+  // guard is a safety so a tool already in hand is never hidden.
+  return TOOL_CATALOG.filter((t) => isToolReachable(t.key) || (toolsState[t.key] || 0) > 0).map((t) => ({
     ...t,
     count: toolsState[t.key] || 0,
   }));

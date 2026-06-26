@@ -3,10 +3,11 @@
 // Renders inside the Townsfolk hub screen as the "Workers" tab. Each row
 // shows the worker, hire / fire buttons, the per-hire effect summary, and
 // the current count out of maxCount.
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import type { CSSProperties } from "react";
 import { getItem } from "../../constants.js";
 import { TYPE_WORKERS, nextHireCost, nextHireResourceCost } from "./data.js";
+import { isWorkerReachable } from "../../game/reachability.js";
 import type { WorkerAbility, WorkerDef } from "./data.js";
 import Icon from "../../ui/Icon.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
@@ -215,9 +216,17 @@ interface WorkersPanelProps {
 }
 
 export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
-  const hired = (state?.workers?.hired ?? {}) as Record<string, number>;
-  const [selectedId, setSelectedId] = useState<string | null>(TYPE_WORKERS[0]?.id ?? null);
-  const selected = TYPE_WORKERS.find((w) => w.id === selectedId) ?? TYPE_WORKERS[0] ?? null;
+  const hiredSource = state?.workers?.hired;
+  const hired = useMemo(() => (hiredSource ?? {}) as Record<string, number>, [hiredSource]);
+  // Static reachability: only surface a worker whose target family/recipe exists in the
+  // configured game (mirrors visibleTools). The `|| hired > 0` guard keeps a worker the
+  // player already employs from vanishing if scope shifts.
+  const visibleWorkers = useMemo(
+    () => TYPE_WORKERS.filter((w) => isWorkerReachable(w.id) || (hired[w.id] ?? 0) > 0),
+    [hired],
+  );
+  const [selectedId, setSelectedId] = useState<string | null>(visibleWorkers[0]?.id ?? null);
+  const selected = visibleWorkers.find((w) => w.id === selectedId) ?? visibleWorkers[0] ?? null;
   const totalHired = Object.values(hired).reduce((sum, n) => sum + (Number(n) || 0), 0);
   const villagersAvailable = state?.villagers ?? 0;
 
@@ -243,7 +252,7 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
         browser={
           <div className="flex flex-col gap-3">
             {SECTION_ORDER.map((section) => {
-              const workers = TYPE_WORKERS.filter((w) => sectionForWorker(w) === section);
+              const workers = visibleWorkers.filter((w) => sectionForWorker(w) === section);
               if (workers.length === 0) return null;
               return (
                 <div key={section}>

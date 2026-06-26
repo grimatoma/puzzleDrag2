@@ -322,7 +322,9 @@ export const TILE_TYPES = [
   {
     id: "tile_flower_pansy", category: "flowers", displayName: "Pansy",
     baseResource: "tile_flower_pansy", tier: 0,
-    discovery: { method: "default" },
+    // Zones-1&2 scope: flowers are out — unlinked off `default` to a deferred building
+    // (Apiary is never unlocked in zones 1–2), so it falls out as unreachable.
+    discovery: { method: "building", buildingId: "apiary" },
     effects: {},
     description: "Great to produce honey. Actually a very manly flower.",
   },
@@ -516,7 +518,8 @@ export const TILE_TYPES = [
   {
     id: "tile_cattle_cow", category: "cattle", displayName: "Cow",
     baseResource: "tile_cattle_cow", tier: 0,
-    discovery: { method: "default" },
+    // Zones-1&2 scope: cattle are out — unlinked off `default` to a deferred building.
+    discovery: { method: "building", buildingId: "barn" },
     effects: {},
     description: "Easy to collect. Sorry for the lactose intolerance.",
   },
@@ -539,7 +542,8 @@ export const TILE_TYPES = [
   {
     id: "tile_mount_horse", category: "mounts", displayName: "Horse",
     baseResource: "tile_mount_horse", tier: 0,
-    discovery: { method: "default" },
+    // Zones-1&2 scope: mounts are out — unlinked off `default` to a deferred building.
+    discovery: { method: "building", buildingId: "stable" },
     effects: {},
     description: "Easy to collect. Look at it. It's amazing.",
   },
@@ -568,7 +572,8 @@ export const TILE_TYPES = [
   {
     id: "tile_fish_sardine", category: "fish", displayName: "Sardine",
     baseResource: "tile_fish_sardine", tier: 0,
-    discovery: { method: "default" },
+    // Zones-1&2 scope: the fish biome is out — unlinked off `default` to a deferred building.
+    discovery: { method: "building", buildingId: "fishmonger" },
     effects: {},
     description: "A common shoaling fish, easy to net at high tide.",
   },
@@ -646,7 +651,9 @@ export const TILE_TYPES = [
   {
     id: "tile_mine_gem", category: "mine_gem", displayName: "Gem",
     baseResource: "tile_mine_gem", tier: 0,
-    discovery: { method: "default" },
+    // Zones-1&2 scope: the deep-mine gem seam is out — unlinked off `default` to a
+    // deferred building (Observatory is never unlocked in zones 1–2).
+    discovery: { method: "building", buildingId: "observatory" },
     effects: {},
     description: "A rough gemstone glittering in the rock — chain enough to cut a polished stone.",
   },
@@ -660,7 +667,8 @@ export const TILE_TYPES = [
   {
     id: "tile_mine_gold", category: "mine_gold", displayName: "Gold",
     baseResource: "tile_mine_gold", tier: 0,
-    discovery: { method: "default" },
+    // Zones-1&2 scope: the deep-mine gold seam is out — unlinked off `default`.
+    discovery: { method: "building", buildingId: "observatory" },
     effects: {},
     description: "A nugget of pure gold pulled from the deeper seams.",
   },
@@ -674,7 +682,8 @@ export const TILE_TYPES = [
   {
     id: "tile_coin_golden", category: "treasure", displayName: "Golden Coin",
     baseResource: "tile_coin_golden", tier: 0,
-    discovery: { method: "default" },
+    // Zones-1&2 scope: the treasure tile is out — unlinked off `default`.
+    discovery: { method: "building", buildingId: "observatory" },
     abilities: [
       { id: "coin_bonus_per_tile", params: { amount: 20 } },
     ],

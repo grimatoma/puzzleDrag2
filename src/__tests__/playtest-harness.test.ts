@@ -167,15 +167,16 @@ describe("progression spine — code-derived oracle", () => {
     expect(buildProgressionSpine()).toEqual(buildProgressionSpine());
   });
 
-  it("fresh-save reachability spans the whole spine now (softlock fixed); only the token-gated capital stays locked", () => {
+  it("fresh-save reachability is scoped to zones 1 & 2 (home + the farm+mining frontier)", () => {
     const o = buildProgressionSpine().oracle;
-    // The farm cluster is reachable from the start...
-    for (const z of ["home", "meadow", "orchard", "crossroads"]) expect(o.freshSaveReachable).toContain(z);
-    // ...and now that home can climb to City, the quarry opens and the mine/fish
-    // zones behind it become reachable too.
-    for (const z of ["quarry", "caves", "forge", "harbor", "mirefen"]) expect(o.freshSaveReachable).toContain(z);
-    // The Old Capital remains gated behind Hearth-Tokens.
-    expect(o.freshSaveReachable).not.toContain("oldcapital");
+    // Zones-1&2 scope: home climbs its farm-goods ladder to City, which unlocks the
+    // meadow frontier (Town 2, gated on home tier 3). Both are reachable...
+    expect(o.freshSaveReachable).toContain("home");
+    expect(o.freshSaveReachable).toContain("meadow");
+    // ...and everything past meadow is unlinked (edges cut), so it stays stranded.
+    for (const z of ["orchard", "crossroads", "quarry", "caves", "forge", "harbor", "mirefen", "oldcapital"]) {
+      expect(o.freshSaveReachable).not.toContain(z);
+    }
   });
 
   it("reports no softlock: home climbs its full farm-goods ladder, yet still cannot produce mine goods", () => {
@@ -252,7 +253,7 @@ describe("progression spine — cross-run diff", () => {
       blockedRung: "Hamlet", primaryMissing: ["bread"], summary: "synthetic regression",
     };
     const baseHam = baseline.zones.find((z) => z.id === "home")!.tiers.find((t) => t.id === "hamlet")!;
-    delete baseHam.upgradeCost.bread; // before: no bread; after (current): bread:10
+    delete baseHam.upgradeCost.bread; // before: no bread; after (current): bread:6
 
     const d = diffSpines(baseline, current);
     expect(d.unchanged).toBe(false);
@@ -262,7 +263,7 @@ describe("progression spine — cross-run diff", () => {
     expect(softlock?.after).toContain("bread");
     const tierCost = d.changes.find((c) => c.path === "zone:home.tier:hamlet.cost");
     expect(tierCost?.severity).toBe("minor");
-    expect(tierCost?.after).toContain("bread:10");
+    expect(tierCost?.after).toContain("bread:6");
     // Severity counts are tallied for the dashboard banner.
     expect(d.counts.critical).toBeGreaterThanOrEqual(1);
     // Sorted critical-first.
