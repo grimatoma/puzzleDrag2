@@ -157,10 +157,11 @@ export function ConceptRefCard({
   const target = wikiNavTarget(conceptId, entityKey);
   const cardLayout = resolveLayout(conceptId, layout, context);
 
-  // "Not yet reachable" — no unlock path in the configured game. Greyed wherever
-  // this entity is cross-referenced. `reachabilityOf` is null for un-gated concepts.
+  // Grey only entities with NO unlock path ("unreachable"), wherever this entity
+  // is cross-referenced. "gated" (reachable via research / buy / daily) stays
+  // normal. `reachabilityOf` is null for un-gated concepts.
   const reach = reachabilityOf(conceptId, entityKey);
-  const unreached = reach != null && reach !== "reachable";
+  const unreached = reach === "unreachable";
 
   const onActivate = () => navigate(target);
 

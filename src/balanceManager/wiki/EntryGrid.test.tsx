@@ -15,7 +15,8 @@ import React from "react";
 import { WikiViewProvider } from "./wikiView.js";
 import EntryGrid from "./EntryGrid.jsx";
 import type { WikiEntry } from "./EntryGrid.jsx";
-import { findUnreachable } from "../../game/reachability.js";
+import { findUnreachable, reachabilityOf } from "../../game/reachability.js";
+import { TILE_TYPES } from "../../features/tileCollection/data.js";
 
 afterEach(() => cleanup());
 
@@ -210,6 +211,21 @@ describe("EntryGrid — not-yet-reachable greying", () => {
     const unreachableBuilding = findUnreachable().buildings[0];
     const key = unreachableBuilding ?? "cave_in";
     const { container } = renderWithView("developer", [{ key, name: "Some Entry" }]);
+    expect(container.querySelector(".wiki-entry-card--unreached")).toBeNull();
+  });
+
+  it("does NOT grey a gated tile (reachable via research/buy/daily)", () => {
+    // "gated" is reachable somehow, just not on the default board, so it must
+    // render normally — only "unreachable" (no path) is greyed.
+    const gatedTile = TILE_TYPES.find((t) => reachabilityOf("tiles", t.id) === "gated");
+    if (gatedTile == null) return; // no gated tiles configured → nothing to assert
+    localStorage.setItem("hearth.wiki.view", "developer");
+    const { container } = render(
+      <WikiViewProvider>
+        <EntryGrid entries={[{ key: gatedTile.id, name: "Gated" }]} conceptId="tiles" />
+      </WikiViewProvider>,
+    );
+    localStorage.removeItem("hearth.wiki.view");
     expect(container.querySelector(".wiki-entry-card--unreached")).toBeNull();
   });
 });

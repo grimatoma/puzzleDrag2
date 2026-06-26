@@ -142,10 +142,11 @@ export default function EntryGrid({
       {entries.map((entry: WikiEntry) => {
         const bar = colorBarStyle(entry.color);
         const isSelectable = onSelect != null;
-        // "Not yet reachable" — no unlock path in the configured game. Greyed so
-        // it reads as locked. `reachabilityOf` returns null for un-gated concepts.
+        // Grey only entities with NO unlock path ("unreachable"). "gated"
+        // (reachable via research / buy / daily) stays normal — it's reachable,
+        // just not on the default board. `reachabilityOf` is null for un-gated concepts.
         const reach = conceptId ? reachabilityOf(conceptId, entry.key) : null;
-        const unreached = reach != null && reach !== "reachable";
+        const unreached = reach === "unreachable";
         // Visual: use iconKey if set, else emoji if set, else a muted initial placeholder
         const cardVisual = (() => {
           if (entry.iconKey) {
