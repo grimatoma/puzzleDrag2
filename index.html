@@ -76,24 +76,81 @@
       .boot-cloud--b { width: 130px; height: 42px; top: 30%; opacity: .4;  animation: bootCloud 34s linear infinite; animation-delay: -13s; }
       .boot-cloud--c { width: 230px; height: 62px; top: 9%;  opacity: .32; animation: bootCloud 46s linear infinite; animation-delay: -30s; }
       @keyframes bootCloud { from { transform: translateX(-280px); } to { transform: translateX(calc(100vw + 280px)); } }
-      .boot-hearth, .boot-textblock, .boot-bar { position: relative; z-index: 1; }
-      .boot-hearth { width: 148px; height: 164px; }
-      .boot-hearth .glow { fill: #ffb24a; transform-box: fill-box; transform-origin: 50% 72%; animation: bootGlow 2.4s ease-in-out infinite; }
-      .boot-hearth .flame { transform-box: fill-box; transform-origin: 50% 100%; }
-      .boot-hearth .flame--outer { fill: #e0631f; animation: bootFlicker 1.7s ease-in-out infinite; }
-      .boot-hearth .flame--mid   { fill: #ffaa2b; animation: bootFlicker 1.15s ease-in-out infinite reverse; }
-      .boot-hearth .flame--core  { fill: #ffe49a; animation: bootCore 0.85s ease-in-out infinite; }
-      @keyframes bootFlicker { 0%,100% { transform: scaleY(1) scaleX(1) translateY(0); } 45% { transform: scaleY(1.1) scaleX(.92) translateY(-2px); } 72% { transform: scaleY(.96) scaleX(1.04); } }
-      @keyframes bootCore { 0%,100% { transform: scaleY(1) scaleX(1); opacity: 1; } 50% { transform: scaleY(1.16) scaleX(.9); opacity: .82; } }
-      @keyframes bootGlow { 0%,100% { opacity: .26; transform: scale(1); } 50% { opacity: .5; transform: scale(1.08); } }
+      .boot-hearth-stage, .boot-textblock, .boot-bar { position: relative; z-index: 1; }
+
+      /* ── Hearth fire ─────────────────────────────────────────────────────
+         A premium, layered hearth: a pulsing warm bloom, gradient flames that
+         flicker and sway organically, rising embers, glowing log coals and a
+         hot-core glow — all synced to a faint title-glow. Pure CSS/SVG so it
+         animates the instant the splash paints, before the JS bundle loads. */
+      .boot-hearth-stage { width: 168px; height: 188px; display: flex; align-items: center; justify-content: center; }
+      .boot-bloom {
+        position: absolute; left: 50%; top: 55%; width: 248px; height: 248px;
+        transform: translate(-50%, -50%); border-radius: 50%; z-index: 0; pointer-events: none;
+        background: radial-gradient(circle, rgba(255,178,76,.55) 0%, rgba(255,138,46,.30) 32%, rgba(224,99,31,.12) 56%, rgba(224,99,31,0) 72%);
+        animation: bootBloom 2.4s ease-in-out infinite;
+      }
+      @keyframes bootBloom { 0%,100% { opacity: .68; transform: translate(-50%,-50%) scale(1); } 50% { opacity: 1; transform: translate(-50%,-50%) scale(1.12); } }
+
+      .boot-hearth { position: relative; z-index: 1; width: 150px; height: 188px; overflow: visible; }
+      .boot-hearth .glow { fill: url(#bootGlowGrad); transform-box: fill-box; transform-origin: 50% 70%; animation: bootGlow 1.9s ease-in-out infinite; }
+      .boot-hearth .flame { transform-box: fill-box; transform-origin: 50% 100%; will-change: transform; filter: drop-shadow(0 0 6px rgba(255,150,50,.45)); }
+      .boot-hearth .flame--outer { fill: url(#bootFlOuter); animation: bootFlameA 1.45s ease-in-out infinite; }
+      .boot-hearth .flame--mid   { fill: url(#bootFlMid);   animation: bootFlameB 1.05s ease-in-out infinite; }
+      .boot-hearth .flame--core  { fill: url(#bootFlCore);  animation: bootFlameC 0.78s ease-in-out infinite; }
+      .boot-hearth .flame--lick  { fill: url(#bootFlMid); opacity: 0; animation: bootLick 1.3s ease-in-out infinite; }
+      .boot-hearth .logember { fill: url(#bootEmberGrad); transform-box: fill-box; transform-origin: 50% 50%; animation: bootCoal 1.6s ease-in-out infinite; }
+      .boot-hearth .logember--b { animation-duration: 2.2s; animation-delay: -.7s; }
+      @keyframes bootFlameA {
+        0%,100% { transform: translateY(0) scale(1,1) skewX(0deg); }
+        20% { transform: translateY(-2px) scale(.96,1.07) skewX(2.5deg); }
+        42% { transform: translateY(0) scale(1.04,.96) skewX(-2deg); }
+        63% { transform: translateY(-3px) scale(.95,1.09) skewX(1.5deg); }
+        82% { transform: translateY(-1px) scale(1.02,.99) skewX(-1.5deg); }
+      }
+      @keyframes bootFlameB {
+        0%,100% { transform: translateY(0) scale(1,1) skewX(0deg); }
+        25% { transform: translateY(-2px) scale(1.05,.95) skewX(-3deg); }
+        50% { transform: translateY(-4px) scale(.93,1.12) skewX(2deg); }
+        75% { transform: translateY(-1px) scale(1.03,.98) skewX(-1.5deg); }
+      }
+      @keyframes bootFlameC { 0%,100% { transform: scale(1,1); opacity: 1; } 50% { transform: translateY(-3px) scale(.88,1.18); opacity: .86; } }
+      @keyframes bootLick {
+        0%,100% { transform: translateY(0) scaleY(.6); opacity: 0; }
+        28% { opacity: .8; }
+        55% { transform: translateY(-12px) scaleY(1.15); opacity: .55; }
+        80% { transform: translateY(-20px) scaleY(.85); opacity: 0; }
+      }
+      @keyframes bootGlow { 0%,100% { opacity: .32; transform: scale(1); } 50% { opacity: .58; transform: scale(1.12); } }
+      @keyframes bootCoal { 0%,100% { opacity: .45; } 50% { opacity: 1; } }
+
+      .boot-embers { position: absolute; left: 50%; top: 62%; width: 0; height: 0; z-index: 2; pointer-events: none; }
+      .boot-embers span {
+        position: absolute; left: 0; top: 0; width: 6px; height: 6px; margin: -3px; border-radius: 50%;
+        background: radial-gradient(circle, #ffffff 0%, #ffd884 36%, #ff9a3a 64%, rgba(255,120,30,0) 78%);
+        box-shadow: 0 0 7px 1px rgba(255,165,60,.7);
+        opacity: 0; will-change: transform, opacity;
+        animation: bootEmber var(--dur, 3.4s) ease-out infinite; animation-delay: var(--delay, 0s);
+      }
+      @keyframes bootEmber {
+        0%   { transform: translate(var(--ox, 0px), 8px) scale(calc(.45 * var(--s, 1))); opacity: 0; }
+        12%  { opacity: 1; }
+        38%  { transform: translate(calc(var(--ox, 0px) + 9px * var(--d, 1)), -44px) scale(calc(.95 * var(--s, 1))); }
+        68%  { transform: translate(calc(var(--ox, 0px) - 7px * var(--d, 1)), -90px) scale(calc(.6 * var(--s, 1))); opacity: .85; }
+        100% { transform: translate(calc(var(--ox, 0px) + 5px * var(--d, 1)), -142px) scale(calc(.1 * var(--s, 1))); opacity: 0; }
+      }
+
       .boot-textblock { display: flex; flex-direction: column; align-items: center; gap: 5px; }
-      .boot-title { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; font-size: clamp(30px, 7vw, 42px); font-weight: 700; letter-spacing: .5px; color: #3a2a18; text-shadow: 0 1px 0 #fff7e6, 0 0 22px rgba(224,99,31,.28); }
+      .boot-title { font-family: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, "Times New Roman", serif; font-size: clamp(30px, 7vw, 42px); font-weight: 700; letter-spacing: .5px; color: #3a2a18; text-shadow: 0 1px 0 #fff7e6, 0 0 22px rgba(224,99,31,.28); animation: bootTitleGlow 3s ease-in-out infinite; }
+      @keyframes bootTitleGlow { 0%,100% { text-shadow: 0 1px 0 #fff7e6, 0 0 18px rgba(224,99,31,.22); } 50% { text-shadow: 0 1px 0 #fff7e6, 0 0 34px rgba(255,150,52,.5); } }
       .boot-sub { font-family: system-ui, sans-serif; font-size: 12px; letter-spacing: 1.4px; text-transform: uppercase; color: #7a5e3f; opacity: .85; }
       .boot-bar { width: min(220px, 56vw); height: 6px; border-radius: 999px; background: rgba(122,94,63,.2); overflow: hidden; }
       .boot-bar__fill { width: 42%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #e2b24a, #e0631f); animation: bootSlide 1.35s cubic-bezier(.45,0,.55,1) infinite; }
       @keyframes bootSlide { 0% { transform: translateX(-130%); } 100% { transform: translateX(360%); } }
       @media (prefers-reduced-motion: reduce) {
-        .boot-cloud, .boot-hearth .flame, .boot-hearth .glow, .boot-bar__fill { animation: none; }
+        .boot-cloud, .boot-bloom, .boot-embers span, .boot-hearth .flame, .boot-hearth .glow, .boot-hearth .logember, .boot-title, .boot-bar__fill { animation: none; }
+        .boot-embers { display: none; }
+        .boot-hearth .flame--lick { display: none; }
         .boot-bar__fill { width: 100%; opacity: .8; }
       }
     </style>
@@ -107,15 +164,66 @@
       <div class="boot-cloud boot-cloud--a"></div>
       <div class="boot-cloud boot-cloud--b"></div>
       <div class="boot-cloud boot-cloud--c"></div>
-      <svg class="boot-hearth" viewBox="-60 -72 120 134" aria-hidden="true">
-        <ellipse class="glow" cx="0" cy="6" rx="50" ry="46"></ellipse>
-        <ellipse cx="0" cy="53" rx="40" ry="7" fill="rgba(60,40,20,.16)"></ellipse>
-        <rect x="-38" y="42" width="76" height="13" rx="6.5" fill="#6e4a2c" transform="rotate(-8)"></rect>
-        <rect x="-38" y="42" width="76" height="13" rx="6.5" fill="#825b37" transform="rotate(9)"></rect>
-        <path class="flame flame--outer" d="M -26,42 C -36,8 -20,-16 0,-56 C 20,-16 36,8 26,42 C 14,54 -14,54 -26,42 Z"></path>
-        <path class="flame flame--mid"   d="M -17,42 C -24,12 -12,-8 0,-38 C 12,-8 24,12 17,42 C 9,52 -9,52 -17,42 Z"></path>
-        <path class="flame flame--core"  d="M -9,42 C -13,18 -6,2 0,-20 C 6,2 13,18 9,42 C 5,49 -5,49 -9,42 Z"></path>
-      </svg>
+      <div class="boot-hearth-stage">
+        <div class="boot-bloom"></div>
+        <svg class="boot-hearth" viewBox="-60 -78 120 150" aria-hidden="true">
+          <defs>
+            <linearGradient id="bootFlOuter" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stop-color="#c7340e"></stop>
+              <stop offset="38%" stop-color="#ee5a16"></stop>
+              <stop offset="78%" stop-color="#ff9a2c"></stop>
+              <stop offset="100%" stop-color="#ffce5e"></stop>
+            </linearGradient>
+            <linearGradient id="bootFlMid" x1="0" y1="1" x2="0" y2="0">
+              <stop offset="0%" stop-color="#ff7a16"></stop>
+              <stop offset="50%" stop-color="#ffab2c"></stop>
+              <stop offset="100%" stop-color="#ffe486"></stop>
+            </linearGradient>
+            <radialGradient id="bootFlCore" cx="50%" cy="64%" r="62%">
+              <stop offset="0%" stop-color="#fffdf4"></stop>
+              <stop offset="42%" stop-color="#ffeeb0"></stop>
+              <stop offset="100%" stop-color="#ffc04a"></stop>
+            </radialGradient>
+            <radialGradient id="bootGlowGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffd27a"></stop>
+              <stop offset="100%" stop-color="#ffb24a" stop-opacity="0"></stop>
+            </radialGradient>
+            <radialGradient id="bootEmberGrad" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stop-color="#ffe6a0"></stop>
+              <stop offset="60%" stop-color="#ff8a2e"></stop>
+              <stop offset="100%" stop-color="#e0631f"></stop>
+            </radialGradient>
+            <linearGradient id="bootLog" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#8a5e38"></stop>
+              <stop offset="100%" stop-color="#5e3d22"></stop>
+            </linearGradient>
+          </defs>
+          <ellipse cx="0" cy="56" rx="42" ry="7.5" fill="rgba(60,40,20,.16)"></ellipse>
+          <ellipse class="glow" cx="0" cy="18" rx="48" ry="42"></ellipse>
+          <rect x="-38" y="44" width="76" height="13" rx="6.5" fill="url(#bootLog)" transform="rotate(-8)"></rect>
+          <rect x="-38" y="44" width="76" height="13" rx="6.5" fill="url(#bootLog)" transform="rotate(9)"></rect>
+          <circle class="logember" cx="-6" cy="47" r="3.4"></circle>
+          <circle class="logember logember--b" cx="8" cy="49" r="2.6"></circle>
+          <path class="flame flame--outer" d="M -27,43 C -38,6 -19,-18 0,-60 C 19,-18 38,6 27,43 C 14,56 -14,56 -27,43 Z"></path>
+          <path class="flame flame--mid"   d="M -17,43 C -24,12 -12,-10 0,-40 C 12,-10 24,12 17,43 C 9,54 -9,54 -17,43 Z"></path>
+          <path class="flame flame--core"  d="M -9,43 C -13,20 -6,2 0,-22 C 6,2 13,20 9,43 C 5,50 -5,50 -9,43 Z"></path>
+          <path class="flame flame--lick"  d="M -5,40 C -8,22 -3,8 0,-14 C 3,8 8,22 5,40 C 3,46 -3,46 -5,40 Z"></path>
+        </svg>
+        <div class="boot-embers" aria-hidden="true">
+          <span style="--ox:-22px; --d:-1.1; --s:.9; --dur:3.6s; --delay:-0.2s"></span>
+          <span style="--ox:-14px; --d:.7; --s:1.2; --dur:3.0s; --delay:-1.4s"></span>
+          <span style="--ox:-6px; --d:-0.6; --s:.7; --dur:4.0s; --delay:-2.7s"></span>
+          <span style="--ox:2px; --d:1.2; --s:1.0; --dur:3.3s; --delay:-0.9s"></span>
+          <span style="--ox:10px; --d:-1.0; --s:.8; --dur:3.8s; --delay:-2.1s"></span>
+          <span style="--ox:18px; --d:.9; --s:1.3; --dur:2.9s; --delay:-1.0s"></span>
+          <span style="--ox:24px; --d:-0.8; --s:.7; --dur:4.2s; --delay:-3.3s"></span>
+          <span style="--ox:-26px; --d:1.0; --s:1.1; --dur:3.1s; --delay:-1.8s"></span>
+          <span style="--ox:-2px; --d:-1.3; --s:.85; --dur:3.7s; --delay:-0.5s"></span>
+          <span style="--ox:14px; --d:.5; --s:.95; --dur:3.4s; --delay:-2.5s"></span>
+          <span style="--ox:-18px; --d:.4; --s:1.4; --dur:4.1s; --delay:-3.0s"></span>
+          <span style="--ox:6px; --d:-0.5; --s:.6; --dur:2.8s; --delay:-1.2s"></span>
+        </div>
+      </div>
       <div class="boot-textblock">
         <div class="boot-title">Hearthlands</div>
         <div class="boot-sub">Stoking the hearth…</div>
