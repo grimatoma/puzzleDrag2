@@ -10,6 +10,7 @@
  */
 
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { COLORS } from "../shared.jsx";
 import Icon from "../../ui/Icon.jsx";
 import { iconLabel } from "../../textures/iconRegistry.js";
@@ -119,7 +120,8 @@ export function ReachabilityPathModal({ conceptId, entityKey, onClose }: Reachab
     return { pos, width, height };
   })();
 
-  return (
+  return createPortal(
+    <div className="wiki-root">
     <div
       className="wiki-cost-modal-backdrop"
       role="dialog"
@@ -253,6 +255,8 @@ export function ReachabilityPathModal({ conceptId, entityKey, onClose }: Reachab
         )}
       </div>
     </div>
+    </div>,
+    document.body
   );
 }
 
