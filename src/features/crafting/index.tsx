@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState, type ReactNode } from "react";
 import { RECIPES, ITEMS } from "../../constants.js";
 import { isRecipeReachable } from "../../game/reachability.js";
 import { DECORATIONS } from "../decorations/data.js";
@@ -7,6 +7,7 @@ import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { locBuilt } from "../../locBuilt.js";
 import Icon from "../../ui/Icon.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
+import Button from "../../ui/primitives/Button.jsx";
 import { FeaturePanel } from "../_shared/uiTypes.js";
 import {
   BrowserDetailLayout,
@@ -16,7 +17,6 @@ import {
   DetailActionButton,
   DetailPane,
 } from "../../ui/primitives/BrowserDetail.jsx";
-import type { CSSProperties } from "react";
 import type { GameState, Dispatch } from "../../types/state.js";
 import { zoneInventory } from "../../state/zoneInventory.js";
 import { settlementTier } from "../zones/data.js";
@@ -69,6 +69,15 @@ function LockGlyph({ size = 12 }: { size?: number }) {
   );
 }
 
+function ChevronGlyph({ size = 14, dir = "right" }: { size?: number; dir?: "left" | "right" }) {
+  const d = dir === "left" ? "M15 6l-6 6 6 6" : "M9 6l6 6-6 6";
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d={d} stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 const STATION_META: Record<string, StationMeta> = {
   bakery:   { label: "Bakery",   iconKey: "station_bakery",   bg: "#c08458", title: "Mira's Bakery",  flavor: "Where flour and patience become warm bread." },
   forge:    { label: "Forge",    iconKey: "station_forge",    bg: "#8898a4", title: "Bram's Forge",   flavor: "Iron, fire, and the steady ring of the hammer." },
@@ -98,6 +107,24 @@ const STATION_ORDER = ["bakery", "larder", "forge", "workshop", "decor"];
 
 function stationBuilt(built: Record<string, unknown> | null | undefined, station: string): boolean {
   return !!(built && built[station]);
+}
+
+// RECIPES contains each recipe under multiple keys (canonical `rec_*` plus
+// legacy item-name aliases like `axe` for `rec_axe`). Insertion order puts
+// canonical keys first, so deduping by recipe identity keeps the `rec_*` key.
+// Orphaned/scoped-out recipes (no unlock path) are hidden.
+function recipesForStation(station: string): Array<[string, RecipeDef]> {
+  const seen = new Set<RecipeDef>();
+  const entries = Object.entries(RECIPES) as Array<[string, RecipeDef | unknown]>;
+  return entries.filter((entry): entry is [string, RecipeDef] => {
+    const r = entry[1];
+    if (!r || typeof r !== "object" || (r as RecipeDef).station !== station) return false;
+    if (!isRecipeReachable(entry[0])) return false;
+    const rDef = r as RecipeDef;
+    if (seen.has(rDef)) return false;
+    seen.add(rDef);
+    return true;
+  });
 }
 
 function canCraft(recipe: RecipeDef, inputs: Record<string, number>, inventory: Record<string, number>, built: Record<string, unknown>, tier2Unlocked: boolean): boolean {
@@ -304,6 +331,97 @@ function DecorationDetail({ decor, state, dispatch }: DecorDetailProps) {
   );
 }
 
+interface StationCardProps {
+  station: string;
+  state: GameState;
+  built: Record<string, unknown>;
+  inventory: Record<string, number>;
+  tier2Unlocked: boolean;
+  onOpen: () => void;
+}
+
+// Level-1 drill-down card: one per crafting building. Tapping it drills into
+// that building's recipe (or decor) list.
+function StationCard({ station, state, built, inventory, tier2Unlocked, onOpen }: StationCardProps) {
+  const meta = STATION_META[station];
+  const isDecor = station === "decor";
+  const isBuilt = isDecor ? true : stationBuilt(built, station);
+
+  let statusNode: ReactNode;
+  if (isDecor) {
+    const placed = Object.values(
+      ((locBuilt(state) as { decorations?: Record<string, number> }).decorations) ?? {},
+    ).reduce((sum, n) => sum + (Number(n) || 0), 0);
+    statusNode = `${placed} placed`;
+  } else if (!isBuilt) {
+    statusNode = <span className="inline-flex items-center gap-1"><LockGlyph size={11} /> Locked</span>;
+  } else {
+    const recs = recipesForStation(station);
+    const ready = recs.filter(([key, recipe]) =>
+      canCraft(recipe, effectiveRecipeInputs(state, key, recipe.inputs), inventory, built, tier2Unlocked),
+    ).length;
+    statusNode = `${ready}/${recs.length} ready`;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`hl-card hl-card--interactive text-left gap-2 ${isBuilt ? "" : "opacity-70"}`}
+      aria-label={`Open ${meta.label}`}
+    >
+      <div className="flex items-center gap-3">
+        <span
+          style={{ width: 44, height: 44, backgroundColor: meta.bg }}
+          className="inline-grid place-items-center flex-shrink-0 rounded-lg"
+        >
+          <IconCanvas iconKey={meta.iconKey} size={30} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="hl-card-title truncate">{meta.title}</div>
+          <div className="hl-card-meta">{meta.label}</div>
+        </div>
+        <span className="flex-shrink-0 text-ink-soft opacity-70"><ChevronGlyph size={16} /></span>
+      </div>
+      <p className="hl-card-faint leading-snug">{meta.flavor}</p>
+      <div className="mt-auto"><span className="hl-board-pill">{statusNode}</span></div>
+    </button>
+  );
+}
+
+interface StationMenuProps {
+  state: GameState;
+  built: Record<string, unknown>;
+  inventory: Record<string, number>;
+  tier2Unlocked: boolean;
+  onOpen: (station: string) => void;
+}
+
+// Level-1 drill-down view: the grid of building cards.
+function StationMenu({ state, built, inventory, tier2Unlocked, onOpen }: StationMenuProps) {
+  return (
+    <FeaturePanel>
+      <FeaturePanel.Header title="Crafting" />
+      <FeaturePanel.Body>
+        <p className="mb-3 text-caption text-ink-soft">Choose a workshop to see what you can craft there.</p>
+        <BrowserGrid min={220}>
+          {STATION_ORDER.map((s) => (
+            <StationCard
+              key={s}
+              station={s}
+              state={state}
+              built={built}
+              inventory={inventory}
+              tier2Unlocked={tier2Unlocked}
+              onOpen={() => onOpen(s)}
+            />
+          ))}
+        </BrowserGrid>
+      </FeaturePanel.Body>
+    </FeaturePanel>
+  );
+}
+
 interface CraftingScreenProps {
   state: GameState;
   dispatch: Dispatch;
@@ -313,47 +431,38 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
   const inventory: Record<string, number> = zoneInventory(state);
   const tier2Unlocked: boolean = settlementTier(state, "home") >= TIER2_HOME_TIER;
   const craftedTotals: Record<string, number> = state.craftedTotals ?? {};
-  const craftingTab = state.craftingTab;
   const built = locBuilt(state) as Record<string, unknown>;
 
-  // Stations that exist (built or not) — always show all three tabs, but indicate built status
-  const builtStations = STATION_ORDER.filter((s) => stationBuilt(built, s));
+  // Drill-down: craftingTab unset → the building menu (level 1); a valid
+  // station → that building's recipe/decor list (level 2). The station lives in
+  // state.craftingTab, which the router projects onto `#/crafting/<station>`,
+  // so each drill in/out is its own history entry (browser + button back both
+  // work), and the station is preserved when switching to another tab and back.
+  const activeTab = (state.craftingTab && STATION_ORDER.includes(state.craftingTab))
+    ? state.craftingTab
+    : null;
+  const openStation = (s: string) => dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: s });
+  const backToMenu = () => dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: null });
 
-  // Active tab is URL-driven via state.craftingTab (the router projects it
-  // onto `#/crafting/<station>`). When unset (first visit), default to the
-  // first built station and back-fill craftingTab so the URL reflects it.
-  const activeTab = (craftingTab && STATION_ORDER.includes(craftingTab))
-    ? craftingTab
-    : (builtStations[0] || STATION_ORDER[0]);
-
-  const dispatchedDefaultRef = useRef<boolean>(false);
-  useEffect(() => {
-    if (dispatchedDefaultRef.current) return;
-    if (craftingTab && STATION_ORDER.includes(craftingTab)) return;
-    dispatchedDefaultRef.current = true;
-    dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: activeTab });
-  }, [craftingTab, activeTab, dispatch]);
-
-  const setActiveTab = (s: string) => dispatch({ type: "SET_VIEW", view: "crafting", craftingTab: s });
-  // RECIPES contains each recipe under multiple keys (canonical `rec_*` plus
-  // legacy item-name aliases like `axe` for `rec_axe`). Insertion order puts
-  // canonical keys first, so deduping by recipe identity keeps the `rec_*` key.
-  const seenRecipes = new Set<RecipeDef>();
-  const recipeEntries = Object.entries(RECIPES) as Array<[string, RecipeDef | unknown]>;
-  const stationRecipes: Array<[string, RecipeDef]> = recipeEntries.filter((entry): entry is [string, RecipeDef] => {
-    const r = entry[1];
-    if (!r || typeof r !== "object" || (r as RecipeDef).station !== activeTab) return false;
-    // Static reachability: hide a recipe with no unlock path in the configured game
-    // (orphaned or scoped out). Shown otherwise, even if not yet unlocked here.
-    if (!isRecipeReachable(entry[0])) return false;
-    const rDef = r as RecipeDef;
-    if (seenRecipes.has(rDef)) return false;
-    seenRecipes.add(rDef);
-    return true;
-  });
-  const meta = STATION_META[activeTab];
+  // Selection within the active station. Declared unconditionally (before any
+  // early return) so hook order stays stable across the menu/detail switch.
   const [selectedRecipeKey, setSelectedRecipeKey] = useState<string | null>(null);
   const [selectedDecorId, setSelectedDecorId] = useState<string | null>(null);
+
+  if (!activeTab) {
+    return (
+      <StationMenu
+        state={state}
+        built={built}
+        inventory={inventory}
+        tier2Unlocked={tier2Unlocked}
+        onOpen={openStation}
+      />
+    );
+  }
+
+  const meta = STATION_META[activeTab];
+  const stationRecipes = recipesForStation(activeTab);
   const selectedRecipeEntry = stationRecipes.find(([key]) => key === selectedRecipeKey) ?? stationRecipes[0] ?? null;
   const decorations = Object.values(DECORATIONS) as DecorDef[];
   const selectedDecor = decorations.find((decor: DecorDef) => decor.id === selectedDecorId) ?? decorations[0] ?? null;
@@ -373,29 +482,17 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
 
   return (
     <FeaturePanel>
-      <FeaturePanel.Tabs className="!flex-nowrap overflow-x-auto">
-        {STATION_ORDER.map((s) => {
-          const m = STATION_META[s];
-          const isActive = activeTab === s;
-          const isBuilt = s === "decor" ? true : stationBuilt(built, s);
-          const styleObj: CSSProperties = isActive ? { backgroundColor: m.bg, borderColor: "rgba(255,255,255,0.2)" } : {};
-          return (
-            <FeaturePanel.Tab
-              key={s}
-              onClick={() => setActiveTab(s)}
-              active={isActive}
-              className="flex-shrink-0 relative"
-              style={styleObj}
-            >
-              <span style={{ width: 22, height: 22, display: "inline-grid", placeItems: "center" }}>
-                <IconCanvas iconKey={m.iconKey} size={22} />
-              </span>
-              <span>{m.label}</span>
-              {!isBuilt && <span className="opacity-60"><LockGlyph size={10} /></span>}
-            </FeaturePanel.Tab>
-          );
-        })}
-      </FeaturePanel.Tabs>
+      <div className="flex items-center gap-2 px-3 pt-2 flex-shrink-0">
+        <Button
+          tone="iron"
+          variant="soft"
+          size="sm"
+          onClick={backToMenu}
+          leading={<ChevronGlyph size={14} dir="left" />}
+        >
+          Buildings
+        </Button>
+      </div>
 
       <StationHeader meta={meta} pill={headerPill} />
 
