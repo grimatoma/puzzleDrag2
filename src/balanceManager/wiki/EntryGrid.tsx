@@ -139,7 +139,15 @@ export default function EntryGrid({
         ))}
       </div>
     <div className={cfg.gridCols}>
-      {entries.map((entry: WikiEntry) => {
+      {(conceptId
+        ? [...entries].sort((a, b) => {
+            const aUnreached = reachabilityOf(conceptId, a.key) === "unreachable";
+            const bUnreached = reachabilityOf(conceptId, b.key) === "unreachable";
+            if (aUnreached === bUnreached) return 0;
+            return aUnreached ? 1 : -1;
+          })
+        : entries
+      ).map((entry: WikiEntry) => {
         const bar = colorBarStyle(entry.color);
         const isSelectable = onSelect != null;
         // Grey only entities with NO unlock path ("unreachable"). "gated"
