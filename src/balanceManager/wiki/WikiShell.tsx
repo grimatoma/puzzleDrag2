@@ -10,7 +10,7 @@
 // in `./wikiNav.js` + `./concepts.js`. All cross-link routing flows through
 // `wikiNavTarget` so each concept owns its own tab.
 
-import React, { useState, useEffect, useCallback, Suspense, lazy } from "react";
+import React, { useState, useEffect, useCallback, Suspense, lazy, useRef } from "react";
 import Icon from "../../ui/Icon.jsx";
 import { COLORS } from "../shared.jsx";
 import { parseHash, initialWikiRoute, useBalanceRouter } from "../router.js";
@@ -328,6 +328,13 @@ export default function WikiShell() {
   // derived separately: a primary node is open if `tab` is one of its children.
   const [manualExpanded, setManualExpanded] = useState<Set<string>>(() => new Set());
 
+  // Scroll management: scroll to top on forward nav; save/restore on back/forward.
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Map of hash string → saved scrollTop for back/forward restoration.
+  const scrollSave = useRef<Map<string, number>>(new Map());
+  // Set to true by our popstate listener so the tab/focus effect restores instead of resets.
+  const isPopstateRef = useRef(false);
+
   // The overlay is only meaningful on small screens; ignore the toggle on desktop.
   const overlayOpen = isSmallScreen && mobileNavOpen;
 
@@ -337,6 +344,10 @@ export default function WikiShell() {
   useBalanceRouter(tab, setTab, focus, setFocus, VALID_TABS);
 
   const navigate = useCallback(({ tab: nextTab, focus: nextFocus = null }: { tab: string; focus?: string | null }) => {
+    // Save scroll position for the page we're leaving so back can restore it.
+    if (scrollRef.current) {
+      scrollSave.current.set(window.location.hash, scrollRef.current.scrollTop);
+    }
     setTab(nextTab);
     setFocus(nextFocus);
     setMobileNavOpen(false);
@@ -357,6 +368,33 @@ export default function WikiShell() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  // Detect browser back/forward so we can restore scroll instead of resetting it.
+  useEffect(() => {
+    const onPop = () => {
+      // Save the scroll position we're leaving, then flag that the next route
+      // change is a popstate so the scroll effect restores rather than resets.
+      if (scrollRef.current) {
+        scrollSave.current.set(window.location.hash, scrollRef.current.scrollTop);
+      }
+      isPopstateRef.current = true;
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
+  // On every route change: restore saved scroll (back/forward) or reset to top (forward nav).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    if (isPopstateRef.current) {
+      isPopstateRef.current = false;
+      const saved = scrollSave.current.get(window.location.hash) ?? 0;
+      el.scrollTop = saved;
+    } else {
+      el.scrollTop = 0;
+    }
+  }, [tab, focus]);
 
   // On small screens the sidebar renders as an overlay and is always shown in
   // its "expanded" form (labels + section headers).
@@ -626,7 +664,7 @@ export default function WikiShell() {
 
           {/* Main content */}
           <main className="wiki-main flex-1 flex flex-col min-w-0 overflow-hidden">
-            <div className="flex-1 overflow-y-auto px-5 py-4">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-4">
               <Suspense fallback={
                 <div className="text-center py-8 text-[12px] italic" style={{ color: COLORS.inkSubtle }}>
                   Loading…
