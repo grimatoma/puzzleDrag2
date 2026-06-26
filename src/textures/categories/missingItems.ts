@@ -3,7 +3,7 @@
 //   - scythe_full   (tool, upgraded scythe — full crescent blade)
 //   - iron_pick     (tool, upgraded pickaxe — iron-headed)
 //   - stone_hammer  (tool, smashes cobble tiles)
-//   - iron_ration   (mine resource, calorie-dense food block)
+//   - iron_ration   (mine resource, sealed metal ration tin)
 //   - supplies      (kitchen recipe output, basic supply bundle)
 //   - hay_bundle    (farm resource, tied bundle of hay)
 //   - iron_bar      (mine resource, smelted iron ingot)
@@ -264,110 +264,172 @@ function drawStoneHammer(ctx: CanvasRenderingContext2D) {
   ctx.restore();
 }
 
-// ── iron_ration — hard-tack ration block w/ stamped insignia ──────────────
+// ── iron_ration — sealed metal ration tin (ring-pull lid + paper label) ────
 function drawIronRation(ctx: CanvasRenderingContext2D) {
-  drawShadow(ctx, 18, 4);
-  // Wrapper underlay (parchment)
-  ctx.fillStyle = "#d4c08a";
-  rr(ctx, -16, -8, 32, 22, 3);
+  drawShadow(ctx, 16, 4);
+
+  // ── Tin body: upright steel can, slightly wider than tall ──
+  const bodyL = -13, bodyR = 13, bodyTop = -8, bodyBot = 15;
+  const bodyGrad = ctx.createLinearGradient(bodyL, 0, bodyR, 0);
+  bodyGrad.addColorStop(0, "#6c7480");      // shaded left
+  bodyGrad.addColorStop(0.28, "#b9c2cc");
+  bodyGrad.addColorStop(0.5, "#e9eef3");     // bright vertical cylinder sheen
+  bodyGrad.addColorStop(0.72, "#aab3bd");
+  bodyGrad.addColorStop(1, "#5a626d");       // shaded right
+  ctx.fillStyle = bodyGrad;
+  rr(ctx, bodyL, bodyTop, bodyR - bodyL, bodyBot - bodyTop, 3);
   ctx.fill();
-  ctx.strokeStyle = "#5a4020";
-  ctx.lineWidth = 1.4;
+  ctx.strokeStyle = "#23282e";
+  ctx.lineWidth = 1.6;
   ctx.stroke();
-  // Wrapper crease lines
-  ctx.strokeStyle = "rgba(90,64,32,0.4)";
-  ctx.lineWidth = 0.7;
+  // Vertical seam line on the can body (right of centre, sells "tin")
+  ctx.strokeStyle = "rgba(40,46,54,0.45)";
+  ctx.lineWidth = 0.8;
   ctx.beginPath();
-  ctx.moveTo(-14, -4); ctx.lineTo(14, -4);
-  ctx.moveTo(-14, 10); ctx.lineTo(14, 10);
+  ctx.moveTo(8, -6); ctx.lineTo(8, 13);
   ctx.stroke();
 
-  // Dark hard-tack block exposed in the middle (gradient for depth)
-  const tackGrad = ctx.createLinearGradient(0, -2, 0, 8);
-  tackGrad.addColorStop(0, "#7a6450");
-  tackGrad.addColorStop(0.5, "#4a3828");
-  tackGrad.addColorStop(1, "#1a0e04");
-  ctx.fillStyle = tackGrad;
-  rr(ctx, -12, -2, 24, 10, 1.5);
+  // ── Paper label band wrapped around the body ──
+  const labelGrad = ctx.createLinearGradient(bodyL, 0, bodyR, 0);
+  labelGrad.addColorStop(0, "#c9a96a");
+  labelGrad.addColorStop(0.3, "#f2e2bd");
+  labelGrad.addColorStop(0.5, "#fbf2d8");
+  labelGrad.addColorStop(0.72, "#e6d2a4");
+  labelGrad.addColorStop(1, "#b89a5e");
+  ctx.fillStyle = labelGrad;
+  rr(ctx, bodyL + 0.5, -1, (bodyR - bodyL) - 1, 12, 1);
   ctx.fill();
-  ctx.strokeStyle = "#0a0604";
-  ctx.lineWidth = 1.2;
+  ctx.strokeStyle = "rgba(120,92,44,0.7)";
+  ctx.lineWidth = 0.9;
   ctx.stroke();
-  // Grain dots (showing it's compressed grain + meat + fat)
-  ctx.fillStyle = "rgba(200,160,90,0.6)";
-  [[-8, 0], [-4, 2], [0, 0], [4, 3], [8, 1], [-2, 5], [6, 5]].forEach(([x, y]) => {
-    ctx.beginPath();
-    ctx.arc(x, y, 0.6, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  // Iron seal stamped on the wrapper — anchor / hammer mark
-  ctx.fillStyle = "#5a6470";
-  ctx.beginPath();
-  ctx.arc(0, -4, 4, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.strokeStyle = "#1a1e24";
-  ctx.lineWidth = 1.0;
-  ctx.stroke();
-  // Stamped "I" letter (for iron)
-  ctx.fillStyle = "#fff8e0";
-  ctx.fillRect(-0.6, -7, 1.2, 6);
-  ctx.fillRect(-2, -7, 4, 1);
-  ctx.fillRect(-2, -2, 4, 1);
-
-  // Twine wrapping around the centre
-  ctx.strokeStyle = "#5a3a18";
-  ctx.lineWidth = 1.4;
-  ctx.beginPath();
-  ctx.moveTo(-16, 4); ctx.lineTo(16, 4);
-  ctx.stroke();
-  ctx.strokeStyle = "rgba(255,240,200,0.4)";
+  // Top & bottom rule lines on the label
+  ctx.strokeStyle = "rgba(120,92,44,0.5)";
   ctx.lineWidth = 0.6;
   ctx.beginPath();
-  ctx.moveTo(-16, 3.5); ctx.lineTo(16, 3.5);
+  ctx.moveTo(bodyL + 1.5, 1.2); ctx.lineTo(bodyR - 1.5, 1.2);
+  ctx.moveTo(bodyL + 1.5, 9.8); ctx.lineTo(bodyR - 1.5, 9.8);
   ctx.stroke();
-  // Twine knot
-  ctx.fillStyle = "#5a3a18";
+  // Food cue on the label: a stamped biscuit/cracker disc (dimpled ration block)
+  ctx.fillStyle = "#9c6b32";
   ctx.beginPath();
-  ctx.arc(13, 4, 1.6, 0, Math.PI * 2);
+  ctx.arc(-6, 5.5, 3.4, 0, Math.PI * 2);
   ctx.fill();
+  ctx.strokeStyle = "#5a3c16";
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,238,200,0.35)";
+  ctx.beginPath();
+  ctx.arc(-7, 4.4, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = "rgba(70,44,16,0.75)";
+  [[-7.3, 5.5], [-4.7, 5.5], [-6, 4.2], [-6, 6.8]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.arc(x, y, 0.55, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // Three printed text lines beside the biscuit (faux ration print)
+  ctx.strokeStyle = "rgba(96,72,36,0.8)";
+  ctx.lineWidth = 1.1;
+  ctx.beginPath();
+  ctx.moveTo(0, 3.4); ctx.lineTo(9, 3.4);
+  ctx.moveTo(0, 5.5); ctx.lineTo(8, 5.5);
+  ctx.moveTo(0, 7.6); ctx.lineTo(9, 7.6);
+  ctx.stroke();
 
-  // Highlight on wrapper top
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  // ── Lid: domed steel top with a chime rim (3/4 ellipse) ──
+  const lidGrad = ctx.createLinearGradient(0, -12, 0, -4);
+  lidGrad.addColorStop(0, "#f4f8fb");
+  lidGrad.addColorStop(0.5, "#c4ccd5");
+  lidGrad.addColorStop(1, "#7e8792");
+  ctx.fillStyle = lidGrad;
   ctx.beginPath();
-  ctx.ellipse(-6, -6, 5, 1.2, -0.2, 0, Math.PI * 2);
+  ctx.ellipse(0, -8, 13, 4.2, 0, 0, Math.PI * 2);
   ctx.fill();
+  ctx.strokeStyle = "#23282e";
+  ctx.lineWidth = 1.4;
+  ctx.stroke();
+  // Inner score ring on the lid (pull-tab seam)
+  ctx.strokeStyle = "rgba(40,46,54,0.4)";
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.ellipse(0, -8, 9.5, 2.9, 0, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // ── Ring-pull tab on the lid (the unmistakable canned-ration cue) ──
+  ctx.strokeStyle = "#dfe5ea";
+  ctx.lineWidth = 1.8;
+  ctx.beginPath();
+  ctx.ellipse(0, -9, 4.4, 2.4, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.strokeStyle = "#5a626d";
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.ellipse(0.4, -8.4, 4.4, 2.4, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  // Rivet holding the tab to the lid
+  ctx.fillStyle = "#9aa2ac";
+  ctx.beginPath();
+  ctx.arc(0, -7.4, 1.1, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = "#3a4046";
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+
+  // Bright vertical metal glint down the left of the body
+  ctx.strokeStyle = "rgba(255,255,255,0.5)";
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(-8, -5); ctx.lineTo(-8, 13);
+  ctx.stroke();
 }
 
 // ── supplies — simple supply bundle (sack + lashed crate corner + apple) ──
 function drawSupplies(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 22, 4);
 
-  // Crate corner peeking out behind sack
-  ctx.fillStyle = "#7a5028";
+  // Wooden crate peeking out behind the sack on the upper-right. Kept fully
+  // inside the box (max x = 17) and sat high so only a lit top face + a short
+  // front edge show above the sack's shoulder — reads as a crate stacked
+  // behind, not a side handle dangling off the silhouette.
+  // Short front face
+  const crateFront = ctx.createLinearGradient(8, -6, 8, 6);
+  crateFront.addColorStop(0, "#b08440");
+  crateFront.addColorStop(1, "#7a5226");
+  ctx.fillStyle = crateFront;
   ctx.beginPath();
-  ctx.moveTo(8, 14);
-  ctx.lineTo(20, 14);
-  ctx.lineTo(20, 0);
-  ctx.lineTo(14, -4);
-  ctx.lineTo(8, 0);
+  ctx.moveTo(9, 6);
+  ctx.lineTo(17, 6);
+  ctx.lineTo(17, -6);
+  ctx.lineTo(9, -6);
+  ctx.closePath();
+  ctx.fill();
+  // Lit top face (parallelogram) — sells the 3D box read
+  ctx.fillStyle = "#d4a460";
+  ctx.beginPath();
+  ctx.moveTo(9, -6);
+  ctx.lineTo(17, -6);
+  ctx.lineTo(14, -11);
+  ctx.lineTo(6, -11);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#3a1808";
   ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(9, 6);
+  ctx.lineTo(17, 6);
+  ctx.lineTo(17, -6);
+  ctx.lineTo(14, -11);
+  ctx.lineTo(6, -11);
+  ctx.lineTo(9, -6);
+  ctx.closePath();
   ctx.stroke();
-  // Crate plank grain
+  // Plank seam + top edge
   ctx.strokeStyle = "rgba(40,16,4,0.5)";
   ctx.lineWidth = 0.6;
   ctx.beginPath();
-  ctx.moveTo(14, -2); ctx.lineTo(14, 14);
+  ctx.moveTo(13, -6); ctx.lineTo(13, 6);
+  ctx.moveTo(9, -6); ctx.lineTo(17, -6);
   ctx.stroke();
-  // Crate iron strap
-  ctx.fillStyle = "#5a4030";
-  ctx.fillRect(8, 4, 12, 2);
-  ctx.strokeStyle = "#1a0e04";
-  ctx.lineWidth = 0.6;
-  ctx.strokeRect(8, 4, 12, 2);
 
   // Main sack (cloth pouch)
   const sackGrad = ctx.createRadialGradient(-4, -2, 4, 0, 4, 20);
@@ -686,84 +748,160 @@ function drawPearls(ctx: CanvasRenderingContext2D) {
   }
 }
 
-// ── auger — helical drill-bit boring a vertical column ────────────────────
+// ── auger — boring bit: narrow shaft wrapped in PROUD helical flighting ────
+// The defining read is screw flighting that stands out beyond a thin shaft and
+// breaks the silhouette into a scalloped screw-thread edge. We therefore build
+// the body from stacked half-turn "flight lobes" that bulge left/right of the
+// core on alternating sides; each lobe's curved edges form the scalloped
+// outline, and the visible front of each turn is a curved (chevroning) band —
+// not a flat parallel stripe.
 function drawAuger(ctx: CanvasRenderingContext2D) {
-  drawShadow(ctx, 14, 4);
-  // Handle at top
-  ctx.save();
-  const handleGrad = ctx.createLinearGradient(-3, -22, 3, -22);
-  handleGrad.addColorStop(0, "#a87838");
-  handleGrad.addColorStop(0.5, "#7a5028");
-  handleGrad.addColorStop(1, "#3a2008");
+  drawShadow(ctx, 9, 3.5);
+
+  // Geometry: a long, narrow threaded shaft.
+  const yTop = -8;          // top of the threaded section
+  const yBot = 22;          // where the lead point begins
+  const span = yBot - yTop;
+  const coreTop = 2.4;      // core half-width at top
+  const coreBot = 1.0;      // core half-width near the point (tapering)
+  const flightTop = 6.2;    // flight radius (proud of core) at top
+  const flightBot = 2.6;    // flight radius near the point
+  const t = (y: number) => (y - yTop) / span;            // 0..1 down the shaft
+  const coreAt = (y: number) => coreTop + (coreBot - coreTop) * t(y);
+  const flightAt = (y: number) => flightTop + (flightBot - flightTop) * t(y);
+
+  const pitch = 5.0;        // vertical rise of one full thread turn
+  const half = pitch / 2;   // a half-turn = one visible front lobe
+
+  // ── Dark central shaft (thin) the flighting wraps around ──
+  const shaftGrad = ctx.createLinearGradient(-coreTop, 0, coreTop, 0);
+  shaftGrad.addColorStop(0, "#2a3038");
+  shaftGrad.addColorStop(0.5, "#525a66");
+  shaftGrad.addColorStop(1, "#1e242c");
+  ctx.fillStyle = shaftGrad;
+  ctx.beginPath();
+  ctx.moveTo(-coreAt(yTop), yTop);
+  ctx.lineTo(coreAt(yTop), yTop);
+  ctx.lineTo(coreAt(yBot), yBot);
+  ctx.lineTo(-coreAt(yBot), yBot);
+  ctx.closePath();
+  ctx.fill();
+
+  // ── Helical flight lobes ──
+  // Each half-turn the front of the helix crosses from one side to the other.
+  // A lobe is a curved leaf: it bows OUT past the core on its leading side and
+  // tucks back to the core at top & bottom, so successive lobes scallop the
+  // silhouette. Alternating side each half-turn gives the spiral wrap.
+  for (let i = 0, y = yTop; y < yBot; i++, y += half) {
+    // Overlap each lobe slightly into its neighbours so the thread reads as one
+    // continuous winding spiral instead of separate beads.
+    const yA = Math.max(y - half * 0.18, yTop);          // lobe top (on the core)
+    const yB = Math.min(y + half * 1.18, yBot);          // lobe bottom (on the core)
+    const yM = (y + Math.min(y + half, yBot)) / 2;       // widest point of the lobe
+    const side = i % 2 === 0 ? 1 : -1;   // which way this half-turn bulges
+    const core = coreAt(yM) * side;
+    const out = flightAt(yM) * side;     // proud outer edge of the flight
+
+    // Front face of the flight (lit). Curved outer edge = scalloped silhouette;
+    // curved inner edge meets the shaft so the band chevrons rather than runs
+    // straight. Sweeps down the leading edge, back up the trailing edge.
+    const g = ctx.createLinearGradient(core, yA, out, yB);
+    g.addColorStop(0, "#eef2f6");
+    g.addColorStop(0.45, "#b6bdc6");
+    g.addColorStop(1, "#737b86");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(coreAt(yA) * side, yA);
+    // leading edge bows out to the proud tip
+    ctx.quadraticCurveTo(out, yA + half * 0.18, out, yM);
+    ctx.quadraticCurveTo(out, yB - half * 0.18, coreAt(yB) * side, yB);
+    // trailing edge curves back in toward the shaft centre line
+    ctx.quadraticCurveTo(core * 0.2, yM, coreAt(yA) * side, yA);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = "#161b22";
+    ctx.lineWidth = 1.1;
+    ctx.stroke();
+
+    // Crisp lit ridge along the leading (outer) edge of the flight
+    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+    ctx.lineWidth = 0.8;
+    ctx.beginPath();
+    ctx.moveTo(coreAt(yA) * side, yA + 0.4);
+    ctx.quadraticCurveTo(out * 0.96, yM, coreAt(yB) * side, yB - 0.4);
+    ctx.stroke();
+
+    // Shaded valley where this turn meets the shaft (the thread groove)
+    ctx.strokeStyle = "rgba(12,16,22,0.5)";
+    ctx.lineWidth = 0.9;
+    ctx.beginPath();
+    ctx.moveTo(coreAt(yA) * side, yA);
+    ctx.quadraticCurveTo(core * 0.35, yM, coreAt(yB) * side, yB);
+    ctx.stroke();
+  }
+
+  // ── Lead-screw point continuing the taper ──
+  const tipGrad = ctx.createLinearGradient(0, yBot, 0, 28);
+  tipGrad.addColorStop(0, "#dde2e8");
+  tipGrad.addColorStop(1, "#5a626d");
+  ctx.fillStyle = tipGrad;
+  ctx.beginPath();
+  ctx.moveTo(-coreAt(yBot) - 0.4, yBot);
+  ctx.lineTo(coreAt(yBot) + 0.4, yBot);
+  ctx.lineTo(0, 28);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = "#161b22";
+  ctx.lineWidth = 1.1;
+  ctx.stroke();
+  // small starter-thread nick on the point
+  ctx.strokeStyle = "rgba(255,255,255,0.5)";
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(-1.4, yBot + 2); ctx.lineTo(0.8, yBot + 4.5);
+  ctx.stroke();
+
+  // ── Top shank + handle ──
+  // Short round shank above the threading.
+  const shankGrad = ctx.createLinearGradient(-2.4, 0, 2.4, 0);
+  shankGrad.addColorStop(0, "#5a626d");
+  shankGrad.addColorStop(0.5, "#aeb6c0");
+  shankGrad.addColorStop(1, "#4a525c");
+  ctx.fillStyle = shankGrad;
+  rr(ctx, -2.4, -13, 4.8, 6, 1);
+  ctx.fill();
+  ctx.strokeStyle = "#161b22";
+  ctx.lineWidth = 1.0;
+  ctx.stroke();
+  // Brass collar/ferrule where shank meets the handle
+  ctx.fillStyle = "#c89030";
+  rr(ctx, -4.5, -16, 9, 4, 1.2);
+  ctx.fill();
+  ctx.strokeStyle = "#3a1808";
+  ctx.lineWidth = 0.9;
+  ctx.stroke();
+  // Wooden cross handle (T-bar grip at the top)
+  const handleGrad = ctx.createLinearGradient(-13, -22, 13, -22);
+  handleGrad.addColorStop(0, "#5a3014");
+  handleGrad.addColorStop(0.5, "#a87838");
+  handleGrad.addColorStop(1, "#5a3014");
   ctx.fillStyle = handleGrad;
-  rr(ctx, -3, -22, 6, 14, 2);
+  rr(ctx, -13, -23, 26, 7, 3.5);
   ctx.fill();
   ctx.strokeStyle = "#1a0e04";
   ctx.lineWidth = 1.2;
   ctx.stroke();
-  ctx.restore();
-  // Shaft (central vertical rod)
-  const shaftGrad = ctx.createLinearGradient(-3, -8, 3, -8);
-  shaftGrad.addColorStop(0, "#c8ccd4");
-  shaftGrad.addColorStop(0.5, "#9da3a8");
-  shaftGrad.addColorStop(1, "#5a6070");
-  ctx.fillStyle = shaftGrad;
-  rr(ctx, -2, -8, 4, 30, 1);
-  ctx.fill();
-  ctx.strokeStyle = "#3a4048";
+  // Handle sheen
+  ctx.strokeStyle = "rgba(255,225,170,0.5)";
   ctx.lineWidth = 1.0;
+  ctx.beginPath();
+  ctx.moveTo(-10, -21.5); ctx.lineTo(10, -21.5);
   ctx.stroke();
-  // Helical flutes — angled bands crossing the shaft
-  ctx.save();
-  ctx.beginPath();
-  rr(ctx, -2, -8, 4, 30, 1);
-  ctx.clip();
-  ctx.strokeStyle = "#5a6070";
-  ctx.lineWidth = 2.2;
-  for (let i = 0; i < 7; i++) {
-    const y = -6 + i * 5;
-    ctx.beginPath();
-    ctx.moveTo(-8, y); ctx.lineTo(8, y + 3);
-    ctx.stroke();
-  }
-  ctx.restore();
-  // Tip — sharp triangular point
-  const tipGrad = ctx.createLinearGradient(-4, 20, 4, 22);
-  tipGrad.addColorStop(0, "#dde2e8");
-  tipGrad.addColorStop(1, "#6a7280");
-  ctx.fillStyle = tipGrad;
-  ctx.beginPath();
-  ctx.moveTo(-4, 20); ctx.lineTo(4, 20); ctx.lineTo(0, 26);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#1a1e24";
-  ctx.lineWidth = 1.2;
-  ctx.stroke();
-  // Collar between handle and shaft
-  ctx.fillStyle = "#c89030";
-  ctx.fillRect(-4, -9, 8, 3);
-  ctx.strokeStyle = "#3a1808";
-  ctx.lineWidth = 0.8;
-  ctx.strokeRect(-4, -9, 8, 3);
-  // Tip gleam
-  ctx.fillStyle = "rgba(255,255,255,0.9)";
-  ctx.beginPath();
-  ctx.arc(-1, 21, 0.8, 0, Math.PI * 2);
-  ctx.fill();
 }
 
 // ── blast_charge — dynamite bundle with cross-blast motif ─────────────────
 function drawBlastCharge(ctx: CanvasRenderingContext2D) {
   drawShadow(ctx, 18, 4);
-  // Soft radial glow behind the charge (kept inside ±18 so nothing hits the box)
-  const glow = ctx.createRadialGradient(0, 2, 2, 0, 2, 17);
-  glow.addColorStop(0, "rgba(255,170,90,0.42)");
-  glow.addColorStop(0.6, "rgba(255,136,68,0.18)");
-  glow.addColorStop(1, "rgba(255,136,68,0)");
-  ctx.fillStyle = glow;
-  ctx.beginPath();
-  ctx.arc(0, 2, 17, 0, Math.PI * 2);
-  ctx.fill();
   // Charge body (two red sticks)
   const drawStick = (x: number) => {
     const g = ctx.createLinearGradient(x - 4, 0, x + 4, 0);
@@ -789,7 +927,16 @@ function drawBlastCharge(ctx: CanvasRenderingContext2D) {
   // Fuse
   ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6;
   ctx.beginPath(); ctx.moveTo(0, -10); ctx.bezierCurveTo(-3, -14, 5, -15, 3, -18); ctx.stroke();
-  // Spark
+  // Tight ember glow localized to the fuse tip only (stays well inside the box)
+  const spark = ctx.createRadialGradient(3, -18, 0.5, 3, -18, 5.5);
+  spark.addColorStop(0, "rgba(255,228,150,0.85)");
+  spark.addColorStop(0.5, "rgba(255,168,72,0.35)");
+  spark.addColorStop(1, "rgba(255,150,60,0)");
+  ctx.fillStyle = spark;
+  ctx.beginPath();
+  ctx.arc(3, -18, 5.5, 0, Math.PI * 2);
+  ctx.fill();
+  // Spark star at the fuse tip
   ctx.fillStyle = "#fff4a0";
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {

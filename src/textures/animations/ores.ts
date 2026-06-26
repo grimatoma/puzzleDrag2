@@ -466,7 +466,8 @@ function animGoldNugget(ctx: CanvasRenderingContext2D, t: number): void {
   const ping = twinkle(t, 0.9);
   const [px, py] = spots[idx];
   sparkle(ctx, px, py, 1.3 + ping * 1.8, ping * 0.9, "255,252,220");
-  ctx.restore();
+  ctx.restore(); // squash
+  ctx.restore(); // outer translate(0,-5) — was leaking, drifting the nugget off-cell
 }
 
 // ---------------------------------------------------------------------------
@@ -515,7 +516,8 @@ function animSilver(ctx: CanvasRenderingContext2D, t: number): void {
     [[[-10, 8], [-1, 5], [8, 9]], 2.8],
     [[[-5, -11], [2, -7], [10, -10]], 2.4],
   ];
-  // Each streak segment flashes to near-white as the mirror sweep passes it.
+  // Each streak segment flashes from a dim grey to near-white as the mirror
+  // sweep passes it — a wide low base ↔ high peak swing so the specular reads.
   streaks.forEach(([pts, lw]) => {
     ctx.lineWidth = lw;
     ctx.lineCap = "round";
@@ -523,12 +525,14 @@ function animSilver(ctx: CanvasRenderingContext2D, t: number): void {
       const [x0, y0] = pts[s];
       const [x1, y1] = pts[s + 1];
       const midX = (x0 + x1) / 2;
-      const flash = clamp01(1 - Math.abs(midX - sweepX) / 7);
-      const peak = Math.round(214 + flash * 41);
+      // easeInOutSine-shaped falloff over a wider window → a soft but punchy lobe.
+      const flash = easeInOutSine(clamp01(1 - Math.abs(midX - sweepX) / 11));
+      const base = Math.round(132 + flash * 44); // dim grey ↔ light grey ends
+      const peak = Math.round(150 + flash * 105); // mid swings deep → near-white
       const g = ctx.createLinearGradient(x0, y0, x1, y1);
-      g.addColorStop(0, "#b6b8c0");
+      g.addColorStop(0, `rgb(${base},${base},${Math.min(255, base + 6)})`);
       g.addColorStop(0.5, `rgb(${peak},${peak},${Math.min(255, peak + 6)})`);
-      g.addColorStop(1, "#9a9ca6");
+      g.addColorStop(1, `rgb(${base - 8},${base - 8},${base})`);
       ctx.strokeStyle = g;
       ctx.beginPath();
       ctx.moveTo(x0, y0);
@@ -548,7 +552,7 @@ function animSilver(ctx: CanvasRenderingContext2D, t: number): void {
   rockPath(ctx, SILVER_HULL);
   ctx.stroke();
 
-  glint(ctx, sweep, { span: 18, width: 4.5, angle: -0.55, intensity: 0.4, length: 40 });
+  glint(ctx, sweep, { span: 18, width: 6, angle: -0.55, intensity: 0.7, length: 44 });
   ctx.restore();
 
   ctx.fillStyle = "rgba(255,255,255,0.95)";
@@ -558,10 +562,11 @@ function animSilver(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.fill();
   });
 
-  // A streak-tip spark snaps bright as the sweep clears the right edge.
+  // A streak-tip spark snaps bright as the sweep clears the right edge — a clear
+  // discrete pop that punctuates each loop.
   const snapX = 7;
-  const snap = clamp01(1 - Math.abs(snapX - sweepX) / 6);
-  sparkle(ctx, snapX, 7, 1.4 + snap * 1.8, 0.4 + snap * 0.55, "240,248,255");
+  const snap = easeInOutSine(clamp01(1 - Math.abs(snapX - sweepX) / 6));
+  sparkle(ctx, snapX, 7, 1.4 + snap * 3.2, 0.3 + snap * 0.7, "240,248,255");
 
   ctx.strokeStyle = "rgba(224,222,230,0.5)";
   ctx.lineWidth = 1.3;

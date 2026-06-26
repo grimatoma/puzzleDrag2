@@ -114,8 +114,50 @@ function drawMeadow(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.ellipse(-10, -2, 8, 2, -0.3, 0, Math.PI * 2);
   ctx.fill();
-  // Fence posts
-  ctx.strokeStyle = "#5a3014";
+  // Grass tufts on the mound (varied greens, with a few golden tips)
+  const tufts: [number, number, string][] = [
+    [-18, 6, "#3a6a18"], [-13, 10, "#4a7a1c"], [-7, 4, "#3a6a18"],
+    [-2, 8, "#4a7a1c"], [4, 5, "#3a6a18"], [9, 9, "#4a7a1c"],
+    [15, 7, "#3a6a18"], [19, 11, "#4a7a1c"],
+  ];
+  tufts.forEach(([x, y, col]) => {
+    ctx.strokeStyle = col;
+    ctx.lineWidth = 1.4;
+    ctx.lineCap = "round";
+    for (let b = -2; b <= 2; b += 2) {
+      ctx.beginPath();
+      ctx.moveTo(x, y + 4);
+      ctx.quadraticCurveTo(x + b * 0.6, y, x + b, y - 4);
+      ctx.stroke();
+    }
+  });
+  // A few golden grass tips for a sunlit-meadow feel
+  ctx.fillStyle = "#e8c24a";
+  [[-13, 6], [4, 1], [19, 7]].forEach(([x, y]) => {
+    ctx.beginPath();
+    ctx.ellipse(x, y, 0.9, 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // Wildflowers scattered across the mound
+  const flowers: [number, number, string][] = [
+    [-15, 2, "#f06088"], [-4, -2, "#f8d040"], [8, 0, "#e0e0f0"],
+    [16, 3, "#f06088"], [0, 5, "#f8d040"],
+  ];
+  flowers.forEach(([x, y, petal]) => {
+    ctx.fillStyle = petal;
+    for (let p = 0; p < 5; p++) {
+      const a = (p / 5) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(x + Math.cos(a) * 1.4, y + Math.sin(a) * 1.4, 1.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "#f8e890";
+    ctx.beginPath();
+    ctx.arc(x, y, 0.9, 0, Math.PI * 2);
+    ctx.fill();
+  });
+  // Light-wood fence posts
+  ctx.strokeStyle = "#b08850";
   ctx.lineWidth = 2;
   ctx.lineCap = "round";
   for (let i = -16; i <= 16; i += 8) {
@@ -124,30 +166,21 @@ function drawMeadow(ctx: CanvasRenderingContext2D) {
     ctx.lineTo(i, 14);
     ctx.stroke();
   }
-  // Fence rails
-  ctx.strokeStyle = "#7a4a18";
-  ctx.lineWidth = 1.4;
+  // Fence rails — light wood
+  ctx.strokeStyle = "#c8a06a";
+  ctx.lineWidth = 1.6;
   ctx.beginPath();
   ctx.moveTo(-20, 6); ctx.lineTo(20, 6);
   ctx.moveTo(-20, 12); ctx.lineTo(20, 12);
   ctx.stroke();
-  // Wheat in foreground
-  ctx.strokeStyle = "#c89320";
-  ctx.lineWidth = 1.6;
-  for (let x = -22; x <= 22; x += 4) {
+  // Post outline for a touch of definition
+  ctx.strokeStyle = "rgba(90,48,20,0.5)";
+  ctx.lineWidth = 0.6;
+  for (let i = -16; i <= 16; i += 8) {
     ctx.beginPath();
-    ctx.moveTo(x, 22);
-    ctx.bezierCurveTo(x, 12, x + (x % 8 === 0 ? 1 : -1), 4, x + 1, -2);
+    ctx.moveTo(i - 1, 2);
+    ctx.lineTo(i - 1, 14);
     ctx.stroke();
-  }
-  // Wheat heads
-  ctx.fillStyle = "#f4c84a";
-  for (let x = -22; x <= 22; x += 4) {
-    for (let i = 0; i < 2; i++) {
-      ctx.beginPath();
-      ctx.ellipse(x + 1, -2 + i * 2, 0.9, 1.4, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
   }
   // Sun
   ctx.fillStyle = "#ffd34c";
@@ -316,7 +349,25 @@ function drawQuarry(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#3a4348";
   ctx.lineWidth = 1.6;
   ctx.stroke();
-  // Stone facets
+  // Facet shading — darker lower-right face to give the block volume
+  ctx.fillStyle = "rgba(58,67,72,0.45)";
+  ctx.beginPath();
+  ctx.moveTo(0, 4);
+  ctx.lineTo(18, 4);
+  ctx.lineTo(14, 18);
+  ctx.lineTo(0, 18);
+  ctx.closePath();
+  ctx.fill();
+  // Lighter upper-left face
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  ctx.beginPath();
+  ctx.moveTo(-18, 4);
+  ctx.lineTo(-14, -10);
+  ctx.lineTo(0, -10);
+  ctx.lineTo(0, 4);
+  ctx.closePath();
+  ctx.fill();
+  // Stone facet edges
   ctx.strokeStyle = "rgba(58,67,72,0.6)";
   ctx.lineWidth = 1;
   ctx.beginPath();
@@ -348,90 +399,129 @@ function drawQuarry(ctx: CanvasRenderingContext2D) {
   ctx.strokeStyle = "#3a1c08";
   ctx.lineWidth = 1;
   ctx.strokeRect(-1.6, -2, 3.2, 28);
+  // Pickaxe head — a curved double-pointed bar with real thickness, tapering
+  // to a spike at each end so it reads unmistakably as a pick (not a sliver)
   ctx.fillStyle = "#5a6066";
   ctx.beginPath();
-  ctx.moveTo(-12, -2);
-  ctx.lineTo(12, -4);
-  ctx.lineTo(0, 2);
+  ctx.moveTo(-13, -3);                 // left spike tip
+  ctx.quadraticCurveTo(-5, -5, -3, -3); // upper edge to centre
+  ctx.lineTo(3, -3);
+  ctx.quadraticCurveTo(5, -5, 13, -3);  // upper edge to right spike
+  ctx.quadraticCurveTo(6, 0, 3, 0);     // lower edge back from right tip
+  ctx.lineTo(-3, 0);
+  ctx.quadraticCurveTo(-6, 0, -13, -3); // lower edge back to left tip
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#1a1c20";
   ctx.lineWidth = 1.2;
   ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
+  // Central eye/socket where the head meets the handle
+  ctx.fillStyle = "#3a4046";
   ctx.beginPath();
-  ctx.moveTo(-10, -2);
-  ctx.lineTo(10, -3);
-  ctx.lineTo(8, -2);
-  ctx.lineTo(-8, -1);
-  ctx.closePath();
+  ctx.rect(-2.4, -3.4, 4.8, 4);
   ctx.fill();
+  ctx.strokeStyle = "#1a1c20";
+  ctx.lineWidth = 0.8;
+  ctx.stroke();
+  // Top sheen along the head
+  ctx.strokeStyle = "rgba(255,255,255,0.4)";
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(-11, -3.4);
+  ctx.quadraticCurveTo(-5, -4.4, -3, -3.4);
+  ctx.moveTo(3, -3.4);
+  ctx.quadraticCurveTo(5, -4.4, 11, -3.4);
+  ctx.stroke();
   ctx.restore();
-  // Stone chips
-  ctx.fillStyle = "#9da3a8";
-  [[-18, 16], [16, 18], [-12, 22]].forEach(([x, y]) => {
+  // Two cleanly-rendered fallen rock chips at the base (intentional debris)
+  ctx.fillStyle = "#8a9298";
+  ([[-15, 19], [13, 21]] as [number, number][]).forEach(([x, y]) => {
     ctx.beginPath();
-    ctx.moveTo(x - 2, y);
-    ctx.lineTo(x + 2, y - 1);
-    ctx.lineTo(x + 1, y + 1);
+    ctx.moveTo(x - 2.5, y + 1);
+    ctx.lineTo(x - 1, y - 2);
+    ctx.lineTo(x + 2.5, y - 1);
+    ctx.lineTo(x + 1, y + 2);
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = "#3a4348";
-    ctx.lineWidth = 0.6;
+    ctx.lineWidth = 0.8;
     ctx.stroke();
   });
 }
 
 function drawCaves(ctx: CanvasRenderingContext2D) {
-  // Lanternlit Caves — cave entrance with hanging lantern
+  // Lanternlit Caves — a rocky hillside with an arched cave mouth and a
+  // hanging lantern lighting the opening
   drawShadow(ctx, 22, 4);
-  // Cave background (dark)
-  ctx.fillStyle = "#1a1408";
+  // Outer rocky hillside (the mountain the cave is cut into)
+  ctx.fillStyle = "#6a5a46";
   ctx.beginPath();
-  ctx.moveTo(-22, 22);
-  ctx.bezierCurveTo(-22, -8, -10, -22, 0, -22);
-  ctx.bezierCurveTo(10, -22, 22, -8, 22, 22);
+  ctx.moveTo(-22, 20);
+  ctx.bezierCurveTo(-24, -6, -12, -22, 0, -22);
+  ctx.bezierCurveTo(12, -22, 24, -6, 22, 20);
+  ctx.lineTo(22, 20);
+  ctx.lineTo(-22, 20);
   ctx.closePath();
   ctx.fill();
-  // Rock shoulders
-  ctx.fillStyle = "#5a4a3a";
+  ctx.strokeStyle = "#2a2014";
+  ctx.lineWidth = 1.6;
+  ctx.stroke();
+  // Rocky shading facets on the hillside
+  ctx.fillStyle = "rgba(40,32,20,0.4)";
   ctx.beginPath();
-  ctx.moveTo(-22, 22);
-  ctx.bezierCurveTo(-22, -2, -16, -16, -10, -16);
-  ctx.bezierCurveTo(-12, -8, -16, 4, -22, 22);
+  ctx.moveTo(11, -18); ctx.lineTo(20, -2); ctx.lineTo(14, 6); ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = "rgba(255,240,210,0.12)";
+  ctx.beginPath();
+  ctx.moveTo(-12, -18); ctx.lineTo(-20, -2); ctx.lineTo(-14, 2); ctx.closePath();
+  ctx.fill();
+  // Arched cave mouth (dark opening cut into the rock)
+  ctx.fillStyle = "#1a1206";
+  ctx.beginPath();
+  ctx.moveTo(-13, 20);
+  ctx.lineTo(-13, -4);
+  ctx.bezierCurveTo(-13, -16, 13, -16, 13, -4);
+  ctx.lineTo(13, 20);
   ctx.closePath();
   ctx.fill();
-  ctx.beginPath();
-  ctx.moveTo(22, 22);
-  ctx.bezierCurveTo(22, -2, 16, -16, 10, -16);
-  ctx.bezierCurveTo(12, -8, 16, 4, 22, 22);
-  ctx.closePath();
-  ctx.fill();
-  ctx.strokeStyle = "#1a1004";
+  ctx.strokeStyle = "#0e0a02";
   ctx.lineWidth = 1.4;
   ctx.stroke();
-  // Stalactite
-  ctx.fillStyle = "#7a6a50";
-  [[-6, -22, -4, -14], [4, -22, 6, -14], [-2, -22, -2, -10]].forEach(([x1, y1, x2, y2]) => {
+  // Inner-mouth depth (slightly lighter back wall low down)
+  ctx.fillStyle = "rgba(90,74,58,0.35)";
+  ctx.beginPath();
+  ctx.ellipse(0, 16, 9, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Stalactites hanging from the arch ceiling
+  ctx.fillStyle = "#5a4a38";
+  [[-7, -10, -6, -3], [6, -10, 7, -3], [-1, -13, -1, -5]].forEach(([x1, y1, x2, y2]) => {
     ctx.beginPath();
-    ctx.moveTo(x1 - 1.5, y1);
-    ctx.lineTo(x1 + 1.5, y1);
+    ctx.moveTo(x1 - 1.4, y1);
+    ctx.lineTo(x1 + 1.4, y1);
     ctx.lineTo(x2, y2);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = "#3a2a18";
-    ctx.lineWidth = 0.8;
+    ctx.strokeStyle = "#2a2014";
+    ctx.lineWidth = 0.7;
     ctx.stroke();
   });
-  // Lantern hanging in mouth
+  // Soft lantern glow filling the cave mouth (contained within the opening)
+  const caveGlow = ctx.createRadialGradient(0, 2, 1, 0, 2, 13);
+  caveGlow.addColorStop(0, "rgba(255,200,90,0.5)");
+  caveGlow.addColorStop(1, "rgba(255,190,70,0)");
+  ctx.fillStyle = caveGlow;
+  ctx.beginPath();
+  ctx.ellipse(0, 2, 12, 13, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Lantern hanging from the arch ceiling
   ctx.strokeStyle = "#1a1004";
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, -22); ctx.lineTo(0, -8);
+  ctx.moveTo(0, -14); ctx.lineTo(0, -6);
   ctx.stroke();
   ctx.fillStyle = "#3a3040";
   ctx.beginPath();
-  ctx.rect(-4, -8, 8, 6);
+  ctx.rect(-4, -6, 8, 5);
   ctx.fill();
   ctx.strokeStyle = "#1a1010";
   ctx.lineWidth = 0.8;
@@ -439,31 +529,24 @@ function drawCaves(ctx: CanvasRenderingContext2D) {
   // Lantern glass
   ctx.fillStyle = "#fff080";
   ctx.beginPath();
-  ctx.ellipse(0, -2, 5, 6, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 2, 4.5, 5.5, 0, 0, Math.PI * 2);
   ctx.fill();
   ctx.strokeStyle = "#a87018";
   ctx.lineWidth = 0.8;
   ctx.stroke();
-  // Glow halo
-  ctx.fillStyle = "rgba(255,200,80,0.45)";
+  // Bright flame core
+  ctx.fillStyle = "#fffae0";
   ctx.beginPath();
-  ctx.ellipse(0, -2, 14, 16, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 2, 1.8, 2.6, 0, 0, Math.PI * 2);
   ctx.fill();
   // Lantern bottom cap
   ctx.fillStyle = "#3a3040";
   ctx.beginPath();
-  ctx.rect(-4, 4, 8, 3);
+  ctx.rect(-4, 7, 8, 2.6);
   ctx.fill();
   ctx.strokeStyle = "#1a1010";
   ctx.lineWidth = 0.8;
   ctx.stroke();
-  // Dim glints on cave walls
-  ctx.fillStyle = "rgba(255,200,80,0.7)";
-  [[-14, -4, 1.4], [14, -4, 1.4], [-12, 8, 1], [12, 8, 1]].forEach(([x, y, r]) => {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fill();
-  });
 }
 
 function drawFairground(ctx: CanvasRenderingContext2D) {
@@ -603,6 +686,15 @@ function drawForgeMap(ctx: CanvasRenderingContext2D) {
   // Highlight
   ctx.fillStyle = "rgba(255,255,255,0.3)";
   ctx.fillRect(-15, -7, 30, 1.5);
+  // Small ember glow at the anvil top — tight, behind the hot iron so it
+  // does not obscure the silhouette
+  const ember = ctx.createRadialGradient(2, -8, 0, 2, -8, 7);
+  ember.addColorStop(0, "rgba(255,170,60,0.55)");
+  ember.addColorStop(1, "rgba(255,160,40,0)");
+  ctx.fillStyle = ember;
+  ctx.beginPath();
+  ctx.ellipse(2, -8, 8, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
   // Hot iron piece
   ctx.fillStyle = "#ffae40";
   ctx.beginPath();
@@ -612,30 +704,13 @@ function drawForgeMap(ctx: CanvasRenderingContext2D) {
   ctx.beginPath();
   ctx.ellipse(2, -9, 4, 1, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Sparks
+  // A couple of tiny sparks rising right off the hot iron (not a ring)
   ctx.fillStyle = "#ffd040";
-  for (let i = 0; i < 6; i++) {
-    const a = -Math.PI / 2 + (i / 6) * Math.PI * 2;
-    const r = 12 + (i % 2) * 3;
-    const x = 2 + Math.cos(a) * r;
-    const y = -10 + Math.sin(a) * r;
+  [[-2, -12, 1], [4, -14, 1.2], [1, -16, 0.8]].forEach(([sx, sy, sr]) => {
     ctx.beginPath();
-    for (let j = 0; j < 8; j++) {
-      const sa = (j / 8) * Math.PI * 2;
-      const sr = j % 2 === 0 ? 1.4 : 0.5;
-      const sx = x + Math.cos(sa) * sr;
-      const sy = y + Math.sin(sa) * sr;
-      if (j === 0) ctx.moveTo(sx, sy);
-      else ctx.lineTo(sx, sy);
-    }
-    ctx.closePath();
+    ctx.arc(sx, sy, sr, 0, Math.PI * 2);
     ctx.fill();
-  }
-  // Glow
-  ctx.fillStyle = "rgba(255,160,40,0.35)";
-  ctx.beginPath();
-  ctx.arc(2, -8, 14, 0, Math.PI * 2);
-  ctx.fill();
+  });
   // Hammer (background)
   ctx.save();
   ctx.translate(-14, -16);

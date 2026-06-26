@@ -175,13 +175,22 @@ function drawPotion(ctx: CanvasRenderingContext2D) {
   [[-3, 6, 1.4], [2, 9, 1.0], [-1, 12, 1.6], [4, 4, 0.8]].forEach(([x, y, r]) => {
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI*2); ctx.fill();
   });
-  // Label
-  ctx.fillStyle = "#f5ebd2";
-  ctx.fillRect(-6, 6, 12, 5);
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 0.8; ctx.strokeRect(-6, 6, 12, 5);
-  ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 0.6;
-  ctx.beginPath(); ctx.moveTo(-4, 8); ctx.lineTo(4, 8); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(-4, 9.5); ctx.lineTo(2, 9.5); ctx.stroke();
+  // Glowing alchemical sigil on the body — a bold gold star replaces the old
+  // text-line label so it reads as a magic potion, not a bottled product.
+  ctx.save();
+  ctx.translate(0, 8);
+  magicHalo(ctx, "rgba(248,192,64,0.5)", 8);
+  ctx.fillStyle = "#fff4a0";
+  ctx.strokeStyle = "#a87010"; ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2 - Math.PI / 2;
+    const r = i % 2 === 0 ? 4.6 : 1.9;
+    const x = Math.cos(a) * r, y = Math.sin(a) * r;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.restore();
   // Highlight
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.beginPath(); ctx.ellipse(-5, 0, 1.2, 5, -0.3, 0, Math.PI*2); ctx.fill();
@@ -272,6 +281,11 @@ function drawRuneStone(ctx: CanvasRenderingContext2D) {
 // 7. Magic Scroll
 function drawScroll(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 18);
+  // Nudge the scroll body down + in so the top roller bar and side knobs
+  // clear the design box (the shadow is left where it sits below).
+  ctx.save();
+  ctx.translate(0, 2);
+  ctx.scale(0.9, 0.9);
   // Top rod
   ctx.fillStyle = "#7a4818";
   ctx.fillRect(-16, -14, 32, 4);
@@ -328,6 +342,7 @@ function drawScroll(ctx: CanvasRenderingContext2D) {
     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
   }
   ctx.closePath(); ctx.fill();
+  ctx.restore();
 }
 
 // 8. Hourglass
@@ -839,19 +854,21 @@ function drawGoldenApple(ctx: CanvasRenderingContext2D) {
   const g = ctx.createRadialGradient(-4, -4, 2, 0, 0, 14);
   g.addColorStop(0, "#fffce0"); g.addColorStop(0.4, "#f8c040"); g.addColorStop(1, "#7a4810");
   ctx.fillStyle = g;
+  // Round apple: high full shoulders with only a shallow stem dimple at the
+  // top, and a body that stays wide rather than bulging low like a pear.
   ctx.beginPath();
-  ctx.moveTo(-10, -2);
-  ctx.bezierCurveTo(-14, -10, -2, -14, 0, -10);
-  ctx.bezierCurveTo(2, -14, 14, -10, 10, -2);
-  ctx.bezierCurveTo(14, 8, 6, 14, 0, 14);
-  ctx.bezierCurveTo(-6, 14, -14, 8, -10, -2);
+  ctx.moveTo(-12, -3);
+  ctx.bezierCurveTo(-13, -13, -4, -13, 0, -9);
+  ctx.bezierCurveTo(4, -13, 13, -13, 12, -3);
+  ctx.bezierCurveTo(13, 7, 7, 13, 0, 13);
+  ctx.bezierCurveTo(-7, 13, -13, 7, -12, -3);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.6; ctx.stroke();
   // Stem
   ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(0, -10); ctx.bezierCurveTo(2, -14, 0, -16, -2, -18);
+  ctx.moveTo(0, -9); ctx.bezierCurveTo(2, -14, 0, -16, -2, -18);
   ctx.stroke();
   // Leaf
   ctx.fillStyle = "#a8d040";
@@ -997,21 +1014,31 @@ function drawGoldenSheep(ctx: CanvasRenderingContext2D) {
     }
     ctx.restore();
   }
-  // Head poking out (right side)
-  ctx.fillStyle = "#3a2008";
-  ctx.beginPath(); ctx.ellipse(13, 0, 4, 3, 0.2, 0, Math.PI*2); ctx.fill();
-  ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.0; ctx.stroke();
-  // Ear
-  ctx.fillStyle = "#3a2008";
-  ctx.beginPath(); ctx.moveTo(11, -2); ctx.lineTo(14, -5); ctx.lineTo(13, -1); ctx.closePath(); ctx.fill();
-  // Eye highlight
+  // Legs — drawn before the head so the head reads on top; thicker and longer
+  // with little hooves so the animal silhouette survives at thumbnail size.
+  ctx.fillStyle = "#3a2008"; ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 0.8;
+  [-7, -1, 5].forEach(x => {
+    ctx.beginPath(); ctx.rect(x, 9, 3.4, 9); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#1a0e04";
+    ctx.beginPath(); ctx.rect(x - 0.4, 16.5, 4.2, 2); ctx.fill();
+    ctx.fillStyle = "#3a2008";
+  });
+  // Head poking out (right side) — larger, pulled clear of the fleece with a
+  // distinct muzzle so it reads unmistakably as the animal's head.
+  ctx.fillStyle = "#3a2008"; ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.ellipse(15, 1, 5.5, 4.5, 0.15, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+  // Muzzle tip
+  ctx.fillStyle = "#5a3814";
+  ctx.beginPath(); ctx.ellipse(19, 2.5, 2.2, 1.8, 0.2, 0, Math.PI*2); ctx.fill();
+  // Ears (one each side of the head)
+  ctx.fillStyle = "#3a2008"; ctx.strokeStyle = "#1a0e04"; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(12, -3); ctx.lineTo(15, -6); ctx.lineTo(15, -1); ctx.closePath(); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(18, -3); ctx.lineTo(20, -5); ctx.lineTo(18, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+  // Eye
   ctx.fillStyle = "#fffce0";
-  ctx.beginPath(); ctx.arc(14, -1, 0.7, 0, Math.PI*2); ctx.fill();
-  // Legs
-  ctx.fillStyle = "#3a2008";
-  ctx.fillRect(-7, 10, 2.4, 8);
-  ctx.fillRect(0, 10, 2.4, 8);
-  ctx.fillRect(6, 10, 2.4, 8);
+  ctx.beginPath(); ctx.arc(15, -0.5, 1.1, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = "#1a0e04";
+  ctx.beginPath(); ctx.arc(15.3, -0.3, 0.5, 0, Math.PI*2); ctx.fill();
   // Sparkles
   ctx.fillStyle = "#fffce0";
   [[-10, -10], [12, -8], [10, 10]].forEach(([x, y]) => {
@@ -1034,21 +1061,20 @@ function drawPhilosophersStone(ctx: CanvasRenderingContext2D) {
   g.addColorStop(0, "#ffffff"); g.addColorStop(0.3, "#f86040"); g.addColorStop(0.7, "#a82018"); g.addColorStop(1, "#3a0808");
   ctx.fillStyle = g;
   ctx.beginPath();
-  ctx.moveTo(0, -14);
-  ctx.lineTo(12, -4);
-  ctx.lineTo(8, 12);
-  ctx.lineTo(-8, 12);
-  ctx.lineTo(-12, -4);
+  ctx.moveTo(0, -12);
+  ctx.lineTo(10, -3);
+  ctx.lineTo(6.5, 10);
+  ctx.lineTo(-6.5, 10);
+  ctx.lineTo(-10, -3);
   ctx.closePath();
   ctx.fill();
   ctx.strokeStyle = "#3a0808"; ctx.lineWidth = 1.8; ctx.stroke();
-  // Facet lines
-  ctx.strokeStyle = "rgba(255,255,255,0.7)"; ctx.lineWidth = 0.9;
+  // Facet lines — toned down so the central glint stays the focal point.
+  ctx.strokeStyle = "rgba(255,255,255,0.4)"; ctx.lineWidth = 0.7;
   ctx.beginPath();
-  ctx.moveTo(0, -14); ctx.lineTo(0, 12);
-  ctx.moveTo(-12, -4); ctx.lineTo(12, -4);
-  ctx.moveTo(0, -14); ctx.lineTo(-8, 12);
-  ctx.moveTo(0, -14); ctx.lineTo(8, 12);
+  ctx.moveTo(-10, -3); ctx.lineTo(10, -3);
+  ctx.moveTo(0, -12); ctx.lineTo(-6.5, 10);
+  ctx.moveTo(0, -12); ctx.lineTo(6.5, 10);
   ctx.stroke();
   // Center sparkle
   ctx.fillStyle = "#ffffff";
@@ -1060,13 +1086,16 @@ function drawPhilosophersStone(ctx: CanvasRenderingContext2D) {
     if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
   }
   ctx.closePath(); ctx.fill();
-  // Outer alchemical glyph
-  ctx.strokeStyle = "rgba(248,192,64,0.7)"; ctx.lineWidth = 0.8;
-  ctx.beginPath(); ctx.arc(0, -2, 16, 0, Math.PI*2); ctx.stroke();
+  // Outer alchemical ring — thicker gold band that fully encloses the gem.
+  ctx.strokeStyle = "rgba(248,192,64,0.85)"; ctx.lineWidth = 1.6;
+  ctx.beginPath(); ctx.arc(0, -2, 15, 0, Math.PI*2); ctx.stroke();
 }
 
 function drawMinersHat(ctx: CanvasRenderingContext2D) {
   shadow(ctx, 18);
+  // Lift the helmet so the contained forward beam has room above it.
+  ctx.save();
+  ctx.translate(0, 4);
   // Helmet body
   const g = ctx.createRadialGradient(-4, -6, 3, 0, 4, 18);
   g.addColorStop(0, "#f8c040"); g.addColorStop(0.6, "#a87010"); g.addColorStop(1, "#3a2008");
@@ -1097,16 +1126,19 @@ function drawMinersHat(ctx: CanvasRenderingContext2D) {
   ctx.fillStyle = lampG;
   ctx.beginPath(); ctx.arc(0, -7, 4, 0, Math.PI*2); ctx.fill();
   ctx.strokeStyle = "#3a2008"; ctx.lineWidth = 1.0; ctx.stroke();
-  // Light beam
-  ctx.fillStyle = "rgba(255,244,160,0.45)";
+  // Light beam — shorter cone angled forward (upper-left) so it stays inside
+  // the design box instead of shooting straight up out of frame. Brighter at
+  // the lamp, fading out, so it reads as a beam rather than empty space.
+  const beamG = ctx.createLinearGradient(0, -7, -16, -19);
+  beamG.addColorStop(0, "rgba(255,244,160,0.75)");
+  beamG.addColorStop(1, "rgba(255,244,160,0)");
+  ctx.fillStyle = beamG;
   ctx.beginPath();
-  ctx.moveTo(-3, -7); ctx.lineTo(-14, -22); ctx.lineTo(14, -22); ctx.lineTo(3, -7);
+  ctx.moveTo(-2, -9); ctx.lineTo(-20, -16); ctx.lineTo(-15, -22); ctx.lineTo(2, -6);
   ctx.closePath(); ctx.fill();
+  ctx.restore();
   // Magical glimmer
   magicHalo(ctx, "rgba(184,120,232,0.4)", 16);
-  // Highlight
-  ctx.fillStyle = "rgba(255,255,255,0.4)";
-  ctx.beginPath(); ctx.ellipse(-8, -2, 4, 7, -0.4, 0, Math.PI*2); ctx.fill();
 }
 
 export const ICONS = {

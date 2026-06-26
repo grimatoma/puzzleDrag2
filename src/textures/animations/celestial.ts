@@ -219,12 +219,36 @@ function animFullMoon(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.beginPath();
     ctx.arc(cx, cy, r, Math.PI * 0.2, Math.PI * 0.9);
     ctx.stroke();
-    // A small glint pings on a crater rim, staggered per crater.
-    const gl = twinkle(t, 5.2, ci * 0.17);
+    // A small glint pings on a crater rim — faster + clearly staggered per
+    // crater so a wink visibly travels across the surface (was near-imperceptible
+    // at period 5.2). Each crater fires in turn over one shared cycle.
+    const gl = twinkle(t, 3.2, (ci / craters.length) * 0.85);
     if (gl > 0.01) {
-      sparkle(ctx, cx - r * 0.3, cy - r * 0.3, 1.2 + gl * 0.8, gl * 0.7, "235,242,255");
+      sparkle(ctx, cx - r * 0.3, cy - r * 0.3, 1.3 + gl * 1.0, gl * 0.85, "235,242,255");
     }
   });
+
+  // Rotating specular sheen — a soft highlight band slowly orbits the face, the
+  // primary legible motion (the moon "turning" toward the light). Clipped to the
+  // disc; driven by loopPhase so it tiles seamlessly. An additive soft ellipse
+  // whose centre swings around a small circle, elongated tangent to the swing.
+  const sheenPh = loopPhase(t, 7.0) * TAU;
+  const scx = Math.cos(sheenPh) * 6.5;
+  const scy = Math.sin(sheenPh) * 6.5;
+  const sheen = ctx.createRadialGradient(scx, scy, 0.5, scx, scy, 11);
+  sheen.addColorStop(0, "rgba(255,255,255,0.42)");
+  sheen.addColorStop(0.5, "rgba(245,249,255,0.16)");
+  sheen.addColorStop(1, "rgba(245,249,255,0)");
+  ctx.fillStyle = sheen;
+  ctx.save();
+  ctx.translate(scx, scy);
+  ctx.rotate(sheenPh + Math.PI / 2); // long axis follows the orbit tangent
+  ctx.scale(1.4, 0.7);
+  ctx.translate(-scx, -scy);
+  ctx.beginPath();
+  ctx.arc(scx, scy, 11, 0, TAU);
+  ctx.fill();
+  ctx.restore();
   ctx.restore();
 
   // Crescent highlight rim — the lit arc swings with libration (the terminator
@@ -370,12 +394,13 @@ function animRingedPlanet(ctx: CanvasRenderingContext2D, t: number): void {
 }
 
 // ---------------------------------------------------------------------------
-// astral_shooting_star — REBUILT. The old version was a straight-line fly-by:
-// BLANK at t=0, unusable at rest. Now a twinkling star PARKS in-frame at the
-// resting position (visible at every t including 0); periodically it ANTICIPATES
-// (a tiny dip), then ARCS out on an eased path with a SQUASHED head + a tapering
-// trail, and SETTLES back onto the resting twinkle. Most of the loop is just the
-// quiet resting star.
+// astral_shooting_star — a twinkling star PARKS in-frame at the resting position
+// (visible at every t including 0) and keeps a faint resting trail so it reads as
+// a *shooting* star even at rest. The shoot now RECURS on a short period: the
+// head ANTICIPATES (a tiny dip), ARCS out on an eased path with a SQUASHED head +
+// a tapering trail, then SETTLES back onto the resting twinkle. The peak glow is
+// tamed so it never blows out to a flat white disc, and the envelope is fully
+// periodic so the first and last frame match (seamless loop).
 function animShootingStar(ctx: CanvasRenderingContext2D, t: number): void {
   const restX = 11;
   const restY = -11;
@@ -385,11 +410,11 @@ function animShootingStar(ctx: CanvasRenderingContext2D, t: number): void {
   const nx = -dirY; // unit normal
   const ny = dirX;
 
-  // Event envelope: the star is at REST for most of the period, then performs
-  // one shoot. `shoot` 0..1 = progress through the active window.
-  const period = 4.8;
+  // Event envelope: the star rests briefly, then shoots — RECURRING often enough
+  // that the streak reads as a repeating loop, not a one-shot burst.
+  const period = 2.4;
   const ph = loopPhase(t, period);
-  const active = 0.42; // fraction of the cycle spent shooting
+  const active = 0.62; // fraction of the cycle spent shooting (most of it)
   const shooting = ph < active;
   const u = shooting ? ph / active : 0; // 0..1 across the shoot
 
@@ -421,15 +446,18 @@ function animShootingStar(ctx: CanvasRenderingContext2D, t: number): void {
   const headX = restX + dirX * along + nx * arc;
   const headY = restY + dirY * along + ny * arc;
 
-  // --- Trail (only while shooting) — a tapering wedge behind the head, fading
-  // back toward the rest point.
-  if (intensity > 0.01) {
-    const tailLen = 18 + squash * 10;
+  // --- Trail — a tapering wedge behind the head. A faint resting trail is always
+  // present (so even the parked star reads as a *shooting* star, matching the
+  // static art), and it brightens/lengthens during the shoot.
+  const restTw = twinkle(t, 2.6); // gentle idle pulse on the parked star
+  const trailStr = Math.max(intensity, 0.22 + restTw * 0.1);
+  {
+    const tailLen = 16 + squash * 10 + trailStr * 4;
     const tailX = headX - dirX * tailLen;
     const tailY = headY - dirY * tailLen;
     const trail = ctx.createLinearGradient(headX, headY, tailX, tailY);
-    trail.addColorStop(0, `rgba(255,245,200,${(0.9 * intensity).toFixed(3)})`);
-    trail.addColorStop(0.4, `rgba(255,210,120,${(0.5 * intensity).toFixed(3)})`);
+    trail.addColorStop(0, `rgba(255,245,200,${(0.8 * trailStr).toFixed(3)})`);
+    trail.addColorStop(0.4, `rgba(255,210,120,${(0.45 * trailStr).toFixed(3)})`);
     trail.addColorStop(1, "rgba(255,200,120,0)");
     ctx.fillStyle = trail;
     const hw = 4.0;
@@ -440,22 +468,22 @@ function animShootingStar(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.closePath();
     ctx.fill();
 
-    // A couple of sparks shed along the trail.
+    // A couple of sparks shed along the trail (stronger during the shoot).
     for (let s = 0; s < 3; s++) {
       const d = 6 + s * 6;
       const sxp = headX - dirX * d + nx * (s % 2 === 0 ? 2 : -2);
       const syp = headY - dirY * d + ny * (s % 2 === 0 ? 2 : -2);
-      sparkle(ctx, sxp, syp, 1.6 - s * 0.3, intensity * (0.8 - s * 0.18), "255,248,220");
+      sparkle(ctx, sxp, syp, 1.6 - s * 0.3, trailStr * (0.8 - s * 0.18), "255,248,220");
     }
   }
 
-  // --- Head glow — bright during the shoot, a soft resting glow otherwise.
-  const restTw = twinkle(t, 2.6); // gentle idle pulse on the parked star
-  const glowStr = shooting ? 0.5 + intensity * 0.5 : 0.32 + restTw * 0.18;
-  const glowR = (shooting ? 11 + intensity * 5 : 9) ;
+  // --- Head glow — bright during the shoot, a soft resting glow otherwise. Peak
+  // alpha is capped well below 1 so the head never blows out to a flat white disc.
+  const glowStr = shooting ? 0.42 + intensity * 0.34 : 0.32 + restTw * 0.16;
+  const glowR = (shooting ? 11 + intensity * 4 : 9);
   const glow = ctx.createRadialGradient(headX, headY, 2, headX, headY, glowR);
-  glow.addColorStop(0, `rgba(255,250,210,${clamp01(0.9 * glowStr + 0.2).toFixed(3)})`);
-  glow.addColorStop(0.5, `rgba(255,210,110,${(0.4 * (shooting ? intensity + 0.4 : 0.5)).toFixed(3)})`);
+  glow.addColorStop(0, `rgba(255,250,210,${clamp01(0.7 * glowStr + 0.18).toFixed(3)})`);
+  glow.addColorStop(0.5, `rgba(255,210,110,${(0.34 * (shooting ? intensity + 0.4 : 0.5)).toFixed(3)})`);
   glow.addColorStop(1, "rgba(255,210,110,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
@@ -508,10 +536,10 @@ function animConstellation(ctx: CanvasRenderingContext2D, t: number): void {
     [-19, -8], [17, -16], [-15, 14], [20, 10], [2, -20], [-8, 19], [14, 18],
   ];
   dust.forEach(([x, y], i) => {
-    const a = 0.4 * (0.5 + 0.5 * Math.sin(t * 3 + i * 2.1));
+    const a = 0.3 * (0.5 + 0.5 * Math.sin(t * 3 + i * 2.1));
     ctx.fillStyle = `rgba(200,215,255,${a.toFixed(3)})`;
     ctx.beginPath();
-    ctx.arc(x, y, 0.7, 0, TAU);
+    ctx.arc(x, y, 0.6, 0, TAU);
     ctx.fill();
   });
 
@@ -525,25 +553,36 @@ function animConstellation(ctx: CanvasRenderingContext2D, t: number): void {
     [4, 12, 3.2],
   ];
 
-  // A light pulse sweeps the path position 0..1 each loop.
-  const pulse = loopPhase(t, 3.4); // 0..1 head of the travelling spark
+  // A light pulse sweeps the path position 0..1 each loop. Slightly faster so
+  // the travelling draw is unmistakable as motion (not a slow creep).
+  const pulse = loopPhase(t, 2.8); // 0..1 head of the travelling spark
+  // Shortest circular distance from `pulse` to a path param `p` (wraps at 1).
+  const circDist = (p: number): number => {
+    const d = Math.abs(((pulse - p + 1) % 1));
+    return Math.min(d, 1 - d);
+  };
 
-  // Connecting lines — base faint; a brighter segment glows where the pulse is.
-  // Draw each polyline segment with alpha boosted by proximity of `pulse`.
+  // Connecting lines — the line is DRAWN/IGNITED in sequence: a dim base so the
+  // figure is always faintly legible, and a bright wave that travels along the
+  // segments in order, so the eye clearly reads the constellation tracing itself.
   const segPos = [0.0, 0.28, 0.56, 0.8, 1.0]; // path param at each node
-  ctx.lineWidth = 1.1;
+  ctx.lineCap = "round";
   for (let i = 0; i < nodes.length - 1; i++) {
     const mid = (segPos[i] + segPos[i + 1]) / 2;
-    const near = Math.max(0, 1 - Math.abs(((pulse - mid + 1) % 1) - 0) * 3.0);
-    const aa = 0.4 + near * 0.5;
-    ctx.strokeStyle = `rgba(180,205,255,${clamp01(aa).toFixed(3)})`;
+    const near = Math.max(0, 1 - circDist(mid) * 4.0); // tight, bright crest
+    // Dim base + a strong travelling crest = obvious sequential draw.
+    const aa = 0.28 + near * 0.62;
+    ctx.lineWidth = 1.0 + near * 1.4; // the lit segment also thickens
+    ctx.strokeStyle = `rgba(190,215,255,${clamp01(aa).toFixed(3)})`;
     ctx.beginPath();
     ctx.moveTo(nodes[i][0], nodes[i][1]);
     ctx.lineTo(nodes[i + 1][0], nodes[i + 1][1]);
     ctx.stroke();
   }
+  ctx.lineCap = "butt";
   // Closing brace line (node 1 → node 4), faint static.
-  ctx.strokeStyle = "rgba(150,180,235,0.35)";
+  ctx.lineWidth = 1.0;
+  ctx.strokeStyle = "rgba(150,180,235,0.30)";
   ctx.beginPath();
   ctx.moveTo(nodes[1][0], nodes[1][1]);
   ctx.lineTo(nodes[4][0], nodes[4][1]);
@@ -557,14 +596,16 @@ function animConstellation(ctx: CanvasRenderingContext2D, t: number): void {
   const by = lerp(nodes[si][1], nodes[si + 1][1], sf);
   sparkle(ctx, bx, by, 2.0, 0.85, "220,235,255");
 
-  // Star nodes — each IGNITES as the pulse passes its path position.
+  // Star nodes — each IGNITES decisively as the pulse passes its path position,
+  // over a clearly staggered baseline twinkle (so the cluster reads as a sequence
+  // of bright winks running along the figure, not a uniform shimmer).
   nodes.forEach(([x, y, r], i) => {
-    const ignite = Math.max(0, 1 - Math.abs(((pulse - segPos[i] + 1) % 1) - 0) * 4.0);
-    // Baseline gentle breath so they never go fully dark, + ignition flare.
-    const tw = 0.35 + 0.15 * Math.sin(t * 2.4 + i * 1.7) + ignite * 0.6;
-    const scale = 0.85 + clamp01(tw) * 0.4;
+    const ignite = Math.max(0, 1 - circDist(segPos[i]) * 4.5);
+    // Baseline staggered breath so they never go fully dark, + a strong flare.
+    const tw = 0.3 + 0.22 * Math.sin(t * 2.4 + i * 1.9) + ignite * 0.85;
+    const scale = 0.8 + clamp01(tw) * 0.55;
     const rr = r * scale;
-    const glowR = rr * 2.3;
+    const glowR = rr * 2.5;
     const glow = ctx.createRadialGradient(x, y, 0.5, x, y, glowR);
     glow.addColorStop(0, `rgba(220,235,255,${clamp01(0.5 + tw * 0.45).toFixed(3)})`);
     glow.addColorStop(1, "rgba(160,195,255,0)");

@@ -17,7 +17,6 @@ import {
   beat,
   easeInOutSine,
   easeOutCubic,
-  easeOutBack,
   groundShadow,
   glint,
   sparkle,
@@ -46,18 +45,22 @@ function animCandle(ctx: CanvasRenderingContext2D, t: number): void {
   const g = beat(t, 3.6, 0.32); // shove window (0→1→0)
   const gustLean = g * 4.2; // hard lean during the gust
   const gutter = g * (0.55 + 0.25 * Math.sin(base * 9)); // height collapse on gust
-  // Recover flare: a damped overshoot right after the gust window ends.
+  // Recover flare: a damped overshoot right after the gust window ends. Kept
+  // SMALL (0.06) so the post-gust recovery never blooms into a white-out that
+  // pops against the calmer rest frame on loop.
   const recover = gustCycle > 0.32 && gustCycle < 0.6
-    ? Math.sin(((gustCycle - 0.32) / 0.28) * Math.PI) * 0.12
+    ? Math.sin(((gustCycle - 0.32) / 0.28) * Math.PI) * 0.06
     : 0;
 
   const sway = idle + gustLean * easeInOutSine(g);
   const flick = 0.92 + flickIdle - gutter * 0.5 + recover;
   const flameTipY = -23 - (flick - 0.92) * 6 + gutter * 5; // shorter when guttering
-  const glowPulse = 0.55 + Math.sin(base * 3) * 0.14 + (flick - 0.92) * 1.0 - gutter * 0.5;
+  // Glow pulse: lower base + gentler flick coupling so the halo breathes warmly
+  // without ever clipping to a bloom. Peaks well under the old ~0.8 white-out.
+  const glowPulse = 0.46 + Math.sin(base * 3) * 0.1 + (flick - 0.92) * 0.55 - gutter * 0.5;
 
   // Contact shadow brightens/sharpens a touch as the flame flares.
-  groundShadow(ctx, 0, 23, 13, 3.5, 0, 0.24 + Math.max(0, flick - 0.95) * 0.4);
+  groundShadow(ctx, 0, 23, 13, 3.5, 0, 0.24 + Math.max(0, flick - 0.95) * 0.2);
 
   // Warm flame glow (pulsing, follows the sway)
   const glow = ctx.createRadialGradient(sway * 0.5, -16, 1, sway * 0.5, -14, 20);
@@ -172,7 +175,8 @@ function animCandle(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.fill();
 
   // Flame inner bright core — taller when the flame is tall, ducks on a gust.
-  ctx.fillStyle = `rgba(255,255,255,${clamp01(0.78 + (flick - 0.92) * 1.2 - gutter * 0.6)})`;
+  // Coupling toned down so the core stays a warm white, never a flat blow-out.
+  ctx.fillStyle = `rgba(255,255,255,${clamp01(0.72 + (flick - 0.92) * 0.7 - gutter * 0.6)})`;
   ctx.beginPath();
   ctx.ellipse(cx * 0.6, -14, 1.6, Math.max(1, 3.0 + (flick - 0.92) * 4 - gutter * 3), 0, 0, TAU);
   ctx.fill();
@@ -611,7 +615,9 @@ function animRunestone(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.translate(0, -2.8); // re-frame: was sitting ~2.8u low
 
   const bob = breathe(t, 3.0, 1.6, 0); // slow levitation
-  const tilt = Math.sin((t / 4.2) * TAU) * 0.04; // faint drift tilt
+  // Tilt demoted to a barely-there drift: the LIFE is in the runes' glow cycle,
+  // not a stiff whole-body pendulum (which read as the sprite being rotated).
+  const tilt = Math.sin((t / 5.4) * TAU) * 0.012;
 
   groundShadow(ctx, 0, 23, 15, 3.5, bob, 0.28);
 
@@ -677,41 +683,36 @@ function animRunestone(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.fillRect(-13, -21, 27, 45);
   ctx.restore();
 
-  // Sequential ignition: one master cycle lights rune 0, then 1, then 2, each
-  // with its own flare window, so the runes "charge" in turn instead of all
-  // throbbing together. `lit(i)` is that rune's 0..1 glow.
-  const cyclePhase = loopPhase(t, 4.2); // whole ignition cycle
+  // The runes are alive in their OWN right: each carved glyph breathes through a
+  // continuous glow cycle (never latching to a flat-lit hold), and a brighter
+  // "charge" wave travels rune 0→1→2 on a beat so the energy reads as flowing
+  // through the stone rather than the slab being rocked. `lit(i)` is rune i's
+  // 0..1 glow — it loops seamlessly (pure periodic helpers, no hold-then-snap).
   const lit = (i: number): number => {
-    const start = i * 0.26;
-    const local = (cyclePhase - start) / 0.26;
-    if (local < 0) {
-      // pre-ignite: a faint resting ember so it's never fully dark
-      return 0.18;
-    }
-    if (local < 1) {
-      // ignite: fast flare up, then ease to a steady hold
-      return 0.18 + 0.82 * easeOutBack(clamp01(local), 1.6);
-    }
-    return 1; // held lit for the rest of the cycle
+    // Continuous gentle breath, phase-staggered per rune (≈0.32 base..0.7 idle).
+    const breath = 0.5 + 0.18 * Math.sin(((t / 1.8) - i * 0.22) * TAU);
+    // A travelling charge surge that sweeps through the three runes in turn.
+    const surge = beat(t, 3.2, 0.3, (i * 0.18) % 1);
+    return clamp01(0.32 + breath * 0.45 + surge * 0.4);
   };
 
   const drawRune = (i: number, body: () => void, sparkAt: [number, number]): void => {
     const p = lit(i);
     ctx.save();
-    ctx.strokeStyle = `rgba(122,208,255,${clamp01(0.4 + 0.6 * p)})`;
-    ctx.lineWidth = 2 + p * 0.6;
+    ctx.strokeStyle = `rgba(122,208,255,${clamp01(0.35 + 0.65 * p)})`;
+    ctx.lineWidth = 2 + p * 0.7;
     ctx.lineCap = "round";
     // A soft halo under the stroke (stub-safe: no shadowBlur reliance) by
-    // stroking a faint wider pass first.
+    // stroking a faint wider pass first — wider/brighter on the surge.
     ctx.save();
-    ctx.strokeStyle = `rgba(120,190,255,${clamp01(0.22 * p)})`;
-    ctx.lineWidth = 4.5 + p * 1.5;
+    ctx.strokeStyle = `rgba(130,200,255,${clamp01(0.3 * p)})`;
+    ctx.lineWidth = 4.5 + p * 2.2;
     body();
     ctx.restore();
     body();
     ctx.restore();
-    // Ignition spark at the rune's tip right as it catches.
-    const igniteBeat = beat(t, 4.2, 0.1, (i * 0.26) % 1);
+    // Charge spark at the rune's tip right as its surge peaks.
+    const igniteBeat = beat(t, 3.2, 0.12, (i * 0.18) % 1);
     if (igniteBeat > 0.01) {
       sparkle(ctx, sparkAt[0], sparkAt[1], 1.3 + igniteBeat * 0.9, igniteBeat * 0.9, "190,230,255");
     }
@@ -763,29 +764,37 @@ function animMagicDust(ctx: CanvasRenderingContext2D, t: number): void {
   // Re-frame: shift the action left & up so it's centred, not crammed upper-right.
   ctx.translate(-6.0, -3.2);
 
-  // Pour beat: rest upright, then tip to pour, hold, recover. `beat` gates the
-  // actual stream + squash so at rest the pouch is closed and quiet.
+  // The pouch is ALWAYS alive: a continuous gentle bob + a breathing belly
+  // squash (period 2.0s) so the body itself moves, not just an overlay. The pour
+  // beat is now a secondary accent on top of that.
+  const bob = breathe(t, 2.0, 1.3, 0); // vertical float, loops
+  const breathS = breathe(t, 2.0, 0.04, 0, 0.1); // belly inflate/deflate
+
+  // Pour beat: rest, then tip to pour, recover. `beat` gates the dust STREAM so
+  // the spill only flows on the pour; the body keeps bobbing the whole time.
   const pour = beat(t, 4.0, 0.55); // 0 at rest, 0→1→0 while pouring
   const tip = pour * 0.42; // radians the pouch rotates to pour
-  const squash = 1 + pour * 0.08; // belly bulges as it tips and empties
+  const squash = 1 + pour * 0.08 + breathS; // pour bulge + continuous breath
 
-  // Glow tracks the pour mouth, gently pulsing and flaring while pouring.
-  const glowPulse = 0.5 + Math.sin((t / 2.6) * TAU) * 0.12 + pour * 0.18;
+  // Glow: a single periodic driver tied to the bob period so it RETURNS to its
+  // frame-1 value each loop (no endless swell), with a small flare while pouring.
+  const glowPulse = clamp01(0.46 + Math.sin((t / 2.0) * TAU) * 0.1 + pour * 0.16);
 
-  groundShadow(ctx, 2, 23, 13, 3.5, 0, 0.25);
+  groundShadow(ctx, 2, 23, 13, 3.5, bob, 0.25);
 
-  const glow = ctx.createRadialGradient(10, 4, 2, 10, 4, 22);
-  glow.addColorStop(0, `rgba(255,220,120,${clamp01(glowPulse)})`);
-  glow.addColorStop(0.6, "rgba(255,200,80,0.18)");
+  const glow = ctx.createRadialGradient(8, 2, 2, 8, 2, 22);
+  glow.addColorStop(0, `rgba(255,220,120,${glowPulse})`);
+  glow.addColorStop(0.6, "rgba(255,200,80,0.16)");
   glow.addColorStop(1, "rgba(255,200,80,0)");
   ctx.fillStyle = glow;
   ctx.beginPath();
-  ctx.arc(10, 4, 22, 0, TAU);
+  ctx.arc(8, 2, 22, 0, TAU);
   ctx.fill();
 
-  // Tip + squash the pouch about its lower body (~(-3, 16)) so the mouth swings
-  // toward the spill. Drawn body unchanged otherwise.
+  // Bob the whole pouch, then tip + squash about its lower body (~(-3, 16)) so
+  // the mouth swings toward the spill during a pour.
   ctx.save();
+  ctx.translate(0, bob);
   ctx.translate(-3, 16);
   ctx.rotate(tip);
   ctx.scale(squash, 2 - squash);
@@ -863,16 +872,18 @@ function animMagicDust(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.fill();
   }
 
-  // A few drifting motes rising from the mouth (ambient, always faintly present).
-  for (let i = 0; i < 4; i++) {
-    const ph = loopPhase(t, 2.4, (i * 0.31) % 1);
-    const mx = 4 + Math.sin(ph * 5 + i) * 3;
-    const my = -4 - ph * 12;
-    const ma = Math.max(0, Math.sin(ph * Math.PI)) * 0.7;
+  // Dust motes CONTINUOUSLY lifting out of the mouth (ambient, always present
+  // even at rest) — this is the always-on "magic dust" life, drifting up and
+  // fading, so the pouch reads as active without depending on the pour beat.
+  for (let i = 0; i < 7; i++) {
+    const ph = loopPhase(t, 2.2, (i * 0.37) % 1);
+    const mx = 3 + (i % 3 - 1) * 2.2 + Math.sin(ph * 5 + i) * 3 + bob * 0.3;
+    const my = -3 + bob - ph * 15;
+    const ma = Math.max(0, Math.sin(ph * Math.PI)) * 0.8;
     if (ma <= 0.02) continue;
-    ctx.fillStyle = `rgba(255,235,150,${ma})`;
+    ctx.fillStyle = `rgba(255,236,156,${ma})`;
     ctx.beginPath();
-    ctx.arc(mx, my, 0.8 + (1 - ph) * 0.4, 0, TAU);
+    ctx.arc(mx, my, 0.7 + (1 - ph) * 0.7, 0, TAU);
     ctx.fill();
   }
 
@@ -907,11 +918,17 @@ function animPentacle(ctx: CanvasRenderingContext2D, t: number): void {
   const outerRot = Math.sin((t / 4.0) * TAU) * 0.14;
   const innerRot = -Math.sin((t / 3.2) * TAU) * 0.18;
 
-  // Ritual cycle: the pentagram is drawn on (drawProg 0..1), held + pulsed, then
-  // a quick fade resets it. One master loop keeps everything in lockstep.
+  // Ritual cycle (a TRUE loop, not a one-shot): the pentagram INSCRIBES over the
+  // first ~45%, HOLDS fully drawn + pulsing through the middle, then UN-INSCRIBES
+  // back to an empty disc over the last ~22% — so drawProg returns to 0 at the
+  // wrap and the bright completed frame never hard-cuts to a blank first frame.
   const cycle = loopPhase(t, 5.0);
-  const drawProg = easeInOutSine(clamp01(cycle / 0.55)); // strokes appear over first 55%
-  const holdPulse = beat(t, 5.0, 0.22, 0.6); // a bright pulse once fully drawn
+  const drawProg = (() => {
+    if (cycle < 0.45) return easeInOutSine(cycle / 0.45); // inscribe 0→1
+    if (cycle < 0.78) return 1; // hold fully drawn
+    return easeInOutSine(1 - (cycle - 0.78) / 0.22); // un-inscribe 1→0
+  })();
+  const holdPulse = beat(t, 5.0, 0.22, 0.5); // a bright pulse during the hold
 
   // Outer ambient glow (pulsing, flares on the ritual pulse)
   const glow = ctx.createRadialGradient(0, 0, 4, 0, 0, 24);
