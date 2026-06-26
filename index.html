@@ -94,33 +94,25 @@
 
       .boot-hearth { position: relative; z-index: 1; width: 150px; height: 188px; overflow: visible; }
       .boot-hearth .glow { fill: url(#bootGlowGrad); transform-box: fill-box; transform-origin: 50% 70%; animation: bootGlow 1.9s ease-in-out infinite; }
-      .boot-hearth .flame { transform-box: fill-box; transform-origin: 50% 100%; will-change: transform; filter: drop-shadow(0 0 6px rgba(255,150,50,.45)); }
-      .boot-hearth .flame--outer { fill: url(#bootFlOuter); animation: bootFlameA 1.45s ease-in-out infinite; }
-      .boot-hearth .flame--mid   { fill: url(#bootFlMid);   animation: bootFlameB 1.05s ease-in-out infinite; }
-      .boot-hearth .flame--core  { fill: url(#bootFlCore);  animation: bootFlameC 0.78s ease-in-out infinite; }
-      .boot-hearth .flame--lick  { fill: url(#bootFlMid); opacity: 0; animation: bootLick 1.3s ease-in-out infinite; }
+      /* Every flame level lives in one group and shares ONE transform, so the
+         whole tongue flickers and sways as a single body — the inner levels stay
+         nested inside the outer envelope instead of drifting on their own clocks
+         (the old per-layer animations). Only the white-hot core pulses, and that
+         is opacity-only, which can't pull the levels out of register. */
+      .boot-flames { transform-box: fill-box; transform-origin: 50% 100%; will-change: transform; filter: drop-shadow(0 0 7px rgba(255,150,50,.5)); animation: bootFlame 1.5s ease-in-out infinite; }
+      .boot-hearth .flame--outer { fill: url(#bootFlOuter); }
+      .boot-hearth .flame--mid   { fill: url(#bootFlMid); }
+      .boot-hearth .flame--core  { fill: url(#bootFlCore); animation: bootCore 0.9s ease-in-out infinite; }
       .boot-hearth .logember { fill: url(#bootEmberGrad); transform-box: fill-box; transform-origin: 50% 50%; animation: bootCoal 1.6s ease-in-out infinite; }
       .boot-hearth .logember--b { animation-duration: 2.2s; animation-delay: -.7s; }
-      @keyframes bootFlameA {
+      @keyframes bootFlame {
         0%,100% { transform: translateY(0) scale(1,1) skewX(0deg); }
-        20% { transform: translateY(-2px) scale(.96,1.07) skewX(2.5deg); }
-        42% { transform: translateY(0) scale(1.04,.96) skewX(-2deg); }
-        63% { transform: translateY(-3px) scale(.95,1.09) skewX(1.5deg); }
-        82% { transform: translateY(-1px) scale(1.02,.99) skewX(-1.5deg); }
+        22% { transform: translateY(-1.5px) scale(.985,1.05) skewX(2deg); }
+        45% { transform: translateY(0) scale(1.03,.975) skewX(-1.5deg); }
+        68% { transform: translateY(-2px) scale(.975,1.06) skewX(1.5deg); }
+        85% { transform: translateY(-1px) scale(1.005,.99) skewX(-1deg); }
       }
-      @keyframes bootFlameB {
-        0%,100% { transform: translateY(0) scale(1,1) skewX(0deg); }
-        25% { transform: translateY(-2px) scale(1.05,.95) skewX(-3deg); }
-        50% { transform: translateY(-4px) scale(.93,1.12) skewX(2deg); }
-        75% { transform: translateY(-1px) scale(1.03,.98) skewX(-1.5deg); }
-      }
-      @keyframes bootFlameC { 0%,100% { transform: scale(1,1); opacity: 1; } 50% { transform: translateY(-3px) scale(.88,1.18); opacity: .86; } }
-      @keyframes bootLick {
-        0%,100% { transform: translateY(0) scaleY(.6); opacity: 0; }
-        28% { opacity: .8; }
-        55% { transform: translateY(-12px) scaleY(1.15); opacity: .55; }
-        80% { transform: translateY(-20px) scaleY(.85); opacity: 0; }
-      }
+      @keyframes bootCore { 0%,100% { opacity: 1; } 50% { opacity: .8; } }
       @keyframes bootGlow { 0%,100% { opacity: .32; transform: scale(1); } 50% { opacity: .58; transform: scale(1.12); } }
       @keyframes bootCoal { 0%,100% { opacity: .45; } 50% { opacity: 1; } }
 
@@ -148,9 +140,8 @@
       .boot-bar__fill { width: 42%; height: 100%; border-radius: 999px; background: linear-gradient(90deg, #e2b24a, #e0631f); animation: bootSlide 1.35s cubic-bezier(.45,0,.55,1) infinite; }
       @keyframes bootSlide { 0% { transform: translateX(-130%); } 100% { transform: translateX(360%); } }
       @media (prefers-reduced-motion: reduce) {
-        .boot-cloud, .boot-bloom, .boot-embers span, .boot-hearth .flame, .boot-hearth .glow, .boot-hearth .logember, .boot-title, .boot-bar__fill { animation: none; }
+        .boot-cloud, .boot-bloom, .boot-embers span, .boot-flames, .boot-hearth .flame--core, .boot-hearth .glow, .boot-hearth .logember, .boot-title, .boot-bar__fill { animation: none; }
         .boot-embers { display: none; }
-        .boot-hearth .flame--lick { display: none; }
         .boot-bar__fill { width: 100%; opacity: .8; }
       }
     </style>
@@ -204,10 +195,11 @@
           <rect x="-38" y="44" width="76" height="13" rx="6.5" fill="url(#bootLog)" transform="rotate(9)"></rect>
           <circle class="logember" cx="-6" cy="47" r="3.4"></circle>
           <circle class="logember logember--b" cx="8" cy="49" r="2.6"></circle>
-          <path class="flame flame--outer" d="M -27,43 C -38,6 -19,-18 0,-60 C 19,-18 38,6 27,43 C 14,56 -14,56 -27,43 Z"></path>
-          <path class="flame flame--mid"   d="M -17,43 C -24,12 -12,-10 0,-40 C 12,-10 24,12 17,43 C 9,54 -9,54 -17,43 Z"></path>
-          <path class="flame flame--core"  d="M -9,43 C -13,20 -6,2 0,-22 C 6,2 13,20 9,43 C 5,50 -5,50 -9,43 Z"></path>
-          <path class="flame flame--lick"  d="M -5,40 C -8,22 -3,8 0,-14 C 3,8 8,22 5,40 C 3,46 -3,46 -5,40 Z"></path>
+          <g class="boot-flames">
+            <path class="flame flame--outer" d="M -27,43 C -38,6 -19,-18 0,-60 C 19,-18 38,6 27,43 C 14,56 -14,56 -27,43 Z"></path>
+            <path class="flame flame--mid"   d="M -17,43 C -24,12 -12,-10 0,-40 C 12,-10 24,12 17,43 C 9,54 -9,54 -17,43 Z"></path>
+            <path class="flame flame--core"  d="M -9,43 C -13,20 -6,2 0,-22 C 6,2 13,20 9,43 C 5,50 -5,50 -9,43 Z"></path>
+          </g>
         </svg>
         <div class="boot-embers" aria-hidden="true">
           <span style="--ox:-22px; --d:-1.1; --s:.9; --dur:3.6s; --delay:-0.2s"></span>
