@@ -141,6 +141,21 @@ export class TownScene extends Phaser.Scene {
     // scene with plan data after boot), which otherwise warns "key already in use".
     if (!this.textures.exists("tileset")) this.load.image("tileset", "town/tileset.png");
     if (!this.textures.exists("character")) this.load.atlas("character", "town/character-atlas.png", "town/character-atlas.json");
+
+    // Rasterize the building SVGs through the loader so they're in the texture
+    // cache BEFORE create() runs its first rebuildBuildingsAndPlots. Baking them
+    // in create() (the old path) decoded each via an async Image.onload, so the
+    // ground/plots painted immediately and the buildings only "blinked in" a
+    // frame or two later when each decode resolved. Going through preload makes
+    // the loader hold create() until they're ready, so the town renders atomically.
+    // The registry is set in TownPhaserCanvas's postBoot before the plan-carrying
+    // restart, so svgMap is present on every pass where create() actually runs
+    // (the dataless auto-start pass bails in create()).
+    const svgMap = (this.registry.get("hwv.svgMap") as Record<string, string>) || {};
+    for (const [id, svg] of Object.entries(svgMap)) {
+      const key = `building_${id}`;
+      if (!this.textures.exists(key)) this.load.image(key, this.buildingSvgDataUri(svg));
+    }
   }
 
   create() {
@@ -152,7 +167,8 @@ export class TownScene extends Phaser.Scene {
     if (!this.plan) return;
     this.bakeSpriteTextures();
     this.bakeTownTiles();
-    this.bakeBuildingTextures();
+    // Building SVG textures are rasterized in preload() (see there) so they're
+    // ready before the first rebuildBuildingsAndPlots below — no async pop-in.
     this.createCharacterAnims();
     ensureSmokeTextures(this);
 
@@ -254,9 +270,25 @@ export class TownScene extends Phaser.Scene {
     [PINE, TREE2, FOUNTAIN, BUSH, SIGN, ROCK, ORE].forEach((r) => this.bakeRecipe(r));
   }
 
-  bakeBuildingTextures() {
-    const svgMap = this.registry.get("hwv.svgMap") as Record<string, string> || {};
-    Object.entries(svgMap).forEach(([id, svg]) => this.bakeSvgTexture(`building_${id}`, svg));
+  /**
+   * Inject an explicit `xmlns` + pixel width/height into a building's SVG markup
+   * and return it as a rasterizable data URI. The building SVGs size themselves
+   * via `viewBox` + Tailwind `w-full h-full`, which carry no intrinsic dimensions
+   * when rasterized standalone (no CSS context) — without this they'd decode at
+   * 0×0. We bake at 3× the viewBox for crispness, then the sprite scales to the
+   * lot. `renderToStaticMarkup` emits no `xmlns`, so the data URI would otherwise
+   * be parsed as generic XML and rejected by <img>. Consumed by the preload loader.
+   */
+  buildingSvgDataUri(svg: string): string {
+    const SCALE = 3;
+    const vb = svg.match(/viewBox="([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)"/);
+    const vbw = vb ? parseFloat(vb[3]) : 100;
+    const vbh = vb ? parseFloat(vb[4]) : 100;
+    const w = Math.max(1, Math.round(vbw * SCALE));
+    const h = Math.max(1, Math.round(vbh * SCALE));
+    const attrs = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"`;
+    const sized = svg.replace(/<svg\b/, attrs);
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(sized);
   }
 
   /**
@@ -1018,32 +1050,4 @@ export class TownScene extends Phaser.Scene {
     });
   }
 
-  bakeSvgTexture(key: string, svg: string) {
-    if (this.textures.exists(key)) return;
-    // The building SVGs size themselves via `viewBox` + Tailwind `w-full h-full`
-    // classes, which carry no intrinsic dimensions when rasterized standalone
-    // (no CSS context). Inject explicit pixel width/height from the viewBox so
-    // `new Image()` rasterizes at a known, crisp resolution instead of 0×0.
-    const SCALE = 3;
-    const vb = svg.match(/viewBox="([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)"/);
-    const vbw = vb ? parseFloat(vb[3]) : 100;
-    const vbh = vb ? parseFloat(vb[4]) : 100;
-    const w = Math.max(1, Math.round(vbw * SCALE));
-    const h = Math.max(1, Math.round(vbh * SCALE));
-    // `renderToStaticMarkup` does not emit an `xmlns`, so the data URI would be
-    // parsed as generic XML and rejected by <img>. Inject the SVG namespace plus
-    // explicit pixel dimensions into the root element.
-    const attrs = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"`;
-    const sized = svg.replace(/<svg\b/, attrs);
-    const img = new Image();
-    img.width = w;
-    img.height = h;
-    img.onload = () => {
-      if (this.textures.exists(key)) return;
-      this.textures.addImage(key, img);
-      this.rebuildBuildingsAndPlots();
-    };
-    img.onerror = () => console.warn("[town] failed to bake building SVG", key);
-    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(sized);
-  }
 }
