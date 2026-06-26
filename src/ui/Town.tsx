@@ -13,7 +13,9 @@ import { isBiomeLocked, canEnterBiome } from "../state/biomeAccess.js";
 import { buildTownPlan } from "../townLayout.js";
 import TownPhaserCanvas from "./TownPhaserCanvas.jsx";
 import Icon from "./Icon.jsx";
+import DesignIcon from "./primitives/Icon.jsx";
 import BuildingIllustration from "./buildings/index.jsx";
+import { RequirementChip } from "./primitives/Chip.jsx";
 import { TOWN_THEMES, TOWN_BIOME_CONFIGS, LOCATION_TOWN_CONFIGS, type TownBiomeConfig } from "./town/config.js";
 import {
   BrowserDetailLayout,
@@ -561,20 +563,31 @@ interface CostEntry {
   label: string;
   amount: number;
   have: number;
+  ok: boolean;
+  icon?: React.ReactNode;
   showHave: boolean;
   check: boolean;
 }
 
 function buildingCostEntries(building: Building | null | undefined, state: GameState): CostEntry[] {
   const locInv = zoneInventory(state);
-  return Object.entries(building?.cost ?? {}).map(([key, amount]) => ({
-    key,
-    label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : getItem(key)?.label || key,
-    amount: Number(amount),
-    have: key === "coins" ? state.coins ?? 0 : key === "runes" ? state.runes ?? 0 : inventoryQty(locInv, key),
-    showHave: true,
-    check: true,
-  }));
+  return Object.entries(building?.cost ?? {}).map(([key, amount]) => {
+    const have = key === "coins" ? state.coins ?? 0 : key === "runes" ? state.runes ?? 0 : inventoryQty(locInv, key);
+    return {
+      key,
+      label: key === "coins" ? "Coins" : key === "runes" ? "Runes" : getItem(key)?.label || key,
+      amount: Number(amount),
+      have,
+      ok: have >= Number(amount),
+      icon: key === "coins"
+        ? <DesignIcon iconKey="design.currency.coin" size={18} />
+        : key === "runes"
+          ? undefined
+          : <Icon iconKey={key} size={18} />,
+      showHave: true,
+      check: true,
+    };
+  });
 }
 
 interface BuildingRow {
@@ -621,6 +634,21 @@ function buildingRows(
   });
 }
 
+function BuildCostSummary({ building, state }: { building: Building; state: GameState }) {
+  const entries = buildingCostEntries(building, state);
+  if (!entries.length) return null;
+  return (
+    <div className="flex flex-wrap gap-0.5 mt-0.5">
+      {entries.map(({ key, label, amount, have, ok }) => (
+        <RequirementChip key={key} ok={ok}>
+          <span className="truncate">{label}</span>
+          <span className="tabular-nums">{have}/{amount}</span>
+        </RequirementChip>
+      ))}
+    </div>
+  );
+}
+
 interface BuildPickerProps {
   buildings: Building[];
   state: GameState;
@@ -665,7 +693,9 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
                     title={b.name}
                     subtitle={isBuilt ? "Built" : reason || "Ready to place"}
                     onClick={() => setSelectedId(b.id)}
-                  />
+                  >
+                    {!isBuilt && <BuildCostSummary building={b} state={state} />}
+                  </BrowserItemButton>
                 ))}
               </BrowserGrid>
             }
