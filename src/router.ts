@@ -50,11 +50,9 @@ export const KNOWN_MODALS = new Set<string>([
 // Short alias used in URLs in place of the longer camelCase view key.
 const VIEW_ALIASES: Record<string, string> = {
   tiles: "tileCollection",
-  wiki: "recipeWiki",
 };
 const VIEW_ALIASES_REVERSE: Record<string, string> = {
   tileCollection: "tiles",
-  recipeWiki: "wiki",
 };
 
 // Views that accept a single `tab` segment after the view name. Each view's
