@@ -22,7 +22,6 @@ import {
   breathe,
   beat,
   easeInOutSine,
-  easeOutBack,
   windupOvershoot,
   groundShadow,
   glint,
@@ -290,17 +289,19 @@ function animButterfly(ctx: CanvasRenderingContext2D, t: number): void {
 }
 
 // ---------------------------------------------------------------------------
-// bug_ladybug — recentred up; a genuine WING-FLASH: the two shell halves split
-// open on a periodic beat (anticipation dip → overshoot) revealing translucent
-// flight wings, then snap shut. Spots, seam and gloss are drawn in ONE pass on
-// the unsplit dome (so nothing tears at the seam); only the halves themselves
-// hinge for the flash. A small step-wobble keeps it grounded.
+// bug_ladybug — recentred up; the two shell halves breathe open and shut in a
+// CONTINUOUS gentle cycle (eased there-and-back, no frozen-dome rest), parting
+// just enough to flash the translucent flight wings beneath, then easing closed
+// again. Spots, seam and gloss are drawn in ONE pass on the unsplit dome (so
+// nothing tears at the seam); only the halves themselves hinge. A small
+// step-wobble keeps it grounded.
 function animLadybug(ctx: CanvasRenderingContext2D, t: number): void {
   const wobble = Math.sin(t * 5.0) * 0.05;
   const stepBob = Math.abs(Math.sin(t * 5.0)) * 1.4; // bigger gait bob
-  // Flash beat: rest closed, then a fast open with overshoot and a settle shut.
-  const flashRaw = beat(t, 4.2, 0.34); // 0 most of the cycle, one 0→1→0 pulse
-  const open = easeOutBack(flashRaw, 2.4) * 0.85; // radians each half lifts
+  // Continuous open-close breath: eased 0..1 there-and-back so the shell never
+  // sits frozen and the loop seam is smooth (no snap from dome back to split).
+  const openPhase = pingPong(t, 2.4); // 0 shut .. 1 open .. 0 shut
+  const open = openPhase * 0.6; // radians each half lifts (gentler than the old flash)
   const antTwitch = Math.sin(t * 9.0) * 1.8;
 
   groundShadow(ctx, 0, 22, 14, 4, stepBob, 0.24);
@@ -353,7 +354,7 @@ function animLadybug(ctx: CanvasRenderingContext2D, t: number): void {
     ctx.stroke();
   });
 
-  // Flight wings revealed under the shell during the flash (translucent, buzz).
+  // Flight wings revealed under the shell as it parts (translucent, buzzing).
   if (open > 0.04) {
     const buzz = Math.sin(t * 40) * 1.2;
     ([-1, 1] as number[]).forEach((side) => {
@@ -361,8 +362,8 @@ function animLadybug(ctx: CanvasRenderingContext2D, t: number): void {
       ctx.translate(0, 2);
       ctx.scale(side, 1);
       const fw = ctx.createLinearGradient(0, 0, 16, 8);
-      fw.addColorStop(0, `rgba(70,80,110,${0.55 * clamp01(flashRaw)})`);
-      fw.addColorStop(1, `rgba(160,180,210,${0.18 * clamp01(flashRaw)})`);
+      fw.addColorStop(0, `rgba(70,80,110,${0.55 * clamp01(openPhase)})`);
+      fw.addColorStop(1, `rgba(160,180,210,${0.18 * clamp01(openPhase)})`);
       ctx.fillStyle = fw;
       ctx.beginPath();
       ctx.moveTo(1, -2);
@@ -404,7 +405,7 @@ function animLadybug(ctx: CanvasRenderingContext2D, t: number): void {
   // open we fade it so it reads as belonging to the (now-split) shell rather
   // than floating; clip keeps spots inside the dome.
   ctx.save();
-  ctx.globalAlpha = 1 - clamp01(open / 0.85) * 0.85;
+  ctx.globalAlpha = 1 - clamp01(openPhase) * 0.85;
   ctx.beginPath();
   ctx.arc(0, 4, 14, 0, TAU);
   ctx.clip();
@@ -440,11 +441,12 @@ function animLadybug(ctx: CanvasRenderingContext2D, t: number): void {
 // the rigid shell, and the eye stalks sway with follow-through.
 function animSnail(ctx: CanvasRenderingContext2D, t: number): void {
   // Inch cycle: forward reach (foot stretches, leading edge advances) then a
-  // gather (foot bunches as the shell catches up). Eased there-and-back.
-  const reach = pingPong(t, 1.9); // 0 gathered .. 1 reaching
-  const footStretch = lerp(0.92, 1.12, easeInOutSine(reach)); // x-scale of FOOT only
-  const lead = lerp(-1.2, 1.8, easeInOutSine(reach)); // head/foot leading edge creep (−x = forward)
-  const stalkSway = Math.sin(t * 2.2) * 1.8;
+  // gather (foot bunches as the shell catches up). Eased there-and-back, with a
+  // visible amplitude so it genuinely inches rather than just twitching.
+  const reach = pingPong(t, 2.2); // 0 gathered .. 1 reaching
+  const footStretch = lerp(0.86, 1.18, easeInOutSine(reach)); // x-scale of FOOT only
+  const lead = lerp(-2.6, 3.4, easeInOutSine(reach)); // head/foot leading edge creep (−x = forward)
+  const stalkSway = Math.sin(t * 1.6) * 3.2; // slow, clearly visible eyestalk sway
 
   groundShadow(ctx, 0, 22, 18, 4, 0, 0.24);
 
@@ -555,60 +557,64 @@ function animSnail(ctx: CanvasRenderingContext2D, t: number): void {
 
 // ---------------------------------------------------------------------------
 // bug_dragonfly — thickened, raised and recentred (was a 3px stick sitting low
-// with a detached shadow); the four wings render as GHOSTED motion-blur (a few
-// stacked low-alpha copies fanned by the beat) instead of a rigid flutter, and
-// the whole insect DARTS with anticipation (a wind-up dip → overshoot → settle)
-// rather than a constant slide.
+// with a detached shadow). The four wings now beat FAST and visibly: each wing
+// sweeps through a wide up/down arc, the two pairs beating in opposition, with a
+// few stacked low-alpha ghost copies smearing the fast frames into a readable
+// blur. A gentle hover bob keeps it hanging in the air rather than skittering.
 function animDragonfly(ctx: CanvasRenderingContext2D, t: number): void {
-  // Dart cycle: rest, then a quick lunge with anticipation+overshoot, repeat on
-  // alternating axes so it skitters like a real dragonfly holding station.
-  const dPhaseX = loopPhase(t, 2.4);
-  const dPhaseY = loopPhase(t, 1.7, 0.3);
-  const dartX = (windupOvershoot(dPhaseX) - 0.5) * 7.0;
-  const dartY = (windupOvershoot(dPhaseY) - 0.5) * 4.0;
-  const tiltLag = Math.sin(t * 2.4 - 0.5) * 0.05; // body banks into the dart, lagging
+  // Gentle hover: a slow bob + tiny drift so it hangs in the air. A faint dart
+  // accent (anticipation→overshoot) keeps a little life without skittering.
+  const hoverY = Math.sin(t * 2.2) * 3.0;
+  const driftX = Math.sin(t * 1.1) * 2.2;
+  const dartX = (windupOvershoot(loopPhase(t, 3.2)) - 0.5) * 3.0;
+  const bodyY = hoverY;
+  const bodyX = driftX + dartX;
+  const tiltLag = Math.sin(t * 2.2 - 0.5) * 0.06; // body banks into the bob, lagging
 
-  groundShadow(ctx, dartX, 22, 12, 3.5, dartY + 9.2, 0.2);
+  groundShadow(ctx, bodyX, 22, 12, 3.5, bodyY + 9.2, 0.2);
 
   ctx.save();
-  ctx.translate(-0.1 * -1, -9.2); // re-frame up: off_y +9.2 (reads No@56px) → raise hard
-  ctx.translate(dartX, dartY);
+  ctx.translate(0.1, -9.2); // re-frame up: off_y +9.2 (reads No@56px) → raise hard
+  ctx.translate(bodyX, bodyY);
   ctx.rotate(-0.15 + tiltLag);
 
-  // Four wings as ghosted blur: for each wing draw 3 stacked copies at fanned
-  // tilt angles with falling alpha — the eye reads a buzzing translucent fan.
-  const wingDefs: Array<[number, number, number, number]> = [
-    [-1, -2, 0.1, 0.0], // upper-left
-    [1, -2, 0.1, 1.6], // upper-right
-    [-1, 2, -0.1, 3.1], // lower-left
-    [1, 2, -0.1, 4.7], // lower-right
+  // Four wings beating fast through a WIDE arc. The forewing pair and hindwing
+  // pair beat in opposition (dragonfly style). `wTilt` swings ±0.55 rad so the
+  // motion is unmistakable; 3 stacked ghost copies smear the fast frames.
+  const wingDefs: Array<[number, number, number]> = [
+    [-1, -2, 0], // forewing left  (in phase)
+    [1, -2, 0], // forewing right (in phase)
+    [-1, 2, Math.PI], // hindwing left  (anti-phase)
+    [1, 2, Math.PI], // hindwing right (anti-phase)
   ];
-  wingDefs.forEach(([side, oy, tilt, ph]) => {
-    const swing = Math.sin(t * 30 + ph); // very fast beat
+  wingDefs.forEach(([side, oy, ph]) => {
+    const swing = Math.sin(t * 34 + ph); // very fast beat
+    const baseTilt = swing * 0.55; // WIDE up/down sweep (was ±0.22)
     for (let g = 0; g < 3; g++) {
-      const ga = (g - 1) * 0.16; // ghost fan spread
-      const wTilt = tilt + swing * 0.22 + ga;
-      const alpha = (0.5 - g * 0.13) * (0.6 + 0.4 * (swing * 0.5 + 0.5));
+      const ga = (g - 1) * 0.2; // ghost fan spread = motion-blur smear
+      const wTilt = baseTilt + ga;
+      // Brighter and steadier so the wings actually read at small size.
+      const alpha = (0.7 - g * 0.18) * (0.7 + 0.3 * Math.abs(swing));
       ctx.save();
       ctx.translate(0, oy);
       ctx.scale(side, 1);
       ctx.rotate(wTilt);
-      const wing = ctx.createLinearGradient(0, 0, 22, 0);
-      wing.addColorStop(0, `rgba(200,240,255,${0.55 * alpha})`);
-      wing.addColorStop(1, `rgba(150,220,235,${0.3 * alpha})`);
+      const wing = ctx.createLinearGradient(0, 0, 24, 0);
+      wing.addColorStop(0, `rgba(205,245,255,${0.7 * alpha})`);
+      wing.addColorStop(1, `rgba(150,225,240,${0.4 * alpha})`);
       ctx.fillStyle = wing;
       ctx.beginPath();
       ctx.moveTo(0, 0);
-      ctx.bezierCurveTo(8, -4, 20, -3, 23, -1);
-      ctx.bezierCurveTo(20, 1, 8, 2, 0, 0);
+      ctx.bezierCurveTo(9, -5, 22, -4, 26, -1.5);
+      ctx.bezierCurveTo(22, 1.5, 9, 3, 0, 0);
       ctx.closePath();
       ctx.fill();
       if (g === 0) {
-        ctx.strokeStyle = "rgba(90,160,180,0.5)";
-        ctx.lineWidth = 0.7;
+        ctx.strokeStyle = "rgba(90,170,190,0.6)";
+        ctx.lineWidth = 0.8;
         ctx.beginPath();
         ctx.moveTo(2, 0);
-        ctx.lineTo(20, -1);
+        ctx.lineTo(23, -1.5);
         ctx.stroke();
       }
       ctx.restore();
@@ -672,8 +678,10 @@ function animFirefly(ctx: CanvasRenderingContext2D, t: number): void {
   const bobY = Math.sin(t * 1.6) * 3.0;
   const driftX = Math.sin(t * 1.0) * 2.2;
   const breath = breathe(t, 2.6, 0.5, 0.5); // 0..1 slow breathing
-  const flash = beat(t, 3.3, 0.16, 0.4); // a sharp bright spike once per cycle
-  const lum = clamp01(breath * 0.7 + flash); // combined luminance 0..1
+  // A gentle brightening accent once per cycle — eased and small so it rides ON
+  // the breath swell instead of popping past it as a single oversized flare.
+  const flash = beat(t, 3.3, 0.34, 0.4) * 0.22;
+  const lum = clamp01(breath * 0.78 + flash); // combined luminance 0..1
   // Abdomen pumps WITH the light.
   const pump = 1 + lum * 0.22;
 
@@ -738,8 +746,9 @@ function animFirefly(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.stroke();
   ctx.restore();
 
-  // A clean sparkle pings at the lantern tip on the flash.
-  sparkle(ctx, 13, 7, 1.4 + flash * 1.2, flash, "240,255,170");
+  // A clean sparkle pings softly at the lantern tip as the light swells.
+  const ping = beat(t, 3.3, 0.34, 0.4);
+  sparkle(ctx, 13, 7, 1.2 + ping * 1.0, ping * 0.7, "240,255,170");
 
   // Thorax
   const thorax = ctx.createRadialGradient(-4, -2, 1, -3, 0, 8);
@@ -787,13 +796,15 @@ function animFirefly(ctx: CanvasRenderingContext2D, t: number): void {
 // exaggerated (big alternating swing + lift), and the body BOBS and pitches in
 // sync with the gait so the whole ant scurries instead of jiggling in place.
 function animAnt(ctx: CanvasRenderingContext2D, t: number): void {
-  const gait = t * 8.0; // step clock
+  // Slower step clock so the shuffle reads as a deliberate walk at the sampled
+  // framerate (the old t*8.0 aliased into jitter that looked frozen).
+  const gait = t * 4.2; // step clock
   // Tripod gait: legs {0,2,4} vs {1,3,5} alternate. Body rides the gait — it
-  // lifts when a tripod plants and pitches slightly with the push.
-  const bob = Math.abs(Math.sin(gait)) * 1.6; // vertical bob, synced to steps
-  const advance = Math.sin(t * 4.0) * 1.6; // gentle fore/aft surge
-  const pitch = 0.05 + Math.sin(gait) * 0.04; // body rocks with each push
-  const antWiggle = Math.sin(t * 7.0) * 1.6;
+  // lifts when a tripod plants, surges fore/aft and pitches with each push.
+  const bob = Math.abs(Math.sin(gait)) * 2.6; // bigger vertical bob, synced to steps
+  const advance = Math.sin(gait) * 2.4; // fore/aft surge locked to the step
+  const pitch = 0.05 + Math.sin(gait) * 0.07; // body rocks with each push
+  const antWiggle = Math.sin(t * 5.0) * 2.6; // clearer antenna twitch
 
   groundShadow(ctx, -advance, 22, 16, 4, bob, 0.24);
 

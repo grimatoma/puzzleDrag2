@@ -47,13 +47,13 @@ td{padding:9px;vertical-align:top}
 <header>
   <h1>puzzleDrag2 — Icon &amp; Tile Audit + Fix Status</h1>
   <div class="sub">910 items reviewed; <b>337</b> flagged for fixes. Fixing worst-first (broken → major → minor), player-facing before unused. Each fix is rendered and adversarially verified. <b>Before</b> = audit render; <b>After</b> = post-fix render (animations play in-page).</div>
-  <div class="prog"><span style="width:99.1%;background:#9a8f7a" title="pending: 334"></span><span style="width:0.9%;background:#3a8a4f" title="verified: 3"></span></div>
-  <div class="legend"><span><i style="background:#9a8f7a"></i>pending (334)</span><span><i style="background:#3a7abf"></i>fixed (0)</span><span><i style="background:#3a8a4f"></i>verified (3)</span><span><i style="background:#c0392b"></i>failed (0)</span><span><i style="background:#7a746a"></i>skipped (0)</span></div>
+  <div class="prog"><span style="width:91.7%;background:#9a8f7a" title="pending: 309"></span><span style="width:8.3%;background:#3a8a4f" title="verified: 28"></span></div>
+  <div class="legend"><span><i style="background:#9a8f7a"></i>pending (309)</span><span><i style="background:#3a7abf"></i>fixed (0)</span><span><i style="background:#3a8a4f"></i>verified (28)</span><span><i style="background:#c0392b"></i>failed (0)</span><span><i style="background:#7a746a"></i>skipped (0)</span></div>
 </header>
 <div class="wrap">
   <div class="cards">
-    <div class="scard"><h3>Resolved</h3><div class="big">3 / 337</div><div class="legend"><span>0.9% of flagged</span></div></div>
-    <div class="scard"><h3>broken</h3><div class="big">1 / 2</div><div class="prog" style="height:8px"><span style="width:50%;background:#3a8a4f"></span></div></div><div class="scard"><h3>major</h3><div class="big">1 / 53</div><div class="prog" style="height:8px"><span style="width:1.8867924528301887%;background:#3a8a4f"></span></div></div><div class="scard"><h3>minor</h3><div class="big">1 / 282</div><div class="prog" style="height:8px"><span style="width:0.3546099290780142%;background:#3a8a4f"></span></div></div>
+    <div class="scard"><h3>Resolved</h3><div class="big">28 / 337</div><div class="legend"><span>8.3% of flagged</span></div></div>
+    <div class="scard"><h3>broken</h3><div class="big">1 / 2</div><div class="prog" style="height:8px"><span style="width:50%;background:#3a8a4f"></span></div></div><div class="scard"><h3>major</h3><div class="big">7 / 53</div><div class="prog" style="height:8px"><span style="width:13.20754716981132%;background:#3a8a4f"></span></div></div><div class="scard"><h3>minor</h3><div class="big">20 / 282</div><div class="prog" style="height:8px"><span style="width:7.092198581560284%;background:#3a8a4f"></span></div></div>
   </div>
   <div class="controls">
     <select id="fk"><option value="">All kinds</option><option value="icon-still">Vector icon (still)</option><option value="icon-anim">Vector icon (animation)</option><option value="seasonal-still">Board tile (still)</option><option value="seasonal-anim">Board tile (animated)</option></select>
@@ -147,26 +147,6 @@ td{padding:9px;vertical-align:top}
     <td class="c-prop">Swap to a clear two-figures / handshake / heart motif and raise emblem-vs-medal contrast so it reads at small size.</td>
     <td class="c-note"><span class="dash">—</span></td>
   </tr>
-<tr data-kind="icon-anim" data-verdict="major" data-fix="pending" data-pf="1" data-act="1" data-search="arcane_pentacle arcane a pentacle ritual circle drawing itself in from empty this is a one-shot build-on reveal: it starts as an almost empty dark disc, the ring and five-point star progressively assemble, ending fully drawn and brightly glowing. as a flipbook it is animated and the final symbol looks good, but it is a draw-in intro, not a loop — the bright completed last frame will hard-cut back to the empty first frame. early frames are nearly blank so a frozen first frame would show almost nothing. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__arcane_pentacle.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>arcane_pentacle</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">arcane</span></div></td>
-    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">This is a one-shot build-on reveal: it starts as an almost empty dark disc, the ring and five-point star progressively assemble, ending fully drawn and brightly glowing. As a flipbook it is animated and the final symbol looks good, but it is a draw-in intro, not a loop — the bright completed last frame will hard-cut back to the empty first frame. Early frames are nearly blank so a frozen first frame would show almost nothing.</td>
-    <td class="c-prop">Convert to a looping idle (e.g. the completed pentacle slowly pulses/rotates) or have it draw in then fade back out so first and last frames match.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="major" data-fix="pending" data-pf="1" data-act="1" data-search="astral_shooting_star celestial a four-point star with a one-time fiery streak that then vanishes frames 3-5 show a strong fiery comet streak and a blown-out warm flash, but it happens once early and then the rest of the strip is just a static four-point star sitting still for ~9 frames. that makes it read as a one-shot burst, not a loop, and the bright flash at frames 3-4 is a near-blown-out glow artifact. the end state (plain star) is far from the start, so it pops hard when looping. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__astral_shooting_star.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>astral_shooting_star</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">celestial</span></div></td>
-    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">Frames 3-5 show a strong fiery comet streak and a blown-out warm flash, but it happens once early and then the rest of the strip is just a static four-point star sitting still for ~9 frames. That makes it read as a one-shot burst, not a loop, and the bright flash at frames 3-4 is a near-blown-out glow artifact. The end state (plain star) is far from the start, so it pops hard when looping.</td>
-    <td class="c-prop">Make the streak recur periodically across the loop (or have the star travel and re-enter) and tame the white flash; ensure first and last frames match so it loops without the dead static tail.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
 <tr data-kind="icon-still" data-verdict="major" data-fix="pending" data-pf="1" data-act="1" data-search="axe toolsfarm a stone maul or war-hammer head, not an axe the head is a solid faceted hexagonal grey block with no cutting edge or bit, so it reads as a maul/hammer rather than an axe. wooden handle and shading are clean and the framing is good, but subject accuracy is wrong for the label. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__axe.png" alt="axe"></td>
     <td class="c-img"><div class="noimg">—</div></td>
@@ -197,36 +177,6 @@ td{padding:9px;vertical-align:top}
     <td class="c-prop">Redesign to clearly convey 'drive out' (e.g. an arrow/boot pushing a creature away) and adopt the family's solid glossy fills instead of hollow outlines.</td>
     <td class="c-note"><span class="dash">—</span></td>
   </tr>
-<tr data-kind="icon-still" data-verdict="major" data-fix="pending" data-pf="0" data-act="1" data-search="bug_dragonfly critters a dark cyan smudge/blob, dragonfly only on close inspection this is the weakest of the family: a teal head with two eyes is legible, but the body and wings collapse into a dark muddy horizontal blob with very low internal contrast, so it does not instantly read as a dragonfly at small size. the long thin shape almost reads like a sewing needle or feather rather than the classic crossed-wings dragonfly silhouette. on the dark background it nearly disappears. ">
-    <td class="c-img"><img loading="lazy" src="assets/still/still__bug_dragonfly.png" alt="bug_dragonfly"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>bug_dragonfly</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">critters</span></div></td>
-    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">This is the weakest of the family: a teal head with two eyes is legible, but the body and wings collapse into a dark muddy horizontal blob with very low internal contrast, so it does not instantly read as a dragonfly at small size. The long thin shape almost reads like a sewing needle or feather rather than the classic crossed-wings dragonfly silhouette. On the dark background it nearly disappears.</td>
-    <td class="c-prop">Re-pose with clearly spread, lighter translucent wings crossing the body and add contrast/lighten the abdomen so the dragonfly silhouette reads at a glance.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-still" data-verdict="major" data-fix="pending" data-pf="0" data-act="1" data-search="bug_firefly critters a small dark beetle attached to a huge green glow the firefly concept is there (dark beetle head with red nose/eye, antennae, glowing abdomen), but the enormous radial green glow dominates the icon, clips well past the magenta design box, and pushes the actual bug off-center to the left. the glow reads more as a generic light orb than a firefly, and on the light background the soft glow is weak/washed. ">
-    <td class="c-img"><img loading="lazy" src="assets/still/still__bug_firefly.png" alt="bug_firefly"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>bug_firefly</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">critters</span></div></td>
-    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The firefly concept is there (dark beetle head with red nose/eye, antennae, glowing abdomen), but the enormous radial green glow dominates the icon, clips well past the magenta design box, and pushes the actual bug off-center to the left. The glow reads more as a generic light orb than a firefly, and on the light background the soft glow is weak/washed.</td>
-    <td class="c-prop">Shrink and tighten the glow so it stays inside the box, re-center the bug, and make the glow read as the lit tail of the abdomen rather than a dominant background orb.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="major" data-fix="pending" data-pf="1" data-act="1" data-search="bug_ladybug critters a ladybug that opens its shell once then freezes the first roughly five frames show the elytra split open revealing the face/underwings, then it snaps to a solid red spotted dome that stays essentially frozen for the entire back half. it plays as a one-shot reveal, not a loop, so the second half is static and the wrap-around is a hard jump from closed dome back to open shell. the underlying drawing is clean but the animation does not cycle. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__bug_ladybug.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>bug_ladybug</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">critters</span></div></td>
-    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The first roughly five frames show the elytra split open revealing the face/underwings, then it snaps to a solid red spotted dome that stays essentially frozen for the entire back half. It plays as a one-shot reveal, not a loop, so the second half is static and the wrap-around is a hard jump from closed dome back to open shell. The underlying drawing is clean but the animation does not cycle.</td>
-    <td class="c-prop">Make it a continuous gentle open-close cycle (ease the shell open and back) so the frozen dome half disappears and the loop seam is smooth.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
 <tr data-kind="icon-still" data-verdict="major" data-fix="pending" data-pf="0" data-act="1" data-search="choice_coexist_drive fixed-icons a split circle: green vine on the left, a white trowel/blade on the right the split-disc (green vine half vs a white spade/trowel half) is cryptic and does not clearly communicate 'coexist vs drive-out'; the right-side white object reads more like a trowel or knife than an eviction action. the two halves are stylistically mismatched and the icon feels conceptually muddy. it is a removal-candidate, which fits its weak read. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__choice_coexist_drive.png" alt="choice_coexist_drive"></td>
     <td class="c-img"><div class="noimg">—</div></td>
@@ -235,16 +185,6 @@ td{padding:9px;vertical-align:top}
     <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
     <td class="c-crit">The split-disc (green vine half vs a white spade/trowel half) is cryptic and does not clearly communicate 'coexist vs drive-out'; the right-side white object reads more like a trowel or knife than an eviction action. The two halves are stylistically mismatched and the icon feels conceptually muddy. It is a removal-candidate, which fits its weak read.</td>
     <td class="c-prop">If kept, redesign with two clearly opposed legible symbols (e.g. a sheltered creature vs a creature being pushed out); otherwise proceed with removal.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="major" data-fix="pending" data-pf="1" data-act="1" data-search="crop_watermelon crops a whole striped melon that is frozen, with a mismatched cut-wedge first frame frame 1 shows a cut red-flesh wedge beside the melon, but every subsequent frame drops the wedge to a plain whole green-striped melon that then sits essentially static for the rest of the strip. that makes frame 1 a hard pop/teleport against the rest, and frames 2-14 are effectively unanimated. the melon art itself is nice, but the loop has a jarring jump and there is no real motion. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__crop_watermelon.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>crop_watermelon</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">crops</span></div></td>
-    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">Frame 1 shows a cut red-flesh wedge beside the melon, but every subsequent frame drops the wedge to a plain whole green-striped melon that then sits essentially static for the rest of the strip. That makes frame 1 a hard pop/teleport against the rest, and frames 2-14 are effectively unanimated. The melon art itself is nice, but the loop has a jarring jump and there is no real motion.</td>
-    <td class="c-prop">Remove or keep the cut wedge consistently across all frames, and add an actual idle (gentle bob or sheen sweep) so it animates instead of holding still after a popping first frame.</td>
     <td class="c-note"><span class="dash">—</span></td>
   </tr>
 <tr data-kind="icon-still" data-verdict="major" data-fix="pending" data-pf="0" data-act="1" data-search="cur_heirloom currencies a gold locket/pendant with a heart, hung from a bent bar a round gold pendant bearing a dark heart, suspended from a thin bent gold rod/branch — the heart reads but the bent-stick hanger is awkward and ambiguous (looks like a broken twig or coat-hanger). the hanger arm clips the top magenta bound and the whole piece hangs well below center, leaving the box poorly filled. the dark heart on dark-gold has weak internal contrast. ">
@@ -607,6 +547,66 @@ td{padding:9px;vertical-align:top}
     <td class="c-prop">Redesign as a recognizable chisel: a long flat steel blade ending in a clear angled bevel edge, joined to a wooden handle via a ferrule, ideally pointing down-left so the cutting edge is the focal point.</td>
     <td class="c-note"><span class="dash">—</span></td>
   </tr>
+<tr data-kind="icon-anim" data-verdict="major" data-fix="verified" data-pf="1" data-act="1" data-search="arcane_pentacle arcane a pentacle ritual circle drawing itself in from empty this is a one-shot build-on reveal: it starts as an almost empty dark disc, the ring and five-point star progressively assemble, ending fully drawn and brightly glowing. as a flipbook it is animated and the final symbol looks good, but it is a draw-in intro, not a loop — the bright completed last frame will hard-cut back to the empty first frame. early frames are nearly blank so a frozen first frame would show almost nothing. a mystical pentacle: a five-pointed pentagram inscribed in a glowing circle with rune ticks between two rings, in arcane purple. when drawn it reads unambiguously as arcane_pentacle.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__arcane_pentacle.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/arcane_pentacle.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>arcane_pentacle</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">arcane</span></div></td>
+    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">This is a one-shot build-on reveal: it starts as an almost empty dark disc, the ring and five-point star progressively assemble, ending fully drawn and brightly glowing. As a flipbook it is animated and the final symbol looks good, but it is a draw-in intro, not a loop — the bright completed last frame will hard-cut back to the empty first frame. Early frames are nearly blank so a frozen first frame would show almost nothing.</td>
+    <td class="c-prop">Convert to a looping idle (e.g. the completed pentacle slowly pulses/rotates) or have it draw in then fade back out so first and last frames match.</td>
+    <td class="c-note">A mystical pentacle: a five-pointed pentagram inscribed in a glowing circle with rune ticks between two rings, in arcane purple. When drawn it reads unambiguously as arcane_pentacle.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="major" data-fix="verified" data-pf="1" data-act="1" data-search="astral_shooting_star celestial a four-point star with a one-time fiery streak that then vanishes frames 3-5 show a strong fiery comet streak and a blown-out warm flash, but it happens once early and then the rest of the strip is just a static four-point star sitting still for ~9 frames. that makes it read as a one-shot burst, not a loop, and the bright flash at frames 3-4 is a near-blown-out glow artifact. the end state (plain star) is far from the start, so it pops hard when looping. a golden four-point twinkling star with a recurring warm comet streak/glow arcing up-right — unambiguously a shooting star.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__astral_shooting_star.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/astral_shooting_star.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>astral_shooting_star</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">celestial</span></div></td>
+    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">Frames 3-5 show a strong fiery comet streak and a blown-out warm flash, but it happens once early and then the rest of the strip is just a static four-point star sitting still for ~9 frames. That makes it read as a one-shot burst, not a loop, and the bright flash at frames 3-4 is a near-blown-out glow artifact. The end state (plain star) is far from the start, so it pops hard when looping.</td>
+    <td class="c-prop">Make the streak recur periodically across the loop (or have the star travel and re-enter) and tame the white flash; ensure first and last frames match so it loops without the dead static tail.</td>
+    <td class="c-note">A golden four-point twinkling star with a recurring warm comet streak/glow arcing up-right — unambiguously a shooting star.</td>
+  </tr>
+<tr data-kind="icon-still" data-verdict="major" data-fix="verified" data-pf="0" data-act="1" data-search="bug_dragonfly critters a dark cyan smudge/blob, dragonfly only on close inspection this is the weakest of the family: a teal head with two eyes is legible, but the body and wings collapse into a dark muddy horizontal blob with very low internal contrast, so it does not instantly read as a dragonfly at small size. the long thin shape almost reads like a sewing needle or feather rather than the classic crossed-wings dragonfly silhouette. on the dark background it nearly disappears. a dragonfly — long slender segmented teal body, rounded head with two large compound eyes, and two pairs of long translucent wings fanning out.">
+    <td class="c-img"><img loading="lazy" src="assets/still/still__bug_dragonfly.png" alt="bug_dragonfly"></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/bug_dragonfly.png" alt="bug_dragonfly after"></td>
+    <td class="c-id"><code>bug_dragonfly</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">critters</span></div></td>
+    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">This is the weakest of the family: a teal head with two eyes is legible, but the body and wings collapse into a dark muddy horizontal blob with very low internal contrast, so it does not instantly read as a dragonfly at small size. The long thin shape almost reads like a sewing needle or feather rather than the classic crossed-wings dragonfly silhouette. On the dark background it nearly disappears.</td>
+    <td class="c-prop">Re-pose with clearly spread, lighter translucent wings crossing the body and add contrast/lighten the abdomen so the dragonfly silhouette reads at a glance.</td>
+    <td class="c-note">A dragonfly — long slender segmented teal body, rounded head with two large compound eyes, and two pairs of long translucent wings fanning out.</td>
+  </tr>
+<tr data-kind="icon-still" data-verdict="major" data-fix="verified" data-pf="0" data-act="1" data-search="bug_firefly critters a small dark beetle attached to a huge green glow the firefly concept is there (dark beetle head with red nose/eye, antennae, glowing abdomen), but the enormous radial green glow dominates the icon, clips well past the magenta design box, and pushes the actual bug off-center to the left. the glow reads more as a generic light orb than a firefly, and on the light background the soft glow is weak/washed. a firefly: dark brown body/thorax, red face, pale translucent wings, and a glowing yellow-green abdomen lantern with a soft swelling halo. unambiguous.">
+    <td class="c-img"><img loading="lazy" src="assets/still/still__bug_firefly.png" alt="bug_firefly"></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/bug_firefly.png" alt="bug_firefly after"></td>
+    <td class="c-id"><code>bug_firefly</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">critters</span></div></td>
+    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The firefly concept is there (dark beetle head with red nose/eye, antennae, glowing abdomen), but the enormous radial green glow dominates the icon, clips well past the magenta design box, and pushes the actual bug off-center to the left. The glow reads more as a generic light orb than a firefly, and on the light background the soft glow is weak/washed.</td>
+    <td class="c-prop">Shrink and tighten the glow so it stays inside the box, re-center the bug, and make the glow read as the lit tail of the abdomen rather than a dominant background orb.</td>
+    <td class="c-note">A firefly: dark brown body/thorax, red face, pale translucent wings, and a glowing yellow-green abdomen lantern with a soft swelling halo. Unambiguous.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="major" data-fix="verified" data-pf="1" data-act="1" data-search="bug_ladybug critters a ladybug that opens its shell once then freezes the first roughly five frames show the elytra split open revealing the face/underwings, then it snaps to a solid red spotted dome that stays essentially frozen for the entire back half. it plays as a one-shot reveal, not a loop, so the second half is static and the wrap-around is a hard jump from closed dome back to open shell. the underlying drawing is clean but the animation does not cycle. a red-and-black ladybug with a spotted domed shell, dark head, antennae and six legs, whose shell halves ease open to reveal translucent flight wings and ease shut again.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__bug_ladybug.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/bug_ladybug.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>bug_ladybug</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">critters</span></div></td>
+    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The first roughly five frames show the elytra split open revealing the face/underwings, then it snaps to a solid red spotted dome that stays essentially frozen for the entire back half. It plays as a one-shot reveal, not a loop, so the second half is static and the wrap-around is a hard jump from closed dome back to open shell. The underlying drawing is clean but the animation does not cycle.</td>
+    <td class="c-prop">Make it a continuous gentle open-close cycle (ease the shell open and back) so the frozen dome half disappears and the loop seam is smooth.</td>
+    <td class="c-note">A red-and-black ladybug with a spotted domed shell, dark head, antennae and six legs, whose shell halves ease open to reveal translucent flight wings and ease shut again.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="major" data-fix="verified" data-pf="1" data-act="1" data-search="crop_watermelon crops a whole striped melon that is frozen, with a mismatched cut-wedge first frame frame 1 shows a cut red-flesh wedge beside the melon, but every subsequent frame drops the wedge to a plain whole green-striped melon that then sits essentially static for the rest of the strip. that makes frame 1 a hard pop/teleport against the rest, and frames 2-14 are effectively unanimated. the melon art itself is nice, but the loop has a jarring jump and there is no real motion. a green dark-striped whole watermelon with a cut red-flesh wedge (black seeds, white+green rind) leaning against it on a shadow pad. unmistakably a watermelon.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__crop_watermelon.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/crop_watermelon.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>crop_watermelon</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">crops</span></div></td>
+    <td class="c-v"><span class="v" style="background:#e07b1a">major</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">Frame 1 shows a cut red-flesh wedge beside the melon, but every subsequent frame drops the wedge to a plain whole green-striped melon that then sits essentially static for the rest of the strip. That makes frame 1 a hard pop/teleport against the rest, and frames 2-14 are effectively unanimated. The melon art itself is nice, but the loop has a jarring jump and there is no real motion.</td>
+    <td class="c-prop">Remove or keep the cut wedge consistently across all frames, and add an actual idle (gentle bob or sheen sweep) so it animates instead of holding still after a popping first frame.</td>
+    <td class="c-note">A green dark-striped whole watermelon with a cut red-flesh wedge (black seeds, white+green rind) leaning against it on a shadow pad. Unmistakably a watermelon.</td>
+  </tr>
 <tr data-kind="icon-anim" data-verdict="major" data-fix="verified" data-pf="1" data-act="1" data-search="wtool_wrench workshoptools open-end wrench ratcheting on a bolt (but corrupts canvas state) verified bug (instrumented): animwrench calls ctx.restore() one more time than ctx.save() (netsavedelta -1, stack goes negative). the single save() at the top precedes both the -0.62 framing rotation and the osc handle rotation, so restore() (commented ‘back to the rotated-but-unturned frame’) actually unwinds to identity — the fixed hex socket then draws in the wrong frame — and the extra restore pops a state the caller saved, corrupting the caller’s transform (drifts/garbles on a reused context). the ratchet motion itself is nicely eased. added save() after framing rotate(-0.62): hex bolt now stays fixed &amp; frame is balanced (was -1 restore underflow)">
     <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__wtool_wrench.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
     <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/wtool_wrench.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
@@ -715,96 +715,6 @@ td{padding:9px;vertical-align:top}
     <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
     <td class="c-crit">A striped almond/eye shape over a brown band sits on the gold medallion with a 2-star plaque; it could be read as a speaking mouth or an eye, so the 'voice' meaning is ambiguous though plausible. Gold contrast is better than the bronze twin (Trusted Friend) it shares the emblem with. Craft is otherwise clean.</td>
     <td class="c-prop">Consider a megaphone/speech-bubble motif so 'Voice' reads clearly and is distinct from Trusted Friend.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="arcane_candle arcane lit candle with flickering flame and pulsing glow the flame genuinely changes shape and lean frame-to-frame and the warm halo pulses, so it reads as a real flicker rather than a slide. drawing is clean (white waxy body, gold holder, soft glow disc). however the final frame blooms into a near white-out that won't loop back to the dimmer frame 1, giving a visible flash on repeat. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__arcane_candle.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>arcane_candle</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">arcane</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The flame genuinely changes shape and lean frame-to-frame and the warm halo pulses, so it reads as a real flicker rather than a slide. Drawing is clean (white waxy body, gold holder, soft glow disc). However the final frame blooms into a near white-out that won't loop back to the dimmer frame 1, giving a visible flash on repeat.</td>
-    <td class="c-prop">Tone down the last 1-2 frames' bloom so the brightness returns close to frame 1 for a seamless loop.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="arcane_magic_dust arcane a brown drawstring pouch with gold sparkles spilling out a brown leather pouch with a gold drawstring and a burst of yellow-white sparkles to the right reads as a 'magic dust/pouch', though the bag body is quite dark and muddy and could be mistaken for a coin purse or a nut without the sparkles. the sparkles do the heavy lifting; the pouch itself has low internal contrast and slightly flat shading. framing pushes the sparkle cloud to the right edge but stays inside the box. ">
-    <td class="c-img"><img loading="lazy" src="assets/still/still__arcane_magic_dust.png" alt="arcane_magic_dust"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>arcane_magic_dust</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">arcane</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">A brown leather pouch with a gold drawstring and a burst of yellow-white sparkles to the right reads as a 'magic dust/pouch', though the bag body is quite dark and muddy and could be mistaken for a coin purse or a nut without the sparkles. The sparkles do the heavy lifting; the pouch itself has low internal contrast and slightly flat shading. Framing pushes the sparkle cloud to the right edge but stays inside the box.</td>
-    <td class="c-prop">Lighten and warm the pouch leather and add a clearer cinched-neck/fold so it reads as a pouch on its own, and balance the sparkle burst more symmetrically around the bag.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="arcane_magic_dust arcane brown drawstring pouch with a sparkle and growing side-glow the pouch body is completely static; the only motion is a small star/glint twinkling at the tie-off plus a warm glow that swells on the right side, an overlay rather than the object moving. the bag is decently drawn (segmented brown sack, gold tie) but feels frozen. the glow keeps growing through the strip and does not return to the frame-1 state, so it will pop on loop. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__arcane_magic_dust.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>arcane_magic_dust</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">arcane</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The pouch body is completely static; the only motion is a small star/glint twinkling at the tie-off plus a warm glow that swells on the right side, an overlay rather than the object moving. The bag is decently drawn (segmented brown sack, gold tie) but feels frozen. The glow keeps growing through the strip and does not return to the frame-1 state, so it will pop on loop.</td>
-    <td class="c-prop">Give the pouch a gentle bob/squash or let dust motes lift out of it, and bring the side-glow back down by the last frame so it loops.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="arcane_pentacle arcane a glowing purple pentacle (five-point star in a circle) the five-pointed star inside a ringed circle with node dots clearly reads as a pentacle/summoning sigil and the family-consistent purple glow is attractive. however the whole icon is rendered as a soft low-contrast glow with no solid core, so it looks hazy and slightly washed-out, and on the light half it nearly disappears. it is also the same purple as the crystal ball, risking a palette clash within the family. ">
-    <td class="c-img"><img loading="lazy" src="assets/still/still__arcane_pentacle.png" alt="arcane_pentacle"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>arcane_pentacle</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">arcane</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The five-pointed star inside a ringed circle with node dots clearly reads as a pentacle/summoning sigil and the family-consistent purple glow is attractive. However the whole icon is rendered as a soft low-contrast glow with no solid core, so it looks hazy and slightly washed-out, and on the light half it nearly disappears. It is also the same purple as the crystal ball, risking a palette clash within the family.</td>
-    <td class="c-prop">Add a brighter solid (near-white) core to the star and ring lines so the shape holds at small size and reads on the light background, keeping the purple glow as a halo rather than the entire fill.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="arcane_runestone arcane a dark standing stone tablet carved with glowing blue runes an upright dark-grey rune tablet with three cyan norse-style runes carved into it reads as a runestone, and the cool blue glyphs are a nice accent. the problem is contrast: the dark slate body nearly vanishes into the #23262b dark half (the outline merges with the background) so only the floating runes remain, making it look unanchored on dark. shading on the stone is fairly flat/muddy. ">
-    <td class="c-img"><img loading="lazy" src="assets/still/still__arcane_runestone.png" alt="arcane_runestone"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>arcane_runestone</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">arcane</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">An upright dark-grey rune tablet with three cyan Norse-style runes carved into it reads as a runestone, and the cool blue glyphs are a nice accent. The problem is contrast: the dark slate body nearly vanishes into the #23262b dark half (the outline merges with the background) so only the floating runes remain, making it look unanchored on dark. Shading on the stone is fairly flat/muddy.</td>
-    <td class="c-prop">Lighten the stone body or add a subtle rim/edge light so the tablet silhouette holds against the dark background, and increase the carved-groove shadow under the runes for more depth.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="arcane_runestone arcane upright grey rune tablet rocking side to side there is visible motion but it is a rigid whole-icon pendulum tilt — the entire slab leans left then right while the blue rune glyphs stay frozen, so it reads as the sprite being rotated rather than anything organic. the tablet art itself is fine (bevelled grey stone, glowing carved runes). it does swing back so it loops, but the motion is the crude rigid type. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__arcane_runestone.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>arcane_runestone</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">arcane</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">There is visible motion but it is a rigid whole-icon pendulum tilt — the entire slab leans left then right while the blue rune glyphs stay frozen, so it reads as the sprite being rotated rather than anything organic. The tablet art itself is fine (bevelled grey stone, glowing carved runes). It does swing back so it loops, but the motion is the crude rigid type.</td>
-    <td class="c-prop">Add a subtle pulse/glow cycle to the carved runes (or a tiny shimmer) instead of relying on a stiff whole-body tilt.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="astral_constellation celestial a cluster of sparkle stars loosely joined by faint lines the seven four-point stars with thin connector lines and small dim dots read as a constellation, and the big dipper-like shape is recognizable. however it leans entirely on soft white bloom: on the light half the stars and especially the connecting lines nearly vanish, hurting readability. the faint grey dots scattered around add noise without clearly reading as stars. ">
-    <td class="c-img"><img loading="lazy" src="assets/still/still__astral_constellation.png" alt="astral_constellation"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>astral_constellation</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">celestial</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The seven four-point stars with thin connector lines and small dim dots read as a constellation, and the Big Dipper-like shape is recognizable. However it leans entirely on soft white bloom: on the light half the stars and especially the connecting lines nearly vanish, hurting readability. The faint grey dots scattered around add noise without clearly reading as stars.</td>
-    <td class="c-prop">Add a subtle darker/colored outline or stroke to the stars and connector lines so the shape holds on light backgrounds; drop or brighten the ambiguous grey filler dots.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="astral_constellation celestial a cluster of linked stars over a nebula glow several four-point stars connected by faint lines twinkle slightly and the connecting lines/extra dots shift a little across frames, but the change is small and the overall cluster stays put. it reads as a gentle twinkle rather than clear motion, and the busy dark-navy background makes the faint linking lines hard to parse. loops without a hard jump. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__astral_constellation.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>astral_constellation</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">celestial</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">Several four-point stars connected by faint lines twinkle slightly and the connecting lines/extra dots shift a little across frames, but the change is small and the overall cluster stays put. It reads as a gentle twinkle rather than clear motion, and the busy dark-navy background makes the faint linking lines hard to parse. Loops without a hard jump.</td>
-    <td class="c-prop">Strengthen the twinkle (stagger star brightness pulses) and make the connecting constellation lines draw/brighten in sequence so the motion is clearly legible against the dark ground.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="astral_full_moon celestial a cratered full moon with a soft halo the drawing is nice - pale cratered sphere with a cool-blue rim shadow and a soft surrounding glow - but the motion is very subtle, basically just a gentle halo/glow breathing and barely-perceptible crater shimmer. adjacent frames look almost identical, so it reads as nearly frozen rather than animated. loops fine because there is so little change. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__astral_full_moon.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>astral_full_moon</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">celestial</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The drawing is nice - pale cratered sphere with a cool-blue rim shadow and a soft surrounding glow - but the motion is very subtle, basically just a gentle halo/glow breathing and barely-perceptible crater shimmer. Adjacent frames look almost identical, so it reads as nearly frozen rather than animated. Loops fine because there is so little change.</td>
-    <td class="c-prop">Add a clearer slow drift or twinkle (e.g. a subtle rotating sheen or one crater highlight cycling) so the motion is actually legible at a glance.</td>
     <td class="c-note"><span class="dash">—</span></td>
   </tr>
 <tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="astral_galaxy celestial a bright core ringed by a spiral/ellipse of colored star dots the glowing pale-yellow core surrounded by an ellipse of blue-to-purple dots reads reasonably as a spiral galaxy seen at an angle. the dotted ring is a bit mechanical rather than a flowing spiral arm, and the heavy soft nebula glow makes the whole thing low-contrast and mushy on the light background. color palette is attractive and distinct from siblings. ">
@@ -1177,26 +1087,6 @@ td{padding:9px;vertical-align:top}
     <td class="c-prop">Tidy and brighten the bristle cluster into clearer straw strands and pull the diagonal slightly more upright so it fills the box more evenly.</td>
     <td class="c-note"><span class="dash">—</span></td>
   </tr>
-<tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="bug_ant critters a side-on reddish-brown ant reads as an ant with clear head, antennae, segmented thorax/abdomen and legs, in the family's glossy vector style. the dark head versus the rust-red gradient abdomen gives decent silhouette separation, but the head's pinkish-tan highlight blob looks muddy and the body is tilted/sprawled a bit awkwardly rather than crisply posed. the eye reads fine; legs are a touch thin and could be lost at small size. ">
-    <td class="c-img"><img loading="lazy" src="assets/still/still__bug_ant.png" alt="bug_ant"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>bug_ant</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">critters</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">Reads as an ant with clear head, antennae, segmented thorax/abdomen and legs, in the family's glossy vector style. The dark head versus the rust-red gradient abdomen gives decent silhouette separation, but the head's pinkish-tan highlight blob looks muddy and the body is tilted/sprawled a bit awkwardly rather than crisply posed. The eye reads fine; legs are a touch thin and could be lost at small size.</td>
-    <td class="c-prop">Clean up the muddy tan highlight on the head and slightly thicken the legs for small-size legibility.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="bug_ant critters a glossy reddish-brown ant, frozen the ant is drawn well with glossy segmented head/thorax/abdomen and thin legs, but across the strip the body, legs and antennae barely move so it reads as a static icon. there is no discernible walk cycle or antenna wiggle. no artifacts or drift, just an absence of motion. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__bug_ant.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>bug_ant</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">critters</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The ant is drawn well with glossy segmented head/thorax/abdomen and thin legs, but across the strip the body, legs and antennae barely move so it reads as a static icon. There is no discernible walk cycle or antenna wiggle. No artifacts or drift, just an absence of motion.</td>
-    <td class="c-prop">Add a small leg shuffle and antenna twitch (or a subtle body bob) so the ant reads as alive rather than a still sprite.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
 <tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="bug_caterpillar critters a smiling green segmented caterpillar clearly reads as a caterpillar: rounded green segments receding to the right, cute face with eyes/smile, red antennae and little legs. style and palette fit the family well. however the body tail extends slightly past the right magenta design-box edge, so framing is a touch off / clipping at the bound; the face also has a faint pink cheek blush that's slightly muddy. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__bug_caterpillar.png" alt="bug_caterpillar"></td>
     <td class="c-img"><div class="noimg">—</div></td>
@@ -1205,46 +1095,6 @@ td{padding:9px;vertical-align:top}
     <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
     <td class="c-crit">Clearly reads as a caterpillar: rounded green segments receding to the right, cute face with eyes/smile, red antennae and little legs. Style and palette fit the family well. However the body tail extends slightly past the right magenta design-box edge, so framing is a touch off / clipping at the bound; the face also has a faint pink cheek blush that's slightly muddy.</td>
     <td class="c-prop">Pull the tail end in so the whole body sits inside the 64px box and tidy the soft pink cheek blush.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="bug_dragonfly critters a teal dragonfly, essentially frozen the segmented teal body and faint paired wings are decently drawn, but across all 14 frames there is almost no change beyond a faint wing shimmer. for a dragonfly the wings should blur and beat fast; here it reads as a static sprite. no glow flash or drift, just lacking real motion. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__bug_dragonfly.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>bug_dragonfly</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">critters</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The segmented teal body and faint paired wings are decently drawn, but across all 14 frames there is almost no change beyond a faint wing shimmer. For a dragonfly the wings should blur and beat fast; here it reads as a static sprite. No glow flash or drift, just lacking real motion.</td>
-    <td class="c-prop">Add a fast wing-beat (alternating blur/position of the two wing pairs) and a gentle hover bob so it doesn't read as frozen.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="bug_firefly critters a firefly with a pulsing green glow the green abdomen glow swells and recedes convincingly, suiting a firefly, over a static brown body with a red face. one frame flares much larger and brighter than its neighbours, which pops slightly as a glow spike rather than easing smoothly. otherwise the pulse loops and the drawing is clean. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__bug_firefly.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>bug_firefly</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">critters</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The green abdomen glow swells and recedes convincingly, suiting a firefly, over a static brown body with a red face. One frame flares much larger and brighter than its neighbours, which pops slightly as a glow spike rather than easing smoothly. Otherwise the pulse loops and the drawing is clean.</td>
-    <td class="c-prop">Ease the glow pulse so the single oversized flare frame is tamed to match the surrounding swell, removing the brightness pop.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="bug_snail critters a brown-shelled snail with stalk eyes reads clearly as a snail: cream body with two eye-stalks, on a foot/ground, carrying a brown spiral shell. the spiral and gradient are nicely done. the issue is the outermost shell coil trails off as a thin open line that runs up to the top-right and exits the design box, looking unfinished and pushing the composition past the magenta bound. ">
-    <td class="c-img"><img loading="lazy" src="assets/still/still__bug_snail.png" alt="bug_snail"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>bug_snail</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">critters</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">Reads clearly as a snail: cream body with two eye-stalks, on a foot/ground, carrying a brown spiral shell. The spiral and gradient are nicely done. The issue is the outermost shell coil trails off as a thin open line that runs up to the top-right and exits the design box, looking unfinished and pushing the composition past the magenta bound.</td>
-    <td class="c-prop">Close or tuck the outer shell spiral so it forms a complete coil inside the box rather than a thin trailing line that clips the edge.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="bug_snail critters a glossy-shelled snail, nearly still the brown spiral shell is nicely rendered with a soft gloss highlight and the foot/eyestalks are well drawn. frame-to-frame change is minimal: only a slight bob of the body and a small highlight shift, so it reads as effectively frozen. no artifacts or drift, just too little motion. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__bug_snail.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>bug_snail</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">critters</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The brown spiral shell is nicely rendered with a soft gloss highlight and the foot/eyestalks are well drawn. Frame-to-frame change is minimal: only a slight bob of the body and a small highlight shift, so it reads as effectively frozen. No artifacts or drift, just too little motion.</td>
-    <td class="c-prop">Add a slow eyestalk sway plus a subtle creep/squash of the foot so the snail visibly inches rather than sitting still.</td>
     <td class="c-note"><span class="dash">—</span></td>
   </tr>
 <tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="canary toolsmine a yellow bird in a birdcage on a stand the domed cage with vertical bars, perch and a small yellow bird with orange beak reads correctly as a caged canary, though the bird is small and the cage bars wash out at icon size. craft is clean but the bird competes with the busy cage for the limited pixels, hurting glance-readability. framing is centred but the tall stand leaves a lot of empty box above/below the subject's mass. ">
@@ -1467,16 +1317,6 @@ td{padding:9px;vertical-align:top}
     <td class="c-prop">Enlarge and re-centre the gem, simplify the facet lines, and strengthen the skip arrow's contrast so the skip-with-gem meaning is unmistakable.</td>
     <td class="c-note"><span class="dash">—</span></td>
   </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="crop_corn crops a corn cob in husk with two silk curls that wave at the top the kerneled cob with a green husk base is crisply drawn and the two thin silk/tassel tendrils at the top do wave between frames, but the cob body itself is essentially static so the overall motion is faint. it loops fine and has no artifacts, but at a glance it looks close to frozen apart from the wispy curls. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__crop_corn.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>crop_corn</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">crops</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The kerneled cob with a green husk base is crisply drawn and the two thin silk/tassel tendrils at the top do wave between frames, but the cob body itself is essentially static so the overall motion is faint. It loops fine and has no artifacts, but at a glance it looks close to frozen apart from the wispy curls.</td>
-    <td class="c-prop">Add a subtle whole-cob bob or husk-leaf flex so the motion reads beyond just the thin tassels.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
 <tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="crop_garlic crops a pale ribbed bulb with a curled stem, reads garlic-ish but edges toward onion a cream/white ribbed bulb with vertical clove lines, a tan outline and a single curled top stem. it reads as a pale allium but the rounded body plus single curl makes it ambiguous against onion; garlic's papery cloved-bulb character is faint. framing is good though the near-white body is low-contrast on the light half. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__crop_garlic.png" alt="crop_garlic"></td>
     <td class="c-img"><div class="noimg">—</div></td>
@@ -1485,16 +1325,6 @@ td{padding:9px;vertical-align:top}
     <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
     <td class="c-crit">A cream/white ribbed bulb with vertical clove lines, a tan outline and a single curled top stem. It reads as a pale allium but the rounded body plus single curl makes it ambiguous against onion; garlic's papery cloved-bulb character is faint. Framing is good though the near-white body is low-contrast on the light half.</td>
     <td class="c-prop">Push the garlic identity: add papery-skin texture and a couple of distinct clove bulges at the base so it does not read as a generic onion, and slightly cool the outline.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="crop_pumpkin crops a ribbed orange pumpkin with a faint highlight sweeping across it the pumpkin is well rendered with vertical ribs, a green stem and a glossy specular band, and the only animation is that highlight band sliding subtly across the ribs while the body stays put. it loops cleanly and has no glitches, but the motion is so slight the icon reads as basically static at a glance. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__crop_pumpkin.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>crop_pumpkin</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">crops</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The pumpkin is well rendered with vertical ribs, a green stem and a glossy specular band, and the only animation is that highlight band sliding subtly across the ribs while the body stays put. It loops cleanly and has no glitches, but the motion is so slight the icon reads as basically static at a glance.</td>
-    <td class="c-prop">Add a small squash/bob or stem flex in addition to the light sweep so the pumpkin clearly reads as animated rather than just a shifting shine.</td>
     <td class="c-note"><span class="dash">—</span></td>
   </tr>
 <tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="crop_wheat crops a bundled sheaf of grain with a tie band, somewhat busy/abstract a golden sheaf of stacked grain heads above crossed stalks bound by a brown tie band. it reads as wheat/grain but the overlapping heads form a somewhat muddy horizontal mass and the upward straws look stiff; the bundle is busier and less crisp than its siblings. centred adequately though the dense head-cluster reduces small-size clarity. ">
@@ -2235,26 +2065,6 @@ td{padding:9px;vertical-align:top}
     <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
     <td class="c-crit">A wooden shaft with a rounded leaf-shaped blade and a contrasting grip tip reads as an oar. The blade is a little stubby and rounded so it edges toward looking like a paddle or small spoon at a glance. Clean outline, good wood shading and a clear highlight crease on the blade keep it on-style.</td>
     <td class="c-prop">Lengthen and flatten the blade slightly into a more elongated oar paddle shape to remove the spoon/paddle ambiguity.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="0" data-act="1" data-search="ore_silver ores grey rock-ball with bright white-silver veins the same faceted sphere as copper/iron but with bright white-silver zigzag bands, which at least reads as a different metal and is brighter/cooler. it still shares the reused ball silhouette with two siblings, so distinctness is weak, and the white veins are slightly chalky rather than metallic-reflective. outline and contrast are solid. ">
-    <td class="c-img"><img loading="lazy" src="assets/still/still__ore_silver.png" alt="ore_silver"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>ore_silver</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">ores</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">The same faceted sphere as copper/iron but with bright white-silver zigzag bands, which at least reads as a different metal and is brighter/cooler. It still shares the reused ball silhouette with two siblings, so distinctness is weak, and the white veins are slightly chalky rather than metallic-reflective. Outline and contrast are solid.</td>
-    <td class="c-prop">Give the silver veins a cooler blue-grey metallic gradient instead of flat white, and ideally vary the silhouette so it is not the third copy of the same rock-ball.</td>
-    <td class="c-note"><span class="dash">—</span></td>
-  </tr>
-<tr data-kind="icon-anim" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="ore_silver ores faceted silver-grey ore ball with bright white specular glints a clean low-poly silver nugget with cool grey shading and sharp white sparkle points; mean brightness eases up and down (~127-&gt;133-&gt;127) so a faint specular shimmer travels across it, but the change is quite small and reads as nearly still. drawing and palette are solid and metallic. loops cleanly with no artifacts. ">
-    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__ore_silver.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
-    <td class="c-img"><div class="noimg">—</div></td>
-    <td class="c-id"><code>ore_silver</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">ores</span></div></td>
-    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
-    <td class="c-s"><span class="v" style="background:#9a8f7a">pending</span></td>
-    <td class="c-crit">A clean low-poly silver nugget with cool grey shading and sharp white sparkle points; mean brightness eases up and down (~127-&gt;133-&gt;127) so a faint specular shimmer travels across it, but the change is quite small and reads as nearly still. Drawing and palette are solid and metallic. Loops cleanly with no artifacts.</td>
-    <td class="c-prop">Increase the amplitude of the highlight sweep or add a brief discrete sparkle/glint pop so the motion is more clearly readable at icon size.</td>
     <td class="c-note"><span class="dash">—</span></td>
   </tr>
 <tr data-kind="icon-still" data-verdict="minor" data-fix="pending" data-pf="1" data-act="1" data-search="pact_scroll fixed-icons a tin/canister with a chart label, not a scroll the rounded top/bottom edges and flat side make this read more like a cylindrical can or jar than a scroll or pact document; the orange chart icon in the centre is an odd, unexplained motif. craft is fine (cream parchment gradient, ruled lines, dark outline) but the silhouette undersells 'scroll' and the mountain/chart glyph is confusing. ">
@@ -3427,6 +3237,176 @@ td{padding:9px;vertical-align:top}
     <td class="c-prop">Add a back-and-forth twist of the handle (rotation around the shaft axis) so it reads as actively driving a screw.</td>
     <td class="c-note"><span class="dash">—</span></td>
   </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="arcane_candle arcane lit candle with flickering flame and pulsing glow the flame genuinely changes shape and lean frame-to-frame and the warm halo pulses, so it reads as a real flicker rather than a slide. drawing is clean (white waxy body, gold holder, soft glow disc). however the final frame blooms into a near white-out that won't loop back to the dimmer frame 1, giving a visible flash on repeat. a lit candle: white/cream waxy body in a gold-brass holder with a warm flickering flame and soft glow halo. reads unambiguously as a candle to anyone without knowing the key.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__arcane_candle.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/arcane_candle.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>arcane_candle</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">arcane</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The flame genuinely changes shape and lean frame-to-frame and the warm halo pulses, so it reads as a real flicker rather than a slide. Drawing is clean (white waxy body, gold holder, soft glow disc). However the final frame blooms into a near white-out that won't loop back to the dimmer frame 1, giving a visible flash on repeat.</td>
+    <td class="c-prop">Tone down the last 1-2 frames' bloom so the brightness returns close to frame 1 for a seamless loop.</td>
+    <td class="c-note">A lit candle: white/cream waxy body in a gold-brass holder with a warm flickering flame and soft glow halo. Reads unambiguously as a candle to anyone without knowing the key.</td>
+  </tr>
+<tr data-kind="icon-still" data-verdict="minor" data-fix="verified" data-pf="0" data-act="1" data-search="arcane_magic_dust arcane a brown drawstring pouch with gold sparkles spilling out a brown leather pouch with a gold drawstring and a burst of yellow-white sparkles to the right reads as a 'magic dust/pouch', though the bag body is quite dark and muddy and could be mistaken for a coin purse or a nut without the sparkles. the sparkles do the heavy lifting; the pouch itself has low internal contrast and slightly flat shading. framing pushes the sparkle cloud to the right edge but stays inside the box. a segmented brown drawstring pouch/sack with a gold tie, sitting in a warm golden magical glow with light dust motes and sparkles lifting around its mouth — reads unambiguously as a pouch of magic dust.">
+    <td class="c-img"><img loading="lazy" src="assets/still/still__arcane_magic_dust.png" alt="arcane_magic_dust"></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/arcane_magic_dust.png" alt="arcane_magic_dust after"></td>
+    <td class="c-id"><code>arcane_magic_dust</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">arcane</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">A brown leather pouch with a gold drawstring and a burst of yellow-white sparkles to the right reads as a 'magic dust/pouch', though the bag body is quite dark and muddy and could be mistaken for a coin purse or a nut without the sparkles. The sparkles do the heavy lifting; the pouch itself has low internal contrast and slightly flat shading. Framing pushes the sparkle cloud to the right edge but stays inside the box.</td>
+    <td class="c-prop">Lighten and warm the pouch leather and add a clearer cinched-neck/fold so it reads as a pouch on its own, and balance the sparkle burst more symmetrically around the bag.</td>
+    <td class="c-note">A segmented brown drawstring pouch/sack with a gold tie, sitting in a warm golden magical glow with light dust motes and sparkles lifting around its mouth — reads unambiguously as a pouch of magic dust.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="arcane_magic_dust arcane brown drawstring pouch with a sparkle and growing side-glow the pouch body is completely static; the only motion is a small star/glint twinkling at the tie-off plus a warm glow that swells on the right side, an overlay rather than the object moving. the bag is decently drawn (segmented brown sack, gold tie) but feels frozen. the glow keeps growing through the strip and does not return to the frame-1 state, so it will pop on loop. a segmented brown drawstring pouch/sack with a gold tie, sitting in a warm golden magical glow with light dust motes and sparkles lifting around its mouth — reads unambiguously as a pouch of magic dust.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__arcane_magic_dust.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/arcane_magic_dust.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>arcane_magic_dust</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">arcane</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The pouch body is completely static; the only motion is a small star/glint twinkling at the tie-off plus a warm glow that swells on the right side, an overlay rather than the object moving. The bag is decently drawn (segmented brown sack, gold tie) but feels frozen. The glow keeps growing through the strip and does not return to the frame-1 state, so it will pop on loop.</td>
+    <td class="c-prop">Give the pouch a gentle bob/squash or let dust motes lift out of it, and bring the side-glow back down by the last frame so it loops.</td>
+    <td class="c-note">A segmented brown drawstring pouch/sack with a gold tie, sitting in a warm golden magical glow with light dust motes and sparkles lifting around its mouth — reads unambiguously as a pouch of magic dust.</td>
+  </tr>
+<tr data-kind="icon-still" data-verdict="minor" data-fix="verified" data-pf="0" data-act="1" data-search="arcane_pentacle arcane a glowing purple pentacle (five-point star in a circle) the five-pointed star inside a ringed circle with node dots clearly reads as a pentacle/summoning sigil and the family-consistent purple glow is attractive. however the whole icon is rendered as a soft low-contrast glow with no solid core, so it looks hazy and slightly washed-out, and on the light half it nearly disappears. it is also the same purple as the crystal ball, risking a palette clash within the family. a mystical pentacle: a five-pointed pentagram inscribed in a glowing circle with rune ticks between two rings, in arcane purple. when drawn it reads unambiguously as arcane_pentacle.">
+    <td class="c-img"><img loading="lazy" src="assets/still/still__arcane_pentacle.png" alt="arcane_pentacle"></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/arcane_pentacle.png" alt="arcane_pentacle after"></td>
+    <td class="c-id"><code>arcane_pentacle</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">arcane</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The five-pointed star inside a ringed circle with node dots clearly reads as a pentacle/summoning sigil and the family-consistent purple glow is attractive. However the whole icon is rendered as a soft low-contrast glow with no solid core, so it looks hazy and slightly washed-out, and on the light half it nearly disappears. It is also the same purple as the crystal ball, risking a palette clash within the family.</td>
+    <td class="c-prop">Add a brighter solid (near-white) core to the star and ring lines so the shape holds at small size and reads on the light background, keeping the purple glow as a halo rather than the entire fill.</td>
+    <td class="c-note">A mystical pentacle: a five-pointed pentagram inscribed in a glowing circle with rune ticks between two rings, in arcane purple. When drawn it reads unambiguously as arcane_pentacle.</td>
+  </tr>
+<tr data-kind="icon-still" data-verdict="minor" data-fix="verified" data-pf="0" data-act="1" data-search="arcane_runestone arcane a dark standing stone tablet carved with glowing blue runes an upright dark-grey rune tablet with three cyan norse-style runes carved into it reads as a runestone, and the cool blue glyphs are a nice accent. the problem is contrast: the dark slate body nearly vanishes into the #23262b dark half (the outline merges with the background) so only the floating runes remain, making it look unanchored on dark. shading on the stone is fairly flat/muddy. a grey bevelled stone runestone tablet with three carved glowing blue rune glyphs.">
+    <td class="c-img"><img loading="lazy" src="assets/still/still__arcane_runestone.png" alt="arcane_runestone"></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/arcane_runestone.png" alt="arcane_runestone after"></td>
+    <td class="c-id"><code>arcane_runestone</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">arcane</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">An upright dark-grey rune tablet with three cyan Norse-style runes carved into it reads as a runestone, and the cool blue glyphs are a nice accent. The problem is contrast: the dark slate body nearly vanishes into the #23262b dark half (the outline merges with the background) so only the floating runes remain, making it look unanchored on dark. Shading on the stone is fairly flat/muddy.</td>
+    <td class="c-prop">Lighten the stone body or add a subtle rim/edge light so the tablet silhouette holds against the dark background, and increase the carved-groove shadow under the runes for more depth.</td>
+    <td class="c-note">A grey bevelled stone runestone tablet with three carved glowing blue rune glyphs.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="arcane_runestone arcane upright grey rune tablet rocking side to side there is visible motion but it is a rigid whole-icon pendulum tilt — the entire slab leans left then right while the blue rune glyphs stay frozen, so it reads as the sprite being rotated rather than anything organic. the tablet art itself is fine (bevelled grey stone, glowing carved runes). it does swing back so it loops, but the motion is the crude rigid type. a grey bevelled stone runestone tablet with three carved glowing blue rune glyphs.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__arcane_runestone.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/arcane_runestone.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>arcane_runestone</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">arcane</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">There is visible motion but it is a rigid whole-icon pendulum tilt — the entire slab leans left then right while the blue rune glyphs stay frozen, so it reads as the sprite being rotated rather than anything organic. The tablet art itself is fine (bevelled grey stone, glowing carved runes). It does swing back so it loops, but the motion is the crude rigid type.</td>
+    <td class="c-prop">Add a subtle pulse/glow cycle to the carved runes (or a tiny shimmer) instead of relying on a stiff whole-body tilt.</td>
+    <td class="c-note">A grey bevelled stone runestone tablet with three carved glowing blue rune glyphs.</td>
+  </tr>
+<tr data-kind="icon-still" data-verdict="minor" data-fix="verified" data-pf="0" data-act="1" data-search="astral_constellation celestial a cluster of sparkle stars loosely joined by faint lines the seven four-point stars with thin connector lines and small dim dots read as a constellation, and the big dipper-like shape is recognizable. however it leans entirely on soft white bloom: on the light half the stars and especially the connecting lines nearly vanish, hurting readability. the faint grey dots scattered around add noise without clearly reading as stars. a cluster of five 4-point stars joined by connecting lines into a recognizable star-figure (dipper/kite shape), over a soft nebula glow with faint background dust. unambiguously a constellation.">
+    <td class="c-img"><img loading="lazy" src="assets/still/still__astral_constellation.png" alt="astral_constellation"></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/astral_constellation.png" alt="astral_constellation after"></td>
+    <td class="c-id"><code>astral_constellation</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">celestial</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The seven four-point stars with thin connector lines and small dim dots read as a constellation, and the Big Dipper-like shape is recognizable. However it leans entirely on soft white bloom: on the light half the stars and especially the connecting lines nearly vanish, hurting readability. The faint grey dots scattered around add noise without clearly reading as stars.</td>
+    <td class="c-prop">Add a subtle darker/colored outline or stroke to the stars and connector lines so the shape holds on light backgrounds; drop or brighten the ambiguous grey filler dots.</td>
+    <td class="c-note">A cluster of five 4-point stars joined by connecting lines into a recognizable star-figure (dipper/kite shape), over a soft nebula glow with faint background dust. Unambiguously a constellation.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="astral_constellation celestial a cluster of linked stars over a nebula glow several four-point stars connected by faint lines twinkle slightly and the connecting lines/extra dots shift a little across frames, but the change is small and the overall cluster stays put. it reads as a gentle twinkle rather than clear motion, and the busy dark-navy background makes the faint linking lines hard to parse. loops without a hard jump. a cluster of five 4-point stars joined by connecting lines into a recognizable star-figure (dipper/kite shape), over a soft nebula glow with faint background dust. unambiguously a constellation.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__astral_constellation.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/astral_constellation.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>astral_constellation</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">celestial</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">Several four-point stars connected by faint lines twinkle slightly and the connecting lines/extra dots shift a little across frames, but the change is small and the overall cluster stays put. It reads as a gentle twinkle rather than clear motion, and the busy dark-navy background makes the faint linking lines hard to parse. Loops without a hard jump.</td>
+    <td class="c-prop">Strengthen the twinkle (stagger star brightness pulses) and make the connecting constellation lines draw/brighten in sequence so the motion is clearly legible against the dark ground.</td>
+    <td class="c-note">A cluster of five 4-point stars joined by connecting lines into a recognizable star-figure (dipper/kite shape), over a soft nebula glow with faint background dust. Unambiguously a constellation.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="astral_full_moon celestial a cratered full moon with a soft halo the drawing is nice - pale cratered sphere with a cool-blue rim shadow and a soft surrounding glow - but the motion is very subtle, basically just a gentle halo/glow breathing and barely-perceptible crater shimmer. adjacent frames look almost identical, so it reads as nearly frozen rather than animated. loops fine because there is so little change. a full moon: a pale, cratered sphere with a cool blue-grey rim shadow, a soft white-blue halo, and visible craters. unambiguous to someone who doesn't know the key.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__astral_full_moon.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/astral_full_moon.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>astral_full_moon</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">celestial</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The drawing is nice - pale cratered sphere with a cool-blue rim shadow and a soft surrounding glow - but the motion is very subtle, basically just a gentle halo/glow breathing and barely-perceptible crater shimmer. Adjacent frames look almost identical, so it reads as nearly frozen rather than animated. Loops fine because there is so little change.</td>
+    <td class="c-prop">Add a clearer slow drift or twinkle (e.g. a subtle rotating sheen or one crater highlight cycling) so the motion is actually legible at a glance.</td>
+    <td class="c-note">A full moon: a pale, cratered sphere with a cool blue-grey rim shadow, a soft white-blue halo, and visible craters. Unambiguous to someone who doesn't know the key.</td>
+  </tr>
+<tr data-kind="icon-still" data-verdict="minor" data-fix="verified" data-pf="0" data-act="1" data-search="bug_ant critters a side-on reddish-brown ant reads as an ant with clear head, antennae, segmented thorax/abdomen and legs, in the family's glossy vector style. the dark head versus the rust-red gradient abdomen gives decent silhouette separation, but the head's pinkish-tan highlight blob looks muddy and the body is tilted/sprawled a bit awkwardly rather than crisply posed. the eye reads fine; legs are a touch thin and could be lost at small size. a side-profile ant with glossy segmented head/thorax/abdomen, six legs, two antennae and mandibles — clearly reads as an ant.">
+    <td class="c-img"><img loading="lazy" src="assets/still/still__bug_ant.png" alt="bug_ant"></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/bug_ant.png" alt="bug_ant after"></td>
+    <td class="c-id"><code>bug_ant</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">critters</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">Reads as an ant with clear head, antennae, segmented thorax/abdomen and legs, in the family's glossy vector style. The dark head versus the rust-red gradient abdomen gives decent silhouette separation, but the head's pinkish-tan highlight blob looks muddy and the body is tilted/sprawled a bit awkwardly rather than crisply posed. The eye reads fine; legs are a touch thin and could be lost at small size.</td>
+    <td class="c-prop">Clean up the muddy tan highlight on the head and slightly thicken the legs for small-size legibility.</td>
+    <td class="c-note">A side-profile ant with glossy segmented head/thorax/abdomen, six legs, two antennae and mandibles — clearly reads as an ant.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="bug_ant critters a glossy reddish-brown ant, frozen the ant is drawn well with glossy segmented head/thorax/abdomen and thin legs, but across the strip the body, legs and antennae barely move so it reads as a static icon. there is no discernible walk cycle or antenna wiggle. no artifacts or drift, just an absence of motion. a side-profile ant with glossy segmented head/thorax/abdomen, six legs, two antennae and mandibles — clearly reads as an ant.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__bug_ant.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/bug_ant.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>bug_ant</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">critters</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The ant is drawn well with glossy segmented head/thorax/abdomen and thin legs, but across the strip the body, legs and antennae barely move so it reads as a static icon. There is no discernible walk cycle or antenna wiggle. No artifacts or drift, just an absence of motion.</td>
+    <td class="c-prop">Add a small leg shuffle and antenna twitch (or a subtle body bob) so the ant reads as alive rather than a still sprite.</td>
+    <td class="c-note">A side-profile ant with glossy segmented head/thorax/abdomen, six legs, two antennae and mandibles — clearly reads as an ant.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="bug_dragonfly critters a teal dragonfly, essentially frozen the segmented teal body and faint paired wings are decently drawn, but across all 14 frames there is almost no change beyond a faint wing shimmer. for a dragonfly the wings should blur and beat fast; here it reads as a static sprite. no glow flash or drift, just lacking real motion. a dragonfly — long slender segmented teal body, rounded head with two large compound eyes, and two pairs of long translucent wings fanning out.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__bug_dragonfly.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/bug_dragonfly.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>bug_dragonfly</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">critters</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The segmented teal body and faint paired wings are decently drawn, but across all 14 frames there is almost no change beyond a faint wing shimmer. For a dragonfly the wings should blur and beat fast; here it reads as a static sprite. No glow flash or drift, just lacking real motion.</td>
+    <td class="c-prop">Add a fast wing-beat (alternating blur/position of the two wing pairs) and a gentle hover bob so it doesn't read as frozen.</td>
+    <td class="c-note">A dragonfly — long slender segmented teal body, rounded head with two large compound eyes, and two pairs of long translucent wings fanning out.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="bug_firefly critters a firefly with a pulsing green glow the green abdomen glow swells and recedes convincingly, suiting a firefly, over a static brown body with a red face. one frame flares much larger and brighter than its neighbours, which pops slightly as a glow spike rather than easing smoothly. otherwise the pulse loops and the drawing is clean. a firefly: dark brown body/thorax, red face, pale translucent wings, and a glowing yellow-green abdomen lantern with a soft swelling halo. unambiguous.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__bug_firefly.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/bug_firefly.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>bug_firefly</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">critters</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The green abdomen glow swells and recedes convincingly, suiting a firefly, over a static brown body with a red face. One frame flares much larger and brighter than its neighbours, which pops slightly as a glow spike rather than easing smoothly. Otherwise the pulse loops and the drawing is clean.</td>
+    <td class="c-prop">Ease the glow pulse so the single oversized flare frame is tamed to match the surrounding swell, removing the brightness pop.</td>
+    <td class="c-note">A firefly: dark brown body/thorax, red face, pale translucent wings, and a glowing yellow-green abdomen lantern with a soft swelling halo. Unambiguous.</td>
+  </tr>
+<tr data-kind="icon-still" data-verdict="minor" data-fix="verified" data-pf="0" data-act="1" data-search="bug_snail critters a brown-shelled snail with stalk eyes reads clearly as a snail: cream body with two eye-stalks, on a foot/ground, carrying a brown spiral shell. the spiral and gradient are nicely done. the issue is the outermost shell coil trails off as a thin open line that runs up to the top-right and exits the design box, looking unfinished and pushing the composition past the magenta bound. a brown spiral-shelled snail with a soft gloss highlight on the shell, a cream foot/sole gliding along the ground, a head, and two eyestalks tipped with eyes; ground shadow beneath. unambiguously a snail.">
+    <td class="c-img"><img loading="lazy" src="assets/still/still__bug_snail.png" alt="bug_snail"></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/bug_snail.png" alt="bug_snail after"></td>
+    <td class="c-id"><code>bug_snail</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">critters</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">Reads clearly as a snail: cream body with two eye-stalks, on a foot/ground, carrying a brown spiral shell. The spiral and gradient are nicely done. The issue is the outermost shell coil trails off as a thin open line that runs up to the top-right and exits the design box, looking unfinished and pushing the composition past the magenta bound.</td>
+    <td class="c-prop">Close or tuck the outer shell spiral so it forms a complete coil inside the box rather than a thin trailing line that clips the edge.</td>
+    <td class="c-note">A brown spiral-shelled snail with a soft gloss highlight on the shell, a cream foot/sole gliding along the ground, a head, and two eyestalks tipped with eyes; ground shadow beneath. Unambiguously a snail.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="bug_snail critters a glossy-shelled snail, nearly still the brown spiral shell is nicely rendered with a soft gloss highlight and the foot/eyestalks are well drawn. frame-to-frame change is minimal: only a slight bob of the body and a small highlight shift, so it reads as effectively frozen. no artifacts or drift, just too little motion. a brown spiral-shelled snail with a soft gloss highlight on the shell, a cream foot/sole gliding along the ground, a head, and two eyestalks tipped with eyes; ground shadow beneath. unambiguously a snail.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__bug_snail.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/bug_snail.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>bug_snail</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">critters</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The brown spiral shell is nicely rendered with a soft gloss highlight and the foot/eyestalks are well drawn. Frame-to-frame change is minimal: only a slight bob of the body and a small highlight shift, so it reads as effectively frozen. No artifacts or drift, just too little motion.</td>
+    <td class="c-prop">Add a slow eyestalk sway plus a subtle creep/squash of the foot so the snail visibly inches rather than sitting still.</td>
+    <td class="c-note">A brown spiral-shelled snail with a soft gloss highlight on the shell, a cream foot/sole gliding along the ground, a head, and two eyestalks tipped with eyes; ground shadow beneath. Unambiguously a snail.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="crop_corn crops a corn cob in husk with two silk curls that wave at the top the kerneled cob with a green husk base is crisply drawn and the two thin silk/tassel tendrils at the top do wave between frames, but the cob body itself is essentially static so the overall motion is faint. it loops fine and has no artifacts, but at a glance it looks close to frozen apart from the wispy curls. a yellow kerneled corn-on-the-cob with green husk leaves at the base and thin silk tassels at the top — unambiguously reads as corn.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__crop_corn.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/crop_corn.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>crop_corn</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">crops</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The kerneled cob with a green husk base is crisply drawn and the two thin silk/tassel tendrils at the top do wave between frames, but the cob body itself is essentially static so the overall motion is faint. It loops fine and has no artifacts, but at a glance it looks close to frozen apart from the wispy curls.</td>
+    <td class="c-prop">Add a subtle whole-cob bob or husk-leaf flex so the motion reads beyond just the thin tassels.</td>
+    <td class="c-note">A yellow kerneled corn-on-the-cob with green husk leaves at the base and thin silk tassels at the top — unambiguously reads as corn.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="crop_pumpkin crops a ribbed orange pumpkin with a faint highlight sweeping across it the pumpkin is well rendered with vertical ribs, a green stem and a glossy specular band, and the only animation is that highlight band sliding subtly across the ribs while the body stays put. it loops cleanly and has no glitches, but the motion is so slight the icon reads as basically static at a glance. a ribbed orange pumpkin with a curved green stem on its ground patch — clearly a pumpkin.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__crop_pumpkin.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/crop_pumpkin.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>crop_pumpkin</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">crops</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The pumpkin is well rendered with vertical ribs, a green stem and a glossy specular band, and the only animation is that highlight band sliding subtly across the ribs while the body stays put. It loops cleanly and has no glitches, but the motion is so slight the icon reads as basically static at a glance.</td>
+    <td class="c-prop">Add a small squash/bob or stem flex in addition to the light sweep so the pumpkin clearly reads as animated rather than just a shifting shine.</td>
+    <td class="c-note">A ribbed orange pumpkin with a curved green stem on its ground patch — clearly a pumpkin.</td>
+  </tr>
 <tr data-kind="icon-still" data-verdict="minor" data-fix="verified" data-pf="0" data-act="1" data-search="ore_gold_nugget ores lumpy golden blob / bubbly gold nugget the clustered-bubble gold shape with sparkles reads as gold and is a distinct silhouette, with a warm brown outline and good metallic highlights. however the rounded bubbly lobes read a little like a flower or cluster of grapes rather than a hard mineral nugget, and there are faint diagonal pickaxe-ghost lines crossing it. color and shine are strong. fixed unbalanced save/restore (was broken: leaked transform drifted nugget off-cell after frame 1) — all 14 frames now render in-cell">
     <td class="c-img"><img loading="lazy" src="assets/still/still__ore_gold_nugget.png" alt="ore_gold_nugget"></td>
     <td class="c-img"><img loading="lazy" src="assets/after/ore_gold_nugget.png" alt="ore_gold_nugget after"></td>
@@ -3436,6 +3416,26 @@ td{padding:9px;vertical-align:top}
     <td class="c-crit">The clustered-bubble gold shape with sparkles reads as gold and is a distinct silhouette, with a warm brown outline and good metallic highlights. However the rounded bubbly lobes read a little like a flower or cluster of grapes rather than a hard mineral nugget, and there are faint diagonal pickaxe-ghost lines crossing it. Color and shine are strong.</td>
     <td class="c-prop">Tighten a couple of lobes into harder angular facets so it reads as a mineral nugget rather than a soft cluster, and clean up the faint diagonal cross lines.</td>
     <td class="c-note">fixed unbalanced save/restore (was BROKEN: leaked transform drifted nugget off-cell after frame 1) — all 14 frames now render in-cell</td>
+  </tr>
+<tr data-kind="icon-still" data-verdict="minor" data-fix="verified" data-pf="0" data-act="1" data-search="ore_silver ores grey rock-ball with bright white-silver veins the same faceted sphere as copper/iron but with bright white-silver zigzag bands, which at least reads as a different metal and is brighter/cooler. it still shares the reused ball silhouette with two siblings, so distinctness is weak, and the white veins are slightly chalky rather than metallic-reflective. outline and contrast are solid. a faceted, cool-grey/silver metallic nugget with a dark outline, sitting on a ground shadow inside the design circle. unambiguously reads as silver/metal ore to someone who doesn't know the key.">
+    <td class="c-img"><img loading="lazy" src="assets/still/still__ore_silver.png" alt="ore_silver"></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/ore_silver.png" alt="ore_silver after"></td>
+    <td class="c-id"><code>ore_silver</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">ores</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">The same faceted sphere as copper/iron but with bright white-silver zigzag bands, which at least reads as a different metal and is brighter/cooler. It still shares the reused ball silhouette with two siblings, so distinctness is weak, and the white veins are slightly chalky rather than metallic-reflective. Outline and contrast are solid.</td>
+    <td class="c-prop">Give the silver veins a cooler blue-grey metallic gradient instead of flat white, and ideally vary the silhouette so it is not the third copy of the same rock-ball.</td>
+    <td class="c-note">A faceted, cool-grey/silver metallic nugget with a dark outline, sitting on a ground shadow inside the design circle. Unambiguously reads as silver/metal ore to someone who doesn't know the key.</td>
+  </tr>
+<tr data-kind="icon-anim" data-verdict="minor" data-fix="verified" data-pf="1" data-act="1" data-search="ore_silver ores faceted silver-grey ore ball with bright white specular glints a clean low-poly silver nugget with cool grey shading and sharp white sparkle points; mean brightness eases up and down (~127-&gt;133-&gt;127) so a faint specular shimmer travels across it, but the change is quite small and reads as nearly still. drawing and palette are solid and metallic. loops cleanly with no artifacts. a faceted, cool-grey/silver metallic nugget with a dark outline, sitting on a ground shadow inside the design circle. unambiguously reads as silver/metal ore to someone who doesn't know the key.">
+    <td class="c-img"><div class="vp" style="width:112px;height:112px"><img class="film" loading="lazy" src="assets/anim/anim__ore_silver.png" style="--w:1568px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-img"><div class="vp" style="width:120px;height:120px"><img class="film" loading="lazy" src="assets/after/ore_silver.png" style="--w:1680px;--dur:2.24s;--steps:14;animation-direction:alternate"></div></td>
+    <td class="c-id"><code>ore_silver</code><div class="meta"><span class="kbadge k-icon-anim">Vector icon (animation)</span> <span class="tag pf">player-facing</span><span class="grp">ores</span></div></td>
+    <td class="c-v"><span class="v" style="background:#c9a227">minor</span></td>
+    <td class="c-s"><span class="v" style="background:#3a8a4f">verified</span></td>
+    <td class="c-crit">A clean low-poly silver nugget with cool grey shading and sharp white sparkle points; mean brightness eases up and down (~127-&gt;133-&gt;127) so a faint specular shimmer travels across it, but the change is quite small and reads as nearly still. Drawing and palette are solid and metallic. Loops cleanly with no artifacts.</td>
+    <td class="c-prop">Increase the amplitude of the highlight sweep or add a brief discrete sparkle/glint pop so the motion is more clearly readable at icon size.</td>
+    <td class="c-note">A faceted, cool-grey/silver metallic nugget with a dark outline, sitting on a ground shadow inside the design circle. Unambiguously reads as silver/metal ore to someone who doesn't know the key.</td>
   </tr>
 <tr data-kind="icon-still" data-verdict="good" data-fix="good" data-pf="1" data-act="0" data-search="ach_champion achievements a gold medal with crossed swords and a two-star ribbon crossed swords are an instantly readable champion/combat symbol with a clean dark-brown outline against the gold disc, good gloss highlight up top. the two-star ribbon nicely signals a mid/high tier. well centred within the magenta box and consistent with the gold-rim siblings. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__ach_champion.png" alt="ach_champion"></td>
@@ -3589,7 +3589,7 @@ td{padding:9px;vertical-align:top}
   </tr>
 <tr data-kind="icon-still" data-verdict="good" data-fix="good" data-pf="0" data-act="0" data-search="arcane_candle arcane a lit candle in a brass holder with a warm flame glow cream wax taper on a gold/brass holder with a clean orange-to-white flame and a soft warm halo reads instantly as a candle on both backgrounds. outline is clean, light direction consistent, good contrast against the dark side. the flame's tiny black wick dot is a touch heavy but acceptable. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__arcane_candle.png" alt="arcane_candle"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/arcane_candle.png" alt="arcane_candle after"></td>
     <td class="c-id"><code>arcane_candle</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">arcane</span></div></td>
     <td class="c-v"><span class="v" style="background:#3a8a4f">good</span></td>
     <td class="c-s"><span class="dash">—</span></td>
@@ -3689,7 +3689,7 @@ td{padding:9px;vertical-align:top}
   </tr>
 <tr data-kind="icon-still" data-verdict="good" data-fix="good" data-pf="0" data-act="0" data-search="astral_full_moon celestial a pale cratered moon disc with a soft halo clean circular disc with a defined blue-grey rim and several darker crater dots, plus a small highlight arc, clearly reads as a full moon. solid vector shading and a confident outline make it work on both halves. the soft outer halo is tasteful and does not overwhelm the form. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__astral_full_moon.png" alt="astral_full_moon"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/astral_full_moon.png" alt="astral_full_moon after"></td>
     <td class="c-id"><code>astral_full_moon</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">celestial</span></div></td>
     <td class="c-v"><span class="v" style="background:#3a8a4f">good</span></td>
     <td class="c-s"><span class="dash">—</span></td>
@@ -3739,7 +3739,7 @@ td{padding:9px;vertical-align:top}
   </tr>
 <tr data-kind="icon-still" data-verdict="good" data-fix="good" data-pf="0" data-act="0" data-search="astral_shooting_star celestial a bright star with a tapering sparkle trail streaking diagonally a large four-point star at upper-right with a fading diagonal trail of smaller sparkles clearly reads as a shooting star with motion. warm golden palette and the tapering trail communicate direction and speed well. works on both halves, though the trail naturally fades more on the light side. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__astral_shooting_star.png" alt="astral_shooting_star"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/astral_shooting_star.png" alt="astral_shooting_star after"></td>
     <td class="c-id"><code>astral_shooting_star</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">celestial</span></div></td>
     <td class="c-v"><span class="v" style="background:#3a8a4f">good</span></td>
     <td class="c-s"><span class="dash">—</span></td>
@@ -4399,7 +4399,7 @@ td{padding:9px;vertical-align:top}
   </tr>
 <tr data-kind="icon-still" data-verdict="good" data-fix="good" data-pf="0" data-act="0" data-search="bug_ladybug critters a round red ladybug with black spots instantly and unambiguously a ladybug: round red domed shell with a central seam, black spots, dark head, and tiny legs peeking out. strong contrast on both backgrounds and a clean glossy highlight giving consistent upper-left light. well centered and fully contained. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__bug_ladybug.png" alt="bug_ladybug"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/bug_ladybug.png" alt="bug_ladybug after"></td>
     <td class="c-id"><code>bug_ladybug</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">critters</span></div></td>
     <td class="c-v"><span class="v" style="background:#3a8a4f">good</span></td>
     <td class="c-s"><span class="dash">—</span></td>
@@ -4849,7 +4849,7 @@ td{padding:9px;vertical-align:top}
   </tr>
 <tr data-kind="icon-still" data-verdict="good" data-fix="good" data-pf="0" data-act="0" data-search="crop_corn crops a corn cob on the husk with green leaves a clear vertical cob rendered as a honeycomb grid of yellow kernels with a brown outline and two splayed green husk leaves at the base, plus little silk tendrils up top. strong contrast and centred well in the box; reads instantly as corn at small size. the kernel grid is slightly mechanical/uniform but it is legible and on-style. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__crop_corn.png" alt="crop_corn"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/crop_corn.png" alt="crop_corn after"></td>
     <td class="c-id"><code>crop_corn</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">crops</span></div></td>
     <td class="c-v"><span class="v" style="background:#3a8a4f">good</span></td>
     <td class="c-s"><span class="dash">—</span></td>
@@ -4909,7 +4909,7 @@ td{padding:9px;vertical-align:top}
   </tr>
 <tr data-kind="icon-still" data-verdict="good" data-fix="good" data-pf="0" data-act="0" data-search="crop_pumpkin crops a ribbed orange pumpkin with a green stem a wide squat orange pumpkin with vertical rib shading, a glossy highlight and a chunky green stem on top. unmistakably a pumpkin, strong silhouette, good warm contrast against both backgrounds. centred well and fills the box nicely. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__crop_pumpkin.png" alt="crop_pumpkin"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/crop_pumpkin.png" alt="crop_pumpkin after"></td>
     <td class="c-id"><code>crop_pumpkin</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">crops</span></div></td>
     <td class="c-v"><span class="v" style="background:#3a8a4f">good</span></td>
     <td class="c-s"><span class="dash">—</span></td>
@@ -4939,7 +4939,7 @@ td{padding:9px;vertical-align:top}
   </tr>
 <tr data-kind="icon-still" data-verdict="good" data-fix="good" data-pf="0" data-act="0" data-search="crop_watermelon crops a striped whole watermelon plus a cut red wedge with seeds a dark-green striped whole melon paired with a cut wedge showing red flesh, pale rind and black seeds. the whole-plus-slice combo reads instantly and is distinct from the other greens via the red wedge. nicely composed and high contrast; the pairing slightly crowds the box but stays within the magenta bounds. ">
     <td class="c-img"><img loading="lazy" src="assets/still/still__crop_watermelon.png" alt="crop_watermelon"></td>
-    <td class="c-img"><div class="noimg">—</div></td>
+    <td class="c-img"><img loading="lazy" src="assets/after/crop_watermelon.png" alt="crop_watermelon after"></td>
     <td class="c-id"><code>crop_watermelon</code><div class="meta"><span class="kbadge k-icon-still">Vector icon (still)</span> <span class="tag rc">unused</span><span class="grp">crops</span></div></td>
     <td class="c-v"><span class="v" style="background:#3a8a4f">good</span></td>
     <td class="c-s"><span class="dash">—</span></td>

@@ -13,6 +13,7 @@ import {
   easeInOutSine,
   easeOutBack,
   easeOutElastic,
+  breathe,
   groundShadow,
   glint,
   sparkle,
@@ -218,14 +219,20 @@ function animWheat(ctx: CanvasRenderingContext2D, t: number): void {
 function animCorn(ctx: CanvasRenderingContext2D, t: number): void {
   // Eased nod: dwell, then a soft tip to one side and back.
   const nodPhase = loopPhase(t, 3.2);
-  const nod = Math.sin(nodPhase * TAU) * 0.06 * easeInOutSine(Math.abs(Math.sin(nodPhase * Math.PI)));
+  const nod = Math.sin(nodPhase * TAU) * 0.085 * easeInOutSine(Math.abs(Math.sin(nodPhase * Math.PI)));
   const roll = Math.sin(t * 0.8); // -1..1 fake axial roll
+  // Whole-cob bob so motion reads beyond the thin tassels.
+  const bob = breathe(t, 2.4, 1.5, 0, 0.2); // ±1.5u float
 
-  groundShadow(ctx, nod * 12, 22, 14, 4, 0, 0.22);
+  groundShadow(ctx, nod * 12, 22, 14, 4, bob, 0.22);
+
+  // Whole-cob bob (husk + cob + silk all float together).
+  ctx.save();
+  ctx.translate(0, -bob);
 
   const huskLeaves: Array<[number, number]> = [[-1, -0.55], [1, 0.55], [0, 0]];
   huskLeaves.forEach(([side, lean], hi) => {
-    const flutter = 1 + Math.sin(t * 2.4 + hi * 1.9) * 0.08;
+    const flutter = 1 + Math.sin(t * 2.4 + hi * 1.9) * 0.14; // wider husk-leaf flex
     const grad = ctx.createLinearGradient(0, 4, side * 16, 22);
     grad.addColorStop(0, "#9ccc54");
     grad.addColorStop(1, "#3a6014");
@@ -317,6 +324,8 @@ function animCorn(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.ellipse(-4 - roll, -6, 1.8, 8, -0.1, 0, TAU);
   ctx.fill();
   ctx.restore();
+
+  ctx.restore(); // bob
 }
 
 // ---------------------------------------------------------------------------
@@ -421,18 +430,22 @@ function animWatermelon(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.save();
   ctx.translate(0, -6); // re-frame: was ~6u low (off_y +6.5)
 
+  // Continuous gentle bob so the fruit is alive every frame (not static between
+  // plops). Rises off the contact point and the shadow reacts.
+  const bob = breathe(t, 2.2, 1.6, 0, 0.15); // ±1.6u float
+
   // Plop beat: settle, then a quick squash that springs back (easeOutElastic).
   const plopPhase = loopPhase(t, 2.8);
   const plop = plopPhase < 0.35 ? 1 - easeOutElastic(plopPhase / 0.35) : 0;
-  const squash = 1 + plop * 0.12; // wider when squashed
-  const stretch = 1 - plop * 0.12; // shorter when squashed
-  const drop = plop * 2.2; // dips on impact
+  const squash = 1 + plop * 0.14; // wider when squashed
+  const stretch = 1 - plop * 0.14; // shorter when squashed
+  const drop = plop * 2.4; // dips on impact
 
-  groundShadow(ctx, 0, 25, 22, 5, -drop * 0.5, 0.25);
+  groundShadow(ctx, 0, 25, 22, 5, bob - drop * 0.5, 0.25);
 
   ctx.save();
-  // Squash about the ground-contact point.
-  ctx.translate(0, 18 + drop);
+  // Float on the bob, then squash about the ground-contact point on impact.
+  ctx.translate(0, 18 + drop - bob);
   ctx.scale(squash, stretch);
   ctx.translate(0, -18);
 
@@ -533,14 +546,17 @@ function animWatermelon(ctx: CanvasRenderingContext2D, t: number): void {
 function animPumpkin(ctx: CanvasRenderingContext2D, t: number): void {
   // Heavy breathing settle: a slow inhale then an eased-back release.
   const phase = loopPhase(t, 3.0);
-  const squashAmt = Math.sin(phase * TAU) * 0.08; // ±8% (was an invisible 2%)
+  const squashAmt = Math.sin(phase * TAU) * 0.1; // ±10% squash
   const squash = 1 + squashAmt;
   const stretch = 1 - squashAmt * 0.7;
   const ribBulge = 1 + squashAmt * 0.9; // ribs splay wider on squash
+  // Gentle whole-pumpkin bob (offset from the squash) so it clearly animates.
+  const bob = breathe(t, 2.6, 1.6, 0, 0.3); // ±1.6u float
 
-  groundShadow(ctx, 0, 22, 22, 5, -squashAmt * 8, 0.25);
+  groundShadow(ctx, 0, 22, 22, 5, bob - squashAmt * 8, 0.25);
 
   ctx.save();
+  ctx.translate(0, -bob);
   ctx.translate(0, 12);
   ctx.scale(squash, stretch);
   ctx.translate(0, -12);
@@ -590,9 +606,10 @@ function animPumpkin(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.fill();
   ctx.restore();
 
-  // Stem / leaf — flutters (outside the squash).
-  const lean = Math.sin(t * 1.8) * 0.06;
+  // Stem / leaf — flexes (outside the squash) and floats with the body bob.
+  const lean = Math.sin(t * 1.8) * 0.12; // wider stem flex
   ctx.save();
+  ctx.translate(0, -bob);
   ctx.translate(0, -10);
   ctx.rotate(lean);
   ctx.translate(0, 10);
