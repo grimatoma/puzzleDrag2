@@ -914,12 +914,13 @@ export class TownScene extends Phaser.Scene {
   static readonly MIN_ZOOM = 0.5;
   static readonly MAX_ZOOM = 3;
   // How far the camera may overscroll past the town's edges, as a fraction of
-  // the visible area. Half a screen of give is enough to guarantee the town can
-  // always be panned in BOTH axes — even when the 4:3 town is heavily
-  // letterboxed inside a very different viewport aspect (e.g. a tall portrait
-  // phone) — without ever letting it be dragged fully off screen. The grass
-  // margins + vignette painted by TownView make that overscroll read as terrain.
-  static readonly OVERSCROLL = 0.5;
+  // the visible area. Zero: panning is clamped strictly to the finite 4:3 map so
+  // the flat camera-background green is NEVER visible — you only ever pan within
+  // the actual terrain. This is safe because the minimum zoom is pinned to
+  // coverZoom (see clampCamera/zoomTo): the map always at least COVERS the
+  // viewport, so even the letterboxed axis has the map filling it edge-to-edge
+  // (and is simply locked) rather than needing overscroll give to stay panable.
+  static readonly OVERSCROLL = 0;
 
   /**
    * Minimum zoom at which the town fully COVERS the viewport — i.e. the visible
@@ -958,6 +959,13 @@ export class TownScene extends Phaser.Scene {
 
   clampCamera() {
     const cam = this.cameras.main;
+    // Pin the floor zoom to coverZoom so the map always at least fills the
+    // viewport. Any path that could leave it zoomed out below cover — a restored
+    // initialCameraState from an older save, or a viewport resize/rotation that
+    // raised the cover threshold — is corrected here, closing the blank-green
+    // border before the scroll clamp (which assumes the map covers) runs.
+    const minZoom = this.coverZoom();
+    if (cam.zoom < minZoom) cam.setZoom(minZoom);
     const wVisible = cam.width / cam.zoom;
     const hVisible = cam.height / cam.zoom;
     const townW = this.plan.width || 1280;
@@ -988,7 +996,11 @@ export class TownScene extends Phaser.Scene {
   // cursor / pinch centre stays put (instead of zooming about the camera mid).
   zoomTo(targetZoom: number, screenX: number, screenY: number) {
     const cam = this.cameras.main;
-    const z = Phaser.Math.Clamp(targetZoom, TownScene.MIN_ZOOM, TownScene.MAX_ZOOM);
+    // Floor the zoom at coverZoom (not the static MIN_ZOOM) so the player can
+    // never pinch/scroll out far enough to letterbox the finite map and expose
+    // the green camera background.
+    const minZoom = Math.max(TownScene.MIN_ZOOM, this.coverZoom());
+    const z = Phaser.Math.Clamp(targetZoom, minZoom, TownScene.MAX_ZOOM);
     if (z === cam.zoom) return;
     const before = cam.getWorldPoint(screenX, screenY);
     const bx = before.x, by = before.y;
