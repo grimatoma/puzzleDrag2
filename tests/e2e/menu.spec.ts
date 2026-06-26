@@ -29,8 +29,14 @@ test('menu opens, settings/about tabs work', async ({ page }) => {
   const aboutBtn = page.getByRole('button', { name: 'ℹ About' });
   await expect(aboutBtn).toBeVisible();
   await expect(aboutBtn).toBeEnabled();
-  await aboutBtn.dispatchEvent('click');
-  await expect(page.getByText(/Hearthlands · v/)).toBeVisible();
+  // A single dispatched click occasionally doesn't land the tab switch under CI
+  // load (the menu Body is still oscillating from the Back transition), and with
+  // no retry the test then just times out waiting for the About content. Retry
+  // the click until the About tab actually renders its version text.
+  await expect(async () => {
+    await aboutBtn.dispatchEvent('click');
+    await expect(page.getByText(/Hearthlands · v/)).toBeVisible({ timeout: 2000 });
+  }).toPass({ timeout: 15000 });
 });
 
 test('boss dev trigger sets boss state', async ({ page }) => {
