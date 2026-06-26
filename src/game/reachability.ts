@@ -403,6 +403,20 @@ export function isRecipeReachable(recipeKey: string): boolean {
 }
 
 /**
+ * Tri-state reachability for a tile category: reachable if ≥1 tile in the
+ * category is default-board-reachable; gated if no tile is reachable but ≥1
+ * is gated (buy/research/daily); unreachable otherwise.
+ */
+export function categoryReachability(categoryKey: string): Reachability {
+  const s = sets();
+  if (s.tileCategories.has(categoryKey)) return "reachable";
+  for (const t of TILE_TYPES as ReadonlyArray<{ id: string; category?: string }>) {
+    if (t.category === categoryKey && s.tiles.get(t.id) === "gated") return "gated";
+  }
+  return "unreachable";
+}
+
+/**
  * Tri-state reachability for a wiki entity, dispatched by its concept id. Tiles
  * carry the "gated" middle state; everything else is reachable/unreachable.
  * Returns null for concepts we don't gate (caller shows no reachability badge).
@@ -410,6 +424,7 @@ export function isRecipeReachable(recipeKey: string): boolean {
 export function reachabilityOf(conceptId: string, entityKey: string): Reachability | null {
   switch (conceptId) {
     case "buildings": return isBuildingReachable(entityKey) ? "reachable" : "unreachable";
+    case "categories": return categoryReachability(entityKey);
     case "recipes": return isRecipeReachable(entityKey) ? "reachable" : "unreachable";
     case "resources": return isResourceReachable(entityKey) ? "reachable" : "unreachable";
     case "tools": return isToolReachable(entityKey) ? "reachable" : "unreachable";

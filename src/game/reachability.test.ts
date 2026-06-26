@@ -8,6 +8,7 @@ import {
   isWorkerReachable,
   isZoneReachable,
   tileReachability,
+  categoryReachability,
   reachabilityOf,
   findUnreachable,
 } from "./reachability.js";
@@ -73,6 +74,21 @@ describe("reachability", () => {
     expect(isTileReachable("tile_bird_clover")).toBe(false);
   });
 
+  it("categoryReachability: reachable, gated, and unreachable categories", () => {
+    // grain/fruits have default-reachable tiles → reachable
+    expect(categoryReachability("grain")).toBe("reachable");
+    expect(categoryReachability("fruits")).toBe("reachable");
+    // mounts: no default-reachable tiles (horse requires the deferred stable building);
+    // tile_mount_mammoth is buy-only → gated, not outright unreachable
+    expect(categoryReachability("mounts")).toBe("gated");
+    // cattle: no default-reachable tiles; tile_cattle_triceratops is daily → gated
+    expect(categoryReachability("cattle")).toBe("gated");
+    // fish: sardine requires the deferred fishmonger; all others chain off sardine → fully unreachable
+    expect(categoryReachability("fish")).toBe("unreachable");
+    // nonexistent category
+    expect(categoryReachability("no_such_category")).toBe("unreachable");
+  });
+
   it("reachabilityOf dispatches by concept id", () => {
     expect(reachabilityOf("buildings", "bakery")).toBe("reachable");
     expect(reachabilityOf("buildings", "mining_camp")).toBe("reachable"); // unlocks at Town 2 Camp
@@ -82,6 +98,9 @@ describe("reachability", () => {
     expect(reachabilityOf("workers", "peasant")).toBe("reachable");
     expect(reachabilityOf("workers", "tax_collector")).toBe("unreachable");
     expect(reachabilityOf("tiles", "tile_bird_clover")).toBe("gated");
+    expect(reachabilityOf("categories", "mounts")).toBe("gated");
+    expect(reachabilityOf("categories", "fruits")).toBe("reachable");
+    expect(reachabilityOf("categories", "fish")).toBe("unreachable");
     expect(reachabilityOf("nonsense", "x")).toBeNull();
   });
 
