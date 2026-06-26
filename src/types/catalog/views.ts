@@ -18,7 +18,6 @@ export enum ViewId {
   Orders = "orders",
   Portal = "portal",
   Quests = "quests",
-  RecipeWiki = "recipeWiki",
   TileCollection = "tileCollection",
   Town = "town",
   Townsfolk = "townsfolk",
