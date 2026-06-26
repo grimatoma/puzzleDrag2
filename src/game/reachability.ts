@@ -9,6 +9,7 @@
  *
  *   recipe ──station──▶ building ──tier.unlocks──▶ zone
  *   tile   ──discovery──▶ {default | chain→tile | building→building}
+ *            ──board──▶ {spawns on board: season drop | upgrade target | mine pool}
  *   resource ──produced by──▶ reachable tile  OR  reachable recipe output
  *   tool   ──▶ reachable recipe output  OR  granted by a reachable building
  *
@@ -28,13 +29,15 @@
  * reachable-by-unlock yet stubbed, or wired yet unreachable. Keep them separate.
  */
 
-import { BUILDINGS, RECIPES, RESOURCES, TOOLS, TILES } from "../constants.js";
+import { BUILDINGS, RECIPES, RESOURCES, TOOLS, TILES, mineTilePoolForZone } from "../constants.js";
 import { MAP_NODES, MAP_EDGES, type MapNode } from "../features/cartography/data.js";
-import { TILE_TYPES } from "../features/tileCollection/data.js";
+import { TILE_TYPES, CATEGORY_OF } from "../features/tileCollection/data.js";
 import { producedResource } from "./producedResource.js";
 import { CIVIC_PROVISIONS } from "../features/civicEconomy/data.js";
 import { SCOPED_OUT } from "./scopedOut.js";
 import { TYPE_WORKER_MAP } from "../features/workers/data.js";
+import { ZONE_TO_TILE_CATEGORIES } from "../features/zones/data.js";
+import { ZONE_UPGRADE_TARGET_GOLD } from "../config/schemas/boardInstance.js";
 import type { WorkerTypeId } from "../types/catalog/workers.js";
 
 /** Tri-state: a hard yes, a "behind an optional system" (research/buy/daily), or no. */
@@ -136,28 +139,90 @@ function computeReachableBuildings(reachableZones: Set<string>): Set<string> {
 
 // ── Tiles (discovery) ─────────────────────────────────────────────────────────
 
+const ZONE_CAT_TO_TILE_CATS = ZONE_TO_TILE_CATEGORIES as Record<string, string[] | undefined>;
+const TILE_CATEGORY_LOOKUP = CATEGORY_OF as Record<string, string | undefined>;
+
 /**
- * Per-tile reachability from its `discovery` method:
- *   default            → reachable
- *   chain(chainLengthOf)→ reachable iff the source tile is reachable
+ * Tile categories that can physically appear on the board in at least one reachable zone.
+ * A category is board-spawnable if ANY of:
+ *   - It has a non-zero season-drop rate on any reachable farm board (natural spawn).
+ *   - It is the upgrade TARGET (value, not key) in any reachable farm board's upgradeMap
+ *     (appears as the upgrade tile when a source category chain completes).
+ *   - It appears in the mine tile pool of any reachable mine board (via pool membership).
+ *
+ * Board-spawnability is a necessary companion to discovery: a tile with `default`
+ * discovery is in the player's collection from the start but still needs its category
+ * to appear on at least one reachable board — otherwise the tile is never encountered.
+ * Chain-discovered tiles inherit this implicitly: their source tile must be reachable
+ * (which itself requires board-spawnability), so the chain can only trigger on boards
+ * where the source category actually spawns.
+ */
+function computeBoardSpawnableCategories(reachableZones: Set<string>): Set<string> {
+  const out = new Set<string>();
+  const addZoneCat = (zoneCat: string) => {
+    for (const tileCat of ZONE_CAT_TO_TILE_CATS[zoneCat] ?? []) out.add(tileCat);
+  };
+  for (const node of MAP_NODES) {
+    if (!reachableZones.has(node.id)) continue;
+    const farm = (node.boards as { farm?: { seasonDrops?: Record<string, Record<string, number>>; upgradeMap?: Record<string, string> } }).farm;
+    if (farm) {
+      // Natural spawns: any season with a non-zero drop rate.
+      for (const row of Object.values(farm.seasonDrops ?? {})) {
+        for (const [zoneCat, rate] of Object.entries(row)) {
+          if ((rate as number) > 0) addZoneCat(zoneCat);
+        }
+      }
+      // Upgrade targets: the VALUE zone-category appears on the board when the source chains.
+      for (const target of Object.values(farm.upgradeMap ?? {})) {
+        if (target !== ZONE_UPGRADE_TARGET_GOLD) addZoneCat(target as string);
+      }
+    }
+    const mine = (node.boards as { mine?: object }).mine;
+    if (mine) {
+      // Mine-pool membership: every tile key in the zone's mine pool contributes its category.
+      for (const tileKey of mineTilePoolForZone(node.id)) {
+        const cat = TILE_CATEGORY_LOOKUP[tileKey];
+        if (cat) out.add(cat);
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Per-tile reachability from its `discovery` method AND board-presence:
+ *   default            → reachable iff the tile's category is board-spawnable
+ *   chain(chainLengthOf)→ reachable iff the source tile is reachable (source must itself
+ *                         be board-spawnable, since "default" tiles now require it)
  *   building(buildingId)→ reachable iff that building is reachable
  *   research|buy|daily  → gated (behind an optional system we don't gate display on)
+ *
+ * The board-spawnability check ensures "default" discovery is not sufficient alone:
+ * the tile's category must appear on at least one reachable board (season drop,
+ * upgrade target, or mine pool), so the tile can actually be encountered in play.
+ * Each board has its own upgrade map, so categories that only appear as upgrade
+ * targets on specific boards are only reachable when those boards are reachable.
  */
-function computeTileReachability(reachableBuildings: Set<string>): Map<string, Reachability> {
+function computeTileReachability(reachableBuildings: Set<string>, boardSpawnableCategories: Set<string>): Map<string, Reachability> {
   const byId = new Map(TILE_TYPES.map((t) => [t.id, t]));
   const memo = new Map<string, Reachability>();
   const resolve = (id: string, seen: Set<string>): Reachability => {
     const cached = memo.get(id);
     if (cached) return cached;
     if (SCOPED_OUT.tiles.has(id)) { memo.set(id, "unreachable"); return "unreachable"; } // manifest residue
-    const t = byId.get(id) as { discovery?: { method?: string; chainLengthOf?: string; buildingId?: string } } | undefined;
+    const t = byId.get(id) as { discovery?: { method?: string; chainLengthOf?: string; buildingId?: string }; category?: string } | undefined;
     if (!t) return "unreachable";
     if (seen.has(id)) return "unreachable"; // cycle guard
     seen.add(id);
     const d = t.discovery ?? {};
     let r: Reachability;
     switch (d.method) {
-      case "default": r = "reachable"; break;
+      case "default":
+        // Default means the tile is in the collection from the start, but its category
+        // must also be spawnable on some reachable board — otherwise the tile is never
+        // encountered regardless of collection membership.
+        r = t.category && boardSpawnableCategories.has(t.category) ? "reachable" : "unreachable";
+        break;
       case "chain": r = d.chainLengthOf ? resolve(d.chainLengthOf, seen) : "unreachable"; break;
       case "building": r = d.buildingId && reachableBuildings.has(d.buildingId) ? "reachable" : "unreachable"; break;
       case "research":
@@ -261,7 +326,8 @@ function sets(): ReachSets {
   if (CACHE) return CACHE;
   const zones = computeReachableZones();
   const buildings = computeReachableBuildings(zones);
-  const tiles = computeTileReachability(buildings);
+  const boardCategories = computeBoardSpawnableCategories(zones);
+  const tiles = computeTileReachability(buildings, boardCategories);
   const resources = computeReachableResources(buildings, tiles);
   const tools = computeReachableTools(buildings, resources);
   const tileCategories = new Set<string>();

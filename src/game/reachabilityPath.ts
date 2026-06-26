@@ -8,7 +8,7 @@
  *   recipe   ──crafted at──▶ building ──unlocked at tier──▶ zone ──travel──▶ Home
  *            ──needs──▶ resource/tool (each recursed)
  *   building ──requires──▶ building,  ──unlocked at──▶ zone ──travel──▶ Home
- *   tile     ──discovery──▶ { Default board | chains-from tile | discovered-at building | Gated system }
+ *   tile     ──discovery──▶ { spawns/upgrade on board | chains-from tile | discovered-at building | Gated system }
  *   resource ──produced by──▶ board tile  |  ──crafted as──▶ recipe
  *   tool     ──crafted as──▶ recipe  |  ──granted by──▶ building
  *   worker   ──needs <family> tile / recipe──▶ … | Catalog
@@ -19,9 +19,11 @@
  * bundle AND `/b/` (the wiki renders it in a modal off the reachability badge).
  */
 
-import { BUILDINGS, RECIPES, TOOLS, TILES } from "../constants.js";
+import { BUILDINGS, RECIPES, TOOLS, TILES, mineTilePoolForZone } from "../constants.js";
 import { MAP_NODES, MAP_EDGES } from "../features/cartography/data.js";
-import { TILE_TYPES } from "../features/tileCollection/data.js";
+import { TILE_TYPES, CATEGORY_OF } from "../features/tileCollection/data.js";
+import { ZONE_TO_TILE_CATEGORIES } from "../features/zones/data.js";
+import { ZONE_UPGRADE_TARGET_GOLD } from "../config/schemas/boardInstance.js";
 import { producedResource } from "./producedResource.js";
 import { CIVIC_PROVISIONS } from "../features/civicEconomy/data.js";
 import { TYPE_WORKER_MAP } from "../features/workers/data.js";
@@ -109,6 +111,9 @@ function travelPath(target: string): string[] | null {
   return null;
 }
 
+const ZONE_CAT_TO_TILE_CATS_PATH = ZONE_TO_TILE_CATEGORIES as Record<string, string[] | undefined>;
+const TILE_CAT_LOOKUP_PATH = CATEGORY_OF as Record<string, string | undefined>;
+
 /** Distinct (object-deduped) recipe key whose output item is `key`, preferring a reachable one. */
 function recipeProducing(key: string): string | null {
   let fallback: string | null = null;
@@ -168,6 +173,52 @@ function tileOfCategory(cat: string): string | null {
     fallback ??= t.id;
   }
   return fallback;
+}
+
+type SpawnMechanism =
+  | { kind: "natural" }
+  | { kind: "upgrade"; sourceZoneCat: string }
+  | { kind: "mine" };
+
+/**
+ * Determine HOW a tile category appears on any reachable board, for path display.
+ * Prefers natural spawn > upgrade target > mine pool (natural is most direct).
+ * Returns null only if the category is not board-spawnable on any reachable zone
+ * (in which case a "default" tile with that category would be unreachable anyway).
+ */
+function boardSpawnMechanismForCategory(tileCat: string): SpawnMechanism | null {
+  const zoneCatsForTileCat = new Set<string>();
+  for (const [zoneCat, tileCats] of Object.entries(ZONE_CAT_TO_TILE_CATS_PATH)) {
+    if ((tileCats ?? []).includes(tileCat)) zoneCatsForTileCat.add(zoneCat);
+  }
+  let upgradeHit: SpawnMechanism | null = null;
+  let mineHit: SpawnMechanism | null = null;
+  for (const node of MAP_NODES) {
+    if (!isZoneReachable(node.id)) continue;
+    const boards = node.boards as {
+      farm?: { seasonDrops?: Record<string, Record<string, number>>; upgradeMap?: Record<string, string> };
+      mine?: object;
+    };
+    const farm = boards.farm;
+    if (farm) {
+      for (const row of Object.values(farm.seasonDrops ?? {})) {
+        for (const [zoneCat, rate] of Object.entries(row)) {
+          if ((rate as number) > 0 && zoneCatsForTileCat.has(zoneCat)) return { kind: "natural" };
+        }
+      }
+      for (const [srcZoneCat, tgtZoneCat] of Object.entries(farm.upgradeMap ?? {})) {
+        if (tgtZoneCat !== ZONE_UPGRADE_TARGET_GOLD && zoneCatsForTileCat.has(tgtZoneCat as string)) {
+          upgradeHit ??= { kind: "upgrade", sourceZoneCat: srcZoneCat };
+        }
+      }
+    }
+    if (boards.mine && !mineHit) {
+      for (const tileKey of mineTilePoolForZone(node.id)) {
+        if (TILE_CAT_LOOKUP_PATH[tileKey] === tileCat) { mineHit = { kind: "mine" }; break; }
+      }
+    }
+  }
+  return upgradeHit ?? mineHit;
 }
 
 /**
@@ -292,13 +343,32 @@ export function reachabilityPath(conceptId: string, entityKey: string): ReachPat
         break;
       }
       case "tiles": {
-        const t = (TILE_TYPES as ReadonlyArray<{ id: string; discovery?: { method?: string; chainLengthOf?: string; buildingId?: string } }>)
+        const t = (TILE_TYPES as ReadonlyArray<{ id: string; category?: string; discovery?: { method?: string; chainLengthOf?: string; buildingId?: string } }>)
           .find((x) => x.id === key);
         const d = t?.discovery ?? {};
         switch (d.method) {
-          case "default":
-            addEdge(id, ensureLeaf("board", "Default board", "board", "reachable"), "found on");
+          case "default": {
+            const mechanism = t?.category ? boardSpawnMechanismForCategory(t.category) : null;
+            if (mechanism?.kind === "upgrade") {
+              addEdge(
+                id,
+                ensureLeaf(
+                  `board:upgrade:${mechanism.sourceZoneCat}`,
+                  "Farm board (upgrade result)",
+                  "board",
+                  "reachable",
+                  `upgrade from: ${mechanism.sourceZoneCat} tiles`,
+                ),
+                "upgrade result on",
+              );
+            } else if (mechanism?.kind === "mine") {
+              addEdge(id, ensureLeaf("board:mine", "Mine board", "board", "reachable"), "found in");
+            } else {
+              // natural spawn (or unknown — fallback to generic label)
+              addEdge(id, ensureLeaf("board:natural", "Farm board (natural spawn)", "board", "reachable"), "spawns on");
+            }
             break;
+          }
           case "chain":
             if (d.chainLengthOf) {
               const src = ensureEntity("tiles", d.chainLengthOf);
