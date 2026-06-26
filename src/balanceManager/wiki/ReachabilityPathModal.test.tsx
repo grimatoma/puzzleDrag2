@@ -39,8 +39,8 @@ describe("ReachabilityPathModal", () => {
   });
 
   it("closes on backdrop click and on the close button", () => {
-    const { onClose, container } = renderModal();
-    fireEvent.click(container.querySelector(".wiki-cost-modal-backdrop")!);
+    const { onClose } = renderModal();
+    fireEvent.click(document.body.querySelector(".wiki-cost-modal-backdrop")!);
     expect(onClose).toHaveBeenCalledTimes(1);
     fireEvent.click(screen.getByLabelText("Close"));
     expect(onClose).toHaveBeenCalledTimes(2);
