@@ -39,6 +39,8 @@ import {
   RECIPES,
   FARM_TILE_POOL,
   MINE_TILE_POOL,
+  DEEP_MINE_TILE_POOL,
+  DEEP_MINE_ZONES,
   FISH_TILE_POOL,
   tileFamilyResource,
 } from "../constants.js";
@@ -66,6 +68,9 @@ function poolResources(pool: readonly string[]): string[] {
 // tier costs — add it explicitly so the mine board's output set is complete.
 const FARM_OUT = new Set(poolResources(FARM_TILE_POOL));
 const MINE_OUT = new Set([...poolResources(MINE_TILE_POOL), "dirt"]);
+// Deeper mine zones (caves/forge) also yield gold → gold_bar; the entry quarry
+// does not. Keeps the oracle's reachability in sync with mineTilePoolForZone.
+const DEEP_MINE_OUT = new Set([...poolResources(DEEP_MINE_TILE_POOL), "dirt"]);
 const FISH_OUT = new Set(poolResources(FISH_TILE_POOL));
 
 export interface RecipeView {
@@ -103,7 +108,7 @@ function zoneBoardOutputs(node: MapNode): Set<string> {
   const out = new Set<string>();
   const b = node.boards as Record<string, unknown>;
   if (b.farm) for (const r of FARM_OUT) out.add(r);
-  if (b.mine) for (const r of MINE_OUT) out.add(r);
+  if (b.mine) for (const r of (DEEP_MINE_ZONES.has(node.id) ? DEEP_MINE_OUT : MINE_OUT)) out.add(r);
   if (b.fish) for (const r of FISH_OUT) out.add(r);
   return out;
 }

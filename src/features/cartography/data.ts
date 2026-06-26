@@ -371,7 +371,12 @@ export const MAP_NODES: MapNode[] = [
       {
         id: "foundry_city", name: "Foundry City", plots: 12,
         unlocks: [BuildingId.Observatory, BuildingId.CaravanPost, BuildingId.Housing3],
-        upgradeCost: { resources: { iron_bar: 20, gold_bar: 4, cut_gem: 3, silver_bar: 8 } },
+        // Quarry-producible goods only. Gold is a deep-mine (caves/forge)
+        // resource the entry quarry can't make, so its own top rung must not
+        // demand gold_bar — every other quarry rung climbs on its own output,
+        // and Foundry City now follows suit (the dropped gold_bar:4 is replaced
+        // by more cut_gem + silver_bar, both quarried here).
+        upgradeCost: { resources: { iron_bar: 20, cut_gem: 6, silver_bar: 12 } },
       },
     ],
   },

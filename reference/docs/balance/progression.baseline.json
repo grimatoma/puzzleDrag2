@@ -467,7 +467,6 @@
       "tier": 3,
       "inputs": [
         "pie",
-        "honey",
         "jam"
       ]
     },
@@ -739,9 +738,8 @@
           "plots": 12,
           "upgradeCost": {
             "iron_bar": 20,
-            "gold_bar": 4,
-            "cut_gem": 3,
-            "silver_bar": 8
+            "cut_gem": 6,
+            "silver_bar": 12
           },
           "unlocks": [
             "observatory",
@@ -751,19 +749,8 @@
         }
       ],
       "reachableFromFreshSave": true,
-      "maxSelfTier": 4,
-      "wall": {
-        "reachedTier": 4,
-        "reachedName": "Smeltworks",
-        "toTier": 5,
-        "toName": "Foundry City",
-        "missing": [
-          {
-            "key": "gold_bar",
-            "reason": "no source reachable from this settlement's board or stations"
-          }
-        ]
-      }
+      "maxSelfTier": 5,
+      "wall": null
     },
     {
       "id": "caves",
@@ -782,9 +769,69 @@
         "tier": 1
       },
       "requiresHearthTokens": false,
-      "tiers": [],
+      "tiers": [
+        {
+          "id": "lantern_camp",
+          "name": "Lantern Camp",
+          "plots": 3,
+          "upgradeCost": {},
+          "unlocks": [
+            "hearth",
+            "kitchen",
+            "inn"
+          ]
+        },
+        {
+          "id": "tunnel_works",
+          "name": "Tunnel Works",
+          "plots": 5,
+          "upgradeCost": {
+            "block": 14,
+            "coke": 4
+          },
+          "unlocks": [
+            "workshop",
+            "housing",
+            "watchtower"
+          ]
+        },
+        {
+          "id": "gem_galleries",
+          "name": "Gem Galleries",
+          "plots": 7,
+          "upgradeCost": {
+            "iron_bar": 12,
+            "coke": 8,
+            "cut_gem": 1
+          },
+          "unlocks": [
+            "forge",
+            "barn",
+            "apothecary",
+            "chapel"
+          ]
+        },
+        {
+          "id": "deephold",
+          "name": "Deephold",
+          "plots": 9,
+          "upgradeCost": {
+            "iron_bar": 18,
+            "silver_bar": 6,
+            "cut_gem": 3,
+            "gold_bar": 2
+          },
+          "unlocks": [
+            "powder_store",
+            "observatory",
+            "caravan_post",
+            "housing2",
+            "housing3"
+          ]
+        }
+      ],
       "reachableFromFreshSave": true,
-      "maxSelfTier": 0,
+      "maxSelfTier": 3,
       "wall": null
     },
     {
@@ -1058,23 +1105,7 @@
       "plank",
       "soup"
     ],
-    "walls": [
-      {
-        "zone": "quarry",
-        "wall": {
-          "reachedTier": 4,
-          "reachedName": "Smeltworks",
-          "toTier": 5,
-          "toName": "Foundry City",
-          "missing": [
-            {
-              "key": "gold_bar",
-              "reason": "no source reachable from this settlement's board or stations"
-            }
-          ]
-        }
-      }
-    ],
+    "walls": [],
     "softlock": null,
     "marketEscape": {
       "exists": false,

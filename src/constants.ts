@@ -280,6 +280,21 @@ export const FARM_TILE_POOL = [
 ];
 export const MINE_TILE_POOL = ["tile_mine_stone", "tile_mine_stone", "tile_mine_stone", "tile_mine_iron_ore", "tile_mine_copper_ore", "tile_mine_coal", "tile_special_dirt", "tile_special_dirt", "tile_mine_gem", "tile_mine_silver"];
 
+// Deeper mine zones surface gold. `gold_bar` gates the Chapel/Observatory and
+// the deep mine tiers, but it must stay a LATE resource — so the entry quarry
+// keeps the gold-free MINE_TILE_POOL and only the deeper caves/forge expose
+// gold. (Previously gold was reachable solely via the mythic philosophers_stone
+// tool, which walled those buildings off in normal play.) The shared
+// MINE_TILE_POOL is intentionally left unchanged so the entry mine doesn't
+// de-gate gold early.
+export const DEEP_MINE_ZONES: ReadonlySet<string> = new Set(["caves", "forge"]);
+export const DEEP_MINE_TILE_POOL = [...MINE_TILE_POOL, "tile_mine_gold"];
+
+/** The mine tile pool for a given zone — the deep pool (with gold) for deep mine zones. */
+export function mineTilePoolForZone(zoneId: string | null | undefined): string[] {
+  return zoneId != null && DEEP_MINE_ZONES.has(zoneId) ? DEEP_MINE_TILE_POOL : MINE_TILE_POOL;
+}
+
 // Fish biome (MVP) — sardines / mackerel are most common, kelp is a filler,
 // clam/oyster are mid-rare, fish_fillet is rare so it's mostly a chain product.
 export const FISH_TILE_POOL = [
@@ -980,16 +995,16 @@ export const RECIPES: RecipeRecord = {
   rec_cobblepath:  { item: "cobblepath",    station: "forge",  tier: 1, inputs: { block: 5, plank: 2 }},
   rec_lantern:     { item: "lantern",       station: "forge",  tier: 2, inputs: { iron_bar: 1, coke: 1, plank: 1 }},
   rec_goldring:    { item: "goldring",      station: "forge",  tier: 2, inputs: { gold_bar: 1, iron_bar: 2 }},
-  rec_gemcrown:    { item: "gemcrown",      station: "forge",  tier: 2, inputs: { cut_gem: 1, gold_bar: 2 }},
+  rec_gemcrown:    { item: "gemcrown",      station: "forge",  tier: 2, inputs: { cut_gem: 1, gold_bar: 1 }},
   rec_ironframe:   { item: "ironframe",     station: "forge",  tier: 3, inputs: { plank: 2, iron_bar: 1 }},
   rec_stonework:   { item: "stonework",     station: "forge",  tier: 3, inputs: { block: 2, coke: 1 }},
   rec_chowder:     { item: "chowder",       station: "larder", tier: 2, inputs: { fish_fillet: 2, milk: 1, soup: 1 }},
   rec_fish_oil_bot:{ item: "fish_oil_bottled", station: "workshop", tier: 1, inputs: { fish_oil: 1, plank: 1 }},
   rec_cured_meat:  { item: "cured_meat",    station: "smokehouse", tier: 1, inputs: { meat: 2, coke: 1 }},
   rec_festival_loaf:{ item: "festival_loaf", station: "bakery",     tier: 2, inputs: { flour: 3, jam: 2, eggs: 1 }},
-  rec_wedding_pie: { item: "wedding_pie",   station: "bakery",     tier: 3, inputs: { pie: 1, honey: 1, jam: 2 }},
+  rec_wedding_pie: { item: "wedding_pie",   station: "bakery",     tier: 3, inputs: { pie: 1, jam: 2 }},
   rec_iron_ration: { item: "iron_ration",   station: "kitchen",    tier: 2, inputs: { flour: 5, meat: 1, iron_bar: 1 }},
-  rec_supplies:    { item: "supplies",      station: "kitchen",    tier: 1, inputs: { flour: 5 }},
+  rec_supplies:    { item: "supplies",      station: "kitchen",    tier: 1, inputs: { flour: 3 }},
 };
 
 // ── Backward-compatible aliases ────────────────────────────────────────────
@@ -1040,7 +1055,7 @@ Object.assign(RECIPES, { tools: WORKSHOP_RECIPES });
 
 export const MARKET_PRICES = {
   // Raw tiles (board pieces sometimes sold).
-  tile_grass_grass:    { buy: 40,  sell: 0  },
+  tile_grass_grass:    { buy: 40,  sell: 1  },
   tile_grain_wheat:  { buy: 60,  sell: 2  },
   tile_mine_stone:   { buy: 50,  sell: 1  },
   tile_mine_coal:    { buy: 60,  sell: 2  },
