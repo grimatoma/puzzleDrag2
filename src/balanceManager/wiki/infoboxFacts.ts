@@ -179,6 +179,10 @@ function abilityPhrase(ability: unknown): { label: string; value: string } | nul
       return { label: "Threshold", value: `−${num("amount", 1)} (${prettify(p.category)})` };
     case "threshold_reduce":
       return { label: "Threshold", value: `−${num("amount", 1)} ${itemLabel(p.target)}` };
+    case "chain_redirect_category":
+      return { label: "Promotes", value: `${prettify(p.fromCategory)} → ${prettify(p.toCategory)}` };
+    case "rune_support_reduce":
+      return { label: "Rune", value: `−${num("amount", 1)} support` };
     default: {
       const cat = getAbility(typeof id === "string" ? id : null);
       return cat ? { label: "Power", value: cat.name } : null;
@@ -336,7 +340,9 @@ export function infoboxFacts(conceptId: string, key: string, e: Rec): Fact[] {
     }
 
     case "workers": {
-      // Fields: role, maxCount, hireCost.coins
+      // Ability ("attribute") leads — what the worker actually does — then the
+      // descriptive metadata. Fields: abilities, role, maxCount, hireCost.coins
+      f.push(...abilityFacts(e["abilities"]));
       add("Role", e["role"]);
       add("Max count", e["maxCount"]);
       const hireCost = e["hireCost"];
