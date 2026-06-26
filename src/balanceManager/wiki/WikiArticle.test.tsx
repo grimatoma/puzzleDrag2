@@ -222,7 +222,10 @@ describe("WikiArticle — RefButton navigation (wikiNavTarget)", () => {
     const relButtons = allButtons.filter(
       (b) =>
         !/back/i.test(b.textContent ?? "") &&
-        !(b.getAttribute("title") ?? "").startsWith("Go to"),
+        !(b.getAttribute("title") ?? "").startsWith("Go to") &&
+        // Exclude the header reachability badge (a button that opens the
+        // "how is this reachable?" graph, not a relation cross-link).
+        !(b.getAttribute("aria-label") ?? "").startsWith("Reachability:"),
     );
 
     // Click the first relation button and verify the navigate signature.
