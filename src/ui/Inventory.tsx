@@ -376,8 +376,6 @@ function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: InventoryEnt
     }
   };
   const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key: key as ResourceKey, qty: 1 } });
-  const status = orderStatus ? <StatusPill status={orderStatus} total={orderTotal} /> : null;
-
   return (
     <DetailPane
       eyebrow={kind === "tool" ? "Tool" : kind === "item" ? "Item" : "Resource"}
@@ -407,12 +405,6 @@ function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: InventoryEnt
         </div>
       }
     >
-      {status && (
-        <div className="hl-well">
-          <div className="hl-section-label mb-1.5">Status</div>
-          <div className="flex flex-wrap gap-2">{status}</div>
-        </div>
-      )}
       {tags.length > 0 && (
         <div className="hl-well">
           <div className="hl-section-label mb-1.5">Tags</div>
