@@ -401,18 +401,7 @@ interface StationMenuProps {
 function StationMenu({ state, built, inventory, tier2Unlocked, onOpen }: StationMenuProps) {
   return (
     <FeaturePanel>
-      <FeaturePanel.Header
-        title="Crafting"
-        actions={
-          <button
-            type="button"
-            onClick={() => { window.location.hash = "#/wiki"; }}
-            className="flex-shrink-0 rounded-lg px-2 py-1 border border-iron bg-parchment-dim text-ink-soft text-[11px] hover:bg-parchment-soft transition-colors"
-          >
-            Recipe Graph →
-          </button>
-        }
-      />
+      <FeaturePanel.Header title="Crafting" />
       <FeaturePanel.Body>
         <p className="mb-3 text-caption text-ink-soft">Choose a workshop to see what you can craft there.</p>
         <BrowserGrid min={220}>
@@ -503,13 +492,6 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
         >
           Buildings
         </Button>
-        <button
-          type="button"
-          onClick={() => { window.location.hash = "#/wiki"; }}
-          className="ml-auto flex-shrink-0 rounded-lg px-2 py-1 border border-iron bg-parchment-dim text-ink-soft text-[11px] hover:bg-parchment-soft transition-colors"
-        >
-          Recipe Graph →
-        </button>
       </div>
 
       <StationHeader meta={meta} pill={headerPill} />
