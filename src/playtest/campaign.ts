@@ -34,7 +34,6 @@ import {
   settlementTier,
   maxTier,
   currentTierDef,
-  SETTLEMENT_FOUNDING_BASE_COINS,
   SETTLEMENT_FOUNDING_GROWTH,
   zoneHasBoard,
 } from "../features/zones/data.js";
@@ -174,11 +173,17 @@ function pearson(xs: number[], ys: number[]): number {
   return den === 0 ? 0 : num / den;
 }
 
-/** First `count` settlement-founding prices: round(base · growth^(k-1)). */
+// Founding switched to a resource basket in Phase 2, but the COIN-accumulation
+// curve is still the cleanest fully-real progression signal — so the harness
+// keeps measuring runs-to-bank this geometric set of coin balances (the same
+// numbers that used to be the founding prices).
+const FOUNDING_COIN_CURVE_BASE = 300;
+
+/** First `count` coin checkpoints: round(base · growth^(k-1)). */
 function foundingCoinLadder(count: number): Array<{ label: string; coins: number }> {
   const out: Array<{ label: string; coins: number }> = [];
   for (let k = 1; k <= count; k++) {
-    const coins = Math.round(SETTLEMENT_FOUNDING_BASE_COINS * Math.pow(SETTLEMENT_FOUNDING_GROWTH, k - 1));
+    const coins = Math.round(FOUNDING_COIN_CURVE_BASE * Math.pow(SETTLEMENT_FOUNDING_GROWTH, k - 1));
     out.push({ label: `found settlement #${k + 1} (${coins}c)`, coins });
   }
   return out;

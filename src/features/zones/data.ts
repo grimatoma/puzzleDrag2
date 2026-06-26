@@ -37,8 +37,11 @@ import {
   EXPEDITION_FOOD_TURNS,
   EXPEDITION_MEAT_FOODS,
   SETTLEMENT_BIOMES,
+  getItem,
 } from "../../constants.js";
 import type { GameState, HeirloomsState } from "../../types/state.js";
+import { inventoryQty } from "../../types/inventory.js";
+import { zoneInventory } from "../../state/zoneInventory.js";
 
 export const ZONE_CATEGORIES = Object.freeze([
   "grass",
@@ -371,18 +374,15 @@ export function displayZoneName(state: GameState | null | undefined, zoneId?: st
   return ZONES[id]?.name ?? id;
 }
 
-// ─── Settlement founding (Phase 4) ───────────────────────────────────────────
-// `home` is founded for free; founding any other zone costs an escalating coin
-// price. These constants are tunable (mocked starting values).
-//
-// DEFERRED (Phase 4b): founding is recorded in state + dispatchable via
-// FOUND_SETTLEMENT, but it is NOT yet *enforced* — building/playing at a
-// not-yet-founded zone is still allowed (BUILD / StartFarming don't gate on
-// isSettlementFounded), and there is no Kingdoms-hub UI on the cartography map
-// that surfaces founded/completed status or a "Found this settlement" button.
-// Wire both of those in 4b.
-export const SETTLEMENT_FOUNDING_BASE_COINS = 300;
+// ─── Settlement founding (Phase 4 + Phase 2) ─────────────────────────────────
+// `home` is founded for free; founding any other zone costs an escalating
+// **resource basket** (Phase 2 — was a flat coin price). Founding is bankrolled
+// by the capital's stores (`home`), because the new zone has no inventory of
+// its own until it's founded. These values are tunable.
+export const SETTLEMENT_FOUNDING_BASKET: Readonly<Record<string, number>> = Object.freeze({ plank: 12, bread: 10, hay_bundle: 8 });
 export const SETTLEMENT_FOUNDING_GROWTH = 1.7;
+/** The zone whose inventory pays founding costs — the capital bankrolls expansion. */
+export const FOUNDING_PAYMENT_ZONE = DEFAULT_ZONE;
 
 /** Number of zones the player has founded. */
 export function foundedSettlementCount(state: GameState | null | undefined): number {
@@ -397,13 +397,58 @@ export function isSettlementFounded(state: GameState | null | undefined, zoneId:
 }
 
 /**
- * Coin cost to found the *next* settlement, given how many are already founded.
- * The k-th founding (k = current founded count, so the 2nd settlement is k=1)
- * costs `base * growth^(k-1)`.
+ * Resource basket to found the *next* settlement, given how many are already
+ * founded. The k-th founding (k = current founded count, so the 2nd settlement
+ * is k=1) scales every basket amount by `growth^(k-1)`.
  */
-export function settlementFoundingCost(state: GameState | null | undefined): { coins: number } {
+export function settlementFoundingCost(state: GameState | null | undefined): { resources: Record<string, number> } {
   const k = Math.max(1, foundedSettlementCount(state));
-  return { coins: Math.round(SETTLEMENT_FOUNDING_BASE_COINS * Math.pow(SETTLEMENT_FOUNDING_GROWTH, k - 1)) };
+  const mult = Math.pow(SETTLEMENT_FOUNDING_GROWTH, k - 1);
+  const resources: Record<string, number> = {};
+  for (const [key, amt] of Object.entries(SETTLEMENT_FOUNDING_BASKET)) {
+    resources[key] = Math.round(amt * mult);
+  }
+  return { resources };
+}
+
+/** True when the capital's stores (home) can cover the next founding's basket. */
+export function canAffordFounding(state: GameState | null | undefined): boolean {
+  if (!state) return false;
+  const { resources } = settlementFoundingCost(state);
+  const inv = zoneInventory(state, FOUNDING_PAYMENT_ZONE);
+  return Object.entries(resources).every(([k, v]) => inventoryQty(inv, k) >= v);
+}
+
+/** Human-readable basket label, e.g. "12 Plank · 10 Bread · 8 Hay Bundle". */
+export function foundingCostLabel(state: GameState | null | undefined): string {
+  const { resources } = settlementFoundingCost(state);
+  return Object.entries(resources)
+    .map(([k, v]) => `${v} ${getItem(k)?.label ?? k}`)
+    .join(" · ");
+}
+
+// ─── Housing & villager capacity (Phase 2) ───────────────────────────────────
+// The House (`housing`) is the one repeatable building: every town can raise a
+// fixed number of them, and each House settles a batch of Villagers (the hiring
+// currency) the instant it's built — replacing the old +1/season drip. House
+// count is DERIVED from the zone's plot map rather than a separate counter: a
+// zone's `_plots` already records every placed building, duplicates included.
+export const HOUSE_BUILDING_ID = "housing";
+export const HOUSE_VILLAGER_GRANT = 3;
+const HOUSE_CAP_BY_ZONE: Readonly<Record<string, number>> = Object.freeze({ home: 3, meadow: 2 });
+
+/** Max number of Houses buildable at a zone (1 for any unlisted zone). */
+export function houseCapForZone(zoneId: string): number {
+  return HOUSE_CAP_BY_ZONE[zoneId] ?? 1;
+}
+
+/** How many Houses are already placed at `zoneId`, counted from its plot map. */
+export function houseCountAt(state: GameState | null | undefined, zoneId: string): number {
+  const built = state?.built?.[zoneId] as { _plots?: Record<string, string | null> } | undefined;
+  const plots = built?._plots ?? {};
+  let n = 0;
+  for (const id of Object.values(plots)) if (id === HOUSE_BUILDING_ID) n++;
+  return n;
 }
 
 // ─── Settlement tier ladder (Zone Tier Ladder) ──────────────────────────────
@@ -466,6 +511,27 @@ export function unlockedBuildings(zoneId: string, tier: number): BuildingId[] {
   const top = Math.min(Math.max(0, tier), ladder.length - 1);
   for (let t = 0; t <= top; t++) {
     for (const b of ladder[t].unlocks) {
+      if (!seen.has(b)) { seen.add(b); out.push(b); }
+    }
+  }
+  return out;
+}
+
+/**
+ * Buildings buildable *anywhere* (Phase 2 "global unlock"): the union of every
+ * founded zone's currently-unlocked roster. Once a zone grows to the rung that
+ * unlocks a building, that building can be raised at any town — you still pay
+ * its cost from the local stores, and the Town view's biome + reachability
+ * filters still apply on top. Unfounded / stranded zones contribute nothing
+ * (home always counts), so this can never widen scope past what the player has
+ * actually reached.
+ */
+export function globallyUnlockedBuildings(state: GameState | null | undefined): BuildingId[] {
+  const out: BuildingId[] = [];
+  const seen = new Set<string>();
+  for (const zoneId of ZONE_IDS) {
+    if (zoneId !== DEFAULT_ZONE && !isSettlementFounded(state, zoneId)) continue;
+    for (const b of unlockedBuildings(zoneId, settlementTier(state, zoneId))) {
       if (!seen.has(b)) { seen.add(b); out.push(b); }
     }
   }

@@ -2,8 +2,9 @@
 // (The original named-individual "apprentice" roster was removed; the
 // type-tier workers introduced alongside it are now the worker system.)
 import { describe, it, expect } from "vitest";
-import { inv } from "../src/testUtils/inventory.js";
+import { inv, patchInventory } from "../src/testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../src/state.js";
+import { BUILDINGS } from "../src/constants.js";
 import { TYPE_WORKERS, TYPE_WORKER_MAP } from "../src/features/workers/data.js";
 import { computeWorkerEffects } from "../src/features/workers/aggregate.js";
 
@@ -145,45 +146,52 @@ describe("Phase 4 — WORKERS/FIRE", () => {
   });
 });
 
-describe("Villager currency — Housing Blocks grant Villagers at season end", () => {
-  function withBuilt(state, ids) {
-    const map = state.mapCurrent ?? "home";
-    const builtForMap = { ...(state.built?.[map] ?? {}) };
-    for (const id of ids) builtForMap[id] = true;
-    return { ...state, built: { ...state.built, [map]: builtForMap } };
-  }
+describe("Villager currency — Houses grant Villagers on build (Phase 2)", () => {
+  const HOUSE = BUILDINGS.find((b) => b.id === "housing");
+  // Stock home so the House's build cost is affordable; build runs at home.
+  const stockedHome = () =>
+    patchInventory(
+      { ...createInitialState(), mapCurrent: "home", activeZone: "home" },
+      { plank: 999, bread: 999, eggs: 999 },
+      "home",
+    );
 
   it("fresh state starts with zero Villagers", () => {
     expect(createInitialState().villagers).toBe(0);
   });
 
-  it("each built Housing Block adds 1 Villager when the season closes", () => {
-    let s = withBuilt(createInitialState(), ["hearth", "housing", "housing2", "housing3"]);
+  it("each House grants a batch of Villagers the moment it's built", () => {
+    let s = stockedHome();
     expect(s.villagers).toBe(0);
-    s = rootReducer(s, { type: "CLOSE_SEASON" });
+    s = rootReducer(s, { type: "BUILD", building: HOUSE });
     expect(s.villagers).toBe(3);
-    // Villagers accumulate across seasons.
-    s = rootReducer(s, { type: "CLOSE_SEASON" });
+    // A second House grants another batch (House is repeatable up to the cap).
+    s = rootReducer(s, { type: "BUILD", building: HOUSE });
     expect(s.villagers).toBe(6);
   });
 
-  it("no Housing Blocks → no Villagers granted at season end", () => {
-    let s = withBuilt(createInitialState(), ["hearth"]);
+  it("closing a season alone (no House built) grants no Villagers", () => {
+    let s = { ...createInitialState() };
     s = rootReducer(s, { type: "CLOSE_SEASON" });
     expect(s.villagers).toBe(0);
   });
 
-  it("end-to-end: earn a Villager, hire with it, then it is spent", () => {
-    let s = withBuilt(createInitialState(), ["hearth", "housing"]);
-    s = rootReducer(s, { type: "CLOSE_SEASON" });
-    expect(s.villagers).toBe(1);
-    s = { ...s, coins: 1000, inventory: { home: { tile_grass_grass: 100 } } };
+  it("end-to-end: build a House to earn Villagers, hire spends one, fire refunds it", () => {
+    let s = stockedHome();
+    s = rootReducer(s, { type: "BUILD", building: HOUSE });
+    expect(s.villagers).toBe(3);
+    s = { ...s, coins: 1000, inventory: { ...s.inventory, home: { ...(s.inventory.home ?? {}), tile_grass_grass: 100 } } };
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(s.workers.hired.farmer).toBe(1);
-    expect(s.villagers).toBe(0);
-    // Out of Villagers → the next hire is rejected.
+    expect(s.villagers).toBe(2); // one Villager spent on the hire
+    s = rootReducer(s, { type: "WORKERS/FIRE", payload: { id: "farmer" } });
+    expect(s.villagers).toBe(3); // firing refunds it
+  });
+
+  it("with no Villagers available, a hire is rejected", () => {
+    const s = { ...createInitialState(), coins: 1000, villagers: 0, inventory: { home: { tile_grass_grass: 100 } } };
     const blocked = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
-    expect(blocked.workers.hired.farmer).toBe(1);
+    expect(blocked.workers?.hired?.farmer ?? 0).toBe(0);
   });
 });
 

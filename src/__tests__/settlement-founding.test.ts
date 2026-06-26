@@ -1,19 +1,24 @@
-// Phase 4a — settlement founding: state.settlements + FOUND_SETTLEMENT +
-// the founding-cost / founded / completed helpers.
+// Phase 4a + Phase 2 — settlement founding: state.settlements + FOUND_SETTLEMENT +
+// the founding-cost / founded / completed helpers. Founding now costs a scaling
+// **resource basket** paid from the capital's stores (home), not coins.
 import { describe, it, expect, beforeEach } from "vitest";
 import { inv, patchInventory } from "../testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../state.js";
 import {
   isSettlementFounded,
   settlementFoundingCost,
+  canAffordFounding,
   foundedSettlementCount,
   settlementCompleted,
   completedSettlementCount,
-  SETTLEMENT_FOUNDING_BASE_COINS,
+  SETTLEMENT_FOUNDING_BASKET,
   SETTLEMENT_FOUNDING_GROWTH,
 } from "../features/zones/data.js";
 
 beforeEach(() => global.localStorage.clear());
+
+// Generous home stores so the basket is always affordable in the success cases.
+const stockHome = (s) => patchInventory(s, { plank: 99, bread: 99, hay_bundle: 99 }, "home");
 
 describe("fresh state — settlements", () => {
   it("home is founded for free; other zones are not", () => {
@@ -25,86 +30,93 @@ describe("fresh state — settlements", () => {
   });
 });
 
-describe("settlementFoundingCost — escalating", () => {
-  it("the 2nd settlement costs the base price", () => {
-    expect(settlementFoundingCost(createInitialState())).toEqual({ coins: SETTLEMENT_FOUNDING_BASE_COINS });
+describe("settlementFoundingCost — escalating resource basket", () => {
+  it("the 2nd settlement costs the base basket", () => {
+    expect(settlementFoundingCost(createInitialState())).toEqual({ resources: { ...SETTLEMENT_FOUNDING_BASKET } });
   });
-  it("each further founding multiplies by the growth factor", () => {
+  it("each further founding scales every basket amount by the growth factor", () => {
     const twoFounded = { ...createInitialState(), settlements: { home: { founded: true }, meadow: { founded: true } } };
-    expect(settlementFoundingCost(twoFounded)).toEqual({
-      coins: Math.round(SETTLEMENT_FOUNDING_BASE_COINS * SETTLEMENT_FOUNDING_GROWTH),
-    });
+    const c2 = settlementFoundingCost(twoFounded).resources;
+    for (const [k, base] of Object.entries(SETTLEMENT_FOUNDING_BASKET)) {
+      expect(c2[k]).toBe(Math.round(base * SETTLEMENT_FOUNDING_GROWTH));
+    }
     const threeFounded = { ...twoFounded, settlements: { ...twoFounded.settlements, orchard: { founded: true } } };
-    expect(settlementFoundingCost(threeFounded).coins).toBe(
-      Math.round(SETTLEMENT_FOUNDING_BASE_COINS * SETTLEMENT_FOUNDING_GROWTH * SETTLEMENT_FOUNDING_GROWTH),
-    );
+    const c3 = settlementFoundingCost(threeFounded).resources;
+    for (const [k, base] of Object.entries(SETTLEMENT_FOUNDING_BASKET)) {
+      expect(c3[k]).toBe(Math.round(base * SETTLEMENT_FOUNDING_GROWTH * SETTLEMENT_FOUNDING_GROWTH));
+    }
   });
 });
 
 describe("FOUND_SETTLEMENT", () => {
   // Phase 6a — founding the *next* settlement requires the previous one (home,
   // for the second founding) to already be complete. Build out home + face its
-  // keeper before testing the founding flow itself.
+  // keeper, and stock home with the founding basket (paid from home's stores).
   const homeCompleted = (over = {}) => {
+    const base = createInitialState();
     const built = { decorations: {}, _plots: {} };
     for (const b of ["hearth", "mill", "bakery", "inn", "granary", "larder", "forge", "caravan_post"]) built[b] = true;
-    return {
-      ...createInitialState(),
-      built: { ...createInitialState().built, home: built },
+    return stockHome({
+      ...base,
+      built: { ...base.built, home: built },
       settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist" } },
       ...over,
-    };
+    });
   };
 
-  it("founds a zone, deducts the cost, and bumps the next cost", () => {
-    let s = homeCompleted({ coins: 5000 });
-    const cost = settlementFoundingCost(s).coins;
+  it("founds a zone, deducts the basket from home, and bumps the next cost", () => {
+    let s = homeCompleted();
+    const cost = settlementFoundingCost(s).resources;
+    const before = { ...inv(s, "home") };
     s = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } });
     expect(s.settlements.orchard).toMatchObject({ founded: true }); // Phase 5e adds a `biome`
     expect(isSettlementFounded(s, "orchard")).toBe(true);
-    expect(s.coins).toBe(5000 - cost);
+    // Basket deducted from home stores (the capital bankrolls expansion).
+    expect(inv(s, "home").plank).toBe(before.plank - cost.plank);
+    expect(inv(s, "home").bread).toBe(before.bread - cost.bread);
+    expect(inv(s, "home").hay_bundle).toBe(before.hay_bundle - cost.hay_bundle);
     expect(foundedSettlementCount(s)).toBe(2);
-    expect(settlementFoundingCost(s).coins).toBeGreaterThan(cost);
+    expect(settlementFoundingCost(s).resources.plank).toBeGreaterThan(cost.plank);
   });
 
   it("rejects an unknown zone", () => {
-    const s = homeCompleted({ coins: 9999 });
+    const s = homeCompleted();
     expect(rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "nowhere" } })).toBe(s);
   });
 
   it("rejects an already-founded zone (incl. home)", () => {
-    const s = homeCompleted({ coins: 9999 });
+    const s = homeCompleted();
     expect(rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "home" } })).toBe(s);
     const s2 = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } });
     expect(rootReducer(s2, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } })).toBe(s2);
   });
 
-  it("rejects when the player can't afford the cost", () => {
-    const s = homeCompleted({ coins: 10 });
-    expect(rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } })).toBe(s);
+  it("rejects when home can't cover the basket", () => {
+    // Strip home's stores so the basket is unaffordable.
+    const poor = (() => { const s = homeCompleted(); return { ...s, inventory: { ...s.inventory, home: {} } }; })();
+    expect(canAffordFounding(poor)).toBe(false);
+    expect(rootReducer(poor, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } })).toBe(poor);
   });
 
   it("rejects founding settlement #2 when no prior settlement is complete", () => {
     // Fresh state — home is auto-founded but not built up or keeper-faced.
-    const s = { ...createInitialState(), coins: 9999 };
+    const s = stockHome({ ...createInitialState() });
     const result = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } });
     expect(result.settlements?.orchard).toBeUndefined();
-    expect(result.coins).toBe(s.coins); // not deducted
     expect(result.bubble?.text).toMatch(/Complete your first settlement/i);
   });
 
   // Zone Tier Ladder — the quarry (Town 2) requires home at its City rung.
-  it("rejects founding the quarry until home reaches City (tier 4)", () => {
+  it("rejects founding the quarry until home reaches City", () => {
     // home completed (passes the prior-complete gate) but still at tier 0.
-    const s = homeCompleted({ coins: 99999, settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist", tier: 0 } } });
+    const s = homeCompleted({ settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist", tier: 0 } } });
     const blocked = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "quarry" } });
     expect(blocked.settlements?.quarry).toBeUndefined();
-    expect(blocked.coins).toBe(s.coins); // not deducted
     expect(blocked.bubble?.text).toMatch(/City before founding/i);
   });
 
-  it("allows founding the quarry once home is at City (tier 4)", () => {
-    const s = homeCompleted({ coins: 99999, settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist", tier: 4 } } });
+  it("allows founding the quarry once home is at City", () => {
+    const s = homeCompleted({ settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist", tier: 4 } } });
     const ok = rootReducer(s, { type: "FOUND_SETTLEMENT", payload: { zoneId: "quarry" } });
     expect(ok.settlements?.quarry).toMatchObject({ founded: true, tier: 0 });
   });
@@ -187,8 +199,9 @@ describe("settlementCompleted", () => {
       settlements: { home: { founded: true, biome: "temperate_vale", keeperPath: "coexist" } },
     });
     expect(completedSettlementCount(s)).toBe(1); // home, founded + half-built + keeper faced
-    // meadow founded but not completed → still 1
-    const s2 = rootReducer({ ...s, coins: 9999 }, { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } });
+    // founding another zone doesn't complete it → still 1
+    const s2 = rootReducer(stockHome(s), { type: "FOUND_SETTLEMENT", payload: { zoneId: "orchard" } });
+    expect(s2.settlements.orchard).toMatchObject({ founded: true });
     expect(completedSettlementCount(s2)).toBe(1);
   });
 });
