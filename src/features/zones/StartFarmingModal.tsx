@@ -89,11 +89,12 @@ interface TileSlotProps {
   selected: boolean;
   locked: boolean;
   activeTileId: string | null;
+  variantCount: number;
   onToggle: () => void;
   onChoose: () => void;
 }
 
-function TileSlot({ category, selected, locked, activeTileId, onToggle, onChoose }: TileSlotProps) {
+function TileSlot({ category, selected, locked, activeTileId, variantCount, onToggle, onChoose }: TileSlotProps) {
   const label = CATEGORY_LABEL[category] ?? category;
   const fallbackGlyph = CATEGORY_GLYPH[category] ?? "•";
   const activeTile: TileTypeDef | null = activeTileId ? ((TILE_TYPES_MAP as Record<string, TileTypeDef | undefined>)[activeTileId] ?? null) : null;
@@ -107,8 +108,9 @@ function TileSlot({ category, selected, locked, activeTileId, onToggle, onChoose
   };
   // When mustPick is on, a single click toggles inclusion. A dedicated
   // "Change" affordance opens the picker so toggling the slot off doesn't
-  // accidentally open it.
-  const showChangeButton = selected;
+  // accidentally open it. Hide it when there's only a single discovered
+  // variant — there's nothing to swap to, so the pencil would be a dead end.
+  const showChangeButton = selected && variantCount > 1;
   return (
     <div className="relative w-full">
       <button
@@ -385,6 +387,7 @@ export default function StartFarmingModal({ state, dispatch, onClose }: StartFar
               selected={selected.has(cat)}
               locked={!mustPick}
               activeTileId={activeTileForZoneCategory(state, cat)}
+              variantCount={unlockedRowsForZoneCategory(state, cat).length}
               onToggle={() => toggleCategory(cat)}
               onChoose={() => setChooserCat(cat)}
             />
