@@ -650,6 +650,7 @@ function animWrench(ctx: CanvasRenderingContext2D, t: number): void {
   ctx.save();
   ctx.translate(-2, -2.9); // partial re-centre; the bolt-pivot translate adds the rest
   ctx.rotate(-0.62);
+  ctx.save(); // capture the rotated-but-unturned frame; the fixed hex socket draws here
   // Everything but the hex turns about the bolt at (0,21).
   ctx.translate(0, 21);
   ctx.rotate(osc);

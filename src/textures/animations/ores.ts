@@ -466,7 +466,8 @@ function animGoldNugget(ctx: CanvasRenderingContext2D, t: number): void {
   const ping = twinkle(t, 0.9);
   const [px, py] = spots[idx];
   sparkle(ctx, px, py, 1.3 + ping * 1.8, ping * 0.9, "255,252,220");
-  ctx.restore();
+  ctx.restore(); // squash
+  ctx.restore(); // outer translate(0,-5) — was leaking, drifting the nugget off-cell
 }
 
 // ---------------------------------------------------------------------------
