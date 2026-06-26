@@ -22,7 +22,6 @@ status). The full mapping lives in the canon's
   is retired (guarded to no-op); the canon is hand-authored.
 - `balance-index.html` — the balance ledger prose (numbers now in `design/economy.html`; the live
   `balance/profile.json`, `progression.baseline.json` & `progression-timeline.html` stay active).
-- `starting-zones-scope.html` — the zones 1–2 balance baseline (folded into `design/economy.html`).
 - `civic-economy.html` — Town Hall tithes/provisions (folded into `design/meta.html#civic`).
 - `strategy-review-2026.html`, `runthrough.html` — review & playthrough (folded into the scope/atlas pages).
 - `ux-redesign-2026.html` — UX atlas, kept as visual reference only (not design canon).

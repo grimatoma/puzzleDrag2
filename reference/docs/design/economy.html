@@ -52,7 +52,7 @@
       <p>Balance is the conversation between where value <b>enters</b> the economy (faucets) and where it <b>leaves</b> (sinks). The resource axis is where the old softlock lived; keeping faucets ahead of the sinks that gate them is the <a href="progression.html#nosoftlock">no-softlock invariant</a>.</p>
       <div class="grid">
         <div class="card g"><h3>Faucets (value in)</h3><ul><li>Chain collection → materials (per <code>TILES_PER_RESOURCE</code> threshold)</li><li>Chain coins (linear in chain length)</li><li>Season-end bonus (+25 coins) &amp; Chapel (+50 at season end)</li><li>Daily rewards, civic tithes, timed depots, boons</li></ul></div>
-        <div class="card r"><h3>Sinks (value out)</h3><ul><li>Tier-up costs (materials; the main sink)</li><li>Founding cost (coins; exponential)</li><li>Session entry tolls (coins per visit)</li><li>Worker wages + hire ramps; crafting inputs; win-task baskets</li></ul></div>
+        <div class="card r"><h3>Sinks (value out)</h3><ul><li>Tier-up costs (materials; the main sink)</li><li>Founding cost (a <b>resource caravan</b>, paid in farm goods)</li><li>Session entry tolls (coins per visit)</li><li>Worker wages + hire ramps; crafting inputs; win-task baskets</li></ul></div>
       </div>
     </section>
 
@@ -64,7 +64,7 @@
           <tr><td>Chain coins</td><td><code>max(1, floor(chainLength × tileValue)) + coinHookBonus</code>, ×<code>coin_gain_mult</code></td><td><b>Linear in chain length</b>, weighted by tile value — not by the resource's sell value.</td></tr>
           <tr><td>Resource accrual</td><td><code>progress[res] += chainLength</code>; units = <code>floor(progress / TILES_PER_RESOURCE[tile])</code></td><td>Remainder carries forward. Every N chained tiles → 1 unit.</td></tr>
           <tr><td>Realized value / tile</td><td><code>ITEMS[res].value / TILES_PER_RESOURCE[tile]</code></td><td>The dominance metric for the value-spread audit.</td></tr>
-          <tr><td>Founding cost (k-th town)</td><td><code>round(300 × 1.7^(k−1))</code></td><td>→ 300, 510, 867, 1474, 2506… The exponential coin sink that paces the frontier.</td></tr>
+          <tr><td>Founding cost (k-th town)</td><td><b>resource caravan</b>, scaling ~×1.6 / founding</td><td>Per the <a href="../starting-zones-scope.html">Zones 1–2 baseline</a>, founding is paid in <b>farm goods</b> (Town 2 = 12 plank · 10 bread · 8 hay), +metal for later towns — <em>not</em> coins. Code still uses the legacy <code>round(300 × 1.7^(k−1))</code> coin formula (a plan-vs-code delta to reconcile).</td></tr>
           <tr><td>Net coins / run</td><td><code>chainCoins − entryToll + seasonBonus + buildingBonuses</code></td><td>Home: toll 50, season bonus 25 → break-even ≈ 25 coins.</td></tr>
           <tr><td>Turn budget</td><td><code>max(1, floor((baseTurns + additive + bonus) × (fertilizer ? 2 : 1)))</code></td><td>Home <code>baseTurns = 10</code>. Granary +1, etc.</td></tr>
         </tbody>
@@ -77,10 +77,10 @@
       <table>
         <thead><tr><th>Metric</th><th>Target</th><th>Current</th></tr></thead>
         <tbody>
-          <tr><td>Time to mid-game (home City + 2nd town founded)</td><td class="num">20–35 runs</td><td>not yet validated cross-zone</td></tr>
+          <tr><td>Time to mid-game (home Town tier + 2nd town founded)</td><td class="num">20–35 runs</td><td>not yet validated cross-zone</td></tr>
           <tr><td>home tier 1 · Hamlet</td><td class="num">3–8 runs</td><td>reachable ✓</td></tr>
           <tr><td>home tier 2 · Village</td><td class="num">10–20 runs</td><td>reachable ✓</td></tr>
-          <tr><td>home tier 3 · City (mid-game)</td><td class="num">20–35 runs</td><td>reachable ✓</td></tr>
+          <tr><td>home tier 3 · Town (mid-game)</td><td class="num">20–35 runs</td><td>reachable ✓</td></tr>
           <tr><td>Coins per run</td><td class="num">40–140</td><td>too fast (≈2 runs to a founding price)</td></tr>
           <tr><td>Family value-spread (max ÷ median)</td><td class="num">≤ 3–4×</td><td>≈ 10× (outlier ≈ 192×)</td></tr>
         </tbody>
@@ -95,28 +95,37 @@
 
     <section id="ladders">
       <h2>Per-zone cost tables</h2>
-      <p>Tier-up costs are <b>resource-only</b> for home (farm goods) and <b>coins + resources</b> for the frontier. Founding adds an escalating coin cost; each session adds an entry toll. Full per-rung detail is on each town's card in the <a href="towns.html">Atlas</a>; the spine summary:</p>
+      <p>Tier-up costs are <b>resource-only</b> for home (farm goods); founding is a <b>resource caravan</b> and each session adds a coin entry toll. The <b>zones 1–2 numbers below are the tuning-locked baseline</b>, drawn from the <a href="../starting-zones-scope.html">Zones 1–2 Scope &amp; Balance Baseline</a> (the most-developed plan — its proposed values, which can differ from current code); later-zone numbers mirror the <a href="../zones/index.html">Atlas</a> and are provisional. Per-rung detail per town is in the <a href="towns.html">Atlas</a>.</p>
       <h4>Home — Hearthwood Vale (farm goods only)</h4>
       <table>
-        <thead><tr><th>Rung</th><th>Plots</th><th>Houses</th><th>Tier-up cost</th></tr></thead>
+        <thead><tr><th>Rung</th><th>Plots</th><th>Houses</th><th>Tier-up cost (proposed)</th></tr></thead>
         <tbody>
           <tr><td>Outpost (t0)</td><td class="num">3</td><td class="num">0</td><td>— start —</td></tr>
-          <tr><td>Hamlet (t1)</td><td class="num">6</td><td class="num">1</td><td class="num">3 hay · 5 plank · 10 bread · 4 eggs · 2 soup</td></tr>
-          <tr><td>Village (t2)</td><td class="num">9</td><td class="num">2</td><td class="num">12 eggs · 14 soup · 16 bread · 6 pie · 14 plank · 10 hay</td></tr>
-          <tr><td>City (t3)</td><td class="num">12</td><td class="num">3</td><td class="num">28 bread · 14 pie · 18 soup · 18 eggs · 18 plank · 12 flour</td></tr>
+          <tr><td>Hamlet (t1)</td><td class="num">6</td><td class="num">1</td><td class="num">8 plank · 10 hay · 6 bread</td></tr>
+          <tr><td>Village (t2)</td><td class="num">9</td><td class="num">2</td><td class="num">12 plank · 14 bread · 6 preserve · 8 eggs</td></tr>
+          <tr><td>Town (t3)</td><td class="num">12</td><td class="num">3</td><td class="num">20 plank · 24 bread · 10 preserve · 8 pie</td></tr>
         </tbody>
       </table>
-      <h4>Frontier founding &amp; entry (current)</h4>
+      <h4>Town 2 — frontier (farm + mining) · proposed</h4>
       <table>
-        <thead><tr><th>Town</th><th>Founding (caravan)</th><th>Session entry toll</th><th>Rungs</th></tr></thead>
+        <thead><tr><th>Rung</th><th>Plots</th><th>Houses</th><th>Tier-up cost (proposed)</th></tr></thead>
         <tbody>
-          <tr><td>Hearthwood (home)</td><td class="num">—</td><td class="num">50 coins</td><td class="num">4</td></tr>
-          <tr><td>Two Rivers</td><td class="num">12 plank · 10 bread · 8 hay (resource caravan)</td><td class="num">100 coins</td><td class="num">4</td></tr>
-          <tr><td>Cinderhold / Glimmerdeep / Aetherreach</td><td class="num">coin cost (300×1.7^k curve)</td><td class="num">100–200 coins</td><td class="num">4–5</td></tr>
-          <tr><td>Gullcliff / Mirefen (fish)</td><td class="num">coin + reach</td><td class="num">50–100 coins</td><td class="num">4</td></tr>
+          <tr><td>Camp (t0)</td><td class="num">4</td><td class="num">0</td><td>— start (founded by caravan) —</td></tr>
+          <tr><td>Diggings (t1)</td><td class="num">7</td><td class="num">1</td><td class="num">10 plank · 12 bread · 10 brick</td></tr>
+          <tr><td>Boomtown (t2)</td><td class="num">10</td><td class="num">2</td><td class="num">16 plank · 14 bread · 12 brick · 8 iron_bar</td></tr>
+        </tbody>
+        <caption><b>3 tiers</b>, plot ceiling 10, max 2 houses. Tier-ups demand brick/iron the mine itself produces, so growth is gated by digging. (Code currently names the stone good <code>block</code>; the plan calls it <code>brick</code> — a naming delta to reconcile.)</caption>
+      </table>
+      <h4>Founding &amp; session tolls</h4>
+      <table>
+        <thead><tr><th>Town</th><th>Founding</th><th>Session entry toll</th><th>Rungs</th></tr></thead>
+        <tbody>
+          <tr><td>Hearthwood (home)</td><td class="num">free — light the hearth</td><td class="num">50 coins (farm)</td><td class="num">4</td></tr>
+          <tr><td>Two Rivers (farm+mine)</td><td class="num">12 plank · 10 bread · 8 hay (caravan)</td><td class="num">100 coins (mine)</td><td class="num">3</td></tr>
+          <tr><td>Frontier &amp; atlas towns</td><td class="num">resource caravan (+metal), ~×1.6 / founding</td><td class="num">50–200 coins</td><td class="num">4–5</td></tr>
           <tr><td>Goldgrass (Capital)</td><td class="num">spine-complete gate</td><td class="num">—</td><td class="num">5</td></tr>
         </tbody>
-        <caption>Frontier per-rung costs (coins + zone metals like obsidian/crystal/aether) are listed on each <a href="towns.html#frontier">Atlas card</a>. Two Rivers founding is a resource caravan, not coins — an intentional demand on farm production.</caption>
+        <caption>Founding is a resource caravan, not coins — an intentional demand on production. Chapel pays +50 coins at season end; a flat season-end bonus adds +25. Atlas per-rung costs (coins + zone metals) are on each <a href="towns.html#frontier">Atlas card</a>.</caption>
       </table>
     </section>
 
@@ -130,11 +139,14 @@
           <tr><td>Farmer</td><td>−1 grain chain</td><td class="num">2</td><td class="num">50c · 2 grass</td><td class="num">+25c</td></tr>
           <tr><td>Lumberjack</td><td>−1 tree chain</td><td class="num">3</td><td class="num">60c · 2 oak</td><td class="num">+30c</td></tr>
           <tr><td>Poultryman</td><td>−1 bird chain</td><td class="num">3</td><td class="num">60c · 2 eggs</td><td class="num">+30c</td></tr>
+          <tr><td>Vegetable Picker</td><td>−1 veg chain</td><td class="num">3</td><td class="num">120c · 4 carrot</td><td class="num">+60c</td></tr>
+          <tr><td>Fruit Picker</td><td>−1 fruit chain</td><td class="num">4</td><td class="num">160c · 4 apple</td><td class="num">+80c</td></tr>
+          <tr><td>Herder</td><td>−1 herd chain</td><td class="num">2</td><td class="num">140c · 4 meat</td><td class="num">+70c</td></tr>
           <tr><td>Baker</td><td>−1 flour on Bread (floor 1)</td><td class="num">2</td><td class="num">80c · flour+eggs</td><td class="num">+40c</td></tr>
           <tr><td>Miner</td><td>−1 stone chain</td><td class="num">5</td><td class="num">75c · 2 stone</td><td class="num">+35c</td></tr>
           <tr><td>Iron / Coal Miner</td><td>−1 ore / coal chain</td><td class="num">3 / 4</td><td class="num">90 / 100c</td><td class="num">+45 / +50c</td></tr>
         </tbody>
-        <caption>Deeper families (veg, fruit, herd) cost far more to staff (120–160c first hire). Five miners total ≈ 725 coins (verified linear sum). Population: 3 houses × 3 = 9 at home.</caption>
+        <caption>11 in-scope worker types; deeper families (veg, fruit, herd) cost far more. Each hire also takes 1 Villager + a resource (both ramp). Five miners total ≈ 725 coins (verified linear sum). Population: 3 houses × 3 = 9 at home, 2 × 3 = 6 at Two Rivers.</caption>
       </table>
       <div class="box warn"><b>Open wiring (critical).</b> Today a worker reduces the <em>income</em> threshold, not the on-board chain length (<code>effectiveMinChain</code> floors at 3 and reads only the boss). Routing Houses → Villagers → shorter chains is the top open balance lever — see <a href="status.html">Build status</a>.</div>
     </section>

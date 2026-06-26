@@ -67,11 +67,11 @@
 
     <section id="gates">
       <h2>The founding model — non-linear, softly gated</h2>
-      <p class="lead">Founding a town requires only that it is <b>reachable on the map</b> and that you can <b>afford the rising coin cost</b>. There is no "finish this town before founding the next." On top of that open base sit a few <b>light, acyclic, pacing-oriented soft gates</b> — never the old prerequisite chain.</p>
+      <p class="lead">Founding a town requires only that it is <b>reachable on the map</b> and that you can <b>afford the rising caravan cost</b> (a basket of goods that scales per founding). There is no "finish this town before founding the next." On top of that open base sit a few <b>light, acyclic, pacing-oriented soft gates</b> — never the old prerequisite chain.</p>
       <div class="grid">
         <div class="card g"><h3>① Board-feed dependency</h3><p>You can't run a <b>mine</b> until you own a <b>farm</b> (mines eat food as expedition turns), nor a <b>fish</b> board until you own a <b>farm + mine</b> (bait + tackle). This is the same stacking shown in <a href="index.html#stack">the Overview</a> — the dependency that makes later boards feel earned.</p></div>
         <div class="card"><h3>② Low home-tier nudge</h3><p>The first combination town asks home ≥ Hamlet; the first hazard town asks home ≥ Village. A gentle nudge so the farm loop is learned before the mine arrives — not a wall.</p></div>
-        <div class="card b"><h3>③ Rising coin cost</h3><p>Each successive founding costs more coins, so the frontier naturally unfurls outward over time. Coins are a <b>soft secondary gate</b>; the real spend is the materials each town's growth demands.</p></div>
+        <div class="card b"><h3>③ Rising caravan cost</h3><p>Founding is a <b>resource caravan</b> (farm goods early, +metal later) scaling ~×1.6 per town, so the frontier unfurls outward over time. Coins fund session tolls and wages, not founding — a deliberate demand on your <em>production</em>, per the <a href="../starting-zones-scope.html">Zones 1–2 baseline</a>.</p></div>
         <div class="card r"><h3>④ The finale gate</h3><p>The only hard gate: the Golden Capital's finale opens once <b>every required-spine town is complete</b>. This replaces the legacy "3 Hearth-Tokens" gate (see <a href="status.html#log">decision log</a>).</p></div>
       </div>
       <div class="diagram">
@@ -87,7 +87,7 @@
             <line x1="640" y1="78" x2="713" y2="78" stroke="#7a6c54" stroke-width="2" marker-end="url(#g1)"/>
           </g>
         </svg>
-        <p class="cap">The only dependencies are acyclic and feed-based. Coins + map reach handle the rest of the pacing.</p>
+        <p class="cap">The only dependencies are acyclic and feed-based. Caravan cost + map reach handle the rest of the pacing.</p>
       </div>
     </section>
 
@@ -102,11 +102,11 @@
       <p>Home is the spine's anchor: a <b>four-rung</b> farm settlement that climbs on <b>farm goods alone</b> (no coins, no mine goods — the invariant in action). Each rung raises the plot count and unlocks building types.</p>
       <div class="ladder">
         <div class="rung"><div class="t">tier 0 · start</div><div class="n">Outpost</div><div class="p">3 plots · 0 houses</div><div class="cost">free — unlocks Hearth, Mill, Bakery</div></div>
-        <div class="rung"><div class="t">tier 1</div><div class="n">Hamlet</div><div class="p">6 plots · 1 house</div><div class="cost"><span class="rc farm"><span class="q">3</span><span class="x">×</span>hay</span><span class="rc farm"><span class="q">5</span><span class="x">×</span>plank</span><span class="rc farm"><span class="q">10</span><span class="x">×</span>bread</span><span class="rc farm"><span class="q">4</span><span class="x">×</span>eggs</span><span class="rc farm"><span class="q">2</span><span class="x">×</span>soup</span></div></div>
-        <div class="rung"><div class="t">tier 2</div><div class="n">Village</div><div class="p">9 plots · 2 houses</div><div class="cost"><span class="rc farm"><span class="q">12</span><span class="x">×</span>eggs</span><span class="rc farm"><span class="q">14</span><span class="x">×</span>soup</span><span class="rc farm"><span class="q">16</span><span class="x">×</span>bread</span><span class="rc farm"><span class="q">6</span><span class="x">×</span>pie</span><span class="rc farm"><span class="q">14</span><span class="x">×</span>plank</span><span class="rc farm"><span class="q">10</span><span class="x">×</span>hay</span></div></div>
-        <div class="rung"><div class="t">tier 3 · mid-game</div><div class="n">City</div><div class="p">12 plots · 3 houses</div><div class="cost"><span class="rc farm"><span class="q">28</span><span class="x">×</span>bread</span><span class="rc farm"><span class="q">14</span><span class="x">×</span>pie</span><span class="rc farm"><span class="q">18</span><span class="x">×</span>soup</span><span class="rc farm"><span class="q">18</span><span class="x">×</span>eggs</span><span class="rc farm"><span class="q">18</span><span class="x">×</span>plank</span><span class="rc farm"><span class="q">12</span><span class="x">×</span>flour</span></div></div>
+        <div class="rung"><div class="t">tier 1</div><div class="n">Hamlet</div><div class="p">6 plots · 1 house</div><div class="cost"><span class="rc farm"><span class="q">8</span><span class="x">×</span>plank</span><span class="rc farm"><span class="q">10</span><span class="x">×</span>hay</span><span class="rc farm"><span class="q">6</span><span class="x">×</span>bread</span></div></div>
+        <div class="rung"><div class="t">tier 2</div><div class="n">Village</div><div class="p">9 plots · 2 houses</div><div class="cost"><span class="rc farm"><span class="q">12</span><span class="x">×</span>plank</span><span class="rc farm"><span class="q">14</span><span class="x">×</span>bread</span><span class="rc farm"><span class="q">6</span><span class="x">×</span>preserve</span><span class="rc farm"><span class="q">8</span><span class="x">×</span>eggs</span></div></div>
+        <div class="rung"><div class="t">tier 3 · mid-game</div><div class="n">Town</div><div class="p">12 plots · 3 houses</div><div class="cost"><span class="rc farm"><span class="q">20</span><span class="x">×</span>plank</span><span class="rc farm"><span class="q">24</span><span class="x">×</span>bread</span><span class="rc farm"><span class="q">10</span><span class="x">×</span>preserve</span><span class="rc farm"><span class="q">8</span><span class="x">×</span>pie</span></div></div>
       </div>
-      <p class="meta">Reaching City is the mid-game milestone (target ~20–35 runs — see <a href="economy.html#kpi">KPI targets</a>). Other settlements run their own 4–5 rung ladders, detailed per-town in the <a href="towns.html">Atlas</a> and costed in <a href="economy.html#ladders">Economy</a>.</p>
+      <p class="meta">Costs follow the <a href="../starting-zones-scope.html">Zones 1–2 baseline</a> (proposed). Reaching <b>Town</b> tier is the mid-game milestone (~20–35 runs — see <a href="economy.html#kpi">KPI targets</a>). Other settlements run their own 3–5 rung ladders, detailed per-town in the <a href="towns.html">Atlas</a> and costed in <a href="economy.html#ladders">Economy</a>.</p>
     </section>
 
     <section id="tiering">

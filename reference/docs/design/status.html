@@ -70,13 +70,14 @@
         <li><span class="d">2026-06-22</span> Balance Profile generated; goals + KPI bands captured. Campaign pacing harness + code-derived progression oracle added; the softlock surfaced. The game-design prose set consolidated; the Zone Atlas (10 zones, passes 1–2) built.</li>
         <li><span class="d">2026-06-23</span> <b>Progression softlock fixed.</b> Home re-costed onto farm goods alone (Bakery off <code>block</code> → <code>hay_bundle</code>, unlocked at Outpost; Village/City off mine goods), so home climbs Outpost→City unaided. Oracle flips to no-softlock.</li>
         <li><span class="d">2026-06-24</span> game-design split set finalized (the seven-town arc, build-status tracker, meta &amp; money).</li>
-        <li><span class="d">2026-06-26</span> <b>This consolidation.</b> Merged scope + balance + progression into this <code>design/</code> canon. Decisions: (1) one reconciled roster — 7 required + 5 optional frontier, Thornwild folded; (2) <b>non-linear founding + soft tier/board gates</b>; (3) finale = <b>complete the required spine → build the Monument</b>, retiring the 3-Hearth-Token gate and the <code>act3_win</code> festival-larder beat; (4) home ladder = <b>4 rungs</b> (Outpost→City); (5) the <b>no-softlock invariant</b> is canon; (6) one sell price per key. Superseded prose archived (below).</li>
+        <li><span class="d">2026-06-26</span> <b>This consolidation.</b> Merged scope + balance + progression into this <code>design/</code> canon. Decisions: (1) one reconciled roster — 7 required + 5 optional frontier, Thornwild folded; (2) <b>non-linear founding + soft tier/board gates</b>; (3) finale = <b>complete the required spine → build the Monument</b>, retiring the 3-Hearth-Token gate and the <code>act3_win</code> festival-larder beat; (4) home ladder = <b>4 rungs</b> (Outpost→Town); (5) the <b>no-softlock invariant</b> is canon; (6) one sell price per key. Superseded prose archived (below).</li>
+        <li><span class="d">2026-06-26</span> <b>Zones 1–2 baseline aligned.</b> <a href="../starting-zones-scope.html"><code>starting-zones-scope.html</code></a> confirmed as the most-accurate early-game plan and <b>un-archived as a live companion</b>. Corrected the canon to it: home rung 3 is <b>Town</b> (not City); home + Two Rivers tier-up costs and Two Rivers' <b>3-tier</b> ladder (Camp 4 → Diggings 7 → Boomtown 10) re-pointed to the baseline's proposed values; <b>founding is a resource caravan</b>, not the coin curve. Plan-vs-code deltas flagged for the later code pass: code names the stone good <code>block</code> (plan: <code>brick</code>) and the home top tier <code>city</code> (plan: <code>Town</code>); founding is still coin-priced in code.</li>
       </ul>
     </section>
 
     <section id="superseded">
       <h2>What this set replaced</h2>
-      <p>These docs were folded into this canon and moved to <code>reference/docs/archive/</code> with a "superseded by" banner. <b>Tooling and live data were kept in place</b> (they regenerate and cannot drift), and this set links them.</p>
+      <p>These docs were folded into this canon and moved to <code>reference/docs/archive/</code> (indexed in <code>archive/README.md</code>). <b>Tooling and live baselines were kept in place</b> (they regenerate, or are still the most-accurate plan), and this set links them.</p>
       <table>
         <thead><tr><th>Archived doc</th><th>Replaced by</th></tr></thead>
         <tbody>
@@ -87,14 +88,13 @@
           <tr><td><code>game-design/meta-money.html</code></td><td><a href="meta.html">meta.html</a></td></tr>
           <tr><td><code>game-design/status.html</code></td><td><a href="status.html">status.html</a> (this page)</td></tr>
           <tr><td><code>balance/index.html</code></td><td><a href="economy.html">economy.html</a> + <a href="progression.html">progression.html</a></td></tr>
-          <tr><td><code>starting-zones-scope.html</code></td><td><a href="economy.html#ladders">economy.html</a> (the baseline numbers)</td></tr>
           <tr><td><code>civic-economy.html</code></td><td><a href="meta.html#civic">meta.html → Civic</a></td></tr>
           <tr><td><code>strategy-review-2026.html</code>, <code>runthrough.html</code></td><td><a href="index.html#scope">index.html</a> / <a href="towns.html">towns.html</a></td></tr>
           <tr><td><code>ux-redesign-2026.html</code></td><td>archived as UX reference (not design canon)</td></tr>
           <tr><td><code>zones/{index,grounded,exotic}.html</code></td><td><a href="towns.html">towns.html</a> is design canon; the <a href="../zones/index.html">generator</a> stays as a layout/art tool</td></tr>
         </tbody>
       </table>
-      <div class="box"><b>Kept live (not archived):</b> <code>balance/profile.json</code>, <code>balance/progression.baseline.json</code>, <code>balance/progression-timeline.html</code> (auto-generated), the <code>zones/</code> generator, and all <code>projects/*</code> briefs. These are tooling/queue, not prose to merge.</div>
+      <div class="box"><b>Kept live (not archived):</b> the <a href="../starting-zones-scope.html">Zones 1–2 Scope &amp; Balance Baseline</a> (the most-accurate early-game plan, linked from <a href="economy.html#ladders">Economy</a>), <code>balance/profile.json</code>, <code>balance/progression.baseline.json</code>, <code>balance/progression-timeline.html</code> (auto-generated), the <code>zones/</code> generator, and all <code>projects/*</code> briefs. These are tooling/baselines, not prose to merge.</div>
     </section>
   </main>
 
