@@ -316,7 +316,17 @@ export function installVisualTestingBridge({ getState, dispatch }: {
   getState: () => VisualStateLike | undefined;
   dispatch: Dispatch;
 }): () => void {
-  window.__HEARTH_VISUAL_TESTING__ = true;
+  // NOTE: do NOT set window.__HEARTH_VISUAL_TESTING__ unconditionally here. The
+  // bridge is installed for EVERY player (it powers the Dev Panel's Animations
+  // Demo and the wiki's scenario captures, so it ships in dev-as-prod builds),
+  // but the flag means "a deterministic visual golden is being captured — freeze
+  // all ambient motion." Setting it for every player froze the town's ambient
+  // animation outright (TownScene.update bails and every looping tween is paused
+  // — no chimney smoke, flowing water, lamp glow, tree sway or wandering
+  // villagers). The flag is only legitimate when an actual scenario is active:
+  // the Playwright goldens set it via addInitScript before app code runs, and
+  // the in-app harness (?visual=…, e.g. the Animations Demo iframe) sets it just
+  // below once the scenario param is parsed.
   let readyResolve: ((value: boolean) => void) | undefined;
   const ready = new Promise<boolean>((resolve) => { readyResolve = resolve; });
 
@@ -389,6 +399,12 @@ export function installVisualTestingBridge({ getState, dispatch }: {
   const params = new URLSearchParams(window.location.search);
   const scenarioId = params.get("visual");
   const shouldShowPanel = params.get("visualPanel") === "1";
+  // A scenario is actually being driven in this page (golden capture, the
+  // Animations Demo iframe, or the manual panel) — only now is the visual-test
+  // freeze legitimate. Normal players reach neither branch, so their town keeps
+  // its ambient animation. Set this before loadScenario so VISUAL/LOAD_STATE
+  // (gated on visualTestingEnabled) is accepted.
+  if (scenarioId || shouldShowPanel) window.__HEARTH_VISUAL_TESTING__ = true;
   if (shouldShowPanel) installPanel(api);
 
   (async () => {
