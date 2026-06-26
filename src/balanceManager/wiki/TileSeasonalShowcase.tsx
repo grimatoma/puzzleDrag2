@@ -29,8 +29,11 @@ import {
   hasSeasonalArtFolder,
   seasonalArtActive,
   seasonalIdleFrameCount,
+  seasonalGestureFrameCount,
+  seasonalHasGesture,
   seasonalTransFrameCount,
   paintSeasonalIdleFrame,
+  paintSeasonalGestureFrame,
   paintSeasonalTransFrame,
   ensureAllSeasonalArtLoaded,
   onSeasonalArtLoaded,
@@ -146,6 +149,32 @@ function idlePaint(tileKey: string, variant: TileIconVariant, season: SeasonName
   return null;
 }
 
+/** Build the static key-frame paint for one season (rest pose / poster still). */
+function keyFramePaint(tileKey: string, variant: TileIconVariant, season: SeasonName): Paint | null {
+  if (variant === "pixel") {
+    const frames = seasonalIdleFrameCount(tileKey, season);
+    if (frames <= 0) return null;
+    return (ctx) => paintSeasonalIdleFrame(ctx, tileKey, season, 0);
+  }
+  const draw = seasonalTileDraw(tileKey, season);
+  if (draw) return (ctx) => draw(ctx);
+  return null;
+}
+
+/** Build the rare-idle (gesture) paint for one season.
+ *  Only pixel tiles have a separate gesture clip; vector art embeds it in the idle anim. */
+function gesturePaint(tileKey: string, variant: TileIconVariant, season: SeasonName): Paint | null {
+  if (variant !== "pixel") return null;
+  const frames = seasonalGestureFrameCount(tileKey, season);
+  if (frames <= 0) return null;
+  const cycleMs = frames * SEASONAL_IDLE_MS + 600;
+  return (ctx, t) => {
+    const e = (t * 1000) % cycleMs;
+    const frame = Math.min(frames - 1, Math.floor(e / SEASONAL_IDLE_MS));
+    paintSeasonalGestureFrame(ctx, tileKey, season, frame);
+  };
+}
+
 /** Build the transition paint for one forward step, or null when there's no art. */
 function transPaint(tileKey: string, variant: TileIconVariant, fromIdx: number): Paint | null {
   if (variant === "pixel") {
@@ -248,6 +277,18 @@ export function TileSeasonalShowcase({ tileKey }: { tileKey: string }) {
               </tr>
             </thead>
             <tbody>
+              {/* Key frames — static seasonal stills (rest pose / poster frame) */}
+              <tr style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+                <td style={ROW_LABEL}>Key frame</td>
+                {SEASON_NAMES.map((season) => (
+                  <td key={season} style={TD}>
+                    <AnimCell
+                      paint={keyFramePaint(tileKey, effective, season)}
+                      label={`${season} key frame`}
+                    />
+                  </td>
+                ))}
+              </tr>
               {/* Idle loops — one per season */}
               <tr style={{ borderBottom: `1px solid ${COLORS.border}` }}>
                 <td style={ROW_LABEL}>Idle</td>
@@ -260,9 +301,23 @@ export function TileSeasonalShowcase({ tileKey }: { tileKey: string }) {
                   </td>
                 ))}
               </tr>
-              {/* Forward transitions — span across the two seasons they bridge */}
+              {/* Rare idle (gesture) — pixel-art only, shown when a gesture clip exists */}
+              {effective === "pixel" && pixelAvailable && seasonalHasGesture(tileKey) && (
+                <tr style={{ borderBottom: `1px solid ${COLORS.border}` }}>
+                  <td style={ROW_LABEL}>Rare idle</td>
+                  {SEASON_NAMES.map((season) => (
+                    <td key={season} style={TD}>
+                      <AnimCell
+                        paint={gesturePaint(tileKey, effective, season)}
+                        label={`${season} rare idle`}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              )}
+              {/* Forward transitions */}
               <tr>
-                <td style={ROW_LABEL}>Transitions</td>
+                <td style={ROW_LABEL}>Transition</td>
                 {TRANSITIONS.map((tr) => (
                   <td key={tr.from} style={TD} title={tr.label}>
                     <AnimCell
