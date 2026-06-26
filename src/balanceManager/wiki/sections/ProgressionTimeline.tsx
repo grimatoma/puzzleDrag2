@@ -247,8 +247,7 @@ export function ProgressionTimelineContent() {
 /**
  * The collapsed-by-default "Progression & unlock map" section for the Tiles
  * category page. Heavy content (~80 tile icons) is only mounted when the
- * <details> is open — matching the RecipeGraph collapse pattern in
- * CategoryPage.tsx so the page stays cheap to render by default.
+ * <details> is open, so the page stays cheap to render by default.
  *
  * Returns null when the tile catalog is empty.
  */
