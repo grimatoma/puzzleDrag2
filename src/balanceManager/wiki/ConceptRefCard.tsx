@@ -16,6 +16,7 @@ import Icon from "../../ui/Icon.jsx";
 import { iconLabel } from "../../textures/iconRegistry.js";
 import type { WikiLink, WikiLinkContext } from "./relations.js";
 import { AbilityInstanceBody } from "./abilityInstanceVisual.jsx";
+import { reachabilityOf } from "../../game/reachability.js";
 
 export type ConceptRefVariant = "card" | "inline";
 export type ConceptRefLayout = "auto" | "compact" | "rich";
@@ -156,6 +157,11 @@ export function ConceptRefCard({
   const target = wikiNavTarget(conceptId, entityKey);
   const cardLayout = resolveLayout(conceptId, layout, context);
 
+  // "Not yet reachable" — no unlock path in the configured game. Greyed wherever
+  // this entity is cross-referenced. `reachabilityOf` is null for un-gated concepts.
+  const reach = reachabilityOf(conceptId, entityKey);
+  const unreached = reach != null && reach !== "reachable";
+
   const onActivate = () => navigate(target);
 
   if (variant === "inline") {
@@ -164,7 +170,9 @@ export function ConceptRefCard({
         type="button"
         title={`${conceptId}:${entityKey}`}
         onClick={onActivate}
-        className={`wiki-concept-ref-inline ${className}`.trim()}
+        className={`wiki-concept-ref-inline${
+          unreached ? " wiki-concept-ref-inline--unreached" : ""
+        } ${className}`.trim()}
       >
         {iconKey != null && (
           <Icon iconKey={iconKey} size={18} style={{ flexShrink: 0 }} />
@@ -184,7 +192,9 @@ export function ConceptRefCard({
         type="button"
         title={`${conceptId}:${entityKey}`}
         onClick={onActivate}
-        className={`wiki-concept-ref-card wiki-concept-ref-card--compact ${className}`.trim()}
+        className={`wiki-concept-ref-card wiki-concept-ref-card--compact${
+          unreached ? " wiki-concept-ref-card--unreached" : ""
+        } ${className}`.trim()}
       >
         <div className="wiki-concept-ref-card__visual wiki-concept-ref-card__visual--compact" aria-hidden>
           {iconKey != null ? (
@@ -229,7 +239,7 @@ export function ConceptRefCard({
       onClick={onActivate}
       className={`wiki-concept-ref-card wiki-concept-ref-card--rich${
         conceptId === "buildings" ? " wiki-concept-ref-card--building" : ""
-      } ${className}`.trim()}
+      }${unreached ? " wiki-concept-ref-card--unreached" : ""} ${className}`.trim()}
     >
       <div className="wiki-concept-ref-card__hero">
         <div className="wiki-concept-ref-card__visual" aria-hidden>

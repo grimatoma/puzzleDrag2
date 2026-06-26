@@ -28,6 +28,11 @@
   --wiki-canvas:        #f0e8d4;
   --wiki-canvas-rule:   #ddd0b4;
 
+  /* "Not yet reachable" cards — a neutral grey wash that overrides the warm
+     parchment so an entry the player has no unlock path to reads as locked. */
+  --wiki-locked-bg:     #d9d7d1;
+  --wiki-locked-border: #b3afa7;
+
   /* Phase 3 accent defaults — overridden per-concept via inline style */
   --wiki-accent:      var(--wiki-ember);
 
@@ -302,6 +307,16 @@
   }
 }
 
+/* "Not yet reachable" entry cards — grey wash + desaturated, dimmed visual so an
+   entity with no unlock path reads as locked. Background/border are set inline
+   (they reference the same --wiki-locked-* vars); this rule mutes the icon. */
+.wiki-root .wiki-entry-card--unreached canvas,
+.wiki-root .wiki-entry-card--unreached img,
+.wiki-root .wiki-entry-card--unreached svg {
+  filter: grayscale(0.65);
+  opacity: 0.7;
+}
+
 /* ── Concept reference cards (relations, backlinks, where-used) ─────────────── */
 
 .wiki-root .wiki-concept-ref-grid {
@@ -344,6 +359,33 @@
   .wiki-root .wiki-concept-ref-card:hover {
     transform: none;
   }
+}
+
+/* "Not yet reachable" reference cards — grey wash overriding the accent-tinted
+   parchment gradient, with the visual desaturated, so a locked entity reads the
+   same wherever it's cross-referenced (relations, backlinks, where-used, flow). */
+.wiki-root .wiki-concept-ref-card--unreached {
+  background: var(--wiki-locked-bg);
+  border-color: var(--wiki-locked-border);
+}
+
+.wiki-root .wiki-concept-ref-card--unreached .wiki-concept-ref-card__visual {
+  background: color-mix(in srgb, var(--wiki-locked-border) 35%, transparent);
+}
+
+.wiki-root .wiki-concept-ref-card--unreached .wiki-concept-ref-card__visual canvas,
+.wiki-root .wiki-concept-ref-card--unreached .wiki-concept-ref-card__visual img,
+.wiki-root .wiki-concept-ref-card--unreached .wiki-concept-ref-card__visual svg {
+  filter: grayscale(0.65);
+  opacity: 0.7;
+}
+
+/* Inline reference chips get the same grey wash so prose wikilinks to a locked
+   entity match the cards. */
+.wiki-root .wiki-concept-ref-inline--unreached {
+  background: var(--wiki-locked-bg);
+  border-color: var(--wiki-locked-border);
+  color: var(--wiki-ink-subtle);
 }
 
 .wiki-root .wiki-concept-ref-card__hero {

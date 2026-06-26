@@ -15,6 +15,7 @@ import React from "react";
 import { WikiViewProvider } from "./wikiView.js";
 import EntryGrid from "./EntryGrid.jsx";
 import type { WikiEntry } from "./EntryGrid.jsx";
+import { findUnreachable } from "../../game/reachability.js";
 
 afterEach(() => cleanup());
 
@@ -183,6 +184,33 @@ describe("EntryGrid — fact chips", () => {
     const chips = Array.from(container.querySelectorAll(".wiki-card-fact"));
     const plain = chips.find((c) => (c.textContent ?? "").includes("Level"));
     expect(plain?.getAttribute("data-tone")).toBeNull();
+  });
+});
+
+// ─── Not-yet-reachable greying ─────────────────────────────────────────────────
+
+describe("EntryGrid — not-yet-reachable greying", () => {
+  it("greys a card whose entity has no unlock path when conceptId is given", () => {
+    const unreachableBuilding = findUnreachable().buildings[0];
+    if (unreachableBuilding == null) return; // nothing unreachable → nothing to grey
+    localStorage.setItem("hearth.wiki.view", "developer");
+    const { container } = render(
+      <WikiViewProvider>
+        <EntryGrid
+          entries={[{ key: unreachableBuilding, name: "Unreachable" }]}
+          conceptId="buildings"
+        />
+      </WikiViewProvider>,
+    );
+    localStorage.removeItem("hearth.wiki.view");
+    expect(container.querySelector(".wiki-entry-card--unreached")).not.toBeNull();
+  });
+
+  it("does not grey any card when conceptId is omitted", () => {
+    const unreachableBuilding = findUnreachable().buildings[0];
+    const key = unreachableBuilding ?? "cave_in";
+    const { container } = renderWithView("developer", [{ key, name: "Some Entry" }]);
+    expect(container.querySelector(".wiki-entry-card--unreached")).toBeNull();
   });
 });
 
