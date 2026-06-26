@@ -154,28 +154,37 @@ export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 6;
 
-// Phase 5 — expedition rations (master doc §VI). Mine/Harbor rounds are
-// supply-structured: you bring food before the round, each unit is worth this
-// many base turns, and buildings/NPC-bonds bump it (see expeditionTurnsForFood
-// in features/zones/data.js). Tunable. `cured_meat` / `festival_loaf` /
-// `wedding_pie` / `iron_ration` are forward-declared here — those recipes don't
-// exist in the resource pipeline yet; they'll be added with the round flow
-// (Phase 5d). `tile_fruit_apple` and `bread` are the live keys today.
+// Expedition rations (zones-1&2 scope, scope doc §12). Mine rounds are paid in food
+// carried from the farm — ANY edible item is a ration, there is no special "Supplies"
+// item. The more PROCESSED the food, the more turns it buys: raw produce 1, crafted
+// staple 2, rich crafted 3. Building bonuses (Mining Camp +1, Larder +1, Smokehouse +1
+// to meat) stack on top — see expeditionTurnsForFood in features/zones/data.js. The
+// deferred richer rations (festival loaf / wedding pie / iron ration) are forward-
+// declared for zone 3+ but are unreachable in zones 1–2.
 // Not frozen — `applyExpeditionOverrides` (Dev Panel) mutates this in place.
 export const EXPEDITION_FOOD_TURNS = {
-  supplies:      1,
-  tile_fruit_apple:   1,
-  bread:         1,
-  cured_meat:    2,
-  festival_loaf: 2,
+  // Raw produce — 1 turn.
+  tile_fruit_apple: 1,
+  eggs:          1,
+  soup:          1,
+  pie:           1,
+  jam:           1,
+  meat:          1,
+  // Crafted staple — 2 turns.
+  bread:         2,
+  preserve:      2,
+  // Rich crafted — 3 turns.
+  harvestpie:    3,
+  cured_meat:    3,
+  // Deferred (zone 3+) — forward-declared, unreachable in zones 1–2.
+  festival_loaf: 3,
   wedding_pie:   3,
   iron_ration:   4,
 };
 // Foods the Smokehouse's "+1 to meat-based foods" modifier applies to.
-export const EXPEDITION_MEAT_FOODS = ["cured_meat"];
-// An expedition needs at least this many turns of food packed before you can
-// set out (Phase 5d).
-export const MIN_EXPEDITION_TURNS = 3;
+export const EXPEDITION_MEAT_FOODS = ["cured_meat", "meat"];
+// An expedition needs at least this many turns of food packed before you can set out.
+export const MIN_EXPEDITION_TURNS = 12;
 
 // Phase 5e — settlement biomes (master doc §IV). A biome is chosen at founding
 // and fixes the two hazards that appear in every round at that settlement, plus
@@ -802,7 +811,7 @@ export const NPCS = {
 
 export const BUILDINGS = [
   { id: "hearth", name: "Hearth", desc: "The heart of the village. Keeps folk warm and anchors the community.", cost: { coins: 0 }, lv: 1, x: 60, y: 360, w: 90, h: 110, look: { color: "#a8431a" } },
-  { id: "mill", name: "Mill", desc: "Grinds and sorts harvest goods — reduces the flour needed to bake bread by 1.", cost: { plank: 6, bread: 8, block: 2, iron_bar: 8 }, lv: 1, x: 200, y: 380, w: 80, h: 90, look: { color: "#c8923a" },
+  { id: "mill", name: "Mill", desc: "Grinds and sorts harvest goods — reduces the flour needed to bake bread by 1.", cost: { plank: 8, hay_bundle: 6 }, lv: 1, x: 200, y: 380, w: 80, h: 90, look: { color: "#c8923a" },
     abilities: [{ id: "recipe_input_reduce", params: { recipe: "rec_bread", input: "flour", amount: 1 } }] },
   { id: "bakery", name: "Bakery", desc: "Craft baked goods — bread, honey rolls, harvest pies — to sell for coins.", cost: { plank: 8, hay_bundle: 6, eggs: 4 }, lv: 1, x: 320, y: 360, w: 100, h: 110, look: { color: "#8a4a26" } },
   { id: "inn", name: "Inn", desc: "A warm roadside inn where travellers rest by the fire.", cost: { plank: 8, hay_bundle: 4, bread: 3 }, lv: 2, x: 470, y: 350, w: 110, h: 130, look: { color: "#4f6b3a" } },
@@ -810,7 +819,7 @@ export const BUILDINGS = [
     id: "granary",
     name: "Granary",
     desc: "Keeps the harvest safe, adds +1 turn to farm sessions, and raises the inventory cap by 300.",
-    cost: { bread: 12, block: 6, iron_bar: 4 },
+    cost: { bread: 12, plank: 6, soup: 4 },
     lv: 1,
     x: 600,
     y: 380,
@@ -825,34 +834,30 @@ export const BUILDINGS = [
   {
     id: "mining_camp",
     name: "Mining Camp",
-    desc: "Adds +1 expedition turn when departing for mine expeditions.",
-    cost: { bread: 9, dirt: 5, iron_bar: 6 },
+    desc: "Adds +1 expedition turn to every mine ration packed at this town.",
+    cost: { bread: 10, plank: 6 },
     lv: 1,
-    x: 0,
-    y: 0,
-    w: 0,
-    h: 0,
+    x: 430,
+    y: 380,
+    w: 90,
+    h: 100,
     look: { color: "#8a7a6a" },
-    hidden: true,
     abilities: [{ id: "turn_budget_bonus", params: { amount: 1 } }],
   },
-  { id: "larder", name: "Larder", desc: "Preserve and bottle your harvest. Craft preserve jars and berry tinctures for coins.", cost: { bread: 12, block: 4, iron_bar: 8 }, lv: 2, x: 700, y: 395, w: 70, h: 85, look: { color: "#4f6b3a" } },
-  { id: "forge", name: "Forge", desc: "Smith metal goods — hinges, lanterns, rings, and more — for high coin rewards.", cost: { eggs: 6, dirt: 10, iron_bar: 15 }, lv: 8, x: 800, y: 380, w: 100, h: 100, look: { color: "#5a6973" } },
+  { id: "larder", name: "Larder", desc: "Preserve and bottle your harvest — craft preserves, and add +1 turn to every mine ration.", cost: { bread: 12, plank: 4, soup: 6 }, lv: 2, x: 700, y: 395, w: 70, h: 85, look: { color: "#4f6b3a" } },
+  { id: "forge", name: "Forge", desc: "Smith metal goods — hinges, lanterns, rings, and more — for high coin rewards.", cost: { plank: 6, iron_bar: 10, coke: 4 }, lv: 8, x: 800, y: 380, w: 100, h: 100, look: { color: "#5a6973" } },
   { id: "caravan_post", name: "Caravan Post", desc: "Opens distant trade routes, letting you sell crafted goods to far-off markets.", cost: { plank: 20, block: 10, iron_bar: 5 }, lv: 8, x: 940, y: 390, w: 110, h: 90, look: { color: "#7e4f24" } },
   { id: "kitchen", name: "Kitchen", desc: "Converts surplus grain into supplies. Three supplies grant standard Mine entry.", cost: { bread: 9, dirt: 5, iron_bar: 6 }, lv: 2, x: 60, y: 260, w: 90, h: 100, look: { color: "#8a4a26" } },
-  { id: "workshop", name: "Workshop", desc: "Crafts tools from raw materials.", cost: { block: 6, iron_bar: 5 }, lv: 3, x: 180, y: 265, w: 90, h: 100, look: { color: "#6a5a3a" } },
-  { id: "powder_store", name: "Powder Store", desc: "Stockpiles black powder. Produces 2 Bombs at the end of every season.", cost: { iron_bar: 12, coke: 4, dirt: 10 }, lv: 5, x: 310, y: 260, w: 90, h: 100, look: { color: "#3a2a1a" },
+  { id: "workshop", name: "Workshop", desc: "Crafts tools from raw materials.", cost: { plank: 10, block: 6, iron_bar: 5 }, lv: 3, x: 180, y: 265, w: 90, h: 100, look: { color: "#6a5a3a" } },
+  { id: "powder_store", name: "Powder Store", desc: "Stockpiles black powder. Produces 2 Bombs at the end of every season.", cost: { iron_bar: 12, coke: 6, block: 8 }, lv: 5, x: 310, y: 260, w: 90, h: 100, look: { color: "#3a2a1a" },
     abilities: [
       { id: "grant_tool", params: { tool: "bomb", amount: 2 }, trigger: "season_end" },
     ] },
   { id: "portal", name: "Magic Portal", desc: "A shimmering gateway. Summons unlock with Influence (Phase 8).", cost: { runes: 5 }, lv: 8, x: 440, y: 245, w: 100, h: 115, look: { color: "#4a2a7a" } },
-  { id: "housing", name: "Housing Block",
-    desc: "Lodging for the settlement's hired hands — houses +1 Villager each season (Villagers are spent to hire townsfolk).",
-    cost: { eggs: 10, meat: 1, block: 16, iron_bar: 10 }, lv: 2,
-    x: 430, y: 262, w: 80, h: 92, look: { color: "#a07a4a" },
-    abilities: [
-      { id: "worker_pool_step", params: { amount: 1 }, trigger: "season_end" },
-    ] },
+  { id: "housing", name: "House",
+    desc: "Lodging for the settlement's hired hands. Each House settles 3 Villagers at once (Villagers are spent to hire townsfolk). Build several as the town grows.",
+    cost: { plank: 8, bread: 6, eggs: 4 }, lv: 2,
+    x: 430, y: 262, w: 80, h: 92, look: { color: "#a07a4a" } },
   { id: "housing2", name: "Housing Block",
     desc: "Lodging for the settlement's hired hands — houses +1 Villager each season (Villagers are spent to hire townsfolk).",
     cost: { eggs: 10, meat: 1, block: 16, iron_bar: 10 }, lv: 2, requires: "housing",
@@ -870,7 +875,7 @@ export const BUILDINGS = [
   // Phase 12.5 — §18 LOCKED: Silos/Barns preserve tile layout between sessions
   { id: "silo", name: "Silo",
     desc: "Wood-and-stone grain store. Preserves the tile layout between sessions on the Farm.",
-    cost: { plank: 3, bread: 5 }, lv: 4, biome: "farm",
+    cost: { plank: 6, bread: 8 }, lv: 4, biome: "farm",
     x: 710, y: 260, w: 90, h: 100, look: { color: "#9a6a3a" },
     abilities: [
       { id: "preserve_board", params: { biome: "farm" }, trigger: "session_end" },
@@ -893,8 +898,8 @@ export const BUILDINGS = [
     cost: { plank: 10, block: 6, fish_fillet: 6 }, lv: 4, biome: "fish",
     x: 210, y: 150, w: 100, h: 90, look: { color: "#7a8aa6" } },
   { id: "smokehouse", name: "Smokehouse",
-    desc: "A peat-fired smoking shed that turns excess fish and meat into long-keeping rations.",
-    cost: { plank: 8, block: 6, fish_fillet: 4 }, lv: 4,
+    desc: "A peat-fired smoking shed that cures meat into long-keeping rations (a rich mine ration).",
+    cost: { plank: 8, block: 6, coke: 4 }, lv: 4,
     x: 350, y: 150, w: 90, h: 100, look: { color: "#5a4030" } },
   // Decorative flavour buildings — purely cosmetic town landmarks that count
   // toward town-planning achievements. No gameplay abilities.
@@ -912,7 +917,7 @@ export const BUILDINGS = [
     x: 780, y: 150, w: 90, h: 100, look: { color: "#4a7a5a" } },
   { id: "sawmill", name: "Sawmill",
     desc: "A water-driven sawmill — chaining oaks yields an extra plank.",
-    cost: { plank: 20, soup: 6, meat: 4, iron_bar: 10, coke: 4 }, lv: 4,
+    cost: { plank: 12, block: 8 }, lv: 4,
     x: 900, y: 150, w: 100, h: 95, look: { color: "#7a5a34" },
     abilities: [{ id: "bonus_yield", params: { target: "tile_tree_oak", amount: 1 } }] },
   { id: "watchtower", name: "Watchtower",
@@ -931,7 +936,7 @@ export const BUILDINGS = [
     abilities: [{ id: "bonus_yield", params: { target: "tile_flower_pansy", amount: 1 } }] },
   { id: "chapel", name: "Chapel",
     desc: "A small stone chapel with a bell-cote and stained glass — tithes add 50 coins at season's end.",
-    cost: { bread: 20, block: 20, gold_bar: 3, ink: 3 }, lv: 5,
+    cost: { bread: 20, block: 12, pie: 6 }, lv: 5,
     x: 500, y: 60, w: 90, h: 120, look: { color: "#9a8e72" },
     abilities: [{ id: "season_bonus", params: { resource: "coins", amount: 50 }, trigger: "season_end" }] },
   { id: "brewery", name: "Brewery",
@@ -950,7 +955,7 @@ export const RECIPES: RecipeRecord = {
   rec_rake:        { item: "rake",          station: "workshop", inputs: { plank: 1 }},
   rec_axe:         { item: "axe",           station: "workshop", inputs: { block: 1 }},
   rec_sickle:      { item: "sickle",        station: "workshop", inputs: { plank: 1, iron_bar: 1 }},
-  rec_fertilizer:  { item: "fertilizer",    station: "workshop", inputs: { hay_bundle: 1, dirt: 1 }},
+  rec_fertilizer:  { item: "fertilizer",    station: "workshop", inputs: { dirt: 20 }},
   rec_cat:         { item: "cat",           station: "workshop", inputs: { block: 2, dirt: 1 }},
   rec_bird_cage:   { item: "bird_cage",     station: "workshop", inputs: { hay_bundle: 1 }},
   rec_scythe_full: { item: "scythe_full",   station: "workshop", inputs: { block: 1 }},

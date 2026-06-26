@@ -53,7 +53,7 @@ import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import * as civicEconomy from "./features/civicEconomy/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
-import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards, settlementTier, maxTier, currentTierDef, zoneTierGateReason } from "./features/zones/data.js";
+import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards, settlementTier, maxTier, currentTierDef, zoneTierGateReason, HOUSE_BUILDING_ID, HOUSE_VILLAGER_GRANT, houseCapForZone, houseCountAt, FOUNDING_PAYMENT_ZONE } from "./features/zones/data.js";
 import { ResourceKey } from "./types/catalogKeys.js";
 import { inventoryPut, inventoryQty } from "./types/inventory.js";
 import { inventoryZone, zoneInventory, zoneResourceProgress } from "./state/zoneInventory.js";
@@ -792,15 +792,24 @@ function coreReducer(state: GameState, action: Action): GameState {
           bubble: { id: Date.now(), npc: "wren", text: `${tierGateReason} before founding here.`, ms: 2600 },
         };
       }
-      const cost = settlementFoundingCost(state) as { coins?: number };
-      if ((state.coins ?? 0) < (cost.coins ?? 0)) return state; // can't afford
+      // Phase 2 — founding costs a resource basket paid from the capital's
+      // stores (home), not coins. Validate + deduct like the TIER_UP path.
+      const cost = settlementFoundingCost(state);
+      const payZone = FOUNDING_PAYMENT_ZONE; // home — the capital bankrolls expansion
+      const payInv = zoneInventory(state, payZone);
+      const canPayFound = Object.entries(cost.resources).every(([k, v]) => inventoryQty(payInv, k) >= v);
+      if (!canPayFound) return state; // can't afford the basket
       // Phase 5e — pick the biome at founding (the picker passes payload.biome;
       // a missing/unknown choice falls back to the first option for the type).
       const biome = resolveBiomeChoice(settlementTypeForZone(zoneId), action.payload?.biome) as { id: string; name: string } | null;
       if (!biome) return state;
+      let nextPayInv = { ...payInv };
+      Object.entries(cost.resources).forEach(([k, v]) => {
+        nextPayInv = inventoryPut(nextPayInv, k, inventoryQty(nextPayInv, k) - v);
+      });
       const afterFound: GameState = {
         ...state,
-        coins: state.coins - (cost.coins ?? 0),
+        inventory: { ...state.inventory, [payZone]: nextPayInv },
         settlements: { ...(state.settlements ?? {}), [zoneId]: { founded: true, biome: biome.id, tier: 0 } },
         bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, zoneId)} is a ${biome.name} settlement now. People will come.`, ms: 2400 },
       };
@@ -916,6 +925,15 @@ function coreReducer(state: GameState, action: Action): GameState {
           bubble: { id: Date.now(), npc: "wren", text: `Found ${displayZoneName(state, currentZone)} before you build here.`, ms: 2400 },
         };
       }
+      // Repeatable House (Phase 2): the one building a town can raise more than
+      // once — but only up to a per-town cap. Reject once full. (The Town picker
+      // also stops offering it at the cap; this guards the reducer too.)
+      if (b.id === HOUSE_BUILDING_ID && houseCountAt(state, currentZone) >= houseCapForZone(currentZone)) {
+        return {
+          ...state,
+          bubble: { id: Date.now(), npc: "wren", text: `${displayZoneName(state, currentZone)} is fully housed — no room for another House.`, ms: 2400 },
+        };
+      }
       const canCoin = state.coins >= (b.cost.coins || 0);
       const buildInv = zoneInventory(state, currentZone);
       const canRes = Object.entries(b.cost).every(
@@ -960,10 +978,14 @@ function coreReducer(state: GameState, action: Action): GameState {
       }
       // §17 locked: 10 XP per building into almanac
       const { newState: afterBuildAlmanac } = applyAlmanacXp(state, 10);
+      // Repeatable House grants a batch of Villagers (the hiring currency) the
+      // instant it's built — the new model that replaced housing's +1/season drip.
+      const villagerGain = b.id === HOUSE_BUILDING_ID ? HOUSE_VILLAGER_GRANT : 0;
       const afterBuild: GameState = {
         ...state,
         coins: state.coins - (b.cost.coins || 0),
         runes: (state.runes ?? 0) - runesNeeded,
+        villagers: (state.villagers ?? 0) + villagerGain,
         inventory: { ...state.inventory, [currentZone]: nextBuildInv },
         built: { ...state.built, [currentZone]: { ...locBuilt(state), [b.id]: true, _plots: plots } },
         almanac: afterBuildAlmanac.almanac,

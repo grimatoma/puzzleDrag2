@@ -2,6 +2,7 @@
 // biome/hazards + picking a biome at founding.
 import { describe, it, expect, beforeEach } from "vitest";
 import { rootReducer, createInitialState } from "../state.js";
+import { patchInventory } from "../testUtils/inventory.js";
 import { SETTLEMENT_BIOMES, DEFAULT_HOME_BIOME } from "../constants.js";
 import {
   biomesForType,
@@ -64,14 +65,14 @@ describe("FOUND_SETTLEMENT picks the biome", () => {
   const homeCompleted = (over = {}) => {
     const built = { decorations: {}, _plots: {} };
     for (const b of ["hearth", "mill", "bakery", "inn", "granary", "larder", "forge", "caravan_post"]) built[b] = true;
-    return {
+    // Founding now costs a resource basket paid from home's stores, so stock home.
+    return patchInventory({
       ...createInitialState(),
-      coins: 9999,
       built: { ...createInitialState().built, home: built },
-      // home at its City rung (tier 4 of the 6-rung ladder) so the quarry's Town-2 tier gate passes.
+      // home at its City rung so the quarry/meadow Town-2 tier gate passes.
       settlements: { home: { founded: true, biome: DEFAULT_HOME_BIOME, keeperPath: "coexist", tier: 4 } },
       ...over,
-    };
+    }, { plank: 99, bread: 99, hay_bundle: 99 }, "home");
   };
 
   it("records the chosen biome", () => {

@@ -21,7 +21,7 @@ export const UPGRADE_THRESHOLDS = {
   tile_veg_squash: 6, tile_veg_mushroom: 6, tile_veg_pepper: 6, tile_veg_broccoli: 6,
   // Catalog-import placeholders. All default to 6 — balance comes later.
   tile_grass_heather: 6,
-  tile_grain_corn: 6, tile_grain_buckwheat: 6, tile_grain_manna: 6, tile_grain_rice: 6,
+  tile_grain_corn: 5, tile_grain_buckwheat: 6, tile_grain_manna: 6, tile_grain_rice: 6,
   // Fruits → Pie (catalog §4: 7 fruits → 1 pie)
   tile_fruit_apple: 7, tile_fruit_pear: 7, tile_fruit_golden_apple: 7, tile_fruit_blackberry: 7,
   tile_fruit_rambutan: 7, tile_fruit_starfruit: 7, tile_fruit_coconut: 7, tile_fruit_lemon: 7, tile_fruit_jackfruit: 7,

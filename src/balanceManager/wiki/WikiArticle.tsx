@@ -37,6 +37,8 @@ import PageKindBadge from "./PageKindBadge.jsx";
 import { pageKindFor } from "./pageKind.js";
 import { statusForEntity } from "./status.js";
 import { StatusBadge } from "./StatusBadge.jsx";
+import { ReachabilityBadge } from "./ReachabilityBadge.jsx";
+import { reachabilityOf } from "../../game/reachability.js";
 import { ReferenceSection } from "./ReferenceSection.jsx";
 import { useWikiView } from "./wikiView.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
@@ -157,6 +159,8 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
 
   // Status badge
   const status = statusForEntity(conceptId, entityKey);
+  // Derived reachability badge — null for concepts we don't gate (zones, workers, …).
+  const reach = reachabilityOf(conceptId, entityKey);
 
   // Title for the entity
   const title = entity
@@ -304,6 +308,8 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
 
           {/* Status badge — shown in both developer and player views */}
           <StatusBadge status={status} />
+          {/* Derived reachability badge — beside status; a different axis (reach vs wired). */}
+          {reach && <ReachabilityBadge reach={reach} />}
         </div>
       </div>
 

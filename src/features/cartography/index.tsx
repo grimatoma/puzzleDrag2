@@ -6,6 +6,8 @@ import PhaserMap from "./PhaserMap.jsx";
 import {
   isSettlementFounded,
   settlementFoundingCost,
+  canAffordFounding,
+  foundingCostLabel,
   settlementCompleted,
   isOldCapitalUnlocked,
   hearthTokenCount,
@@ -299,8 +301,9 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
 
   const type = settlementTypeForZone(node.id);
   if (!type) return null;
-  const cost = settlementFoundingCost(state).coins;
-  const canAfford = (state?.coins ?? 0) >= cost;
+  const cost = settlementFoundingCost(state).resources;
+  const costLabel = foundingCostLabel(state);
+  const canAfford = canAffordFounding(state);
   // Zone Tier Ladder — founding can be gated on another zone's tier (e.g. the
   // quarry needs home at City). Surface that as a locked-with-reason button.
   const tierGateReason = zoneTierGateReason(state, node.id);
@@ -310,7 +313,7 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
       <button
         onClick={() => !blocked && setPickerOpen(true)}
         disabled={blocked}
-        title={tierGateReason ? `🔒 ${tierGateReason} to found here` : canAfford ? `Found ${node.name}` : `Need ${cost}◉ to found this settlement`}
+        title={tierGateReason ? `🔒 ${tierGateReason} to found here` : canAfford ? `Found ${node.name}` : `Need ${costLabel} (from home stores) to found this settlement`}
         className="rounded-lg px-2 py-1.5 text-center text-micro font-bold"
         style={{
           ...cardStyle,
@@ -321,7 +324,7 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
           width: "100%",
         }}
       >
-        {tierGateReason ? `🔒 ${tierGateReason}` : `🏗 Found this hearth · ${cost}◉`}
+        {tierGateReason ? `🔒 ${tierGateReason}` : `🏗 Found this hearth · ${costLabel}`}
       </button>
       {pickerOpen && (
         <BiomePicker node={node} type={type} cost={cost} dispatch={dispatch} onClose={() => setPickerOpen(false)} />

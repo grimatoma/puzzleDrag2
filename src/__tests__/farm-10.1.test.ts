@@ -23,9 +23,9 @@ describe("10.1 — RECIPES.tools table", () => {
     expect(RECIPES.tools.axe.inputs.block).toBe(1);
   });
 
-  it("fertilizer costs 1 hay + 1 dirt", () => {
-    expect(RECIPES.tools.fertilizer.inputs.hay_bundle).toBe(1);
-    expect(RECIPES.tools.fertilizer.inputs.dirt).toBe(1);
+  it("fertilizer costs 20 dirt", () => {
+    expect(RECIPES.tools.fertilizer.inputs.dirt).toBe(20);
+    expect(RECIPES.tools.fertilizer.inputs.hay_bundle).toBeUndefined();
   });
 
   it("rake is crafted at workshop", () => {
@@ -109,12 +109,11 @@ describe("10.1 — CRAFT_TOOL action", () => {
     expect(inv(s1).block).toBe(2);
   });
 
-  it("crafts fertilizer with 1 hay + 1 dirt", () => {
-    const s0 = workshopState({ inventory: { hay_bundle: 2, dirt: 2 } });
+  it("crafts fertilizer with 20 dirt", () => {
+    const s0 = workshopState({ inventory: { dirt: 20 } });
     const s1 = rootReducer(s0, { type: "CRAFT_TOOL", id: "fertilizer" });
     expect(s1.tools.fertilizer).toBe(1);
-    expect(inv(s1).hay_bundle).toBe(1);
-    expect(inv(s1).dirt).toBe(1);
+    expect(inv(s1).dirt ?? 0).toBe(0);
   });
 });
 

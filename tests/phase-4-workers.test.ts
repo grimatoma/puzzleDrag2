@@ -2,8 +2,9 @@
 // (The original named-individual "apprentice" roster was removed; the
 // type-tier workers introduced alongside it are now the worker system.)
 import { describe, it, expect } from "vitest";
-import { inv } from "../src/testUtils/inventory.js";
+import { inv, patchInventory } from "../src/testUtils/inventory.js";
 import { rootReducer, createInitialState } from "../src/state.js";
+import { BUILDINGS } from "../src/constants.js";
 import { TYPE_WORKERS, TYPE_WORKER_MAP } from "../src/features/workers/data.js";
 import { computeWorkerEffects } from "../src/features/workers/aggregate.js";
 
@@ -145,57 +146,64 @@ describe("Phase 4 — WORKERS/FIRE", () => {
   });
 });
 
-describe("Villager currency — Housing Blocks grant Villagers at season end", () => {
-  function withBuilt(state, ids) {
-    const map = state.mapCurrent ?? "home";
-    const builtForMap = { ...(state.built?.[map] ?? {}) };
-    for (const id of ids) builtForMap[id] = true;
-    return { ...state, built: { ...state.built, [map]: builtForMap } };
-  }
+describe("Villager currency — Houses grant Villagers on build (Phase 2)", () => {
+  const HOUSE = BUILDINGS.find((b) => b.id === "housing");
+  // Stock home so the House's build cost is affordable; build runs at home.
+  const stockedHome = () =>
+    patchInventory(
+      { ...createInitialState(), mapCurrent: "home", activeZone: "home" },
+      { plank: 999, bread: 999, eggs: 999 },
+      "home",
+    );
 
   it("fresh state starts with zero Villagers", () => {
     expect(createInitialState().villagers).toBe(0);
   });
 
-  it("each built Housing Block adds 1 Villager when the season closes", () => {
-    let s = withBuilt(createInitialState(), ["hearth", "housing", "housing2", "housing3"]);
+  it("each House grants a batch of Villagers the moment it's built", () => {
+    let s = stockedHome();
     expect(s.villagers).toBe(0);
-    s = rootReducer(s, { type: "CLOSE_SEASON" });
+    s = rootReducer(s, { type: "BUILD", building: HOUSE });
     expect(s.villagers).toBe(3);
-    // Villagers accumulate across seasons.
-    s = rootReducer(s, { type: "CLOSE_SEASON" });
+    // A second House grants another batch (House is repeatable up to the cap).
+    s = rootReducer(s, { type: "BUILD", building: HOUSE });
     expect(s.villagers).toBe(6);
   });
 
-  it("no Housing Blocks → no Villagers granted at season end", () => {
-    let s = withBuilt(createInitialState(), ["hearth"]);
+  it("closing a season alone (no House built) grants no Villagers", () => {
+    let s = { ...createInitialState() };
     s = rootReducer(s, { type: "CLOSE_SEASON" });
     expect(s.villagers).toBe(0);
   });
 
-  it("end-to-end: earn a Villager, hire with it, then it is spent", () => {
-    let s = withBuilt(createInitialState(), ["hearth", "housing"]);
-    s = rootReducer(s, { type: "CLOSE_SEASON" });
-    expect(s.villagers).toBe(1);
-    s = { ...s, coins: 1000, inventory: { home: { tile_grass_grass: 100 } } };
+  it("end-to-end: build a House to earn Villagers, hire spends one, fire refunds it", () => {
+    let s = stockedHome();
+    s = rootReducer(s, { type: "BUILD", building: HOUSE });
+    expect(s.villagers).toBe(3);
+    s = { ...s, coins: 1000, inventory: { ...s.inventory, home: { ...(s.inventory.home ?? {}), tile_grass_grass: 100 } } };
     s = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
     expect(s.workers.hired.farmer).toBe(1);
-    expect(s.villagers).toBe(0);
-    // Out of Villagers → the next hire is rejected.
+    expect(s.villagers).toBe(2); // one Villager spent on the hire
+    s = rootReducer(s, { type: "WORKERS/FIRE", payload: { id: "farmer" } });
+    expect(s.villagers).toBe(3); // firing refunds it
+  });
+
+  it("with no Villagers available, a hire is rejected", () => {
+    const s = { ...createInitialState(), coins: 1000, villagers: 0, inventory: { home: { tile_grass_grass: 100 } } };
     const blocked = rootReducer(s, { type: "WORKERS/HIRE", payload: { id: "farmer" } });
-    expect(blocked.workers.hired.farmer).toBe(1);
+    expect(blocked.workers?.hired?.farmer ?? 0).toBe(0);
   });
 });
 
 describe("Phase 4 — Aggregator folds type-workers into the effects channels", () => {
   it("a hired Farmer contributes to thresholdReduce on grain species", () => {
     const out = computeWorkerEffects({ workers: { hired: { farmer: 5 } } });
-    // Farmer is threshold_reduce_category on "grain" with amount=1 per hire.
-    // 5 hired Farmers → 5 whole-tile reduction per grain species.
+    // Farmer is threshold_reduce_category on "grain" with amount=1 per hire, capped at
+    // maxCount (zones-1&2: 2 = grain chain 5 − 3). Reduction = min(hired, maxCount) = 2.
     const grainKeys = Object.keys(out.thresholdReduce).filter((k) => k.startsWith("tile_grain"));
     expect(grainKeys.length).toBeGreaterThan(0);
     for (const k of grainKeys) {
-      expect(out.thresholdReduce[k]).toBe(5);
+      expect(out.thresholdReduce[k]).toBe(2);
     }
   });
 
@@ -204,7 +212,7 @@ describe("Phase 4 — Aggregator folds type-workers into the effects channels", 
     const treeKeys = Object.keys(out.thresholdReduce).filter((k) => k.startsWith("tile_tree"));
     expect(treeKeys.length).toBeGreaterThan(0);
     for (const k of treeKeys) {
-      expect(out.thresholdReduce[k]).toBe(10);
+      expect(out.thresholdReduce[k]).toBe(3); // capped at maxCount (tree chain 6 − 3)
     }
   });
 
@@ -216,21 +224,20 @@ describe("Phase 4 — Aggregator folds type-workers into the effects channels", 
     const stoneKeys = Object.keys(out.thresholdReduce).filter((k) => k.startsWith("tile_mine_stone"));
     expect(stoneKeys.length).toBeGreaterThan(0);
     for (const k of stoneKeys) {
-      expect(out.thresholdReduce[k]).toBe(10);
+      expect(out.thresholdReduce[k]).toBe(5); // capped at maxCount (stone chain 8 − 3)
     }
   });
 
   it("a Baker hired to maxCount contributes amount*count to recipeInputReduce", () => {
     const out = computeWorkerEffects({ workers: { hired: { baker: 10 } } });
-    // Baker: recipe_input_reduce bread/flour, amount=1 per hire.
-    // 10 hired Bakers → 10 raw reduction (crafting/slice.js floors recipe at 1).
-    expect(out.recipeInputReduce.bread.flour).toBe(10);
+    // Baker: recipe_input_reduce bread/flour, amount=1 per hire, capped at maxCount (2).
+    expect(out.recipeInputReduce.bread.flour).toBe(2);
   });
 
   it("multiple type-workers compose independently on their own channels", () => {
     const out = computeWorkerEffects({ workers: { hired: { farmer: 10, baker: 10 } } });
     const grainHas = Object.keys(out.thresholdReduce).some((k) => k.startsWith("tile_grain"));
     expect(grainHas).toBe(true);
-    expect(out.recipeInputReduce.bread.flour).toBe(10);
+    expect(out.recipeInputReduce.bread.flour).toBe(2); // Baker capped at maxCount 2
   });
 });

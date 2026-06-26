@@ -27,29 +27,31 @@ function ready(over = {}) {
 }
 
 describe("constants", () => {
-  it("MIN_EXPEDITION_TURNS is a positive number; supplies is a 1-turn ration", () => {
-    expect(MIN_EXPEDITION_TURNS).toBeGreaterThan(0);
-    expect(EXPEDITION_FOOD_TURNS.supplies).toBe(1);
+  it("MIN_EXPEDITION_TURNS is the 12-turn pack minimum; any food is a ration", () => {
+    expect(MIN_EXPEDITION_TURNS).toBe(12);
+    expect(EXPEDITION_FOOD_TURNS.bread).toBe(2);            // crafted staple
+    expect(EXPEDITION_FOOD_TURNS.tile_fruit_apple).toBe(1); // raw produce
+    expect((EXPEDITION_FOOD_TURNS as Record<string, number>).supplies).toBeUndefined();
   });
 });
 
 describe("EXPEDITION/DEPART — happy path", () => {
   it("packs food, sets the turn budget, switches biome, opens the board", () => {
     const s0 = ready();
-    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 4 } } });
-    expect(s1.farmRun.turnBudget).toBe(4);       // 4 bread x 1 turn
-    expect(s1.farmRun.turnsRemaining).toBe(4);
-    expect(inv(s1).bread).toBe(2);          // 6 − 4 packed
+    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 6 } } });
+    expect(s1.farmRun.turnBudget).toBe(12);      // 6 bread x 2 turns
+    expect(s1.farmRun.turnsRemaining).toBe(12);
+    expect(inv(s1).bread ?? 0).toBe(0);     // 6 − 6 packed
     expect(s1.biomeKey).toBe("mine");
     expect(s1.view).toBe("board");
     expect(s1.turnsUsed).toBe(0);
-    expect(s1.session?.expedition).toMatchObject({ zoneId: "quarry", turns: 4 });
+    expect(s1.session?.expedition).toMatchObject({ zoneId: "quarry", turns: 12 });
   });
 
   it("counts a building bonus (Larder +1 to every ration)", () => {
     const s0 = ready({ built: { ...createInitialState().built, quarry: { larder: true } } });
-    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 2 } } });
-    expect(s1.farmRun.turnBudget).toBe(4);       // 2 bread x (1 + 1 larder)
+    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 4 } } });
+    expect(s1.farmRun.turnBudget).toBe(12);      // 4 bread x (2 + 1 larder)
     expect(s1.view).toBe("board");
   });
 
@@ -59,9 +61,9 @@ describe("EXPEDITION/DEPART — happy path", () => {
       { bread: 6, tile_fruit_apple: 4 },
       "harbor",
     );
-    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "fish", supply: { bread: 5 } } });
+    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "fish", supply: { bread: 6 } } });
     expect(s1.biomeKey).toBe("fish");
-    expect(s1.farmRun.turnBudget).toBe(5);
+    expect(s1.farmRun.turnBudget).toBe(12);      // 6 bread x 2 turns
     expect(s1.view).toBe("board");
   });
 });
@@ -77,7 +79,7 @@ describe("EXPEDITION/DEPART — rejections", () => {
 
   it("below MIN_EXPEDITION_TURNS → no change", () => {
     const s0 = ready();
-    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 1 } } }); // 1 < MIN(3)
+    const s1 = rootReducer(s0, { type: "EXPEDITION/DEPART", payload: { biomeKey: "mine", supply: { bread: 1 } } }); // 2 turns < MIN(12)
     expect(s1.view).not.toBe("board");
     expect(inv(s1).bread).toBe(6);
   });

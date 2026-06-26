@@ -148,7 +148,9 @@ const hlot = (i: number): AuthoredLot => {
   return { index, cx, cy, w, h };
 };
 // Total plots at each rung (must equal the matching tiers[].plots in data.ts).
-const HOME_PLOTS = [3, 6, 12, 20];
+// Zones-1&2 scope: ceiling trimmed 3/6/12/20 → 3/6/9/12 (each rung slices the first
+// N stable lots from HOME_LOTS; lots 12–19 are now unused but kept for a future re-open).
+const HOME_PLOTS = [3, 6, 9, 12];
 
 // Farm parcel: the doc's fenced FIELD off the plaza, reached by the short farm
 // lane dropping south from the main street (no road runs under it).

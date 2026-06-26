@@ -20,11 +20,14 @@ describe("Abilities → achievements counters", () => {
     expect(after.achievements?.counters?.abilities_triggered ?? 0).toBe(1);
   });
 
-  it("housing × 3 + powder_store fire 4 building abilities at once", () => {
+  it("legacy Housing Blocks + powder_store fire 3 building abilities at once", () => {
     let s = createInitialState();
     s = withBuilt(s, ["hearth", "housing", "housing2", "housing3", "powder_store"]);
     const after = rootReducer(s, { type: "CLOSE_SEASON" });
-    expect(after.achievements.counters.building_abilities_triggered).toBe(4);
+    // Phase 2: the House (`housing`) no longer fires a season-end ability — it
+    // grants Villagers on build now. The legacy Housing Blocks (housing2/3)
+    // still drip via worker_pool_step, and powder_store fires grant_tool → 3.
+    expect(after.achievements.counters.building_abilities_triggered).toBe(3);
     // Two distinct ability ids fired: worker_pool_step + grant_tool.
     expect(after.achievements.counters.distinct_abilities_triggered).toBe(2);
   });
@@ -46,9 +49,10 @@ describe("Abilities → achievements counters", () => {
   it("crossing the powerful_keep threshold (10 building abilities) unlocks it", () => {
     let s = createInitialState();
     s = withBuilt(s, ["hearth", "housing", "housing2", "housing3", "powder_store"]);
-    // Each season fires 4 building abilities; 3 seasons → 12 ≥ 10.
+    // Phase 2: the House no longer drips, so 3 building abilities fire per season
+    // (housing2 + housing3 + powder_store); 4 seasons → 12 ≥ 10.
     let next = s;
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < 4; i++) {
       next = rootReducer(next, { type: "CLOSE_SEASON" });
     }
     expect(next.achievements.counters.building_abilities_triggered).toBe(12);

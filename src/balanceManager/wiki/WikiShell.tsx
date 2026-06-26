@@ -43,6 +43,9 @@ const ProgressionPageLazy = lazy(() =>
 const CostMatrixPageLazy = lazy(() =>
   import("./sections/CostMatrixPage.jsx").then((m) => ({ default: m.CostMatrixPage })),
 );
+const UnreachablePageLazy = lazy(() =>
+  import("./sections/UnreachablePage.jsx").then((m) => ({ default: m.UnreachablePage })),
+);
 const IconsTab = lazy(() => import("../tabs/IconsTab.jsx"));
 const AnimationsDemoTab = lazy(() => import("../tabs/AnimationsDemoTab.jsx"));
 
@@ -405,6 +408,8 @@ export default function WikiShell() {
     }
   } else if (tab === "costMatrix") {
     mainContent = <CostMatrixPageLazy />;
+  } else if (tab === "unreachable") {
+    mainContent = <UnreachablePageLazy />;
   } else if (tab === "icons") {
     mainContent = <IconsTab />;
   } else if (tab === "animationsDemo") {

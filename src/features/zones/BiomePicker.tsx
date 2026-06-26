@@ -2,6 +2,7 @@
 // the Town view's "Found this settlement" CTA — same dispatch, same data.
 
 import { biomesForType, type SettlementType, type SettlementBiomeDef } from "./data.js";
+import { getItem } from "../../constants.js";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import Button from "../../ui/primitives/Button.jsx";
 import { RewardChip } from "../../ui/primitives/Chip.jsx";
@@ -13,19 +14,23 @@ const formatHazard = (h: string): string =>
 interface BiomePickerProps {
   node: { id: string; name: string };
   type: SettlementType;
-  cost: number;
+  /** Founding cost as a resource basket ({ resourceKey: amount }). */
+  cost: Record<string, number>;
   dispatch: Dispatch;
   onClose: () => void;
 }
 
 export default function BiomePicker({ node, type, cost, dispatch, onClose }: BiomePickerProps) {
   const options: SettlementBiomeDef[] = biomesForType(type);
+  const costLabel = Object.entries(cost)
+    .map(([k, v]) => `${v} ${getItem(k)?.label ?? k}`)
+    .join(" · ");
   return (
     <ParchmentDialog open onClose={onClose} size="md" ariaLabel={`Found ${node.name}`} backdropClassName="z-[60]">
       <ParchmentDialog.Body className="!px-5 !py-4">
         <div className="text-center mb-1">
           <div className="font-bold text-[18px] text-on-panel-dim">Found {node.name}</div>
-          <div className="text-[12px] text-on-panel-faint">Pick a biome — it fixes this settlement's hazards and bonus for good. Costs <b>{cost}◉</b>.</div>
+          <div className="text-[12px] text-on-panel-faint">Pick a biome — it fixes this settlement's hazards and bonus for good. Costs <b>{costLabel}</b> from home stores.</div>
         </div>
         <div className="flex flex-col gap-2 mt-3">
           {options.map((b: SettlementBiomeDef) => (

@@ -34,7 +34,7 @@ interface RecipeLike {
  *   - the legacy tile item's `next` field (e.g. Blackberry → jam), which the
  *     chain pipeline also honours for tiles that "ripen" straight into a good.
  */
-function boardProducedResources(): Set<string> {
+export function boardProducedResources(): Set<string> {
   const out = new Set<string>();
   const isResource = (k: string): boolean =>
     Object.prototype.hasOwnProperty.call(RESOURCES, k);

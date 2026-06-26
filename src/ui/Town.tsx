@@ -1,7 +1,8 @@
 import { useState, useMemo } from "react";
 import { BUILDINGS, getItem } from "../constants.js";
+import { isBuildingReachable } from "../game/reachability.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
-import { ZONES, zoneHasBoard, displayZoneName, isSettlementFounded, settlementFoundingCost, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE, settlementTier, plotsForTier, unlockedBuildings, currentTierDef, maxTier, zoneTierGateReason } from "../features/zones/data.js";
+import { ZONES, zoneHasBoard, displayZoneName, isSettlementFounded, settlementFoundingCost, canAffordFounding, foundingCostLabel, settlementTypeForZone, completedSettlementCount, DEFAULT_ZONE, settlementTier, plotsForTier, globallyUnlockedBuildings, currentTierDef, maxTier, zoneTierGateReason, houseCapForZone, houseCountAt, HOUSE_BUILDING_ID } from "../features/zones/data.js";
 import { getTownMap } from "./town/townMaps.js";
 import type { TownPlan } from "./town/TownScene.js";
 import ZoneEntryCostInfo from "../features/zones/ZoneEntryCostInfo.jsx";
@@ -65,8 +66,9 @@ function FoundSettlementBanner({ state, dispatch }: { state: GameState; dispatch
   if (isSettlementFounded(state, zoneId)) return null;
   const type = settlementTypeForZone(zoneId);
   if (!type) return null;
-  const cost = settlementFoundingCost(state).coins;
-  const canAfford = (state?.coins ?? 0) >= cost;
+  const cost = settlementFoundingCost(state).resources;
+  const costLabel = foundingCostLabel(state);
+  const canAfford = canAffordFounding(state);
   const needPriorComplete = completedSettlementCount(state) < 1;
   const tierGateReason = zoneTierGateReason(state, zoneId);
   const node = ZONES[zoneId];
@@ -77,7 +79,7 @@ function FoundSettlementBanner({ state, dispatch }: { state: GameState; dispatch
     : tierGateReason
       ? tierGateReason
       : !canAfford
-        ? `Need ${cost}◉`
+        ? `Need ${costLabel}`
         : undefined;
   return (
     <>
@@ -104,7 +106,7 @@ function FoundSettlementBanner({ state, dispatch }: { state: GameState; dispatch
           }}
           title={blocked ? blockedReason : `Found ${name}`}
         >
-          🏗 Found this settlement · {cost}◉
+          🏗 Found this settlement · {costLabel}
         </button>
         {blocked && (
           <div
@@ -306,11 +308,16 @@ export function TownView({ state, dispatch, active = true, onReady }: { state: G
     };
   }, [layoutPlots, locationBuilt, plotCount, storedPlots]);
 
-  // Filter buildings to those unlocked at the current tier (cumulative), then by
-  // biome. For un-tiered zones, unlockedBuildings returns the flat buildings[].
-  const allowedBuildings = zoneConfig ? unlockedBuildings(mapCurrent, tier) : ALL_BUILDING_IDS;
+  // Global building unlock (Phase 2): a building unlocked at ANY founded zone's
+  // current tier is buildable everywhere — so we union across founded zones
+  // rather than reading only the current zone's roster. The biome +
+  // reachability filters below still gate by the player's current zone.
+  const allowedBuildings = zoneConfig ? globallyUnlockedBuildings(state) : ALL_BUILDING_IDS;
   const eligibleBuildings = useMemo(
-    () => BUILDINGS.filter((b) => allowedBuildings.includes(b.id as import("../types/catalog/buildings.js").BuildingId) && (!b.biome || b.biome === biomeVariant)),
+    // `&& isBuildingReachable` = static reachability: never offer a building that no
+    // zone ever unlocks (orphaned/scoped-out). The unlock+biome filters above still
+    // gate by the player's current zone/tier.
+    () => BUILDINGS.filter((b) => allowedBuildings.includes(b.id as import("../types/catalog/buildings.js").BuildingId) && (!b.biome || b.biome === biomeVariant) && isBuildingReachable(b.id)),
     [allowedBuildings, biomeVariant],
   );
   const freePlots = plotCount - occupiedPlots;
@@ -585,8 +592,13 @@ function buildingRows(
   locationBuilt: LocationBuiltState,
   freePlots: number,
 ): BuildingRow[] {
+  const zoneId = String(state.mapCurrent ?? DEFAULT_ZONE);
   return buildings.map((b) => {
-    const isBuilt = !!locationBuilt[b.id];
+    // The House is repeatable up to a per-town cap, so for it "built" means
+    // "at cap" (not "placed once") — keep offering it until the town is full.
+    const isHouse = b.id === HOUSE_BUILDING_ID;
+    const atHouseCap = isHouse && houseCountAt(state, zoneId) >= houseCapForZone(zoneId);
+    const isBuilt = isHouse ? atHouseCap : !!locationBuilt[b.id];
     const prereqMet = !b.requires || !!locationBuilt[b.requires];
     const cost = b.cost as Record<string, number>;
     const canCoin = state.coins >= (cost.coins || 0);
@@ -597,7 +609,7 @@ function buildingRows(
     );
     const canAfford = canCoin && canRes && canRunes;
     const reason = isBuilt
-      ? "Already built"
+      ? (isHouse ? "Fully housed" : "Already built")
       : !prereqMet
         ? `Requires ${b.requires}`
         : freePlots <= 0

@@ -45,13 +45,13 @@ describe("CHAIN_COLLECTED: worker reductions increase resource income", () => {
     expect(zoneProgress(next).flour ?? 0).toBe(1);
   });
 
-  it("with 10 farmers, wheat income uses reduced divisor → more flour", () => {
+  it("with farmers hired, wheat income uses a reduced divisor → more flour", () => {
     const state = mergeTestState({
-      workers: { hired: { farmer: 10, lumberjack: 0, miner: 0, baker: 0 } },
+      workers: { hired: { farmer: 10, lumberjack: 0, miner: 0, baker: 0 } }, // capped at maxCount 2
     });
     const next = dispatchGrainChain(state);
-    // effective divisor = max(1, 5 - 10) = 1; chain 6 → 6 flour
-    expect(inv(next).flour ?? 0).toBe(6);
+    // Farmer reduction caps at maxCount 2 → effective divisor = max(1, 5 - 2) = 3; chain 6 → floor(6/3) = 2 flour
+    expect(inv(next).flour ?? 0).toBe(2);
   });
 
   it("worker income strictly greater than raw-divisor income for the same chain", () => {

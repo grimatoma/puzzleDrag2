@@ -27,23 +27,26 @@ describe("tier helpers", () => {
   });
 
   it("un-tiered zones report no ladder", () => {
-    expect(tiersForZone("meadow")).toEqual([]);
-    expect(maxTier("meadow")).toBe(-1);
+    expect(tiersForZone("orchard")).toEqual([]);
+    expect(maxTier("orchard")).toBe(-1);
   });
 
   it("plotsForTier returns the rung's total plots", () => {
+    // Zones-1&2 scope: home trimmed to 3/6/9/12; meadow is the new farm+mining Town 2 (4/7/10).
     expect(plotsForTier("home", 0)).toBe(3);
     expect(plotsForTier("home", 1)).toBe(6);
-    expect(plotsForTier("home", 2)).toBe(12);
-    expect(plotsForTier("home", 3)).toBe(20);
+    expect(plotsForTier("home", 2)).toBe(9);
+    expect(plotsForTier("home", 3)).toBe(12);
+    expect(plotsForTier("meadow", 0)).toBe(4);
+    expect(plotsForTier("meadow", 2)).toBe(10);
     expect(plotsForTier("quarry", 0)).toBe(2);
     expect(plotsForTier("quarry", 5)).toBe(12);
   });
 
   it("unlockedBuildings accumulates rung-by-rung", () => {
     expect(unlockedBuildings("home", 0)).toContain("hearth");
-    expect(unlockedBuildings("home", 0)).not.toContain("forge"); // forge is a City (tier 3) unlock
-    expect(unlockedBuildings("home", 3)).toContain("forge");
+    expect(unlockedBuildings("home", 0)).not.toContain("caravan_post"); // caravan_post is a City (tier 3) unlock
+    expect(unlockedBuildings("home", 3)).toContain("caravan_post");
     // rung 1 is a strict superset of rung 0
     const r0 = new Set(unlockedBuildings("home", 0));
     expect(unlockedBuildings("home", 1).filter((b) => r0.has(b)).length).toBe(r0.size);
@@ -94,7 +97,7 @@ describe("authored town maps", () => {
   });
 
   it("returns null for un-authored zones/tiers (procedural fallback)", () => {
-    expect(getTownMap("meadow", 0)).toBeNull(); // un-tiered zone
+    expect(getTownMap("meadow", 0)).toBeNull(); // tiered (Town 2) but procedural — not in TOWN_MAPS
     expect(getTownMap("home", 9)).toBeNull();   // tier beyond the ladder
   });
 
@@ -189,6 +192,6 @@ describe("DEV/SET_ZONE_TIER reducer (dev override)", () => {
   it("is a no-op for an unknown or un-tiered zone", () => {
     const s = atHome();
     expect(rootReducer(s, { type: "DEV/SET_ZONE_TIER", zoneId: "nowhere", tier: 1 })).toBe(s);
-    expect(rootReducer(s, { type: "DEV/SET_ZONE_TIER", zoneId: "meadow", tier: 1 })).toBe(s);
+    expect(rootReducer(s, { type: "DEV/SET_ZONE_TIER", zoneId: "orchard", tier: 1 })).toBe(s);
   });
 });

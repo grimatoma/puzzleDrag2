@@ -8,7 +8,7 @@ describe("Phase 12.5 — saved-field preservation", () => {
   it("registers silo and barn buildings with §18 wording", () => {
     const silo = findBuilding("silo");
     const barn = findBuilding("barn");
-    expect(silo).toMatchObject({ cost: { plank: 3, bread: 5 },
+    expect(silo).toMatchObject({ cost: { plank: 6, bread: 8 },
       lv: 4, biome: "farm" });
     expect(barn).toMatchObject({ cost: { plank: 6, block: 6, iron_bar: 4 },
       lv: 5, biome: "mine" });
