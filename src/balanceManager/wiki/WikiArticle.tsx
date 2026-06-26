@@ -39,6 +39,7 @@ import { statusForEntity } from "./status.js";
 import { StatusBadge } from "./StatusBadge.jsx";
 import { ReachabilityBadge } from "./ReachabilityBadge.jsx";
 import { reachabilityOf } from "../../game/reachability.js";
+import { ReachabilityPathModal } from "./ReachabilityPathModal.jsx";
 import { ReferenceSection } from "./ReferenceSection.jsx";
 import { useWikiView } from "./wikiView.js";
 import { FieldsTable, AdditionalFieldsSection, LiveConfigFallback } from "./FieldsTable.jsx";
@@ -130,6 +131,9 @@ export interface WikiArticleProps {
 export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticleProps) {
   const { navigate } = useBalanceNav();
   const { view } = useWikiView();
+
+  // "How is this reachable?" graph modal — opened from the reachability badge.
+  const [showReachPath, setShowReachPath] = React.useState(false);
 
   // Entity + schema
   const entity = getEntity(conceptId, entityKey);
@@ -308,10 +312,19 @@ export default function WikiArticle({ conceptId, entityKey, onBack }: WikiArticl
 
           {/* Status badge — shown in both developer and player views */}
           <StatusBadge status={status} />
-          {/* Derived reachability badge — beside status; a different axis (reach vs wired). */}
-          {reach && <ReachabilityBadge reach={reach} />}
+          {/* Derived reachability badge — beside status; a different axis (reach vs wired).
+              Clickable: opens a graph of HOW the entity is reachable. */}
+          {reach && <ReachabilityBadge reach={reach} onActivate={() => setShowReachPath(true)} />}
         </div>
       </div>
+
+      {showReachPath && (
+        <ReachabilityPathModal
+          conceptId={conceptId}
+          entityKey={entityKey}
+          onClose={() => setShowReachPath(false)}
+        />
+      )}
 
       {/* Two-column layout: main content + right-rail Infobox.
           Stacks to a single column on phones (see .wiki-article-body in

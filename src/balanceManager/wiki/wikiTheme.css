@@ -767,6 +767,23 @@
   gap: 4px;
 }
 
+/* Clickable badge (reachability → opens the "how is this reachable?" graph). */
+.wiki-root .wiki-status-badge--button {
+  cursor: pointer;
+  font-family: var(--wiki-font-body);
+  transition: box-shadow var(--wiki-transition), filter var(--wiki-transition);
+}
+
+.wiki-root .wiki-status-badge--button:hover {
+  filter: brightness(0.97);
+  box-shadow: 0 1px 5px rgba(43, 34, 24, 0.18);
+}
+
+.wiki-root .wiki-status-badge--button:focus-visible {
+  outline: 2px solid var(--wiki-ember);
+  outline-offset: 2px;
+}
+
 /* The raw status tier — always shown in both player and developer views */
 .wiki-root .wiki-status-badge__tier {
   font-family: var(--wiki-font-mono);
@@ -2100,4 +2117,102 @@
   line-height: 1.5;
   white-space: pre;
   overflow: auto;
+}
+
+/* ── Reachability path graph (modal off the reachability badge) ─────────────── */
+.wiki-root .wiki-reach-modal {
+  width: min(880px, 100%);
+}
+
+.wiki-root .wiki-reach-graph {
+  border: 1px solid var(--wiki-border);
+  border-radius: 12px;
+  background:
+    radial-gradient(circle, color-mix(in srgb, var(--wiki-border) 30%, transparent) 1px, transparent 1px)
+    0 0 / 22px 22px,
+    var(--wiki-canvas);
+  padding: 4px;
+  max-height: 60vh;
+}
+
+.wiki-root .wiki-reach-node {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 9px;
+  border: 1.75px solid var(--wiki-border);
+  border-radius: 10px;
+  box-shadow: var(--wiki-shadow-card);
+  text-align: left;
+  font-family: var(--wiki-font-body);
+  overflow: hidden;
+}
+
+.wiki-root button.wiki-reach-node {
+  transition: box-shadow var(--wiki-transition), transform var(--wiki-transition);
+}
+
+.wiki-root button.wiki-reach-node:hover {
+  box-shadow: var(--wiki-shadow-hover);
+  transform: translateY(-1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root button.wiki-reach-node:hover { transform: none; }
+}
+
+.wiki-root .wiki-reach-node__visual {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.wiki-root .wiki-reach-node__text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+
+.wiki-root .wiki-reach-node__label {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.15;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wiki-root .wiki-reach-node__detail {
+  font-size: 10px;
+  color: var(--wiki-ink-subtle);
+  font-family: var(--wiki-font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wiki-root .wiki-reach-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--wiki-ink-subtle);
+}
+
+.wiki-root .wiki-reach-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.wiki-root .wiki-reach-legend i {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  border: 1.5px solid;
 }

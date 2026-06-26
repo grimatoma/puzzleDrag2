@@ -44,20 +44,50 @@ export interface ReachabilityBadgeProps {
   reach: Reachability;
   /** Smaller compact form for entry cards (matches StatusBadge). */
   compact?: boolean;
+  /**
+   * When provided, the badge becomes a button that opens the "how is this
+   * reachable?" graph. Omit (e.g. on entry cards) to render an inert label.
+   */
+  onActivate?: () => void;
 }
 
-export function ReachabilityBadge({ reach, compact = false }: ReachabilityBadgeProps) {
+export function ReachabilityBadge({ reach, compact = false, onActivate }: ReachabilityBadgeProps) {
   const meta = META[reach];
   const tone = TONE_STYLES[meta.tone];
+  const className =
+    (compact ? "wiki-status-badge wiki-status-badge--compact" : "wiki-status-badge") +
+    (onActivate ? " wiki-status-badge--button" : "");
+  const style = { background: tone.background, color: tone.color, borderColor: tone.border };
+  const content = (
+    <>
+      {meta.label}
+      <span className="wiki-status-badge__tier" aria-hidden="true">{meta.tier}</span>
+    </>
+  );
+
+  if (onActivate) {
+    return (
+      <button
+        type="button"
+        className={className}
+        style={style}
+        onClick={onActivate}
+        title={`${meta.description} — click to see how.`}
+        aria-label={`Reachability: ${meta.label}. Show how it is reachable.`}
+      >
+        {content}
+      </button>
+    );
+  }
+
   return (
     <span
-      className={compact ? "wiki-status-badge wiki-status-badge--compact" : "wiki-status-badge"}
-      style={{ background: tone.background, color: tone.color, borderColor: tone.border }}
+      className={className}
+      style={style}
       title={meta.description}
       aria-label={`Reachability: ${meta.label}`}
     >
-      {meta.label}
-      <span className="wiki-status-badge__tier" aria-hidden="true">{meta.tier}</span>
+      {content}
     </span>
   );
 }

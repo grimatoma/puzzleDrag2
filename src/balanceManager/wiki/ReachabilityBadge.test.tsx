@@ -21,4 +21,13 @@ describe("ReachabilityBadge", () => {
     // Distinct tones (green success vs red danger).
     expect(reachable).not.toEqual(unreachable);
   });
+
+  it("renders an inert span by default and a button when onActivate is given", () => {
+    const inert = renderToStaticMarkup(<ReachabilityBadge reach="reachable" />);
+    const clickable = renderToStaticMarkup(<ReachabilityBadge reach="reachable" onActivate={() => {}} />);
+    expect(inert).toContain("<span");
+    expect(inert).not.toContain("wiki-status-badge--button");
+    expect(clickable).toContain("<button");
+    expect(clickable).toContain("wiki-status-badge--button");
+  });
 });
