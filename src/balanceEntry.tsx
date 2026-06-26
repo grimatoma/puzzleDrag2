@@ -22,6 +22,9 @@ import "./index.css";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import BalanceManagerApp from "./balanceManager/index";
+import { startAutoReload } from "./balanceManager/autoReload.js";
+
+startAutoReload();
 
 interface ErrState { error: unknown }
 
