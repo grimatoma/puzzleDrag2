@@ -228,7 +228,7 @@ export function CostMatrixTable({ matrix, editable }: CostMatrixTableProps) {
                   <span className="wiki-cost-rowhead__name">{row.name}</span>
                 </th>
                 {row.context.map((c) => (
-                  <td key={c.key} className="wiki-cost-ctx">
+                  <td key={c.key} className="wiki-cost-ctx" data-label={c.label}>
                     {c.value}
                   </td>
                 ))}
@@ -237,6 +237,7 @@ export function CostMatrixTable({ matrix, editable }: CostMatrixTableProps) {
                   return (
                     <td
                       key={col.key}
+                      data-label={col.label}
                       className={`wiki-cost-cell${cell?.changed ? " wiki-cost-cell--changed" : ""}`}
                     >
                       {cell && (

@@ -91,7 +91,7 @@ export function BoonCard({ boon }: BoonCardProps) {
 
   return (
     <section id="boon">
-      <div className="wiki-section-heading mb-2">Boon</div>
+      <h2 className="wiki-section-heading mb-2">Boon</h2>
 
       <div
         style={{

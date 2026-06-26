@@ -345,3 +345,30 @@ describe("infoboxFacts — recipe ingredients", () => {
     expect(ingredients!.value).toContain("Flour");
   });
 });
+
+describe("infoboxFacts — key-detail colour tones", () => {
+  it("tags ability powers with the 'power' tone (buildings + tiles)", () => {
+    const granary = infoboxFacts("buildings", "granary", getEntity("buildings", "granary"));
+    expect(granary.find((f) => f.label === "Turns")?.tone).toBe("power");
+    const turkey = infoboxFacts("tiles", "tile_bird_turkey", getEntity("tiles", "tile_bird_turkey"));
+    expect(turkey.find((f) => f.label === "Free moves")?.tone).toBe("power");
+  });
+
+  it("tags Crafts/Unlocks (buildings) and Output (recipes) as 'craft', Ingredients as 'ingredient'", () => {
+    const bakery = infoboxFacts("buildings", "bakery", getEntity("buildings", "bakery"));
+    expect(bakery.find((f) => f.label === "Crafts")?.tone).toBe("craft");
+    const kitchen = infoboxFacts("buildings", "kitchen", getEntity("buildings", "kitchen"));
+    expect(kitchen.find((f) => f.label === "Unlocks")?.tone).toBe("unlock");
+    const bread = infoboxFacts("recipes", "rec_bread", getEntity("recipes", "rec_bread"));
+    expect(bread.find((f) => f.label === "Output")?.tone).toBe("craft");
+    expect(bread.find((f) => f.label === "Ingredients")?.tone).toBe("ingredient");
+  });
+
+  it("leaves plain descriptive facts untoned (Level, Cost, Biome)", () => {
+    const granary = infoboxFacts("buildings", "granary", getEntity("buildings", "granary"));
+    expect(granary.find((f) => f.label === "Level")?.tone).toBeUndefined();
+    expect(granary.find((f) => f.label === "Cost")?.tone).toBeUndefined();
+    const turkey = infoboxFacts("tiles", "tile_bird_turkey", getEntity("tiles", "tile_bird_turkey"));
+    expect(turkey.find((f) => f.label === "Biome")?.tone).toBeUndefined();
+  });
+});

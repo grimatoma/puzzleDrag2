@@ -75,7 +75,9 @@ export function parseInventory(raw: Record<string, unknown> | null | undefined):
   for (const [k, v] of Object.entries(raw)) {
     if (!isInventoryKey(k)) continue;
     const n = Number(v);
-    if (Number.isFinite(n) && n !== 0) out[k] = n;
+    // Drop non-finite, zero, and negative counts — a corrupt/edited save must
+    // never load a negative inventory (it would corrupt crafting/cap checks).
+    if (Number.isFinite(n) && n > 0) out[k] = n;
   }
   return out;
 }
@@ -113,7 +115,7 @@ export function parseZoneResourceProgress(raw: unknown): ZoneResourceProgressMap
     for (const [k, v] of Object.entries(rec)) {
       if (!RESOURCE_KEY_SET.has(k)) continue;
       const n = Number(v);
-      if (Number.isFinite(n) && n !== 0) progress[k as ResourceKey] = n;
+      if (Number.isFinite(n) && n > 0) progress[k as ResourceKey] = n;
     }
     return Object.keys(progress).length ? { home: progress } : {};
   }
@@ -124,7 +126,7 @@ export function parseZoneResourceProgress(raw: unknown): ZoneResourceProgressMap
     for (const [k, v] of Object.entries(prog as Record<string, unknown>)) {
       if (!RESOURCE_KEY_SET.has(k)) continue;
       const n = Number(v);
-      if (Number.isFinite(n) && n !== 0) bucket[k as ResourceKey] = n;
+      if (Number.isFinite(n) && n > 0) bucket[k as ResourceKey] = n;
     }
     if (Object.keys(bucket).length) out[zoneId] = bucket;
   }

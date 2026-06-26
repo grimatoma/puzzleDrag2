@@ -8,14 +8,10 @@
 // main pane (category pages, entity articles, narrative pages, and the two
 // surviving developer utility tabs).
 //
-// `BalanceManagerApp` is a thin wrapper around `WikiShell`. `TabProps` /
-// `BalanceDraft` live in `./tabProps.js` and are re-exported here for any
-// remaining consumers.
+// `BalanceManagerApp` is a thin wrapper around `WikiShell`.
 
 import React from "react";
 import WikiShell from "./wiki/WikiShell.jsx";
-
-export type { BalanceDraft, TabProps } from "./tabProps.js";
 
 export default function BalanceManagerApp() {
   return <WikiShell />;

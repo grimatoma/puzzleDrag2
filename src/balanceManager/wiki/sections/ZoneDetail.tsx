@@ -217,7 +217,7 @@ export function ZoneDetail({ zone }: ZoneDetailProps) {
 
   return (
     <section id="zone-detail">
-      <div className="wiki-section-heading mb-2">Drop rates &amp; upgrades</div>
+      <h2 className="wiki-section-heading mb-2">Drop rates &amp; upgrades</h2>
 
       {/* Season drop-rate heatmap */}
       {cats.length > 0 && seasons.length > 0 && (

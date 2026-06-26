@@ -21,7 +21,7 @@ export default function MemberTiles({ conceptId, entityKey }) {
 
   return (
     <section id="member-tiles" className="flex flex-col gap-2">
-      <div className="wiki-section-heading">Tiles ({tiles.length})</div>
+      <h2 className="wiki-section-heading">Tiles ({tiles.length})</h2>
       <EntryGrid
         entries={tiles}
         onSelect={(key) => navigate(wikiNavTarget("tiles", key))}

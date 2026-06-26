@@ -47,7 +47,9 @@ export const SCOPED_OUT: ScopedOut = {
   // they auto-defer through an unreachable input or the deferred Kitchen station.)
   recipes: new Set<string>([
     // Fancy food — celebratory bakery/larder goods past the early loaf/pie/preserve.
-    "honeyroll", "festival_loaf", "tincture",
+    // (wedding_pie used to auto-defer through its `honey` input; main's economy de-trap
+    // dropped honey, so its station + inputs are now all in scope — defer it here.)
+    "honeyroll", "festival_loaf", "tincture", "wedding_pie",
     // Forge metalwork past the in-scope iron_hinge + lantern.
     "cobblepath", "ironframe", "stonework",
     // Workshop tool tree past the in-scope rake / sickle / fertilizer / plough / fruit_picker.

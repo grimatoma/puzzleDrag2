@@ -1,4 +1,4 @@
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useRef, type ReactNode } from "react";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import { FeaturePanel } from "../_shared/uiTypes.js";
 import type { GameState, Dispatch } from "../../types/state.js";
@@ -30,8 +30,9 @@ interface ActionBtnProps {
   onClick?: () => void;
   variant?: 'primary' | 'danger' | 'default' | 'ember';
   className?: string;
+  disabled?: boolean;
 }
-function ActionBtn({ children, onClick, variant = 'default', className = '' }: ActionBtnProps) {
+function ActionBtn({ children, onClick, variant = 'default', className = '', disabled = false }: ActionBtnProps) {
   const styles: Record<string, { background: string; borderColor: string; color: string }> = {
     primary:  { background: '#5a9e4b', borderColor: '#3e7236', color: '#fff' },
     danger:   { background: '#c23b22', borderColor: '#8f2a18', color: '#fff' },
@@ -42,7 +43,8 @@ function ActionBtn({ children, onClick, variant = 'default', className = '' }: A
   return (
     <button
       onClick={onClick}
-      className={`w-full py-2 px-4 text-[13px] font-bold rounded-xl border-2 transition-colors ${className}`}
+      disabled={disabled}
+      className={`w-full py-2 px-4 text-[13px] font-bold rounded-xl border-2 transition-colors ${disabled ? 'opacity-60 cursor-default' : ''} ${className}`}
       style={s}
     >
       {children}
@@ -83,7 +85,15 @@ async function toggleFullscreen(): Promise<void> {
 // waiting, otherwise a quiet "Check for Updates" that pokes the service worker.
 function UpdateButton() {
   const ready = useAppUpdateReady();
-  const [checkedAt, setCheckedAt] = useState<number | null>(null);
+  const [status, setStatus] = useState<"idle" | "checking" | "done">("idle");
+  const doneTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (doneTimer.current) clearTimeout(doneTimer.current);
+    },
+    [],
+  );
 
   if (ready) {
     return (
@@ -93,16 +103,30 @@ function UpdateButton() {
     );
   }
 
-  // After a manual check, give brief feedback. If a build is found, the banner
-  // (or this button flipping to "Refresh") takes over automatically.
+  // Run a manual check, showing "Checking…" only while the check is actually in
+  // flight. When it settles with no new build, flash "Up to date" briefly and
+  // fall back to idle. If a build *is* found, `ready` flips and this button
+  // becomes the "Refresh" affordance above (the banner also takes over).
+  const onCheck = () => {
+    if (status === "checking") return;
+    if (doneTimer.current) clearTimeout(doneTimer.current);
+    setStatus("checking");
+    checkForUpdate().then(() => {
+      setStatus("done");
+      doneTimer.current = setTimeout(() => setStatus("idle"), 2500);
+    });
+  };
+
+  const label =
+    status === "checking"
+      ? "↻ Checking…"
+      : status === "done"
+        ? "✓ Up to date"
+        : "↻ Check for Updates";
+
   return (
-    <ActionBtn
-      onClick={() => {
-        checkForUpdate();
-        setCheckedAt(Date.now());
-      }}
-    >
-      {checkedAt ? "↻ Checking…" : "↻ Check for Updates"}
+    <ActionBtn onClick={onCheck} disabled={status === "checking"}>
+      {label}
     </ActionBtn>
   );
 }
@@ -174,7 +198,6 @@ function MainTab({ dispatch }: { dispatch: Dispatch }) {
 // --- Settings tab ---
 const AUDIO_ROWS = [
   { key: 'sfxOn',     label: 'Sound Effects' },
-  { key: 'musicOn',   label: 'Music' },
   { key: 'hapticsOn', label: 'Haptics' },
 ];
 const GRAPHICS_ROWS = [

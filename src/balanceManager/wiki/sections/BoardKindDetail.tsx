@@ -38,7 +38,7 @@ export function hasBoardKindDetail(entity: BoardKindLike | null | undefined): bo
 }
 
 const heading = (text: string) => (
-  <div className="wiki-section-heading mb-2" style={{ color: COLORS.ink }}>{text}</div>
+  <h2 className="wiki-section-heading mb-2" style={{ color: COLORS.ink }}>{text}</h2>
 );
 
 export interface BoardKindDetailProps {

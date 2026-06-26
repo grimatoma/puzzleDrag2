@@ -6,6 +6,7 @@ import {
   buildCostMatrix,
   buildAllCostMatrices,
   costColumnOptions,
+  filterMatrixRows,
   VALUE_COL,
 } from "./costMatrix.js";
 import type { CostMatrix } from "./costMatrix.js";
@@ -88,7 +89,7 @@ describe("buildResourceCostMatrix", () => {
 
   it("reads recipe inputs for crafted resources", () => {
     const crown = row(buildResourceCostMatrix(), "gemcrown");
-    expect(crown.cells.gold_bar.original).toBe(2);
+    expect(crown.cells.gold_bar.original).toBe(1);
     expect(crown.cells.gold_bar.editPath).toBe("RECIPES.rec_gemcrown.inputs.gold_bar");
     expect(crown.group).toMatch(/^Crafted/);
   });
@@ -181,5 +182,34 @@ describe("buildCostMatrix / buildAllCostMatrices", () => {
     expect(buildings.columns.some((c) => c.key === key && c.extra)).toBe(true);
     // The map is per-matrix — tools should be untouched.
     expect(tools.columns.some((c) => c.key === key)).toBe(false);
+  });
+});
+
+describe("filterMatrixRows", () => {
+  it("returns the same matrix reference for a blank query", () => {
+    const m = buildBuildingCostMatrix();
+    expect(filterMatrixRows(m, "")).toBe(m);
+    expect(filterMatrixRows(m, "   ")).toBe(m);
+  });
+
+  it("narrows rows to a case-insensitive name match", () => {
+    const m = buildBuildingCostMatrix();
+    const mill = row(m, "mill");
+    const out = filterMatrixRows(m, mill.name.toUpperCase());
+    expect(out.rows.length).toBeGreaterThan(0);
+    expect(out.rows.every((r) => r.name.toLowerCase().includes(mill.name.toLowerCase()))).toBe(true);
+    expect(out.rows.some((r) => r.id === "mill")).toBe(true);
+  });
+
+  it("matches on the row id too", () => {
+    const out = filterMatrixRows(buildBuildingCostMatrix(), "mill");
+    expect(out.rows.some((r) => r.id === "mill")).toBe(true);
+  });
+
+  it("returns an empty row list but preserves columns when nothing matches", () => {
+    const m = buildBuildingCostMatrix();
+    const out = filterMatrixRows(m, "zzz-no-such-building-xyz");
+    expect(out.rows).toHaveLength(0);
+    expect(out.columns).toBe(m.columns);
   });
 });

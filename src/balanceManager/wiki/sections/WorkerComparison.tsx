@@ -32,7 +32,7 @@ export function WorkerComparison() {
 
   return (
     <section id="worker-comparison">
-      <div className="wiki-section-heading mb-2">Worker comparison</div>
+      <h2 className="wiki-section-heading mb-2">Worker comparison</h2>
       <div
         className="wiki-table-scroll"
         style={{

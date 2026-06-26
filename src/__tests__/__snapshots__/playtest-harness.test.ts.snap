@@ -457,14 +457,9 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
         "zone": "home",
       },
       "id": "quarry",
-      "maxSelfTier": 4,
+      "maxSelfTier": 5,
       "reachableFromFreshSave": false,
-      "wall": {
-        "missing": [
-          "gold_bar",
-        ],
-        "toName": "Foundry City",
-      },
+      "wall": null,
     },
     {
       "gate": {
@@ -472,14 +467,9 @@ exports[`progression spine — code-derived oracle > progression-shape snapshot 
         "zone": "quarry",
       },
       "id": "caves",
-      "maxSelfTier": 2,
+      "maxSelfTier": 3,
       "reachableFromFreshSave": false,
-      "wall": {
-        "missing": [
-          "gold_bar",
-        ],
-        "toName": "Deephold",
-      },
+      "wall": null,
     },
     {
       "gate": null,

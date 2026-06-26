@@ -141,6 +141,21 @@ export class TownScene extends Phaser.Scene {
     // scene with plan data after boot), which otherwise warns "key already in use".
     if (!this.textures.exists("tileset")) this.load.image("tileset", "town/tileset.png");
     if (!this.textures.exists("character")) this.load.atlas("character", "town/character-atlas.png", "town/character-atlas.json");
+
+    // Rasterize the building SVGs through the loader so they're in the texture
+    // cache BEFORE create() runs its first rebuildBuildingsAndPlots. Baking them
+    // in create() (the old path) decoded each via an async Image.onload, so the
+    // ground/plots painted immediately and the buildings only "blinked in" a
+    // frame or two later when each decode resolved. Going through preload makes
+    // the loader hold create() until they're ready, so the town renders atomically.
+    // The registry is set in TownPhaserCanvas's postBoot before the plan-carrying
+    // restart, so svgMap is present on every pass where create() actually runs
+    // (the dataless auto-start pass bails in create()).
+    const svgMap = (this.registry.get("hwv.svgMap") as Record<string, string>) || {};
+    for (const [id, svg] of Object.entries(svgMap)) {
+      const key = `building_${id}`;
+      if (!this.textures.exists(key)) this.load.image(key, this.buildingSvgDataUri(svg));
+    }
   }
 
   create() {
@@ -152,7 +167,8 @@ export class TownScene extends Phaser.Scene {
     if (!this.plan) return;
     this.bakeSpriteTextures();
     this.bakeTownTiles();
-    this.bakeBuildingTextures();
+    // Building SVG textures are rasterized in preload() (see there) so they're
+    // ready before the first rebuildBuildingsAndPlots below — no async pop-in.
     this.createCharacterAnims();
     ensureSmokeTextures(this);
 
@@ -254,9 +270,25 @@ export class TownScene extends Phaser.Scene {
     [PINE, TREE2, FOUNTAIN, BUSH, SIGN, ROCK, ORE].forEach((r) => this.bakeRecipe(r));
   }
 
-  bakeBuildingTextures() {
-    const svgMap = this.registry.get("hwv.svgMap") as Record<string, string> || {};
-    Object.entries(svgMap).forEach(([id, svg]) => this.bakeSvgTexture(`building_${id}`, svg));
+  /**
+   * Inject an explicit `xmlns` + pixel width/height into a building's SVG markup
+   * and return it as a rasterizable data URI. The building SVGs size themselves
+   * via `viewBox` + Tailwind `w-full h-full`, which carry no intrinsic dimensions
+   * when rasterized standalone (no CSS context) — without this they'd decode at
+   * 0×0. We bake at 3× the viewBox for crispness, then the sprite scales to the
+   * lot. `renderToStaticMarkup` emits no `xmlns`, so the data URI would otherwise
+   * be parsed as generic XML and rejected by <img>. Consumed by the preload loader.
+   */
+  buildingSvgDataUri(svg: string): string {
+    const SCALE = 3;
+    const vb = svg.match(/viewBox="([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)"/);
+    const vbw = vb ? parseFloat(vb[3]) : 100;
+    const vbh = vb ? parseFloat(vb[4]) : 100;
+    const w = Math.max(1, Math.round(vbw * SCALE));
+    const h = Math.max(1, Math.round(vbh * SCALE));
+    const attrs = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"`;
+    const sized = svg.replace(/<svg\b/, attrs);
+    return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(sized);
   }
 
   /**
@@ -882,12 +914,13 @@ export class TownScene extends Phaser.Scene {
   static readonly MIN_ZOOM = 0.5;
   static readonly MAX_ZOOM = 3;
   // How far the camera may overscroll past the town's edges, as a fraction of
-  // the visible area. Half a screen of give is enough to guarantee the town can
-  // always be panned in BOTH axes — even when the 4:3 town is heavily
-  // letterboxed inside a very different viewport aspect (e.g. a tall portrait
-  // phone) — without ever letting it be dragged fully off screen. The grass
-  // margins + vignette painted by TownView make that overscroll read as terrain.
-  static readonly OVERSCROLL = 0.5;
+  // the visible area. Zero: panning is clamped strictly to the finite 4:3 map so
+  // the flat camera-background green is NEVER visible — you only ever pan within
+  // the actual terrain. This is safe because the minimum zoom is pinned to
+  // coverZoom (see clampCamera/zoomTo): the map always at least COVERS the
+  // viewport, so even the letterboxed axis has the map filling it edge-to-edge
+  // (and is simply locked) rather than needing overscroll give to stay panable.
+  static readonly OVERSCROLL = 0;
 
   /**
    * Minimum zoom at which the town fully COVERS the viewport — i.e. the visible
@@ -926,6 +959,13 @@ export class TownScene extends Phaser.Scene {
 
   clampCamera() {
     const cam = this.cameras.main;
+    // Pin the floor zoom to coverZoom so the map always at least fills the
+    // viewport. Any path that could leave it zoomed out below cover — a restored
+    // initialCameraState from an older save, or a viewport resize/rotation that
+    // raised the cover threshold — is corrected here, closing the blank-green
+    // border before the scroll clamp (which assumes the map covers) runs.
+    const minZoom = this.coverZoom();
+    if (cam.zoom < minZoom) cam.setZoom(minZoom);
     const wVisible = cam.width / cam.zoom;
     const hVisible = cam.height / cam.zoom;
     const townW = this.plan.width || 1280;
@@ -956,7 +996,11 @@ export class TownScene extends Phaser.Scene {
   // cursor / pinch centre stays put (instead of zooming about the camera mid).
   zoomTo(targetZoom: number, screenX: number, screenY: number) {
     const cam = this.cameras.main;
-    const z = Phaser.Math.Clamp(targetZoom, TownScene.MIN_ZOOM, TownScene.MAX_ZOOM);
+    // Floor the zoom at coverZoom (not the static MIN_ZOOM) so the player can
+    // never pinch/scroll out far enough to letterbox the finite map and expose
+    // the green camera background.
+    const minZoom = Math.max(TownScene.MIN_ZOOM, this.coverZoom());
+    const z = Phaser.Math.Clamp(targetZoom, minZoom, TownScene.MAX_ZOOM);
     if (z === cam.zoom) return;
     const before = cam.getWorldPoint(screenX, screenY);
     const bx = before.x, by = before.y;
@@ -1018,32 +1062,4 @@ export class TownScene extends Phaser.Scene {
     });
   }
 
-  bakeSvgTexture(key: string, svg: string) {
-    if (this.textures.exists(key)) return;
-    // The building SVGs size themselves via `viewBox` + Tailwind `w-full h-full`
-    // classes, which carry no intrinsic dimensions when rasterized standalone
-    // (no CSS context). Inject explicit pixel width/height from the viewBox so
-    // `new Image()` rasterizes at a known, crisp resolution instead of 0×0.
-    const SCALE = 3;
-    const vb = svg.match(/viewBox="([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)"/);
-    const vbw = vb ? parseFloat(vb[3]) : 100;
-    const vbh = vb ? parseFloat(vb[4]) : 100;
-    const w = Math.max(1, Math.round(vbw * SCALE));
-    const h = Math.max(1, Math.round(vbh * SCALE));
-    // `renderToStaticMarkup` does not emit an `xmlns`, so the data URI would be
-    // parsed as generic XML and rejected by <img>. Inject the SVG namespace plus
-    // explicit pixel dimensions into the root element.
-    const attrs = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"`;
-    const sized = svg.replace(/<svg\b/, attrs);
-    const img = new Image();
-    img.width = w;
-    img.height = h;
-    img.onload = () => {
-      if (this.textures.exists(key)) return;
-      this.textures.addImage(key, img);
-      this.rebuildBuildingsAndPlots();
-    };
-    img.onerror = () => console.warn("[town] failed to bake building SVG", key);
-    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(sized);
-  }
 }

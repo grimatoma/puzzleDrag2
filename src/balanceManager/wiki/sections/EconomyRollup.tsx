@@ -93,7 +93,7 @@ export function EconomyRollup() {
 
   return (
     <section id="economy-rollup">
-      <div className="wiki-section-heading mb-2">Town economy</div>
+      <h2 className="wiki-section-heading mb-2">Town economy</h2>
 
       <p className="text-[11px] italic m-0 mb-2" style={{ color: COLORS.inkSubtle }}>
         Everything it costs to found a complete town — summed across every building.

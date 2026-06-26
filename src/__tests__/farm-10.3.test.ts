@@ -30,9 +30,9 @@ describe("10.3 — §11 forge recipe registration", () => {
     expect(recipe("stonework").inputs.coke).toBe(1);
   });
 
-  it("gem_crown: 1 cutgem + 2 gold", () => {
+  it("gem_crown: 1 cutgem + 1 gold", () => {
     expect(recipe("gem_crown").inputs.cut_gem).toBe(1);
-    expect(recipe("gem_crown").inputs.gold_bar).toBe(2);
+    expect(recipe("gem_crown").inputs.gold_bar).toBe(1);
   });
 
   it("gold_ring: 1 gold + 2 ingot", () => {

@@ -28,6 +28,9 @@ import { WIKI_SECTIONS, NARRATIVE_PAGES, DEV_ONLY_SECTION_IDS } from "./wikiNav.
 import { conceptAccent } from "./conceptAccent.js";
 import { useWikiView } from "./wikiView.js";
 import { NarrativePage } from "./NarrativePage.js";
+import { getRecents } from "./recents.js";
+import { buildCommandIndex, resolveRecents, entryKey } from "../commandPalette.js";
+import { wikiNavTarget } from "./WikiLinkButton.jsx";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -207,6 +210,47 @@ function StartHere({ navigate }: StartHereProps) {
   );
 }
 
+// ─── JumpBackIn (recents) ─────────────────────────────────────────────────────
+
+interface JumpBackInProps {
+  navigate: (target: { tab: string; focus?: string | null }) => void;
+}
+
+/**
+ * "Jump back in" — chips for recently-opened entity articles, read from the
+ * localStorage recents list (recents.ts) and resolved to live labels via the
+ * command index. Hidden entirely when there are no recents, so first-time
+ * visitors see the unchanged layout. Reuses the Start-here chip styling.
+ */
+function JumpBackIn({ navigate }: JumpBackInProps) {
+  const recentKeys = getRecents();
+  if (recentKeys.length === 0) return null;
+  // Only build the (full) command index once we actually have recents to resolve.
+  const recents = resolveRecents(buildCommandIndex(), recentKeys, 8);
+  if (recents.length === 0) return null;
+
+  return (
+    <section className="wiki-home-start" aria-label="Jump back in">
+      <h2 className="wiki-home-start__heading">Jump back in</h2>
+      <div className="wiki-home-start__chain" role="list" aria-label="Recently viewed">
+        {recents.map((e) => (
+          <button
+            key={entryKey(e)}
+            type="button"
+            className="wiki-home-start__chip"
+            style={{ "--wiki-accent": conceptAccent(e.tab) } as React.CSSProperties}
+            onClick={() => navigate(wikiNavTarget(e.tab, e.id))}
+            aria-label={`Open ${e.label}`}
+            data-testid={`recent-chip-${e.tab}-${e.id}`}
+          >
+            {e.label}
+          </button>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 // ─── WikiHome ─────────────────────────────────────────────────────────────────
 
 /**
@@ -240,6 +284,9 @@ export function WikiHome({ navigate }: WikiHomeProps) {
           </p>
         </div>
       </section>
+
+      {/* ── 1b. Jump back in (recently viewed) ───────────────────────────── */}
+      <JumpBackIn navigate={navigate} />
 
       {/* ── 2. Browse by category ────────────────────────────────────────── */}
       <section

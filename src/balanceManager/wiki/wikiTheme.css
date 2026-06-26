@@ -4,8 +4,9 @@
  * Scoped under `.wiki-root` so styles don't leak into the rest of the Dev Panel
  * or the game bundle. Imported by WikiShell.tsx (Vite handles CSS imports).
  *
- * Font pairing:
- *   Display/headings : Fraunces (variable-weight serif — distinctive, warm)
+ * Font pairing (self-hosted via @fontsource — imported in src/balanceEntry.tsx,
+ * no external font CDN, so first paint isn't render-blocked):
+ *   Display/headings : Fraunces (distinctive, warm serif)
  *   Body             : IBM Plex Sans (clean, readable at small sizes)
  *   Mono             : JetBrains Mono (entity keys, field names, code)
  *
@@ -99,6 +100,9 @@
   line-height: 1.1;
   color: var(--wiki-ink);
   letter-spacing: -0.025em;
+  /* Reset UA heading margins so promoting these to real <h1>/<h2> for the
+     document outline doesn't shift layout (spacing is owned by parent flex/gap). */
+  margin: 0;
 }
 
 /* Article entity title — clearly smaller but still commanding */
@@ -119,7 +123,8 @@
   letter-spacing: -0.015em;
   padding-bottom: 6px;
   border-bottom: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 40%, var(--wiki-border));
-  margin-bottom: 2px;
+  /* margin-top:0 so the <h2> promotion (for the outline) keeps the divs' old box. */
+  margin: 0 0 2px;
 }
 
 /* Category page concept title — display serif, accent colored, very large */
@@ -845,41 +850,65 @@
 /* ── Entity card fact chips ──────────────────────────────────────────────────── */
 /*
  * Rendered below the entity name on every gallery card that carries `facts`.
- * Keep these tiny and muted — they are supplemental, not primary content.
+ * These are the entity's KEY DETAILS (its powers, what it crafts, what it
+ * costs to make, what it unlocks) — not throwaway tags — so they read as bold,
+ * colour-coded pills. A fact's `data-tone` picks its hue; plain descriptive
+ * facts (level, biome, …) stay in the neutral style below.
  */
 
 .wiki-root .wiki-card-facts {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 3px 4px;
+  gap: 4px;
   width: 100%;
-  margin-top: 2px;
+  margin-top: 4px;
 }
 
 .wiki-root .wiki-card-fact {
+  /* Default tone for neutral (untoned) descriptive chips. */
+  --wiki-fact-tone: var(--wiki-ink-subtle);
   display: inline-flex;
   align-items: center;
   gap: 3px;
-  padding: 1px 5px;
-  border-radius: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
   font-family: var(--wiki-font-body);
-  font-size: 9px;
-  font-weight: 500;
-  color: var(--wiki-ink-subtle);
-  background: color-mix(in srgb, var(--wiki-parchment-deep) 70%, var(--wiki-border));
-  border: 1px solid color-mix(in srgb, var(--wiki-border) 50%, transparent);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--wiki-ink);
+  background: color-mix(in srgb, var(--wiki-parchment-deep) 55%, var(--wiki-border));
+  border: 1px solid color-mix(in srgb, var(--wiki-border) 65%, transparent);
   white-space: nowrap;
-  line-height: 1.4;
+  line-height: 1.45;
   max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .wiki-root .wiki-card-fact__label {
-  color: color-mix(in srgb, var(--wiki-ink-subtle) 70%, var(--wiki-ink));
-  font-weight: 600;
+  color: var(--wiki-ink-subtle);
+  font-weight: 700;
   margin-right: 1px;
+}
+
+/* Key-detail tones — each kind of headline fact gets its own hue (drawn from
+   the wiki section palette) so a glance tells powers from produced goods from
+   inputs from unlocks. The colour flows through one --wiki-fact-tone var. */
+.wiki-root .wiki-card-fact[data-tone="power"]      { --wiki-fact-tone: #c9980a; } /* gold — abilities / boons */
+.wiki-root .wiki-card-fact[data-tone="craft"]      { --wiki-fact-tone: #4f9e57; } /* green — produced / crafted */
+.wiki-root .wiki-card-fact[data-tone="ingredient"] { --wiki-fact-tone: #4a72a8; } /* blue — inputs / ingredients */
+.wiki-root .wiki-card-fact[data-tone="unlock"]     { --wiki-fact-tone: #8a6fb0; } /* violet — unlocks new content */
+
+.wiki-root .wiki-card-fact[data-tone] {
+  font-weight: 700;
+  color: var(--wiki-ink);
+  background: color-mix(in srgb, var(--wiki-fact-tone) 16%, var(--wiki-parchment));
+  border-color: color-mix(in srgb, var(--wiki-fact-tone) 55%, var(--wiki-border));
+}
+
+.wiki-root .wiki-card-fact[data-tone] .wiki-card-fact__label {
+  color: color-mix(in srgb, var(--wiki-fact-tone) 68%, var(--wiki-ink));
 }
 
 /* ── Reference section (collapsible developer-only wrapper) ──────────────────── */
@@ -1407,8 +1436,8 @@
 
   .wiki-root .wiki-search-btn {
     padding: 6px 8px;
-    min-width: 36px;
-    min-height: 36px;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
     justify-content: center;
   }
 
@@ -1419,8 +1448,8 @@
 
   .wiki-root .wiki-back-btn {
     padding: 6px 10px;
-    min-width: 36px;
-    min-height: 36px;
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
     justify-content: center;
   }
 
@@ -1439,10 +1468,10 @@
     display: inline;
   }
 
-  /* Hamburger button tap target — at least 40×40 */
+  /* Hamburger button tap target — meet the 44px touch floor */
   .wiki-root .wiki-toggle-btn--lg {
-    width: 40px;
-    height: 40px;
+    width: var(--tap-min);
+    height: var(--tap-min);
     font-size: 18px;
     flex-shrink: 0;
   }
@@ -1556,6 +1585,16 @@
   /* The Type column cap is irrelevant once stacked — let it flow. */
   .wiki-root .wiki-schema-table td.wiki-field-type {
     max-width: none;
+  }
+}
+
+/* Touch devices: meet the 44px tap-target floor on the small icon buttons that
+   stay compact on a desktop pointer. Scoped to coarse pointers so desktop (and
+   its visual goldens) keep the tighter 28px controls. */
+@media (hover: none) and (pointer: coarse) {
+  .wiki-root .wiki-toggle-btn {
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
   }
 }
 
@@ -1848,6 +1887,114 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
   color: var(--wiki-ink-subtle);
+}
+
+/* ── Cost matrix → stacked cards on phones ───────────────────────────────────
+ * The cost grid is the widest table in the wiki; a sideways scroll is its worst
+ * mobile UX. Reflow each row into a self-contained card (mirrors the schema-
+ * table reflow above): the row name is the card title and every context / cost
+ * cell becomes a labelled row (label from data-label via ::before). Column
+ * add/remove lives in the hidden <thead>, so that stays a desktop-only action;
+ * existing cells — including staged edits — remain fully visible and editable. */
+@media (max-width: 640px) {
+  .wiki-root .wiki-cost-scroll {
+    overflow: visible;
+    max-height: none;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .wiki-root .wiki-cost-table {
+    width: 100%;
+    min-width: 0;
+    display: block;
+  }
+
+  /* Column labels move into each cell via ::before — hide the header row. */
+  .wiki-root .wiki-cost-table thead {
+    display: none;
+  }
+
+  .wiki-root .wiki-cost-table tbody,
+  .wiki-root .wiki-cost-table tr,
+  .wiki-root .wiki-cost-table td,
+  .wiki-root .wiki-cost-table th.wiki-cost-rowhead {
+    display: block;
+    width: auto;
+  }
+
+  /* Each entity row becomes a card. */
+  .wiki-root .wiki-cost-table tbody tr {
+    margin-bottom: 10px;
+    border: 1.5px solid var(--wiki-border);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--wiki-shadow-card);
+    background: var(--wiki-parchment);
+  }
+
+  /* A grouping band (resources: Crafted / Raw) is a divider, not a card. */
+  .wiki-root .wiki-cost-table tbody tr.wiki-cost-band {
+    margin: 14px 0 6px;
+    border: none;
+    box-shadow: none;
+    background: transparent;
+  }
+
+  .wiki-root .wiki-cost-band td {
+    position: static;
+    border: none;
+    padding: 0 2px;
+  }
+
+  /* Row name → card title banner (un-stuck, full width, accent tint). */
+  .wiki-root .wiki-cost-rowhead {
+    position: static;
+    max-width: none;
+    padding: 8px 12px !important;
+    background: color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 8%, var(--wiki-parchment-deep));
+    border-bottom: 1.5px solid color-mix(in srgb, var(--wiki-border) 55%, transparent);
+    font-size: 13px;
+  }
+
+  /* Context + cost cells → labelled rows inside the card. */
+  .wiki-root .wiki-cost-ctx,
+  .wiki-root .wiki-cost-cell {
+    display: flex !important;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left;
+    border-left: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--wiki-border) 30%, transparent);
+    padding: 6px 12px;
+    white-space: normal;
+  }
+
+  .wiki-root .wiki-cost-ctx::before,
+  .wiki-root .wiki-cost-cell::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-family: var(--wiki-font-body);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--wiki-ink-subtle);
+  }
+
+  /* Trailing "add column" placeholder has no business inside a card. */
+  .wiki-root .wiki-cost-cell--add {
+    display: none !important;
+  }
+
+  /* The editable input can use the room a card affords. */
+  .wiki-root .wiki-cost-input {
+    width: auto;
+    min-width: 80px;
+    max-width: 140px;
+  }
 }
 
 /* ── Export modal ─────────────────────────────────────────────────────────────── */

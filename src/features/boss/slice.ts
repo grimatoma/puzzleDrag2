@@ -208,7 +208,10 @@ export function reduce(state: GameState, action: Action): GameState {
         let added = 0;
         if (resourceKey === next.boss.resource) {
           added = gained;
-        } else if (!resourceKey && gained > 0) {
+        } else if (!next.boss.resource && gained > 0) {
+          // Generic boss (no specific target resource) — any collection counts.
+          // Guard on the BOSS's target, not the payload key: a resource-specific
+          // boss must never be credited by an unkeyed collection event.
           added = gained;
         }
         if (added > 0) {

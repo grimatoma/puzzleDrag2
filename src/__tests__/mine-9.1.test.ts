@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { inv, patchInventory } from "../testUtils/inventory.js";
-import { BIOMES, MINE_TILE_POOL, FARM_TILE_POOL, UPGRADE_THRESHOLDS } from "../constants.js";
+import { BIOMES, MINE_TILE_POOL, FARM_TILE_POOL, UPGRADE_THRESHOLDS, DEEP_MINE_TILE_POOL, DEEP_MINE_ZONES, mineTilePoolForZone, tileFamilyResource } from "../constants.js";
 import { createInitialState, rootReducer as reduce } from "../state.js";
 import { upgradeCountForChain } from "../utils.js";
 
@@ -131,5 +131,33 @@ describe("Phase 9.1 — Stone/ore/coal/ingot resource chain + Mine biome setup",
   });
   it("5 gem = 1 cut_gem", () => {
     expect(upgradeCountForChain(5, "tile_mine_gem")).toBe(1);
+  });
+});
+
+describe("Deep-mine gold pool (gold_bar reachability fix)", () => {
+  it("the entry quarry uses the gold-free shared pool", () => {
+    expect(mineTilePoolForZone("quarry")).toBe(MINE_TILE_POOL);
+    expect(mineTilePoolForZone("quarry")).not.toContain("tile_mine_gold");
+  });
+
+  it("deeper caves/forge zones surface gold", () => {
+    for (const zone of DEEP_MINE_ZONES) {
+      expect(mineTilePoolForZone(zone)).toBe(DEEP_MINE_TILE_POOL);
+      expect(mineTilePoolForZone(zone)).toContain("tile_mine_gold");
+    }
+  });
+
+  it("a null/unknown zone falls back to the gold-free pool", () => {
+    expect(mineTilePoolForZone(null)).toBe(MINE_TILE_POOL);
+    expect(mineTilePoolForZone("home")).toBe(MINE_TILE_POOL);
+  });
+
+  it("the deep pool is the shared pool plus exactly one gold tile", () => {
+    expect(DEEP_MINE_TILE_POOL.length).toBe(MINE_TILE_POOL.length + 1);
+    expect(DEEP_MINE_TILE_POOL.filter((k) => k === "tile_mine_gold").length).toBe(1);
+  });
+
+  it("the gold tile yields gold_bar (so the deep mine produces it naturally)", () => {
+    expect(tileFamilyResource("tile_mine_gold")).toBe("gold_bar");
   });
 });

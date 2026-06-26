@@ -386,7 +386,12 @@ export const MAP_NODES: MapNode[] = [
       {
         id: "foundry_city", name: "Foundry City", plots: 12,
         unlocks: [BuildingId.Observatory, BuildingId.CaravanPost, BuildingId.Housing3],
-        upgradeCost: { resources: { iron_bar: 20, gold_bar: 4, cut_gem: 3, silver_bar: 8 } },
+        // Quarry-producible goods only. Gold is a deep-mine (caves/forge)
+        // resource the entry quarry can't make, so its own top rung must not
+        // demand gold_bar — every other quarry rung climbs on its own output,
+        // and Foundry City now follows suit (the dropped gold_bar:4 is replaced
+        // by more cut_gem + silver_bar, both quarried here).
+        upgradeCost: { resources: { iron_bar: 20, cut_gem: 6, silver_bar: 12 } },
       },
     ],
   },
@@ -607,3 +612,19 @@ export const KIND_LABELS: Record<MapNodeKind, string> = {
   event: "Wayside Event",
   capital: "The Old Capital",
 };
+
+/**
+ * The set of board biomes a player can actually play, derived from the nodes
+ * they have travelled to. A node grants whatever board(s) it carries (the home
+ * village carries a farm board; non-playable event/boss/capital nodes carry
+ * none). Used to gate content — e.g. quests — to resources the player can reach.
+ */
+export function accessibleBoardKinds(visited: readonly string[]): BoardKind[] {
+  const kinds = new Set<BoardKind>();
+  for (const id of visited) {
+    const node = MAP_NODES.find((n: MapNode) => n.id === id);
+    if (!node) continue;
+    for (const k of Object.keys(node.boards)) kinds.add(k as BoardKind);
+  }
+  return [...kinds];
+}

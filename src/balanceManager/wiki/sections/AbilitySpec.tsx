@@ -169,7 +169,7 @@ export function AbilitySpec({ ability }: AbilitySpecProps) {
 
   return (
     <section id="ability-spec">
-      <div className="wiki-section-heading mb-2">Specification</div>
+      <h2 className="wiki-section-heading mb-2">Specification</h2>
 
       <div
         style={{

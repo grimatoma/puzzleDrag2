@@ -20,10 +20,12 @@ import { WikiViewProvider } from "./wikiView.js";
 import { WikiHome } from "./WikiHome.jsx";
 import { CONCEPTS } from "./concepts.js";
 import { WIKI_SECTIONS, NARRATIVE_PAGES, DEV_ONLY_SECTION_IDS } from "./wikiNav.js";
+import { buildCommandIndex, entryKey } from "../commandPalette.js";
 
 afterEach(() => {
   cleanup();
   localStorage.removeItem("hearth.wiki.view");
+  localStorage.removeItem("hearth.wiki.recents");
 });
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
@@ -276,5 +278,29 @@ describe("WikiHome — narrative page links", () => {
     expect(navigate).toHaveBeenCalledWith(
       expect.objectContaining({ tab: "page", focus: "progression" }),
     );
+  });
+});
+
+// ─── Test 9: Jump back in (recents) ──────────────────────────────────────────
+
+describe("WikiHome — jump back in (recents)", () => {
+  const SAMPLE = buildCommandIndex()[0];
+
+  it("is absent when there are no recents", () => {
+    renderHome();
+    expect(screen.queryByText(/jump back in/i)).toBeNull();
+  });
+
+  it("renders a recents chip and navigates to the entry when seeded", () => {
+    localStorage.setItem("hearth.wiki.recents", JSON.stringify([entryKey(SAMPLE)]));
+    const navigate = vi.fn();
+    const { container } = renderHome({ navigate });
+
+    expect(document.body.textContent ?? "").toMatch(/jump back in/i);
+
+    const chip = container.querySelector(`[data-testid="recent-chip-${SAMPLE.tab}-${SAMPLE.id}"]`);
+    expect(chip, "Expected a recents chip for the seeded entry").not.toBeNull();
+    fireEvent.click(chip!);
+    expect(navigate).toHaveBeenCalledWith(expect.objectContaining({ tab: SAMPLE.tab }));
   });
 });

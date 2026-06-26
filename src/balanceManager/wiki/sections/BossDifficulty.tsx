@@ -59,7 +59,7 @@ export function BossDifficulty({ boss }: BossDifficultyProps) {
 
   return (
     <section id="boss-difficulty">
-      <div className="wiki-section-heading mb-2">Difficulty</div>
+      <h2 className="wiki-section-heading mb-2">Difficulty</h2>
 
       <div
         style={{

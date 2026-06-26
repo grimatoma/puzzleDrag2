@@ -45,6 +45,10 @@ const MODULE_ORDER = [
   "mapNodes", "decorations", "playerTools", "craftingStations", "hazards",
   "tileCategories", "mineHazards", "fish", "recipes", "uiElements",
   "missingItems", "achievements", "quests", "currencies", "fixed-icons",
+  // Newer additive concept/animated batches (mirror iconRegistry.ts spread).
+  "gems", "weather", "dishes", "reef", "critters", "arcane", "cozyDecor",
+  "celestial", "ores", "pets", "treasure", "drinks", "furniture", "instruments",
+  "festive", "crops", "workshopTools", "nature", "weapons", "spells", "buildings",
 ];
 
 const browser = await chromium.launch();
@@ -149,7 +153,7 @@ const dir = `${OUT}/${MODE}`;
 let n = 0;
 for (const r of reviewable) {
   const { full, thumb } = await renderKey(r.key);
-  const modDir = `${dir}/${r.module}`;
+  const modDir = `${dir}/${r.module.replace(/[^a-z0-9_-]/gi, "_")}`;
   mkdirSync(modDir, { recursive: true });
   writeFileSync(`${modDir}/${r.key}.png`, Buffer.from(full.split(",")[1], "base64"));
   writeFileSync(`${modDir}/${r.key}.thumb.png`, Buffer.from(thumb.split(",")[1], "base64"));
@@ -183,7 +187,7 @@ for (const mod of modules) {
     });
     return c.toDataURL("image/png");
   }, { keys, mod });
-  writeFileSync(`${OUT}/sheets/${mod}.png`, Buffer.from(dataUrl.split(",")[1], "base64"));
+  writeFileSync(`${OUT}/sheets/${mod.replace(/[^a-z0-9_-]/gi, "_")}.png`, Buffer.from(dataUrl.split(",")[1], "base64"));
 }
 console.log(`wrote ${modules.length} contact sheet(s) -> ${OUT}/sheets`);
 

@@ -3,6 +3,7 @@
  */
 import { QUEST_TEMPLATES } from "./templates.js";
 import type { GameState } from "../../types/state.js";
+import type { BoardKind } from "../cartography/data.js";
 
 export interface QuestTemplate {
   id: string;
@@ -14,6 +15,13 @@ export interface QuestTemplate {
   label: string;
   /** Short in-world commission line shown beneath the title on the board. */
   flavor?: string;
+  /**
+   * Board biome this quest's target lives in. Templates with no `biome` are
+   * always offered (the home farm — always reachable — or biome-agnostic tasks
+   * like orders, tool use, and chains). Templates tagged `fish`/`mine` are only
+   * rolled once the player has travelled to a node of that biome.
+   */
+  biome?: BoardKind;
   targetMin: number;
   targetMax: number;
   coinBase: number;
@@ -67,10 +75,24 @@ function rngFrom(seedStr: string): () => number {
 /**
  * Roll 6 quests deterministically from (saveSeed, year, season).
  * Same inputs always produce the same 6 quests.
+ *
+ * `accessibleBiomes`, when provided, restricts the pool to quests the player
+ * can actually fulfil: a template is offered only if it has no `biome` (farm /
+ * biome-agnostic) or its `biome` is in the list. Omitting the argument keeps
+ * the full pool (used by callers that pre-filter, and by older tests).
  */
-export function rollQuests(saveSeed: string, year: number, season: number | string): Quest[] {
+export function rollQuests(
+  saveSeed: string,
+  year: number,
+  season: number | string,
+  accessibleBiomes?: readonly string[],
+): Quest[] {
   const rng = rngFrom(`${saveSeed}|${year}|${season}`);
-  const pool: QuestTemplate[] = [...(QUEST_TEMPLATES as QuestTemplate[])];
+  let pool: QuestTemplate[] = [...(QUEST_TEMPLATES as QuestTemplate[])];
+  if (accessibleBiomes) {
+    const allow = new Set(accessibleBiomes);
+    pool = pool.filter((t) => !t.biome || allow.has(t.biome));
+  }
   const out: Quest[] = [];
   while (out.length < 6 && pool.length) {
     const idx = Math.floor(rng() * pool.length);

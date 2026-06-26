@@ -31,4 +31,10 @@ describe("drag-build feedback audio cues", () => {
     const readyTop = Math.max(...SOUNDS.chainReady.steps.map((s) => s.freq));
     expect(readyTop).toBeGreaterThan(tickTop);
   });
+
+  // The legacy `chainStart` cue was superseded by the chainTick/chainReady
+  // ladder and never played; it was removed so the table carries no dead cue.
+  it("the superseded chainStart cue is gone", () => {
+    expect(SOUNDS.chainStart).toBeUndefined();
+  });
 });

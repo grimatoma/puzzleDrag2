@@ -16,12 +16,13 @@
  */
 
 import React, { useState } from "react";
-import { COLORS, SmallButton } from "../../shared.jsx";
+import { COLORS, SmallButton, SearchBar } from "../../shared.jsx";
 import { useWikiView } from "../wikiView.js";
 import { useCostEdits } from "../costEditsStore.js";
 import { useCostColumns } from "../costColumnsStore.js";
 import { buildCostReport } from "../costExport.js";
 import type { CostReport } from "../costExport.js";
+import { filterMatrixRows } from "../costMatrix.js";
 import { CostMatrixCard } from "./CostMatrixCard.jsx";
 
 // ─── Clipboard helper ─────────────────────────────────────────────────────────
@@ -76,9 +77,9 @@ function CostExportModal({ report, onClose }: { report: CostReport; onClose: () 
     >
       <div className="wiki-cost-modal" onClick={(e) => e.stopPropagation()}>
         <div className="wiki-cost-modal__head">
-          <div className="wiki-section-heading" style={{ border: "none", margin: 0, padding: 0 }}>
+          <h2 className="wiki-section-heading" style={{ border: "none", margin: 0, padding: 0 }}>
             Export {report.count} change{report.count === 1 ? "" : "s"}
-          </div>
+          </h2>
           <button className="wiki-cost-modal__close" onClick={onClose} aria-label="Close export">
             ✕
           </button>
@@ -122,6 +123,13 @@ export function CostMatrixPage() {
   const { columns, clearAll: clearAllColumns } = useCostColumns();
   const report = buildCostReport(edits, columns);
   const [showExport, setShowExport] = useState(false);
+  const [query, setQuery] = useState("");
+
+  // Filter every grid by the same query; count matches for the affordance.
+  const totalRows = report.matrices.reduce((n, m) => n + m.rows.length, 0);
+  const filteredMatrices = report.matrices.map((m) => filterMatrixRows(m, query));
+  const matchedRows = filteredMatrices.reduce((n, m) => n + m.rows.length, 0);
+  const filtering = query.trim().length > 0;
 
   // Reset clears the whole scratch pad — staged values AND any added columns.
   const hasColumns = Object.values(columns).some((arr) => arr && arr.length > 0);
@@ -167,10 +175,31 @@ export function CostMatrixPage() {
         </div>
       </div>
 
-      {/* The three grids */}
-      {report.matrices.map((matrix) => (
-        <CostMatrixCard key={matrix.id} matrix={matrix} editable={editable} id={`cost-${matrix.id}`} />
-      ))}
+      {/* Filter across all three grids */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex-1 min-w-0" style={{ maxWidth: 360 }}>
+          <SearchBar value={query} onChange={setQuery} placeholder="Filter rows by name…" />
+        </div>
+        {filtering && (
+          <span className="text-[12px] italic" style={{ color: COLORS.inkSubtle }}>
+            {matchedRows} of {totalRows} rows
+          </span>
+        )}
+      </div>
+
+      {/* The three grids — while filtering, hide a category with no matches
+          rather than showing its "no costs found" empty state. */}
+      {filteredMatrices.map((matrix) =>
+        filtering && matrix.rows.length === 0 ? null : (
+          <CostMatrixCard key={matrix.id} matrix={matrix} editable={editable} id={`cost-${matrix.id}`} />
+        ),
+      )}
+
+      {filtering && matchedRows === 0 && (
+        <p className="text-[13px] italic m-0" style={{ color: COLORS.inkSubtle }}>
+          No rows match “{query}”.
+        </p>
+      )}
 
       {showExport && <CostExportModal report={report} onClose={() => setShowExport(false)} />}
     </div>

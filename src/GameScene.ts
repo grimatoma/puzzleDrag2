@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, getItem, tileFamilyResource } from "./constants.js";
+import { TILE, COLS, ROWS, UPGRADE_THRESHOLDS, SEASONS, BIOMES, CAPPED_TILES, SCENE_EVENTS, getItem, tileFamilyResource, mineTilePoolForZone } from "./constants.js";
 import { upgradeCountForChain, rollResource } from "./utils.js";
 import { resourceByKey } from "./state/helpers.js";
 import { computeAggregatedAbilities } from "./features/workers/aggregate.js";
@@ -276,6 +276,13 @@ export class GameScene extends Phaser.Scene {
     this.scale.on("resize", onResize);
 
     this.events.once("shutdown", () => {
+      // The two scene-level pointer listeners added in create() live on the
+      // InputPlugin, which persists across a scene.restart — without removing
+      // them, a restart re-adds duplicates that double-fire endPath() /
+      // tryAddToPath() against stale grid refs. (The global document/window
+      // listeners below leak the same way and are already torn down here.)
+      this.input.off("pointerup");
+      this.input.off("pointermove");
       canvas.removeEventListener("selectstart", preventSelect);
       canvas.removeEventListener("contextmenu", preventSelect);
       canvas.removeEventListener("pointerleave", onPointerLeave);
@@ -793,7 +800,12 @@ export class GameScene extends Phaser.Scene {
    * has explicitly chosen (or defaulted) will spawn.
    */
   activePool() {
-    return buildActivePool(this.biome().pool, getRegistry(this.registry, "tileCollectionActive") ?? null);
+    // Mine boards draw a zone-specific pool: deeper zones (caves/forge) surface
+    // gold, the entry quarry does not. Other biomes use the flat biome pool.
+    const basePool = this.biomeKey() === "mine"
+      ? mineTilePoolForZone(getRegistry(this.registry, "activeZone") ?? null)
+      : this.biome().pool;
+    return buildActivePool(basePool, getRegistry(this.registry, "tileCollectionActive") ?? null);
   }
 
   randomResource() {

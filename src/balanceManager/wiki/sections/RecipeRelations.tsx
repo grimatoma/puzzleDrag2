@@ -18,7 +18,7 @@ export function RecipeRelations({ recipe }: RecipeRelationsProps) {
 
   return (
     <section id="recipe-relations">
-      <div className="wiki-section-heading mb-2">Crafting flow</div>
+      <h2 className="wiki-section-heading mb-2">Crafting flow</h2>
       <RecipeRelationsFlow recipe={recipe} />
     </section>
   );
