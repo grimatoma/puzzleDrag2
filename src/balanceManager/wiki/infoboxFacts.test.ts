@@ -215,6 +215,18 @@ describe("infoboxFacts", () => {
     expect(Number(maxFact!.value)).toBeGreaterThan(0);
   });
 
+  it("workers — leads with the worker's ability as a power-tone fact", () => {
+    const entity = getEntity("workers", realWorkerId);
+    const facts = infoboxFacts("workers", realWorkerId, entity);
+    // The first three facts feed the gallery card; the ability must be among
+    // them so the card actually surfaces what the worker does.
+    expect(facts.length).toBeGreaterThan(0);
+    const powerFact = facts.find((f) => f.tone === "power");
+    expect(powerFact).toBeDefined();
+    expect(powerFact!.value.length).toBeGreaterThan(0);
+    expect(facts.indexOf(powerFact!)).toBe(0);
+  });
+
   it("bosses — includes Season fact with real season string", () => {
     const entity = getEntity("bosses", realBossId);
     const facts = infoboxFacts("bosses", realBossId, entity);
