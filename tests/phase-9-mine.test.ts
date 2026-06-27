@@ -52,10 +52,10 @@ describe("Phase 9 — Expedition food model", () => {
     expect(MIN_EXPEDITION_TURNS).toBeGreaterThan(0);
   });
 
-  it("any food is a ration, scored by processing tier (raw 1 / staple 2 / rich 3)", () => {
+  it("any food is a ration, scored by processing tier (raw 1 / staple 2 / rich 3 / dense 4)", () => {
     expect(EXPEDITION_FOOD_TURNS.tile_fruit_apple).toBe(1); // raw produce
     expect(EXPEDITION_FOOD_TURNS.bread).toBe(2);            // crafted staple
     expect(EXPEDITION_FOOD_TURNS.cured_meat).toBe(3);       // rich crafted
-    expect((EXPEDITION_FOOD_TURNS as Record<string, number>).supplies).toBeUndefined();
+    expect((EXPEDITION_FOOD_TURNS as Record<string, number>).supplies).toBe(4); // dense ration
   });
 });

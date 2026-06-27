@@ -154,33 +154,10 @@ export const TILE = 74;
 export const COLS = 6;
 export const ROWS = 6;
 
-// Expedition rations (zones-1&2 scope, scope doc §12). Mine rounds are paid in food
-// carried from the farm — ANY edible item is a ration, there is no special "Supplies"
-// item. The more PROCESSED the food, the more turns it buys: raw produce 1, crafted
-// staple 2, rich crafted 3. Building bonuses (Mining Camp +1, Larder +1, Smokehouse +1
-// to meat) stack on top — see expeditionTurnsForFood in features/zones/data.js. The
-// deferred richer rations (festival loaf / wedding pie / iron ration) are forward-
-// declared for zone 3+ but are unreachable in zones 1–2.
-// Not frozen — `applyExpeditionOverrides` (Dev Panel) mutates this in place.
-export const EXPEDITION_FOOD_TURNS = {
-  // Raw produce — 1 turn.
-  tile_fruit_apple: 1,
-  eggs:          1,
-  soup:          1,
-  pie:           1,
-  jam:           1,
-  meat:          1,
-  // Crafted staple — 2 turns.
-  bread:         2,
-  preserve:      2,
-  // Rich crafted — 3 turns.
-  harvestpie:    3,
-  cured_meat:    3,
-  // Deferred (zone 3+) — forward-declared, unreachable in zones 1–2.
-  festival_loaf: 3,
-  wedding_pie:   3,
-  iron_ration:   4,
-};
+// Expedition rations (zones-1&2 scope, scope doc §12). Foods are SELF-DESCRIBING:
+// each ration item carries a `food: { rationTurns }` attribute on its ITEMS entry,
+// and the runtime lookup `EXPEDITION_FOOD_TURNS` is DERIVED from those entries just
+// after ITEMS is defined below. See there for the full picture + Dev Panel overrides.
 // Foods the Smokehouse's "+1 to meat-based foods" modifier applies to.
 export const EXPEDITION_MEAT_FOODS = ["cured_meat", "meat"];
 // An expedition needs at least this many turns of food packed before you can set out.
@@ -419,7 +396,7 @@ const ITEMS_DATA = {
   flour: { kind: "resource", biome: "farm", label: "Flour", value: 8, next: null, look: { color: 0xf4e3c0, dark: 0x8a6a3a } },
   plank: { kind: "resource", biome: "farm", label: "Plank", value: 6, next: null, look: { color: 0xc98c50, dark: 0x5e3a1d } },
   dirt: { kind: "resource", biome: "farm", label: "Dirt", value: 2, next: null, desc: "Fertile soil hauled up from the special dirt tiles. Used in fertilizer, explosives, and animal pens.", look: { color: 0x6b4a2a, dark: 0x352515 } },
-  jam: { kind: "resource", biome: "farm", label: "Jam", value: 5, next: null, desc: "Sweet preserves cooked down from blackberries. Used in tinctures and festival loaves.", look: { color: 0x8a1840, dark: 0x450c20 } },
+  jam: { kind: "resource", biome: "farm", label: "Jam", value: 5, next: null, food: { rationTurns: 1 }, desc: "Sweet preserves cooked down from blackberries. Used in tinctures and festival loaves.", look: { color: 0x8a1840, dark: 0x450c20 } },
   tile_bird_turkey: { kind: "tile", biome: "farm", label: "Turkey", value: 4, next: "eggs", look: { color: 0xb8743a, dark: 0x5e3818, sway: { amp: 1.2, freq: 0.00050, gust: 0.10 } } },
   tile_bird_clover: { kind: "tile", biome: "farm", label: "Clover", value: 5, next: "eggs", look: { color: 0x6fa450, dark: 0x365e22, sway: { amp: 2.5, freq: 0.00080, gust: 0.18 } } },
   tile_bird_melon: { kind: "tile", biome: "farm", label: "Melon", value: 6, next: "eggs", look: { color: 0xb3d770, dark: 0x4a6e2a, sway: { amp: 0.8, freq: 0.00030, gust: 0.05 } } },
@@ -432,23 +409,23 @@ const ITEMS_DATA = {
   tile_veg_mushroom: { kind: "tile", biome: "farm", label: "Mushroom", value: 4, next: "soup", look: { color: 0xc63a3a, dark: 0x601818, sway: { amp: 1.5, freq: 0.00044, gust: 0.06 } } },
   tile_veg_pepper: { kind: "tile", biome: "farm", label: "Pepper", value: 4, next: "soup", look: { color: 0xd83a3a, dark: 0x6e1818, sway: { amp: 2.2, freq: 0.00054, gust: 0.10 } } },
   tile_veg_broccoli: { kind: "tile", biome: "farm", label: "Broccoli", value: 4, next: "soup", look: { color: 0x4a8a3a, dark: 0x1e3e18, sway: { amp: 3.0, freq: 0.00060, gust: 0.12 } } },
-  soup: { kind: "resource", biome: "farm", label: "Soup", value: 20, next: null, look: { color: 0xc46a2f, dark: 0x6e3a18 } },
-  pie: { kind: "resource", biome: "farm", label: "Pie", value: 90, next: null, look: { color: 0xb05428, dark: 0x582818 } },
+  soup: { kind: "resource", biome: "farm", label: "Soup", value: 20, next: null, food: { rationTurns: 1 }, look: { color: 0xc46a2f, dark: 0x6e3a18 } },
+  pie: { kind: "resource", biome: "farm", label: "Pie", value: 90, next: null, food: { rationTurns: 1 }, look: { color: 0xb05428, dark: 0x582818 } },
   honey: { kind: "resource", biome: "farm", label: "Honey", value: 300, next: null, look: { color: 0xe8a020, dark: 0x745010 } },
-  meat: { kind: "resource", biome: "farm", label: "Meat", value: 21, next: null, look: { color: 0xc44848, dark: 0x682424 } },
+  meat: { kind: "resource", biome: "farm", label: "Meat", value: 21, next: null, food: { rationTurns: 1 }, look: { color: 0xc44848, dark: 0x682424 } },
   milk: { kind: "resource", biome: "farm", label: "Milk", value: 100, next: null, look: { color: 0xfaf6ec, dark: 0x807e74 } },
   horseshoe: { kind: "resource", biome: "farm", label: "Horseshoe", value: 400, next: null, look: { color: 0x8a8a90, dark: 0x46464a } },
-  eggs: { kind: "resource", biome: "farm", label: "Eggs", value: 5, next: null, look: { color: 0xf8efd0, dark: 0x807660 } },
+  eggs: { kind: "resource", biome: "farm", label: "Eggs", value: 5, next: null, food: { rationTurns: 1 }, look: { color: 0xf8efd0, dark: 0x807660 } },
   hay_bundle: { kind: "resource", biome: "farm", label: "Hay Bundle", value: 6, next: null, look: { color: 0xc9b160, dark: 0x6a5828 } },
-  bread: { kind: "resource", biome: "farm", label: "Bread Loaf", value: 125, next: null, desc: "A wholesome loaf baked from flour and eggs, sold for 125 coins at the Bakery.", look: { color: 0xd49060, dark: 0x7a4a28 } },
-  supplies: { kind: "resource", biome: "farm", label: "Supplies", value: 30, next: null, desc: "Travel rations packed at the Kitchen. Three supplies grant standard Mine entry.", look: { color: 0x8a6a3a, dark: 0x453519 } },
+  bread: { kind: "resource", biome: "farm", label: "Bread Loaf", value: 125, next: null, food: { rationTurns: 2 }, desc: "A wholesome loaf baked from flour and eggs, sold for 125 coins at the Bakery.", look: { color: 0xd49060, dark: 0x7a4a28 } },
+  supplies: { kind: "resource", biome: "farm", label: "Supplies", value: 30, next: null, food: { rationTurns: 4 }, desc: "Dense travel rations packed at the Kitchen. Each unit grants 4 turns on expeditions — three cover a standard Mine entry.", look: { color: 0x8a6a3a, dark: 0x453519 } },
 
   tile_grass_heather: { kind: "tile", biome: "farm", label: "Heather", value: 1, next: "hay_bundle", look: { color: 0x7a4f8a, dark: 0x3a2548, sway: { amp: 2.5, freq: 0.00060, gust: 0.10 } } },
   tile_grain_corn: { kind: "tile", biome: "farm", label: "Corn", value: 1, next: "flour", look: { color: 0xf4c84a, dark: 0x7a6020, sway: { amp: 4.0, freq: 0.00060, gust: 0.18 } } },
   tile_grain_buckwheat: { kind: "tile", biome: "farm", label: "Buckwheat", value: 1, next: "flour", look: { color: 0x9ab548, dark: 0x4a5820, sway: { amp: 3.5, freq: 0.00058, gust: 0.16 } } },
   tile_grain_manna: { kind: "tile", biome: "farm", label: "Manna", value: 1, next: "flour", look: { color: 0xf8e8c0, dark: 0x7a6e58, sway: { amp: 1.5, freq: 0.00040, gust: 0.06 } } },
   tile_grain_rice: { kind: "tile", biome: "farm", label: "Rice", value: 1, next: "flour", look: { color: 0xc8d878, dark: 0x60683c, sway: { amp: 3.0, freq: 0.00056, gust: 0.14 } } },
-  tile_fruit_apple: { kind: "tile", biome: "farm", label: "Apple", value: 1, next: "pie", look: { color: 0xd4543a, dark: 0x6a2a18, sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } } },
+  tile_fruit_apple: { kind: "tile", biome: "farm", label: "Apple", value: 1, next: "pie", food: { rationTurns: 1 }, look: { color: 0xd4543a, dark: 0x6a2a18, sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } } },
   tile_fruit_pear: { kind: "tile", biome: "farm", label: "Pear", value: 1, next: "pie", look: { color: 0xbcc436, dark: 0x5e6018, sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } } },
   tile_fruit_golden_apple: { kind: "tile", biome: "farm", label: "Golden Apple", value: 1, next: "pie", look: { color: 0xf4c430, dark: 0x7a6010, sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } } },
   tile_fruit_blackberry: { kind: "tile", biome: "farm", label: "Blackberry", value: 1, next: "jam", look: { color: 0x3a1a4a, dark: 0x180a20, sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } } },
@@ -609,8 +586,8 @@ const ITEMS_DATA = {
 
   // Crafted Products
   honeyroll: { kind: "resource", label: "Honey Roll", value: 175, desc: "A sweet honey roll glazed with jam, commanding 175 coins at market.", look: { color: 0xf0c050, dark: 0x8a6010 } },
-  harvestpie: { kind: "resource", label: "Harvest Pie", value: 175, desc: "A hearty harvest pie filled with jam and egg, prized by townsfolk for 175 coins.", look: { color: 0xd4784a, dark: 0x6a3018 } },
-  preserve: { kind: "resource", label: "Preserve Jar", value: 100, desc: "Bottled berry preserves sealed with egg-white, fetching 100 coins at the Larder.", look: { color: 0x9a6888, dark: 0x502848 } },
+  harvestpie: { kind: "resource", label: "Harvest Pie", value: 175, food: { rationTurns: 3 }, desc: "A hearty harvest pie filled with jam and egg, prized by townsfolk for 175 coins.", look: { color: 0xd4784a, dark: 0x6a3018 } },
+  preserve: { kind: "resource", label: "Preserve Jar", value: 100, food: { rationTurns: 2 }, desc: "Bottled berry preserves sealed with egg-white, fetching 100 coins at the Larder.", look: { color: 0x9a6888, dark: 0x502848 } },
   tincture: { kind: "resource", label: "Berry Tincture", value: 125, desc: "A medicinal berry tincture used by Sister Liss, sold for 125 coins.", look: { color: 0x6b8a3a, dark: 0x304018 } },
   iron_hinge: { kind: "resource", label: "Iron Hinge", value: 175, desc: "A forged iron hinge used in building construction. Story note: Bram requests these for the Caravan Post.", look: { color: 0x7a8a96, dark: 0x2a3a46 } },
   cobblepath: { kind: "resource", label: "Cobble Path", value: 200, desc: "Laid cobblestones that pave trade paths, sold to caravans for 200 coins.", look: { color: 0x9a9a8a, dark: 0x404038 } },
@@ -621,10 +598,10 @@ const ITEMS_DATA = {
   stonework: { kind: "resource", label: "Stonework", value: 300, desc: "Dressed stonework for walls and facades — the final tier of Forge crafting, worth 300 coins.", look: { color: 0x8a8a7a, dark: 0x383828 } },
   chowder: { kind: "resource", label: "Chowder", value: 280, desc: "A creamy seafood chowder thick with fillet, milk, and root vegetables. Larder favourite at 280 coins.", look: { color: 0xd4b888, dark: 0x6a503a } },
   fish_oil_bottled: { kind: "resource", label: "Fish Oil (Bottled)", value: 80, desc: "Refined kelp-and-fish oil sealed in a corked plank flask. Used by tinkers and tar-mongers, worth 80 coins.", look: { color: 0xe8d050, dark: 0x7a6018 } },
-  cured_meat: { kind: "resource", biome: "farm", label: "Cured Meat", value: 45, desc: "Salted and dried meat that lasts for weeks. Each unit grants 2 turns on expeditions.", look: { color: 0x8a4a26, dark: 0x4a2618 } },
-  iron_ration: { kind: "resource", biome: "mine", label: "Iron Ration", value: 120, desc: "A calorie-dense, hard-packed block of dried grain and fat. Each unit grants 4 turns on expeditions.", look: { color: 0x5a5a60, dark: 0x2a2a30 } },
-  festival_loaf: { kind: "resource", biome: "farm", label: "Festival Loaf", value: 60, desc: "A rich, fruit-studded bread baked for seasonal feasts. Each unit grants 2 turns on expeditions.", look: { color: 0xd49060, dark: 0x7a4a28 } },
-  wedding_pie: { kind: "resource", biome: "farm", label: "Wedding Pie", value: 180, desc: "A massive, multi-layered berry pie traditionally served at Hearthwood weddings. Each unit grants 3 turns on expeditions.", look: { color: 0xb05428, dark: 0x582818 } },
+  cured_meat: { kind: "resource", biome: "farm", label: "Cured Meat", value: 45, food: { rationTurns: 3 }, desc: "Salted and dried meat that lasts for weeks. Each unit grants 3 turns on expeditions.", look: { color: 0x8a4a26, dark: 0x4a2618 } },
+  iron_ration: { kind: "resource", biome: "mine", label: "Iron Ration", value: 120, food: { rationTurns: 4 }, desc: "A calorie-dense, hard-packed block of dried grain and fat. Each unit grants 4 turns on expeditions.", look: { color: 0x5a5a60, dark: 0x2a2a30 } },
+  festival_loaf: { kind: "resource", biome: "farm", label: "Festival Loaf", value: 60, food: { rationTurns: 3 }, desc: "A rich, fruit-studded bread baked for seasonal feasts. Each unit grants 3 turns on expeditions.", look: { color: 0xd49060, dark: 0x7a4a28 } },
+  wedding_pie: { kind: "resource", biome: "farm", label: "Wedding Pie", value: 180, food: { rationTurns: 3 }, desc: "A massive, multi-layered berry pie traditionally served at Hearthwood weddings. Each unit grants 3 turns on expeditions.", look: { color: 0xb05428, dark: 0x582818 } },
 };
 
 /** Closed catalog — keys must exist in {@link ItemKey} enums in `types/catalog/itemKeys.ts`. */
@@ -668,6 +645,20 @@ export function getItem(key: string): ItemEntry | undefined {
   if (!(key in ITEMS)) return undefined;
   return ITEMS[key as ItemKey];
 }
+
+// ── Expedition rations — derived from each food's `food.rationTurns` ─────────
+// Foods declare themselves rations on their ITEMS entry (`food: { rationTurns }`);
+// this map is just the runtime index over them. Mine/harbor rounds are paid in
+// food carried from the farm — ANY item with a `food` attribute is a ration, and
+// the more PROCESSED the food the more turns it buys (raw produce 1 … iron ration
+// 4). Building bonuses (Mining Camp +1, Larder +1, Smokehouse +1 to meat) stack on
+// top at runtime — see expeditionTurnsForFood in features/zones/data.js.
+// Not frozen — `applyExpeditionOverrides` (Dev Panel) mutates this in place.
+export const EXPEDITION_FOOD_TURNS: Record<string, number> = Object.fromEntries(
+  Object.entries(ITEMS)
+    .filter(([, entry]) => entry.food != null)
+    .map(([key, entry]) => [key, entry.food!.rationTurns]),
+);
 
 // ── Phase 3a: split ITEMS into three kind-specific maps ───────────────────
 // These are the canonical home for tile/resource/tool data. ITEMS is kept as

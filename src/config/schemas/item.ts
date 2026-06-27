@@ -10,6 +10,10 @@ const itemCommonOptional = {
   power: toolPowerDefinitionSchema.optional(),
   effect: z.string().optional().describe("Tool power id when power object is absent"),
   target: z.string().optional().describe("Default target for tap-target tools"),
+  food: z
+    .object({ rationTurns: z.number().int().positive() })
+    .optional()
+    .describe("Marks this item as an expedition ration; rationTurns = base turns one unit buys"),
 };
 
 export const tileItemSchema = z

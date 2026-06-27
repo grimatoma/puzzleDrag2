@@ -1,8 +1,11 @@
-// Expedition rations (zones-1&2 scope, scope doc §12): the food→turns table by
-// processing tier (raw 1 / staple 2 / rich 3) + the building modifiers (Larder /
-// Smokehouse / Mining Camp / Pier). "Supplies" is gone — any food is a ration.
+// Expedition rations (zones-1&2 scope, scope doc §12): any food is a ration. Each
+// food is SELF-DESCRIBING — it carries `food: { rationTurns }` on its ITEMS entry,
+// and EXPEDITION_FOOD_TURNS is DERIVED from those entries. Turns scale by processing
+// tier (raw 1 / staple 2 / rich 3 / dense ration 4) + building modifiers (Larder /
+// Smokehouse / Mining Camp / Pier).
 import { describe, it, expect } from "vitest";
-import { EXPEDITION_FOOD_TURNS } from "../constants.js";
+import { EXPEDITION_FOOD_TURNS, ITEMS } from "../constants.js";
+import { tagsForItemKey } from "../features/inventory/tags.js";
 import {
   isExpeditionFood,
   expeditionTurnsForFood,
@@ -10,13 +13,34 @@ import {
 } from "../features/zones/data.js";
 
 describe("EXPEDITION_FOOD_TURNS", () => {
-  it("scores foods by processing tier (raw 1 / staple 2 / rich 3)", () => {
+  it("scores foods by processing tier (raw 1 / staple 2 / rich 3 / dense 4)", () => {
     expect(EXPEDITION_FOOD_TURNS).toMatchObject({
       tile_fruit_apple: 1, eggs: 1, soup: 1, pie: 1, jam: 1, meat: 1, // raw produce
       bread: 2, preserve: 2,                                          // crafted staple
       harvestpie: 3, cured_meat: 3,                                   // rich crafted
+      supplies: 4, iron_ration: 4,                                    // dense rations
     });
-    expect((EXPEDITION_FOOD_TURNS as Record<string, number>).supplies).toBeUndefined();
+  });
+
+  it("is derived from each item's food.rationTurns", () => {
+    const fromItems = Object.fromEntries(
+      Object.entries(ITEMS)
+        .filter(([, entry]) => (entry as { food?: { rationTurns: number } }).food != null)
+        .map(([key, entry]) => [key, (entry as { food: { rationTurns: number } }).food.rationTurns]),
+    );
+    expect(EXPEDITION_FOOD_TURNS).toEqual(fromItems);
+    // Every ration key has a positive turn value and a matching item definition.
+    for (const [key, turns] of Object.entries(EXPEDITION_FOOD_TURNS)) {
+      expect(turns).toBeGreaterThan(0);
+      expect((ITEMS[key as keyof typeof ITEMS] as { food?: { rationTurns: number } }).food?.rationTurns).toBe(turns);
+    }
+  });
+
+  it("tags every ration item as FOOD in the inventory (incl. supplies)", () => {
+    expect(tagsForItemKey("supplies")).toContain("food");
+    expect(tagsForItemKey("supplies")).not.toContain("cargo");
+    expect(tagsForItemKey("bread")).toContain("food");
+    expect(tagsForItemKey("tile_mine_stone")).not.toContain("food");
   });
 });
 

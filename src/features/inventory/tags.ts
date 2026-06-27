@@ -17,7 +17,9 @@ export const INVENTORY_SOURCE_TAGS = Object.freeze({
 });
 
 const FOOD_KEYS = new Set<string>(Object.keys(EXPEDITION_FOOD_TURNS));
-const CARGO_KEYS = new Set<string>(["supplies"]);
+// Harbor cargo is tagged by biome/key prefix below; `supplies` is now a ration
+// (FOOD), so this explicit set is currently empty but kept for future cargo goods.
+const CARGO_KEYS = new Set<string>([]);
 
 interface ItemDef { kind?: string; biome?: string }
 

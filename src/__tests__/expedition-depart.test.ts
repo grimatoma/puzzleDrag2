@@ -31,7 +31,8 @@ describe("constants", () => {
     expect(MIN_EXPEDITION_TURNS).toBe(12);
     expect(EXPEDITION_FOOD_TURNS.bread).toBe(2);            // crafted staple
     expect(EXPEDITION_FOOD_TURNS.tile_fruit_apple).toBe(1); // raw produce
-    expect((EXPEDITION_FOOD_TURNS as Record<string, number>).supplies).toBeUndefined();
+    expect((EXPEDITION_FOOD_TURNS as Record<string, number>).supplies).toBe(4); // dense ration
+
   });
 });
 
