@@ -1,8 +1,8 @@
-<p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;">The <strong>Settlement Atlas</strong> — every town in depth. The structural role (board, crux, win task, signature export) comes from the town arc; the environment, growth topology, hazard and boss come from the zone atlas. Seven <strong>required-spine</strong> towns, then five <strong>optional frontier</strong> zones.</p>
+<p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;">The <strong>Settlement Atlas</strong> — every town in depth: environment &amp; growth topology, the crux (its special mechanic), hazard &amp; boss, win task &amp; signature export, new resources, landmark stages, and the tier ladder. Seven <strong>required-spine</strong> towns, then five <strong>optional frontier</strong> zones.</p>
 
 <p>
   <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PROPOSED</span>
-  &nbsp;Spine towns keep plain names (Hearthwood, Two Rivers, Greenmeadow); the dramatic sites keep evocative names (Cinderhold, Gullcliff, Glimmerdeep, Goldgrass). Where a town exists in code its live <a href="#/zones">Zones</a> page is linked; bosses are already coded and linked too.
+  &nbsp;Where a town exists in code, its <strong>live ladder</strong> is embedded — it shows the real per-rung <em>newly-unlocked buildings</em> and cost, and cannot drift. Proposed towns show their proposed ladder, clearly labelled. Bosses are already coded and linked.
 </p>
 
 <p style="font-size:12.5px;color:#7a6c54;margin:0.6em 0 1em;border-bottom:1px solid #e2d6bd;padding-bottom:0.6em;">
@@ -17,36 +17,131 @@
 </p>
 
 <h2>The required spine</h2>
-<table>
-  <thead><tr><th>Town</th><th>Board(s)</th><th>Environment · topology</th><th>Crux</th><th>Win · signature export</th><th>Hazard · boss</th></tr></thead>
-  <tbody>
-    <tr><td><strong>1 · Hearthwood Vale</strong><br>[[zones:home]]</td><td>Farm</td><td>gentle vale · radial</td><td>learn the loop (tutorial)</td><td>build the Caravan · Caravan Yard</td><td>none</td></tr>
-    <tr><td><strong>2 · Two Rivers</strong><br><em>proposed</em></td><td>Farm + Mine</td><td>river valley · twin-fork</td><td>the farm→mine combination</td><td>fill a grand order · Quartermaster's Hall</td><td>none (calm teacher)</td></tr>
-    <tr><td><strong>3 · Cinderhold</strong><br><em>proposed</em></td><td>Farm + Mine</td><td>volcanic terraces · switchback</td><td>mine-hazard management</td><td>best the boss · Pit Canteen</td><td>heat · [[bosses:ember_drake]]</td></tr>
-    <tr><td><strong>4 · Gullcliff</strong><br>cf. [[zones:harbor]]</td><td>Farm + Mine + Fish</td><td>sea-cliff · vertical shelves</td><td>the full three-board stack</td><td>the Regatta · Bait Shack</td><td>tides · [[bosses:storm]]</td></tr>
-    <tr><td><strong>5 · Greenmeadow</strong><br>[[zones:meadow]]</td><td>Farm + Mine</td><td>rich meadow · radial</td><td>farm hazard at scale</td><td>raise a great building · Cattery</td><td>[[hazards:rats]] · [[bosses:mossback]]</td></tr>
-    <tr><td><strong>6 · Glimmerdeep</strong><br>cf. [[zones:caves]]</td><td>Mine only</td><td>crystal caverns · linked-chambers</td><td>provision under scarcity (no farm)</td><td>the great shipment · Supply Depot</td><td>[[hazards:cave_in]] · [[bosses:old_stoneface]]</td></tr>
-    <tr><td><strong>7 · Goldgrass · the Capital</strong><br>cf. [[zones:oldcapital]]</td><td>All</td><td>golden plains · axial boulevard</td><td>everything at once</td><td><strong>build the Monument</strong> (finale)</td><td>stampede · Goldhorn (proposed)</td></tr>
-  </tbody>
-</table>
+<p>Seven towns the finale needs, in the order the map suggests. Each adds at most one new board, one crux, one win task, and a signature building that <strong>exports a bonus</strong> to every other town once complete.</p>
+
+<div style="border:1px solid #e2d6bd;border-left:4px solid #5f7d3a;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fbf7ef;">
+  <h3 style="margin:.4em 0 .3em;">Town 1 · home — Hearthwood Vale &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#eef4dd;color:#46611f;border:1px solid #bcd08e;">Farm</span></h3>
+  <p><strong>Environment.</strong> A gentle forgotten vale around a cold hearth ([[zones:home]]). Radial growth — the settlement spreads outward from the evolving hearth-landmark as wilderness recedes.</p>
+  <p><strong>Crux.</strong> The tutorial home. Teaches every verb — [[systems:chaining|chain]], refine, fill orders, raise a [[buildings:housing|House]] and hire a worker, tier up — with no pressure. Your home forever.</p>
+  <p><strong>Hazard · boss.</strong> None. A safe teacher.</p>
+  <p><strong>Win · signature.</strong> Save coins and <strong>build the Caravan</strong> · the <strong>Caravan Yard</strong> (the means to found every other town).</p>
+  <p><strong>Special.</strong> Climbs on farm goods alone (no coins, no mine goods). Landmark: cold hearth → village green → market cross → town square.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.5em 0 .2em;"><strong>Live ladder</strong> (coded — per-rung unlocks &amp; cost):</p>
+  <div data-wiki-tier-ladder="home"></div>
+  <p style="font-size:12.5px;color:#7a6c54;"><em>Proposed: rename the top rung <strong>City → Town</strong> and re-cost to the zones 1–2 baseline.</em></p>
+</div>
+
+<div style="border:1px solid #e2d6bd;border-left:4px solid #8a6d3b;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fbf7ef;">
+  <h3 style="margin:.4em 0 .3em;">Town 2 — Two Rivers &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#eef4dd;color:#46611f;border:1px solid #bcd08e;">Farm</span> <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#efe3d3;color:#5b4636;border:1px solid #cbb59c;">Mine</span></h3>
+  <p><strong>Environment.</strong> A calm valley where two forks meet. Twin-fork growth — the town fills the land between the rivers, a mill on each bank.</p>
+  <p><strong>Crux.</strong> <strong>The combination.</strong> The first mine, deliberately hazard-free: you learn to pack farm food into <strong>expedition turns</strong> and bring back ore &amp; metal. The quiet "aha" of the whole economy.</p>
+  <p><strong>Hazard · boss.</strong> None (calm teacher).</p>
+  <p><strong>Win · signature.</strong> Fill a grand order demanding both farm &amp; mine goods · the <strong>Quartermaster's Hall</strong> (packs food into rations more efficiently, everywhere).</p>
+  <p><strong>Founding · gate.</strong> A resource caravan (12 [[resources:plank|plank]] · 10 [[resources:bread|bread]] · 8 [[resources:hay_bundle|hay]] — farm goods, not coins); home ≥ Hamlet + own a farm.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.3em 0;"><strong>Ladder (proposed, 3 tiers):</strong> Camp (4) → Diggings (7) → Boomtown (10). Tier-ups demand brick/iron the mine itself digs. <span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#f3ece0;color:#8a6a1a;">tuning-locked baseline</span></p>
+</div>
+
+<div style="border:1px solid #e2d6bd;border-left:4px solid #8a6d3b;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fbf7ef;">
+  <h3 style="margin:.4em 0 .3em;">Town 3 — Cinderhold &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#eef4dd;color:#46611f;border:1px solid #bcd08e;">Farm</span> <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#efe3d3;color:#5b4636;border:1px solid #cbb59c;">Mine</span></h3>
+  <p><strong>Environment.</strong> Glowing lava fields cooling into obsidian terraces. Switchback-terrace growth — hairpin roads climb the slope, each rung claiming a higher cooled shelf.</p>
+  <p><strong>Crux.</strong> <strong>Mine-hazard management.</strong> A rising heat meter channels your routes; the frontier metal <code>obsidian</code> is only won at the dangerous edge.</p>
+  <p><strong>Hazard · boss.</strong> Heat tiles, ash, ember-rain, tremors · [[bosses:ember_drake]] — heat pools on the lowest terrace first; anything left two turns burns. Land 3 iron bars before it floods.</p>
+  <p><strong>Win · signature.</strong> Best the capstone boss · the <strong>Pit Canteen</strong> (+ration-turns on any mine expedition, everywhere).</p>
+  <p><strong>Special.</strong> New resource <code>obsidian</code> (frontier board metal). Landmark: brazier → tap-furnace → great forge → Magma Crown.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.3em 0;"><strong>Ladder (proposed, 4 tiers):</strong> Ashfall Camp (3) → Emberforge Terrace (6) → Cinderhold (10) → Magma Crown (14); scales on <code>block</code> + <code>obsidian</code> + [[resources:gold_bar|gold]] + coins.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.5em 0 .2em;"><strong>Live ladder</strong> (coded analog <code>quarry</code>, Cracked Quarry — per-rung unlocks &amp; cost):</p>
+  <div data-wiki-tier-ladder="quarry"></div>
+</div>
+
+<div style="border:1px solid #e2d6bd;border-left:4px solid #1d6fb8;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fbf7ef;">
+  <h3 style="margin:.4em 0 .3em;">Town 4 — Gullcliff &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#eef4dd;color:#46611f;border:1px solid #bcd08e;">Farm</span> <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#efe3d3;color:#5b4636;border:1px solid #cbb59c;">Mine</span> <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#dfeefc;color:#185a96;border:1px solid #9fcdf0;">Fish</span></h3>
+  <p><strong>Environment.</strong> A bare sea-cliff carved into railed terraces and harbour shelves. Vertical-cliff growth — shelves linked by stairs and a cargo lift; the harbour floods and drains with the tide. (cf. coded [[zones:harbor]], Saltspray.)</p>
+  <p><strong>Crux.</strong> <strong>The full stack.</strong> The first three-board town: farm bait + mine tackle fund the fishery. Vertical logistics — where you mine (low) and craft (high) sit on different levels.</p>
+  <p><strong>Hazard · boss.</strong> Squall, riptide, rogue wave, gull raids · [[bosses:storm]] — demands 4+ fish chains; the lighthouse sweep briefly calms one column per pass. Land 6 fillets before the window closes.</p>
+  <p><strong>Win · signature.</strong> The Regatta · the <strong>Bait Shack</strong> (a standing fishing bonus, everywhere).</p>
+  <p><strong>Special.</strong> Board resource [[resources:pearls]] (oyster tiles). Landmark: tide-watch post → stone beacon → [[buildings:lighthouse|lighthouse]] → Beaconhead.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.3em 0;"><strong>Ladder (proposed, 4 tiers):</strong> Tidewatch Landing (3) → Cliffstair Hamlet (6) → Gullcliff Town (10) → Beaconhead (15); scales on [[resources:plank|plank]] + [[resources:pearls|pearls]] + coins.</p>
+</div>
+
+<div style="border:1px solid #e2d6bd;border-left:4px solid #5f7d3a;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fbf7ef;">
+  <h3 style="margin:.4em 0 .3em;">Town 5 — Greenmeadow &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#eef4dd;color:#46611f;border:1px solid #bcd08e;">Farm</span> <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#efe3d3;color:#5b4636;border:1px solid #cbb59c;">Mine</span></h3>
+  <p><strong>Environment.</strong> A rich, broad meadow ([[zones:meadow]]) — the most generous farmland yet. Radial growth around a great barn.</p>
+  <p><strong>Crux.</strong> <strong>Farm hazard at scale.</strong> The richest yields in the game, beset by [[hazards:rats|rats]]: a spreading pest you must manage while harvesting hard.</p>
+  <p><strong>Hazard · boss.</strong> Rat infestation · [[bosses:mossback]] (lent from Thornwild) — hides tiles under moss; a roaming sun-shaft reveals them. Gather the harvest before the meadow swallows it.</p>
+  <p><strong>Win · signature.</strong> Raise a great building · the <strong>Cattery</strong> (rat / pest management, everywhere).</p>
+  <p><strong>Special.</strong> Landmark: meadow camp → greenfield → meadowgate → great barn.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.5em 0 .2em;"><strong>Live ladder</strong> (coded as <code>meadow</code> — per-rung unlocks &amp; cost):</p>
+  <div data-wiki-tier-ladder="meadow"></div>
+</div>
+
+<div style="border:1px solid #e2d6bd;border-left:4px solid #8a6d3b;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fbf7ef;">
+  <h3 style="margin:.4em 0 .3em;">Town 6 — Glimmerdeep &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#efe3d3;color:#5b4636;border:1px solid #cbb59c;">Mine only</span></h3>
+  <p><strong>Environment.</strong> A chain of unlit caverns opened one by one (cf. coded [[zones:caves]], Lanternlit Caves). Linked-chambers growth — each rung lights and clears the next chamber; cart-rails ferry resources between them. <strong>Light is life</strong>: unlit tiles can't be chained until a lantern reaches them.</p>
+  <p><strong>Crux.</strong> <strong>Provision under scarcity.</strong> The deliberate exception: a mine with <em>no farm</em>. You must import food from your other towns to keep the expeditions running — a logistics test, not a farming one.</p>
+  <p><strong>Hazard · boss.</strong> [[hazards:cave_in|Cave-in]], [[hazards:gas_vent|gas vent]], sinkhole · [[bosses:old_stoneface]] — drops rubble and snuffs the nearest lantern; keep the chamber lit while clearing 20 stone tiles.</p>
+  <p><strong>Win · signature.</strong> Fill the great shipment under scarcity · the <strong>Supply Depot</strong> (an idle resource drip, everywhere — the most coveted cross-zone unlock).</p>
+  <p><strong>Special.</strong> Board resource <code>crystal</code> (+ coded [[resources:cut_gem|cut gem]]). Landmark: lantern post → crystal cairn → geode shrine → resonant spire → the Heart Geode.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.5em 0 .2em;"><strong>Live ladder</strong> (coded analog <code>caves</code> — per-rung unlocks &amp; cost):</p>
+  <div data-wiki-tier-ladder="caves"></div>
+</div>
+
+<div style="border:1px solid #e2d6bd;border-left:4px solid #b4532a;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fcf4f0;">
+  <h3 style="margin:.4em 0 .3em;">Town 7 · finale — Goldgrass · the Golden Capital &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#eef4dd;color:#46611f;border:1px solid #bcd08e;">Farm</span> <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#efe3d3;color:#5b4636;border:1px solid #cbb59c;">Mine</span> <span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#dfeefc;color:#185a96;border:1px solid #9fcdf0;">Fish</span></h3>
+  <p><strong>Environment.</strong> Golden prairie urbanised into grand civic districts, ringed by permanent fields (cf. coded [[zones:oldcapital]]). Axial-boulevard growth — a monumental central avenue and ring road; the widest layout in the game.</p>
+  <p><strong>Crux.</strong> <strong>Everything at once.</strong> All three boards at the grandest scale; the capstone of scale and prestige.</p>
+  <p><strong>Hazard · boss.</strong> Locust, [[hazards:fire|wildfire]], drought, stampede · <strong>Goldhorn</strong> (proposed) — a plains-bull that charges every few turns and tramples a full band; herd the right resource into the stockpens before it flattens them.</p>
+  <p><strong>Win · signature.</strong> <strong>Build the Monument</strong> — the finale (see <a href="#/page/design_progression">Progression</a>). Gate: all required-spine towns complete.</p>
+  <p><strong>Special.</strong> Landmark: waystone cross → market cross → civic fountain → grand plaza → the Golden Monument.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.3em 0;"><strong>Ladder (proposed, 5 tiers):</strong> Crossroads Waystation (4) → Granary Town (8) → Market City (14) → Goldgrass Reach (20) → The Golden Capital (26); scales on [[resources:flour|flour]] + [[resources:plank|plank]] + [[resources:gold_bar|gold]] + coins.</p>
+</div>
 
 <h2>The optional frontier</h2>
-<table>
-  <thead><tr><th>Zone</th><th>Board</th><th>Environment · topology</th><th>Hazard · boss</th><th>Cross-zone export</th></tr></thead>
-  <tbody>
-    <tr><td><strong>Mirefen Hollow</strong><br>[[zones:mirefen]]</td><td>Fish</td><td>marsh · ribbon-stilt boardwalk</td><td>flood / miasma · [[bosses:quagmire]]</td><td>tide-reading drip</td></tr>
-    <tr><td><strong>Hoarfrost Hold</strong><br><em>proposed</em></td><td>Farm</td><td>tundra · sheltered-hollow rings</td><td>freeze / blizzard · [[bosses:frostmaw]]</td><td>warmth radius / preserves</td></tr>
-    <tr><td><strong>Sunspire Oasis</strong><br><em>proposed</em></td><td>Farm</td><td>desert · oasis-rings</td><td>sandstorm / drought · Sandwyrm (proposed)</td><td>caravan coin multiplier</td></tr>
-    <tr><td><strong>Aetherreach</strong><br><em>proposed</em></td><td>Mine</td><td>sky-isles · archipelago</td><td>gale / lightning · Sky Leviathan (proposed)</td><td>aether (premium metal)</td></tr>
-    <tr><td><strong>Gravemoor</strong><br><em>proposed</em></td><td>special</td><td>haunted moor · reclaimed-grid</td><td>blight / wisp · Barrow-Lich (proposed)</td><td>consecration / curse-ward</td></tr>
-  </tbody>
-</table>
-<p style="font-size:13px;color:#7a6c54;"><em>Thornwild Canopy is folded into the spine — its [[bosses:mossback]] boss is lent to Greenmeadow's rat crux — so the atlas environments map cleanly onto four spine towns + five frontier zones + one loan.</em></p>
+<p>Five further sites you may found on reach + caravan. None is required for the finale; each ships its own hazard, boss, tier ladder, and a <strong>cross-zone export</strong> worth the detour.</p>
 
-<h2>How a town's ladder grows</h2>
-<p>Every settlement climbs its own tier ladder: each rung raises plots and unlocks buildings. The shapes are code-truth — here is a deep frontier example, the live [[zones:quarry]] ladder (<span data-wiki-fact="zone.quarry.rungCount"></span> rungs, <span data-wiki-fact="zone.quarry.ladderSpan"></span>):</p>
-<div data-wiki-tier-ladder="quarry"></div>
-<p style="font-size:13px;color:#7a6c54;"><em>Other coded ladders: [[zones:home]], [[zones:meadow]], [[zones:caves]], [[zones:mirefen]]. The proposed-but-uncoded towns (Cinderhold, Gullcliff, Glimmerdeep, Goldgrass, Two Rivers, Hoarfrost, Sunspire, Aetherreach, Gravemoor) carry draft ladders in the design source; their exact numbers are <strong>provisional</strong> until coded — see <a href="#/page/design_economy">Economy</a> and <a href="#/page/design_status">Status</a>.</em></p>
+<div style="border:1px solid #e2d6bd;border-left:4px solid #1d6fb8;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fbf7ef;">
+  <h3 style="margin:.4em 0 .3em;">Mirefen Hollow &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#dfeefc;color:#185a96;border:1px solid #9fcdf0;">Fish</span></h3>
+  <p><strong>Environment.</strong> Black-water fen and reed beds planked into buildable hummocks ([[zones:mirefen]]). Ribbon-stilt boardwalk — the town spreads island to island.</p>
+  <p><strong>Crux · special.</strong> A high/low <strong>tide cycle</strong>: harvest at high tide, stranded at low. Tide-reading is the skill. New resource <code>fenmead</code> (brewed, gates the top rung).</p>
+  <p><strong>Hazard · boss.</strong> Tidewater flood, miasma fog, leech bloom, will-o'-wisp · [[bosses:quagmire]].</p>
+  <p><strong>Export.</strong> A tide-reading idle drip. Landmark: reed shrine → stilt fountain → bog-lantern beacon → the Heron Gate.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.5em 0 .2em;"><strong>Live ladder</strong> (coded as <code>mirefen</code> — per-rung unlocks &amp; cost):</p>
+  <div data-wiki-tier-ladder="mirefen"></div>
+</div>
 
-<h2>Signature buildings (export after a town is complete)</h2>
-<p>Each town's win raises a <strong>signature building</strong> whose effect then helps <em>every</em> town: the Caravan Yard founds others; the Quartermaster's Hall packs rations better; the Pit Canteen adds expedition turns; the Bait Shack boosts fishing; the Cattery manages pests; the Supply Depot drips idle goods anywhere. These six are proposed; the everyday roster they sit among ([[buildings:mill]], [[buildings:bakery]], [[buildings:forge]], [[buildings:granary]], [[buildings:workshop]], [[buildings:chapel]]…) is live — see the <a href="#/buildings">Buildings</a> catalog and <a href="#/page/design_systems">Systems</a>.</p>
+<div style="border:1px solid #e2d6bd;border-left:4px solid #5f7d3a;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fbf7ef;">
+  <h3 style="margin:.4em 0 .3em;">Hoarfrost Hold &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#eef4dd;color:#46611f;border:1px solid #bcd08e;">Farm</span></h3>
+  <p><strong>Environment.</strong> Deep snow and glacier ice thawed into warm ground. Sheltered-hollow rings cling to hot-spring warmth.</p>
+  <p><strong>Crux · special.</strong> <strong>Warmth is the frontier</strong>, not space: bonfires extend the thaw zone. Board resources <code>hide</code> &amp; <code>amber</code>.</p>
+  <p><strong>Hazard · boss.</strong> Hard freeze, blizzard whiteout, ice spike, avalanche · [[bosses:frostmaw]] — freezes from outside in; thaw outward with bonfires and harvest 30 [[resources:plank|oak logs]] before the spring ices over.</p>
+  <p><strong>Export.</strong> Warmth-radius / preserves bonus. Landmark: cairn &amp; firepit → spring shrine → aurora bell → the Warm Hall.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.3em 0;"><strong>Ladder (proposed, 4 tiers):</strong> Frostward Camp (3) → Snowhollow Hamlet (6) → Hoarfrost Village (10) → Auroral Hold (15); scales on [[resources:plank|plank]] + <code>cured_meat</code> / <code>hide</code> / <code>amber</code> + coins.</p>
+</div>
+
+<div style="border:1px solid #e2d6bd;border-left:4px solid #5f7d3a;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fbf7ef;">
+  <h3 style="margin:.4em 0 .3em;">Sunspire Oasis &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#eef4dd;color:#46611f;border:1px solid #bcd08e;">Farm</span></h3>
+  <p><strong>Environment.</strong> Encroaching dunes pushed back and irrigated into green oasis rings. Oasis-rings + caravan spokes.</p>
+  <p><strong>Crux · special.</strong> <strong>Mirage</strong> tiles disguise resources; greed-vs-certainty — bank stockpile into caravans for coin multipliers, or play safe. New resource <code>spice</code> (milled); board resource <code>dates</code>.</p>
+  <p><strong>Hazard · boss.</strong> Sandstorm, drought, scorpion swarm, quicksand, mirage · <strong>The Sandwyrm</strong> (proposed) — tunnels beneath the board and surfaces to bury a moving 2×3 block; mine the target before it's buried.</p>
+  <p><strong>Export.</strong> A caravan coin-multiplier. Landmark: wellhead → palm cistern → sundial spire → grand sundial → the Sunspire.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.3em 0;"><strong>Ladder (proposed, 5 tiers):</strong> Wellspring Camp (3) → Caravan Halt (6) → Oasis Market (10) → Sunspire Town (14) → Spice Capital (20); scales on <code>block</code> + <code>dates</code> + <code>spice</code> + [[resources:gold_bar|gold]].</p>
+</div>
+
+<div style="border:1px solid #e2d6bd;border-left:4px solid #8a6d3b;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fbf7ef;">
+  <h3 style="margin:.4em 0 .3em;">Aetherreach &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#efe3d3;color:#5b4636;border:1px solid #cbb59c;">Mine</span></h3>
+  <p><strong>Environment.</strong> Floating sky-isles tethered by bridges. Sky-archipelago — each rung tethers a new drifting islet.</p>
+  <p><strong>Crux · special.</strong> <strong>Everything floats</strong>: untethered tiles drift one cell with the prevailing wind each turn (the wind rotates per <a href="#/seasons">season</a>). Anchoring &amp; chain-direction always matter. Board resource <code>aether</code> (a premium metal).</p>
+  <p><strong>Hazard · boss.</strong> Gale, lightning, island-drift, cloud-leech · <strong>The Sky Leviathan</strong> (proposed) — circles the isles; each pass tilts the board and slides an edge toward the void. Deliver the cargo before three passes.</p>
+  <p><strong>Export.</strong> Aether (premium metal). Landmark: mooring mast → sky-beacon → wind shrine → aether spire → the Sky Citadel.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.3em 0;"><strong>Ladder (proposed, 5 tiers):</strong> Anchor Platform (3) → Skydock Hamlet (6) → Aether Village (10) → Cloudreach Town (14) → Sky Citadel (18); scales on [[resources:plank|plank]] + <code>aether</code> + [[resources:gold_bar|gold]].</p>
+</div>
+
+<div style="border:1px solid #e2d6bd;border-left:4px solid #b4532a;border-radius:8px;padding:6px 14px 12px;margin:1.1em 0;background:#fcf4f0;">
+  <h3 style="margin:.4em 0 .3em;">Gravemoor &nbsp;<span style="font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#efe3d3;color:#5b4636;border:1px solid #cbb59c;">special</span></h3>
+  <p><strong>Environment.</strong> Blight-fog and bramble over ruins, cleansed into hallowed cobble. Reclaimed-grid — the only zone that grows by <strong>uncovering</strong> a buried grid, not pushing outward.</p>
+  <p><strong>Crux · special.</strong> <strong>Reclamation, not conquest</strong>: a chapel projects a consecration radius; night is more dangerous than day — race the dark. New resources <code>warding_salt</code> &amp; <code>blessed_oil</code>.</p>
+  <p><strong>Hazard · boss.</strong> Blight spread, restless wisp, bramble, miasma · <strong>The Barrow-Lich</strong> (proposed) — haunts a fresh tile each turn as a curse-meter climbs; banish enough hauntings by chaining to break it.</p>
+  <p><strong>Export.</strong> Consecration / curse-ward. Landmark: warding fire → broken shrine → consecrated bell → the Dawnlight.</p>
+  <p style="font-size:13px;color:#5a4a36;margin:.3em 0;"><strong>Ladder (proposed, 4 tiers):</strong> Wardens' Camp (3) → Hallowed Hamlet (6) → Reclaimed Village (10) → Dawnhold (15); scales on <code>block</code> + <code>warding_salt</code> + <code>blessed_oil</code> + coins.</p>
+</div>
+
+<p style="font-size:13px;color:#7a6c54;"><em>Thornwild Canopy is folded into the spine — its [[bosses:mossback]] boss is lent to Greenmeadow's rat crux — so the atlas environments map onto seven spine towns + five frontier zones + one loan. Signature buildings (Caravan Yard, Quartermaster's Hall, Pit Canteen, Bait Shack, Cattery, Supply Depot) are proposed; the everyday roster they sit among ([[buildings:mill]], [[buildings:bakery]], [[buildings:forge]], [[buildings:granary]], [[buildings:workshop]]…) is live — see the <a href="#/buildings">Buildings</a> catalog.</em></p>
