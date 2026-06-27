@@ -36,6 +36,12 @@
   /* Phase 3 accent defaults — overridden per-concept via inline style */
   --wiki-accent:      var(--wiki-ember);
 
+  /* Decorative hearth-flame emblem, drawn as a faint background watermark on the
+     hero panels. Inline SVG data URI — no external asset, scales crisply at any
+     size, and its low fill-opacity keeps it a texture rather than an image. */
+  --wiki-emblem-flame:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cpath fill='%23a84010' fill-opacity='.09' d='M50 96 C24 80 30 54 46 39 C51 31 51 19 49 9 C63 24 69 40 65 55 C73 48 75 31 71 21 C90 42 85 73 60 91 C57 94 53 95 50 96 Z'/%3E%3C/svg%3E");
+
   /* typography */
   --wiki-font-display: "Fraunces", "Newsreader", Georgia, serif;
   --wiki-font-body:    "IBM Plex Sans", system-ui, sans-serif;
@@ -89,6 +95,93 @@
   }
 }
 
+/* ── Aesthetic polish (HTML/CSS superpowers) ───────────────────────────────────
+ *
+ * Small, cohesive touches that lift the whole surface without changing the
+ * information design: a warm themed text-selection, parchment-tinted custom
+ * scrollbars, smooth in-page anchor jumps, and a gentle ember glow on the
+ * hearth wordmark. Each one degrades gracefully and respects reduced-motion.
+ */
+
+/* Themed text selection — an ember wash instead of the browser's stock blue. */
+.wiki-root ::selection {
+  background: color-mix(in srgb, var(--wiki-ember) 28%, var(--wiki-parchment));
+  color: var(--wiki-ink);
+}
+
+/* Parchment-tinted scrollbars so the chrome stops reading as generic grey. */
+.wiki-root .wiki-sidebar,
+.wiki-root .wiki-main .overflow-y-auto,
+.wiki-root .wiki-cost-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--wiki-border) transparent;
+}
+
+.wiki-root .wiki-sidebar::-webkit-scrollbar,
+.wiki-root .wiki-main .overflow-y-auto::-webkit-scrollbar,
+.wiki-root .wiki-cost-scroll::-webkit-scrollbar {
+  width: 11px;
+  height: 11px;
+}
+
+.wiki-root .wiki-sidebar::-webkit-scrollbar-thumb,
+.wiki-root .wiki-main .overflow-y-auto::-webkit-scrollbar-thumb,
+.wiki-root .wiki-cost-scroll::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--wiki-border) 80%, transparent);
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 999px;
+}
+
+.wiki-root .wiki-sidebar::-webkit-scrollbar-thumb:hover,
+.wiki-root .wiki-main .overflow-y-auto::-webkit-scrollbar-thumb:hover,
+.wiki-root .wiki-cost-scroll::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--wiki-border-deep) 85%, transparent);
+  background-clip: padding-box;
+}
+
+.wiki-root .wiki-sidebar::-webkit-scrollbar-track,
+.wiki-root .wiki-main .overflow-y-auto::-webkit-scrollbar-track,
+.wiki-root .wiki-cost-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Smooth in-page jumps (the article "Contents" links) + clearance so a heading
+ * doesn't land flush against the top of the scroll pane. */
+.wiki-root .wiki-main .overflow-y-auto {
+  scroll-behavior: smooth;
+}
+
+.wiki-root .wiki-html h1,
+.wiki-root .wiki-html h2,
+.wiki-root .wiki-html h3 {
+  scroll-margin-top: 16px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-main .overflow-y-auto {
+    scroll-behavior: auto;
+  }
+}
+
+/* Gentle ember flicker on the hearth mark — a slow warm-glow pulse, never a
+ * distraction. Disabled under reduced-motion (glow holds at a steady value). */
+@keyframes wiki-hearth-glow {
+  0%, 100% { filter: drop-shadow(0 0 1px rgba(214, 97, 42, 0.30)); }
+  50%      { filter: drop-shadow(0 1px 5px rgba(214, 97, 42, 0.55)); }
+}
+
+.wiki-root .wiki-header-icon {
+  animation: wiki-hearth-glow 4.5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wiki-root .wiki-header-icon {
+    animation: none;
+    filter: drop-shadow(0 0 2px rgba(214, 97, 42, 0.35));
+  }
+}
+
 /* ── Typography hierarchy ───────────────────────────────────────────────────── */
 
 /*
@@ -127,7 +220,15 @@
   color: var(--wiki-ink-light);
   letter-spacing: -0.015em;
   padding-bottom: 6px;
-  border-bottom: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 40%, var(--wiki-border));
+  /* Gradient rule: a strong accent at the title's start that fades to nothing,
+     so the divider reads as a deliberate flourish rather than a flat line. */
+  border-bottom: 2px solid transparent;
+  border-image: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 70%, var(--wiki-border)) 0%,
+      color-mix(in srgb, var(--wiki-border) 45%, transparent) 55%,
+      transparent 100%
+    ) 1;
   /* margin-top:0 so the <h2> promotion (for the outline) keeps the divs' old box. */
   margin: 0 0 2px;
 }
@@ -843,13 +944,23 @@
  */
 
 .wiki-root .wiki-concept-hero {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 12px;
   padding: 20px 22px 16px;
   border-radius: 16px;
   border: 2px solid color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 25%, var(--wiki-border));
+  /* Layered background: a warm accent bloom in the top-right, the faint flame
+     emblem watermark, then the base parchment gradient. Background layers always
+     paint behind content, so no z-index juggling is needed. */
   background:
+    radial-gradient(
+      120% 150% at 92% -25%,
+      color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 16%, transparent) 0%,
+      transparent 58%
+    ),
+    var(--wiki-emblem-flame) right -22px center / auto 178% no-repeat,
     linear-gradient(
       145deg,
       color-mix(in srgb, var(--wiki-accent, var(--wiki-ember)) 6%, var(--wiki-parchment-deep)) 0%,
@@ -1016,13 +1127,22 @@
 }
 
 .wiki-root .wiki-home-hero {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 24px 28px 20px;
+  padding: 28px 32px 24px;
   border-radius: 18px;
   border: 2px solid color-mix(in srgb, var(--wiki-ember) 20%, var(--wiki-border));
+  /* Warm ember bloom + the flame emblem watermark over the parchment gradient,
+     so the landing hero reads as a crafted panel rather than an empty block. */
   background:
+    radial-gradient(
+      130% 160% at 88% -30%,
+      color-mix(in srgb, var(--wiki-ember) 18%, transparent) 0%,
+      transparent 55%
+    ),
+    var(--wiki-emblem-flame) right -28px center / auto 188% no-repeat,
     linear-gradient(
       155deg,
       color-mix(in srgb, var(--wiki-ember) 7%, var(--wiki-parchment-deep)) 0%,
@@ -1048,6 +1168,23 @@
   margin: 0;
 }
 
+/* Warm ember→deep gradient ink for the landing title. Guarded by @supports and
+   layered over the solid `color` above so it degrades to the flat ember fill if
+   background-clip:text is unavailable. */
+@supports ((-webkit-background-clip: text) or (background-clip: text)) {
+  .wiki-root .wiki-home-hero__title {
+    background: linear-gradient(
+      92deg,
+      var(--wiki-ember) 0%,
+      var(--wiki-ember-deep) 100%
+    );
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+  }
+}
+
 .wiki-root .wiki-home-hero__subtitle {
   font-family: var(--wiki-font-body);
   font-size: 13px;
@@ -1067,7 +1204,13 @@
   letter-spacing: -0.015em;
   margin: 0 0 14px;
   padding-bottom: 6px;
-  border-bottom: 2px solid color-mix(in srgb, var(--wiki-ember) 30%, var(--wiki-border));
+  border-bottom: 2px solid transparent;
+  border-image: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--wiki-ember) 65%, var(--wiki-border)) 0%,
+      color-mix(in srgb, var(--wiki-border) 40%, transparent) 55%,
+      transparent 100%
+    ) 1;
 }
 
 .wiki-root .wiki-home-category-grid {
@@ -1197,7 +1340,13 @@
   letter-spacing: -0.015em;
   margin: 0;
   padding-bottom: 6px;
-  border-bottom: 2px solid color-mix(in srgb, var(--wiki-ember) 30%, var(--wiki-border));
+  border-bottom: 2px solid transparent;
+  border-image: linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--wiki-ember) 65%, var(--wiki-border)) 0%,
+      color-mix(in srgb, var(--wiki-border) 40%, transparent) 55%,
+      transparent 100%
+    ) 1;
 }
 
 .wiki-root .wiki-home-start__desc {
@@ -1299,6 +1448,34 @@
  */
 .wiki-root .wiki-prose {
   max-width: 1180px;
+}
+
+/* Drop cap on the lead paragraph of a narrative page — the classic book/atlas
+ * flourish, set in the display serif and ember ink. Scoped to the very first
+ * node being a paragraph (`:first-child`), so pages that open with a heading
+ * are untouched and we never strand a giant initial mid-article. */
+.wiki-root .wiki-prose > .wiki-html > p:first-child::first-letter {
+  float: left;
+  font-family: var(--wiki-font-display);
+  font-weight: 800;
+  font-size: 3.1em;
+  line-height: 0.78;
+  margin: 0.04em 0.09em 0 0;
+  color: var(--wiki-ember-deep);
+  /* Keep the cap clear of the page top when this prose is the lead block. */
+  -webkit-text-fill-color: var(--wiki-ember-deep);
+}
+
+/* The home landing embeds the Overview prose as a mid-page section (below the
+ * category browser), so it isn't a page lead — suppress the drop cap there. */
+.wiki-root .wiki-home-prose .wiki-prose > .wiki-html > p:first-child::first-letter {
+  float: none;
+  font-size: inherit;
+  line-height: inherit;
+  margin: 0;
+  color: inherit;
+  font-weight: inherit;
+  -webkit-text-fill-color: currentColor;
 }
 
 /* Game-screen embeds: keep a single screenshot from dominating the page — they
