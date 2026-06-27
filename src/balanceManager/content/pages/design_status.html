@@ -28,7 +28,7 @@
     <tr><td>Core loop · tier ladders · progression oracle</td><td><span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">built</span></td><td>The whole game runs on it; ladders are resource-gated; home re-costed onto farm goods.</td></tr>
     <tr><td><a href="#/boons">Boon</a> system + keeper paths · civic Town Hall · building specials</td><td><span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">built</span></td><td>Boon effects frozen to economic passives for now; civic is v1.</td></tr>
     <tr><td>Boss board modifiers</td><td><span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">half-wired</span></td><td>Chain-length + respawn run live; freeze / rubble / hidden / heat overlays wiped by the fresh-board rebuild.</td></tr>
-    <tr><td>Daily streak · Old Capital finale</td><td><span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">half-wired</span></td><td>Streak reducer ships (needs a mount dispatch); the [[zones:oldcapital]] node is a stub.</td></tr>
+    <tr><td>Daily streak · Old Capital finale</td><td><span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">half-wired</span></td><td>Streak reducer ships (needs a mount dispatch); the [[zones:oldcapital|the Old Capital]] node is a stub.</td></tr>
     <tr><td>Goals hub · workers→chain-length · non-linear founding · price unification · board-feel boons</td><td><span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#f3ece0;color:#8a6a1a;">to build</span></td><td>Wiring Houses → Villagers → shorter chains is the top open lever; remove the prereq gates in favour of reach + caravan; one sell price per good.</td></tr>
     <tr><td>The proposed zones (Two Rivers, Cinderhold, Gullcliff, Glimmerdeep, Goldgrass, Hoarfrost, Sunspire, Aetherreach, Gravemoor)</td><td><span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#f3ece0;color:#8a6a1a;">to build</span></td><td>Bosses are coded; the zone structure, names &amp; tier ladders are the work. Today's coded zones: <a href="#/zones">Zones</a> catalog.</td></tr>
   </tbody>
@@ -39,15 +39,15 @@
 
 <h2>Decision log</h2>
 <ul>
-  <li><strong>Reconciled roster.</strong> One settlement set blending the town arc's structure with the zone atlas's environments: 7 required-spine towns + 5 optional frontier zones (Thornwild folded, its [[bosses:mossback]] lent to Greenmeadow).</li>
+  <li><strong>Reconciled roster.</strong> One settlement set blending the town arc's structure with the zone atlas's environments: 7 required-spine towns + 5 optional frontier zones (Thornwild folded, its [[bosses:mossback|Mossback]] lent to Greenmeadow).</li>
   <li><strong>Non-linear founding + soft, acyclic feed gates</strong> — dissolves the old softlock by construction; the no-softlock invariant is canon.</li>
   <li><strong>Finale = complete the required spine → build the Monument</strong>, retiring the "3 Hearth-Tokens" gate and the festival-larder terminal beat (kept as optional flavour).</li>
   <li><strong>Home ladder</strong> stays 4 rungs; proposed to rename the top rung <strong>City → Town</strong> and re-cost it to the zones&nbsp;1–2 baseline.</li>
-  <li><strong>One sell price per good</strong> (see [[systems:trade]]).</li>
+  <li><strong>One sell price per good</strong> (see [[systems:trade|trade]]).</li>
 </ul>
 
 <h2>Plan-vs-code deltas (for the later code pass)</h2>
-<p>This section is the design; the live catalog is the code. Known gaps to reconcile when code catches up: most proposed zones aren't coded yet (only [[zones:home]], [[zones:meadow]], [[zones:quarry]], [[zones:caves]], [[zones:mirefen]] are tiered today); the home top rung is coded as <em>City</em> (proposed <em>Town</em>); the stone good is coded as [[resources:block]] (the baseline calls it <em>brick</em>); founding is still coin-priced in code (proposed: a resource caravan).</p>
+<p>This section is the design; the live catalog is the code. Known gaps to reconcile when code catches up: most proposed zones aren't coded yet (only [[zones:home|Home]], [[zones:meadow|Meadow]], [[zones:quarry|Quarry]], [[zones:caves|Caves]], [[zones:mirefen|Mirefen]] are tiered today); the home top rung is coded as <em>City</em> (proposed <em>Town</em>); the stone good is coded as [[resources:block|block]] (the baseline calls it <em>brick</em>); founding is still coin-priced in code (proposed: a resource caravan).</p>
 
 <h2>What this section consolidated</h2>
 <p>The Design section merges what used to be several scattered design docs (a game-design set, a balance ledger, a zone atlas, a zones 1–2 baseline, and assorted reviews) into one coherent account. The detailed early-game tuning baseline and the zone-atlas layouts remain in the repo's design source; the in-app Design section is the interlinked, code-aware view of the same direction.</p>

@@ -43,18 +43,18 @@
 <ul>
   <li><strong>Coins</strong> scale with <em>chain length</em> (a longer [[systems:chaining|chain]] pays more), weighted by tile value — not by the goods' sell value.</li>
   <li><strong>Goods</strong> accrue per family: every N tiles chained yields one unit, then refine at a station ([[systems:crafting|crafting]]).</li>
-  <li><strong>Founding</strong> is a <strong>resource caravan</strong> — a basket of farm goods early ([[resources:plank]], [[resources:bread]], [[resources:hay_bundle]]), +metal for farther towns — scaling per founding. <em>Not</em> a coin price.</li>
+  <li><strong>Founding</strong> is a <strong>resource caravan</strong> — a basket of farm goods early ([[resources:plank|plank]], [[resources:bread|bread]], [[resources:hay_bundle|hay bundle]]), +metal for farther towns — scaling per founding. <em>Not</em> a coin price.</li>
   <li><strong>Turn budget</strong> is a small per-visit allowance (home base <span data-wiki-fact="zone.home.baseTurns"></span>), raised by a [[buildings:granary|Granary]] and doubled by [[tools:fertilizer|fertilizer]].</li>
 </ul>
 
 <h2>Rations → mine turns</h2>
-<p>A mine spends <strong>food</strong> as expedition turns. Any edible item works — there is no special supply item — and more-processed food buys more turns (a soft efficiency gradient, never a hard requirement): raw produce &lt; crafted staples like [[resources:bread]] &lt; rich crafted like [[resources:cured_meat]]. A [[buildings:larder|Larder]] and the mining-camp bonus stack on top.</p>
+<p>A mine spends <strong>food</strong> as expedition turns. Any edible item works — there is no special supply item — and more-processed food buys more turns (a soft efficiency gradient, never a hard requirement): raw produce &lt; crafted staples like [[resources:bread|bread]] &lt; rich crafted like [[resources:cured_meat|cured meat]]. A [[buildings:larder|Larder]] and the mining-camp bonus stack on top.</p>
 
 <h2>The value-spread problem</h2>
-<p style="background:#f7e7df;border-left:3px solid #b4532a;padding:8px 12px;border-radius:6px;">Today the <em>realized value per tile</em> spans far too wide a range (a premium catch like [[resources:pearls]] dwarfs a humble [[resources:pie]]). <strong>Target: compress it toward a modest ceiling</strong> so no single tile family dominates income and every board stays worth playing. Two levers move it: a good's sell value and its tiles-per-unit divisor. The playtest harness emits a compression change-list; deep tuning waits on the cross-zone pacing sim.</p>
+<p style="background:#f7e7df;border-left:3px solid #b4532a;padding:8px 12px;border-radius:6px;">Today the <em>realized value per tile</em> spans far too wide a range (a premium catch like [[resources:pearls|pearls]] dwarfs a humble [[resources:pie|pie]]). <strong>Target: compress it toward a modest ceiling</strong> so no single tile family dominates income and every board stays worth playing. Two levers move it: a good's sell value and its tiles-per-unit divisor. The playtest harness emits a compression change-list; deep tuning waits on the cross-zone pacing sim.</p>
 
 <h2>The price rule — one source of truth</h2>
-<p style="background:#dfeefc;border-left:3px solid #1d6fb8;padding:8px 12px;border-radius:6px;"><strong>Every sellable good has exactly one sell price.</strong> A good must pay the same coins whether the UI classifies it as a "resource" or an "item" — retiring an old fork where the same good could pay wildly different amounts. See [[systems:trade]].</p>
+<p style="background:#dfeefc;border-left:3px solid #1d6fb8;padding:8px 12px;border-radius:6px;"><strong>Every sellable good has exactly one sell price.</strong> A good must pay the same coins whether the UI classifies it as a "resource" or an "item" — retiring an old fork where the same good could pay wildly different amounts. See [[systems:trade|trade]].</p>
 
 <h2>Targets &amp; what's locked</h2>
 <ul>
