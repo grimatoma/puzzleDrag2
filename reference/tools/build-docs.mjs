@@ -359,7 +359,6 @@ function byDateDesc(a, b) {
 // own, so every section reads at a glance.
 const SECTION_META = {
   ".": { label: "Overview", blurb: "Top-level design, audit & proposal docs", order: 0, glyph: "🗺️", accent: "#e0913a" },
-  design: { label: "Design Canon", blurb: "The single source of truth — scope, economy & balance, and unlocking / progression", order: 0.4, glyph: "📐", accent: "#bf7a1e" },
   projects: { label: "Project Briefs", blurb: "Ranked roadmap + self-contained implementation briefs", order: 1, glyph: "🧭", accent: "#e0913a" },
   superpowers: { label: "Plans & Specs", blurb: "In-flight implementation plans & design specs (shipped ones graduate to the Archive)", order: 1.5, glyph: "📝", accent: "#9fb0bd" },
   "seasonal-tile-system": { label: "Seasonal Tile System", blurb: "Live seasonal-tile pipeline & prompts", order: 2, glyph: "🍂", accent: "#c8743a" },
@@ -391,11 +390,6 @@ const FEATURED_DOCS = [];
 // hub; they just don't flood the index. Keyed by top-level folder; `hub` is the
 // docs-relative page a click opens.
 const COLLECTIONS = {
-  design: {
-    label: "Design Canon",
-    hub: "design/index.html",
-    blurb: "The single source of truth — overview & scope, progression, the settlement atlas, economy & balance, systems, meta & money, and a build-status tracker.",
-  },
   "puzzle-prototypes": {
     label: "Puzzle Prototypes",
     hub: "puzzle-prototypes/index.html",

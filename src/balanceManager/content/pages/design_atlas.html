@@ -1,0 +1,52 @@
+<p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;">The <strong>Settlement Atlas</strong> — every town in depth. The structural role (board, crux, win task, signature export) comes from the town arc; the environment, growth topology, hazard and boss come from the zone atlas. Seven <strong>required-spine</strong> towns, then five <strong>optional frontier</strong> zones.</p>
+
+<p>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PROPOSED</span>
+  &nbsp;Spine towns keep plain names (Hearthwood, Two Rivers, Greenmeadow); the dramatic sites keep evocative names (Cinderhold, Gullcliff, Glimmerdeep, Goldgrass). Where a town exists in code its live <a href="#/zones">Zones</a> page is linked; bosses are already coded and linked too.
+</p>
+
+<p style="font-size:12.5px;color:#7a6c54;margin:0.6em 0 1em;border-bottom:1px solid #e2d6bd;padding-bottom:0.6em;">
+  <strong>Design (proposed):</strong>
+  <a href="#/page/design_overview">Overview</a> ·
+  <a href="#/page/design_progression">Progression</a> ·
+  <strong>Settlement Atlas</strong> ·
+  <a href="#/page/design_economy">Economy</a> ·
+  <a href="#/page/design_systems">Systems</a> ·
+  <a href="#/page/design_meta">Meta &amp; Money</a> ·
+  <a href="#/page/design_status">Status &amp; Decisions</a>
+</p>
+
+<h2>The required spine</h2>
+<table>
+  <thead><tr><th>Town</th><th>Board(s)</th><th>Environment · topology</th><th>Crux</th><th>Win · signature export</th><th>Hazard · boss</th></tr></thead>
+  <tbody>
+    <tr><td><strong>1 · Hearthwood Vale</strong><br>[[zones:home]]</td><td>Farm</td><td>gentle vale · radial</td><td>learn the loop (tutorial)</td><td>build the Caravan · Caravan Yard</td><td>none</td></tr>
+    <tr><td><strong>2 · Two Rivers</strong><br><em>proposed</em></td><td>Farm + Mine</td><td>river valley · twin-fork</td><td>the farm→mine combination</td><td>fill a grand order · Quartermaster's Hall</td><td>none (calm teacher)</td></tr>
+    <tr><td><strong>3 · Cinderhold</strong><br><em>proposed</em></td><td>Farm + Mine</td><td>volcanic terraces · switchback</td><td>mine-hazard management</td><td>best the boss · Pit Canteen</td><td>heat · [[bosses:ember_drake]]</td></tr>
+    <tr><td><strong>4 · Gullcliff</strong><br>cf. [[zones:harbor]]</td><td>Farm + Mine + Fish</td><td>sea-cliff · vertical shelves</td><td>the full three-board stack</td><td>the Regatta · Bait Shack</td><td>tides · [[bosses:storm]]</td></tr>
+    <tr><td><strong>5 · Greenmeadow</strong><br>[[zones:meadow]]</td><td>Farm + Mine</td><td>rich meadow · radial</td><td>farm hazard at scale</td><td>raise a great building · Cattery</td><td>[[hazards:rats]] · [[bosses:mossback]]</td></tr>
+    <tr><td><strong>6 · Glimmerdeep</strong><br>cf. [[zones:caves]]</td><td>Mine only</td><td>crystal caverns · linked-chambers</td><td>provision under scarcity (no farm)</td><td>the great shipment · Supply Depot</td><td>[[hazards:cave_in]] · [[bosses:old_stoneface]]</td></tr>
+    <tr><td><strong>7 · Goldgrass · the Capital</strong><br>cf. [[zones:oldcapital]]</td><td>All</td><td>golden plains · axial boulevard</td><td>everything at once</td><td><strong>build the Monument</strong> (finale)</td><td>stampede · Goldhorn (proposed)</td></tr>
+  </tbody>
+</table>
+
+<h2>The optional frontier</h2>
+<table>
+  <thead><tr><th>Zone</th><th>Board</th><th>Environment · topology</th><th>Hazard · boss</th><th>Cross-zone export</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Mirefen Hollow</strong><br>[[zones:mirefen]]</td><td>Fish</td><td>marsh · ribbon-stilt boardwalk</td><td>flood / miasma · [[bosses:quagmire]]</td><td>tide-reading drip</td></tr>
+    <tr><td><strong>Hoarfrost Hold</strong><br><em>proposed</em></td><td>Farm</td><td>tundra · sheltered-hollow rings</td><td>freeze / blizzard · [[bosses:frostmaw]]</td><td>warmth radius / preserves</td></tr>
+    <tr><td><strong>Sunspire Oasis</strong><br><em>proposed</em></td><td>Farm</td><td>desert · oasis-rings</td><td>sandstorm / drought · Sandwyrm (proposed)</td><td>caravan coin multiplier</td></tr>
+    <tr><td><strong>Aetherreach</strong><br><em>proposed</em></td><td>Mine</td><td>sky-isles · archipelago</td><td>gale / lightning · Sky Leviathan (proposed)</td><td>aether (premium metal)</td></tr>
+    <tr><td><strong>Gravemoor</strong><br><em>proposed</em></td><td>special</td><td>haunted moor · reclaimed-grid</td><td>blight / wisp · Barrow-Lich (proposed)</td><td>consecration / curse-ward</td></tr>
+  </tbody>
+</table>
+<p style="font-size:13px;color:#7a6c54;"><em>Thornwild Canopy is folded into the spine — its [[bosses:mossback]] boss is lent to Greenmeadow's rat crux — so the atlas environments map cleanly onto four spine towns + five frontier zones + one loan.</em></p>
+
+<h2>How a town's ladder grows</h2>
+<p>Every settlement climbs its own tier ladder: each rung raises plots and unlocks buildings. The shapes are code-truth — here is a deep frontier example, the live [[zones:quarry]] ladder (<span data-wiki-fact="zone.quarry.rungCount"></span> rungs, <span data-wiki-fact="zone.quarry.ladderSpan"></span>):</p>
+<div data-wiki-tier-ladder="quarry"></div>
+<p style="font-size:13px;color:#7a6c54;"><em>Other coded ladders: [[zones:home]], [[zones:meadow]], [[zones:caves]], [[zones:mirefen]]. The proposed-but-uncoded towns (Cinderhold, Gullcliff, Glimmerdeep, Goldgrass, Two Rivers, Hoarfrost, Sunspire, Aetherreach, Gravemoor) carry draft ladders in the design source; their exact numbers are <strong>provisional</strong> until coded — see <a href="#/page/design_economy">Economy</a> and <a href="#/page/design_status">Status</a>.</em></p>
+
+<h2>Signature buildings (export after a town is complete)</h2>
+<p>Each town's win raises a <strong>signature building</strong> whose effect then helps <em>every</em> town: the Caravan Yard founds others; the Quartermaster's Hall packs rations better; the Pit Canteen adds expedition turns; the Bait Shack boosts fishing; the Cattery manages pests; the Supply Depot drips idle goods anywhere. These six are proposed; the everyday roster they sit among ([[buildings:mill]], [[buildings:bakery]], [[buildings:forge]], [[buildings:granary]], [[buildings:workshop]], [[buildings:chapel]]…) is live — see the <a href="#/buildings">Buildings</a> catalog and <a href="#/page/design_systems">Systems</a>.</p>

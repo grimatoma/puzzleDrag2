@@ -1,0 +1,66 @@
+<p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;">The <strong>Design</strong> section is the consolidated account of where the game is going — its scope, economy and progression — merged from the old scattered design docs into one coherent set. It is the <strong>proposed direction</strong>, deliberately a little ahead of the build.</p>
+
+<p>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PROPOSED</span>
+  &nbsp;The live catalog pages (<strong>Systems</strong>, <strong>Zones</strong>, <strong>Buildings</strong>, <strong>Bosses</strong>…) are <strong>code-truth</strong> and always win. This section is the plan: where a number matters it is shown <em>live from code</em> or kept deliberately qualitative, so it can never quietly drift.
+</p>
+
+<p style="font-size:12.5px;color:#7a6c54;margin:0.6em 0 1em;border-bottom:1px solid #e2d6bd;padding-bottom:0.6em;">
+  <strong>In this section:</strong>
+  <strong>Overview</strong> ·
+  <a href="#/page/design_progression">Progression</a> ·
+  <a href="#/page/design_atlas">Settlement Atlas</a> ·
+  <a href="#/page/design_economy">Economy</a> ·
+  <a href="#/page/design_systems">Systems</a> ·
+  <a href="#/page/design_meta">Meta &amp; Money</a> ·
+  <a href="#/page/design_status">Status &amp; Decisions</a>
+</p>
+
+<h2>What the game is</h2>
+<p>A cozy <strong>match-merge farming &amp; settlement</strong> game. On a small board you drag chains of matching tiles; each chain harvests goods <em>and</em> merges tiles into better ones (see [[systems:chaining]] and [[systems:promotion]]). You spend what you grow to build up a settlement, then outfit a caravan and roll out to found new towns across the map — opening and developing several at your own pace. Each town stacks a new board on the last and grows bigger and harder, but the heart never changes: <strong>drag, harvest, grow, complete, move on.</strong></p>
+
+<p style="background:#f3ece0;border-left:4px solid #c9980a;padding:8px 12px;border-radius:6px;margin:1em 0;">
+  <strong>The fantasy.</strong> You arrive at a cold hearth in a forgotten vale ([[zones:home]]) and someone hands you the tongs. You re-light the farm, build a caravan, and head out across the map — a river valley, a volcano's cooled terraces, a sea-cliff harbour ([[zones:harbor]]), a rat-plagued meadow ([[zones:meadow]]), a deep crystal delve ([[zones:caves]]) — until you raise the capital and wake the kingdom ([[zones:oldcapital]]).
+</p>
+
+<h2>Design pillars</h2>
+<table>
+  <thead><tr><th>Pillar</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td><strong>One compounding loop</strong></td><td>Every system feeds a single flywheel: play the board → harvest → spend on growth → the board yields more. Depth comes from <em>stacking</em> on that loop, never a second parallel game.</td></tr>
+    <tr><td><strong>Cozy early, ramping late</strong></td><td>The first sites are forgiving teachers. Hazards and <a href="#/bosses">bosses</a> arrive only once the player has the tools to meet them. Effort-gated, never time-gated.</td></tr>
+    <tr><td><strong>Choose your build</strong></td><td>Plots are scarce, so which <a href="#/buildings">buildings</a>, <a href="#/workers">workers</a> and <a href="#/tools">tools</a> you raise is a real decision — and you can demolish to re-spec. The puzzle math stays fixed; <em>you</em> change what the board hands you.</td></tr>
+    <tr><td><strong>A world that grows</strong></td><td>The map is the progression bar. Each settlement visibly expands from outpost to city in place, and the frontier of foundable towns unfurls outward as you go.</td></tr>
+  </tbody>
+</table>
+
+<h2>The core loop</h2>
+<p><strong>Play the board → harvest → spend on growth → bigger yield → back to play.</strong> One chain costs one turn; longer chains yield more goods and merge tiles up their family ladder. Raw goods refine at station <a href="#/buildings">buildings</a> (grain → [[resources:flour]] at the [[buildings:mill]] → [[resources:bread]] at the [[buildings:bakery]]); the refined economy is spent to grow the town, which makes the next round bigger. The same four beats repeat in every town, at every scale.</p>
+
+<h2>Boards build on each other</h2>
+<p>What keeps it from being "the same board over and over": <strong>a new board type is always fed by the boards before it.</strong> The farm makes food; food buys mine expeditions; farm food (bait) plus mine metal (tackle) fund the fishery. So every town with a mine also has a farm, and every fishery town has a farm and a mine. This feed-dependency is also the game's main <a href="#/page/design_progression">soft gate</a>. The one deliberate exception is a deep mine with no farm, where provisioning under scarcity is the whole point.</p>
+
+<table>
+  <thead><tr><th>Board</th><th>Eats</th><th>Pays out</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Farm</strong> (free base)</td><td>—</td><td>food: [[resources:hay_bundle]], [[resources:flour]], [[resources:eggs]], [[resources:plank]]</td></tr>
+    <tr><td><strong>Mine</strong></td><td>food → expedition turns</td><td>ore &amp; metal: [[resources:block]], [[resources:iron_bar]], [[resources:coke]]</td></tr>
+    <tr><td><strong>Fishery</strong></td><td>food (bait) + metal (tackle)</td><td>the rare catch: [[resources:fish_fillet]], [[resources:pearls]]</td></tr>
+  </tbody>
+</table>
+
+<h2>The shape of a session &amp; the long arc</h2>
+<p><strong>A session</strong> is one visit to a board: a small budget of <em>turns</em> (home runs <span data-wiki-fact="zone.home.baseTurns"></span> base), each chain spends one, whatever you harvest banks into <em>that town's</em> stockpile. <strong>Each town is a long project</strong>, not a handful of sessions — but it is effort-gated, not time-gated. The time between sessions hands you free tools (timed depots, daily, civic) to go faster — or you craft those tools now by spending extra materials.</p>
+<p><strong>The long arc</strong> is a map of settlements — a required spine the finale needs, plus optional frontier towns for content and cross-zone bonuses. You found each by caravan and need not finish one before opening the next. Workers, coins, tools and Villagers travel with you; each town's materials are its own. The full map and gate model are on the <a href="#/page/design_progression">Progression</a> page; the per-town detail is in the <a href="#/page/design_atlas">Settlement Atlas</a>.</p>
+
+<h2>What is — and isn't — in scope</h2>
+<table>
+  <thead><tr><th>In scope</th><th>Out of scope (for now)</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>One farm, one mine, one fish board — <strong>stacked</strong>, never parallel mini-games. A required town spine + optional frontier. Per-town tier ladders, three currencies, crafting, workers, tools, expeditions, hazards &amp; <a href="#/bosses">bosses</a>, <a href="#/boons">boons</a>. The always-on meta wrap and a free-to-play money model. A narrative capstone finale.</td>
+      <td>Multiplayer / social. A second core game bolted on. Per-town economies that don't feed the loop. Deep balance of the late arc (specced but provisional). Permanent global power creep — cross-zone exports are bounded, named bonuses, not a stat-stacking tree.</td>
+    </tr>
+  </tbody>
+</table>
+<p style="font-size:13px;color:#7a6c54;"><em>"Fully spec the whole arc" means every settlement has a design; it does <strong>not</strong> mean every number is final. The early towns are tuning-locked; later towns carry provisional numbers — see <a href="#/page/design_status">Status</a>.</em></p>

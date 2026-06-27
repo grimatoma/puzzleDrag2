@@ -1,0 +1,64 @@
+<p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;"><strong>Economy &amp; balance</strong> — the model behind the design: what the currencies are, where value enters and leaves, and the targets we tune toward. Concrete numbers live in code and the catalog pages; this page states the <em>shape</em>, not a copy that could drift.</p>
+
+<p>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PROPOSED</span>
+  &nbsp;Targets and the founding model below are design intent. Exact per-rung costs are code-truth (shown on the live <a href="#/zones">Zones</a> pages and the tier-ladder embeds); the early-game tuning baseline lives in the repo's <em>zones&nbsp;1–2 baseline</em> doc.
+</p>
+
+<p style="font-size:12.5px;color:#7a6c54;margin:0.6em 0 1em;border-bottom:1px solid #e2d6bd;padding-bottom:0.6em;">
+  <strong>Design (proposed):</strong>
+  <a href="#/page/design_overview">Overview</a> ·
+  <a href="#/page/design_progression">Progression</a> ·
+  <a href="#/page/design_atlas">Settlement Atlas</a> ·
+  <strong>Economy</strong> ·
+  <a href="#/page/design_systems">Systems</a> ·
+  <a href="#/page/design_meta">Meta &amp; Money</a> ·
+  <a href="#/page/design_status">Status &amp; Decisions</a>
+</p>
+
+<h2>The three currencies</h2>
+<table>
+  <thead><tr><th>Currency</th><th>Earned by</th><th>Spent on</th><th>Scope</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Materials</strong> (goods)</td><td>chaining tiles → refining at stations</td><td>tier-ups, construction, crafting, win tasks, hiring</td><td><strong>per-town</strong> — each settlement's stockpile is its own</td></tr>
+    <tr><td><strong>Coins</strong></td><td>per chain, season-end bonus, selling at [[systems:trade|market]]</td><td>founding caravans, session entry tolls, <a href="#/workers">worker</a> wages, tile unlocks</td><td><strong>global</strong> — travels with you</td></tr>
+    <tr><td><strong>Villagers</strong></td><td>raising [[buildings:housing|Houses]]</td><td>one per <a href="#/workers">worker</a> hire (with coins + materials)</td><td><strong>global</strong> — the worker-currency</td></tr>
+  </tbody>
+</table>
+<p style="font-size:13px;color:#7a6c54;"><em>Materials are the real progression gate; coins are a soft secondary one. Building and tier-up costs are <strong>resource-only</strong> — coins are never spent on construction.</em></p>
+
+<h2>Faucets ↔ sinks</h2>
+<p>Balance is the conversation between where value <strong>enters</strong> (faucets) and where it <strong>leaves</strong> (sinks). Keeping faucets ahead of the sinks that gate them is the <a href="#/page/design_progression">no-softlock invariant</a>.</p>
+<table>
+  <thead><tr><th>Faucets (value in)</th><th>Sinks (value out)</th></tr></thead>
+  <tbody>
+    <tr>
+      <td>[[systems:chaining|Chain]] collection → materials; chain coins (longer chains pay more); the season-end bonus &amp; [[buildings:chapel|Chapel]]; daily rewards, civic tithes, timed depots, <a href="#/boons">boons</a>.</td>
+      <td>Tier-up costs (materials — the main sink); founding caravans; session entry tolls; worker wages &amp; hire ramps; crafting inputs; win-task baskets.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2>How the board pays</h2>
+<ul>
+  <li><strong>Coins</strong> scale with <em>chain length</em> (a longer [[systems:chaining|chain]] pays more), weighted by tile value — not by the goods' sell value.</li>
+  <li><strong>Goods</strong> accrue per family: every N tiles chained yields one unit, then refine at a station ([[systems:crafting|crafting]]).</li>
+  <li><strong>Founding</strong> is a <strong>resource caravan</strong> — a basket of farm goods early ([[resources:plank]], [[resources:bread]], [[resources:hay_bundle]]), +metal for farther towns — scaling per founding. <em>Not</em> a coin price.</li>
+  <li><strong>Turn budget</strong> is a small per-visit allowance (home base <span data-wiki-fact="zone.home.baseTurns"></span>), raised by a [[buildings:granary|Granary]] and doubled by [[tools:fertilizer|fertilizer]].</li>
+</ul>
+
+<h2>Rations → mine turns</h2>
+<p>A mine spends <strong>food</strong> as expedition turns. Any edible item works — there is no special supply item — and more-processed food buys more turns (a soft efficiency gradient, never a hard requirement): raw produce &lt; crafted staples like [[resources:bread]] &lt; rich crafted like [[resources:cured_meat]]. A [[buildings:larder|Larder]] and the mining-camp bonus stack on top.</p>
+
+<h2>The value-spread problem</h2>
+<p style="background:#f7e7df;border-left:3px solid #b4532a;padding:8px 12px;border-radius:6px;">Today the <em>realized value per tile</em> spans far too wide a range (a premium catch like [[resources:pearls]] dwarfs a humble [[resources:pie]]). <strong>Target: compress it toward a modest ceiling</strong> so no single tile family dominates income and every board stays worth playing. Two levers move it: a good's sell value and its tiles-per-unit divisor. The playtest harness emits a compression change-list; deep tuning waits on the cross-zone pacing sim.</p>
+
+<h2>The price rule — one source of truth</h2>
+<p style="background:#dfeefc;border-left:3px solid #1d6fb8;padding:8px 12px;border-radius:6px;"><strong>Every sellable good has exactly one sell price.</strong> A good must pay the same coins whether the UI classifies it as a "resource" or an "item" — retiring an old fork where the same good could pay wildly different amounts. See [[systems:trade]].</p>
+
+<h2>Targets &amp; what's locked</h2>
+<ul>
+  <li><strong>Pacing intent:</strong> a mid-core player reaches the mid-game (home at its top tier + a second town founded) over a <strong>steady week or two</strong>, not a single sitting and not a grind.</li>
+  <li><strong>Tuning-locked:</strong> the first two-to-three towns (home + the first combination town) — their numbers are the agreed baseline.</li>
+  <li><strong>Provisional:</strong> the late arc (towns 4–7 + frontier) is specced but unvalidated until the cross-zone pacing sim crosses boards. See <a href="#/page/design_status">Status</a>.</li>
+</ul>

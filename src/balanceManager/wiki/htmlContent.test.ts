@@ -20,6 +20,28 @@ import { describe, it, expect } from "vitest";
 import { bodyFor, pageFor, listPages } from "./htmlContent.js";
 import { resolveWikiLink } from "./wikilink.js";
 
+// The Design (proposed) section is interlinked into the live catalog; every
+// [[wikilink]] on those pages must resolve, like the entity/_index files below.
+// Scoped to design_* so it can't trip on the retired direction/balance pages.
+describe("Design section page wikilinks", () => {
+  const LINK_RE = /\[\[([^\]]+)\]\]/g;
+  for (const slug of listPages().filter((s) => s.startsWith("design_"))) {
+    it(`pages/${slug} has no broken [[wikilinks]]`, () => {
+      const html = pageFor(slug);
+      if (!html) return;
+      LINK_RE.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = LINK_RE.exec(html)) !== null) {
+        const raw = m[1].split("|")[0].trim();
+        expect(
+          resolveWikiLink(raw),
+          `Broken wikilink [[${raw}]] in pages/${slug}`,
+        ).not.toBeNull();
+      }
+    });
+  }
+});
+
 describe("bodyFor", () => {
   it('returns the authored HTML for resources/bread (matches /staple food/i)', () => {
     const result = bodyFor("resources", "bread");

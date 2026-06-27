@@ -11,23 +11,23 @@ their folder.
 
 ---
 
-## Game-design, balance & zones prose — superseded by the Design Canon · 2026-06-26
-Merged into the single canonical [`docs/design/`](../design/index.html) set (overview &
-scope, progression, settlement atlas, economy & balance, systems, meta & money, build
-status). The full mapping lives in the canon's
-[build-status → "What this set replaced"](../design/status.html#superseded). Superseded prose:
+## Game-design, balance & zones prose — superseded by the in-app Design section · 2026-06-26
+Merged into the consolidated **Design (proposed)** section of the in-app Wiki (Dev Panel → Design;
+`src/balanceManager/content/pages/design_*.html`) — overview & scope, progression, settlement
+atlas, economy & balance, systems, meta & money, and a status/decisions page. Superseded prose:
 
 - [`game-design/`](game-design/index.html) — the six-page Game Design set (overview, systems,
   towns, buildings, meta-money, status). Its generator `reference/tools/build-game-design-docs.mjs`
-  is retired (guarded to no-op); the canon is hand-authored.
-- `balance-index.html` — the balance ledger prose (numbers now in `design/economy.html`; the live
+  is retired (guarded to no-op); the in-app section is hand-authored.
+- `balance-index.html` — the balance ledger prose (the design now lives in the in-app Economy page; the live
   `balance/profile.json`, `progression.baseline.json` & `progression-timeline.html` stay active).
-- `civic-economy.html` — Town Hall tithes/provisions (folded into `design/meta.html#civic`).
+- `civic-economy.html` — Town Hall tithes/provisions (folded into the in-app Meta & money page).
 - `strategy-review-2026.html`, `runthrough.html` — review & playthrough (folded into the scope/atlas pages).
 - `ux-redesign-2026.html` — UX atlas, kept as visual reference only (not design canon).
 
 The Zone Atlas generator (`docs/zones/`) is **not** archived — it stays a live layout/art tool;
-`design/towns.html` is now the design canon for the settlement roster.
+the in-app Settlement Atlas is now the design canon for the settlement roster. The zones&nbsp;1–2
+balance baseline (`docs/starting-zones-scope.html`) likewise stays as the detailed early-game source.
 
 ## Project briefs — completed & dropped · 2026-06
 [`projects/`](projects/README.md) — implementation briefs moved out of the active

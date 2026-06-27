@@ -117,6 +117,20 @@ export const PARKED_PAGES: NarrativePageDef[] = [
   { slug: "future", label: "Future systems" },
 ];
 
+// Design — the consolidated, *proposed* design direction (scope, economy,
+// progression), merged from the former scattered design docs. It is ahead of
+// code on purpose, so it gets its own clearly-labelled group, set apart from
+// the code-truth catalog. Numbers defer to live embeds or stay qualitative.
+export const DESIGN_PAGES: NarrativePageDef[] = [
+  { slug: "design_overview",    label: "Overview & scope" },
+  { slug: "design_progression", label: "Progression" },
+  { slug: "design_atlas",       label: "Settlement Atlas" },
+  { slug: "design_economy",     label: "Economy & balance" },
+  { slug: "design_systems",     label: "Systems" },
+  { slug: "design_meta",        label: "Meta & money" },
+  { slug: "design_status",      label: "Status & decisions" },
+];
+
 export interface UtilityDef {
   id: string;
   label: string;
