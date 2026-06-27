@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="puzzleDrag2 systems — the board & chain, tile families & promotion, the building-gated spawn pool, the two chain knobs, workers, tools, expeditions & hazards, bosses and roguelite boons.">
+<title>puzzleDrag2 — Systems</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>Systems</h1>
+    <p class="sub">The rules underneath the catalogs — how a chain becomes goods, how goods become a town, and the knobs that make one board feel different from the next. Mechanics here; the numbers they take are in <a href="economy.html">Economy</a>.</p>
+    <p class="meta">Canonical · the board · the spawn pool · the two chain knobs · workers · tools · expeditions · bosses · boons</p>
+  </header>
+
+  <div class="canon"><span>⚙️</span><div><b>One loop, stacked.</b> Every system on this page either feeds or is fed by the single core loop in the <a href="index.html#loop">Overview</a>. None of them is a second, parallel game.</div></div>
+
+  <nav class="docnav" aria-label="Design docs">
+    <a href="index.html">Overview &amp; Scope</a>
+    <a href="progression.html">Progression</a>
+    <a href="towns.html">Settlement Atlas</a>
+    <a href="economy.html">Economy &amp; Balance</a>
+    <a href="systems.html" class="here">Systems</a>
+    <a href="meta.html">Meta &amp; Money</a>
+    <a href="status.html">Build status</a>
+  </nav>
+
+  <main>
+    <section id="board">
+      <h2>The board &amp; the chain</h2>
+      <p>A <b>turn</b> is one chain: drag through <b>3+ adjacent matching tiles</b> (8-direction, no reuse). At fixed thresholds along the chain an <b>upgraded tile spawns</b> and a <b>resource is credited</b>; the board collapses and refills. A visit spends a budget of turns (~10 at home) and banks its harvest into that town's stockpile. Raw goods <b>refine at buildings</b> into the materials that grow the town.</p>
+      <div class="box"><b>Cross-collect.</b> A chain in one family can also credit a partner family on adjacent tiles (e.g. grass ↔ grain, trees ↔ birds), rewarding board-reading over rote single-family chains.</div>
+    </section>
+
+    <section id="families">
+      <h2>Tiles, families &amp; promotion</h2>
+      <p>Each tile belongs to a <b>family</b> with a <b>chain-to-upgrade threshold</b>. Long chains <b>promote</b> tiles up their family ladder, and every <code>TILES_PER_RESOURCE</code> tiles chained yields one unit of that family's resource.</p>
+      <table>
+        <thead><tr><th>Board</th><th>Families (resource · chain)</th></tr></thead>
+        <tbody>
+          <tr><td><span class="bd f">Farm</span></td><td>grass→hay (6) · grain→flour (5) · trees→plank (6) · birds→eggs (6) · veg→soup (6) · fruit→pie/jam (7) · herd→meat (5)</td></tr>
+          <tr><td><span class="bd m">Mine</span></td><td>stone→block (8) · iron→iron_bar (6) · coal→coke (7) · dirt→dirt</td></tr>
+          <tr><td><span class="bd fi">Fish</span></td><td>fish→fillet · oyster→pearls · kelp→fish_oil · shells, ink, jade (per zone)</td></tr>
+        </tbody>
+        <caption>Min chain to collect = 3. Discoverable tiles (e.g. chain 20 grass → unlock Meadow Grass; chain 6 pheasant → Chicken) deepen a board's pool over time.</caption>
+      </table>
+    </section>
+
+    <section id="spawn">
+      <h2>The spawn pool — buildings decide what the board hands you</h2>
+      <p class="lead">The board doesn't hand you everything at once. A tile <b>category only spawns once its building is raised</b> — a Coop turns on bird tiles, a Sawmill deepens trees, a Herd pen turns on livestock. So your <b>build choices steer the board's output</b>, and the spawn pool also <b>bends per season</b> and per zone.</p>
+      <p>This is the link between the town and the board: tiering up and choosing buildings is how you reshape what you can chain. Plots are scarce, so it's a real decision — and you can <b>demolish to re-spec</b>.</p>
+    </section>
+
+    <section id="knobs">
+      <h2>The two chain knobs</h2>
+      <p>Two levers — and only two — change the felt difficulty of a board without touching the puzzle rules:</p>
+      <div class="grid">
+        <div class="card g"><h3>① Chain-length floor</h3><p>How long a chain must be to collect / promote. Workers lower a family's threshold (toward a floor of 3); bosses raise it (<code>min_chain</code>). This is the knob that makes a staffed home board breezy and a boss board tense. <span class="pill warn">wiring open</span> — see <a href="economy.html#workers">Economy</a>.</p></div>
+        <div class="card b"><h3>② Spawn bias</h3><p>What the board is likely to hand next — bent by buildings, season, and boss modifiers (<code>respawn_boost</code>, hidden/heat tiles). Steering this is how a zone's signature mechanic (tide rows, lit chambers, drifting tiles) expresses itself.</p></div>
+      </div>
+    </section>
+
+    <section id="workers">
+      <h2>Workers &amp; hiring</h2>
+      <p>Houses produce <b>Villagers</b>; hiring spends a Villager + coins + materials to place a worker that eases one family's chains. Caps and ramps per profession are in <a href="economy.html#workers">Economy → Workers</a>. Workers travel with you between towns; a town's materials do not.</p>
+    </section>
+
+    <section id="tools">
+      <h2>Tools</h2>
+      <p>Single-use <b>board-breakers</b> crafted at the Workshop (rake, sickle, plough, fruit-picker, fertilizer) or won from the between-session faucets (depots, daily, civic). Fertilizer doubles a visit's turn budget. The design principle: the wait between sessions <em>hands</em> you tools for free, or you <b>craft them now</b> by spending extra materials — never a hard time-gate.</p>
+    </section>
+
+    <section id="expeditions">
+      <h2>Expeditions, hazards &amp; bosses</h2>
+      <p>A <b>mine expedition</b> spends packed food as turns (see <a href="economy.html#rations">rations</a>). <b>Hazards</b> are the per-zone environmental pressure — heat, tides, freeze, rats, cave-ins, gales, blight — expressed through spawn bias and tile overlays. <b>Bosses</b> are the headline challenge beat: each declares board modifiers (<code>freeze_columns</code>, <code>rubble_blocks</code>, <code>hide_resources</code>, <code>heat_tiles</code>, <code>respawn_boost</code>, <code>min_chain</code>) and a win condition (see each town's boss in the <a href="towns.html">Atlas</a>).</p>
+      <div class="box warn"><b>Integration status.</b> <code>min_chain</code> + <code>respawn_boost</code> run live today; the tile-overlay modifiers (freeze / rubble / hidden / heat) are written and unit-tested but get wiped by the fresh-board rebuild, so they don't yet reach live play. Tracked in <a href="status.html">Build status</a> &amp; <a href="../projects/03-live-boss-board-modifiers.md">project 03</a>.</div>
+    </section>
+
+    <section id="boons">
+      <h2>Roguelite boons &amp; keeper paths</h2>
+      <p>On entering a zone you choose a <b>keeper path</b> — <b>Coexist</b> or <b>Drive-Out</b> — drawing board-altering <b>boons</b> from that path's catalog (farm / mine / harbor × the two paths). The intent: the choice is a real <b>strategic identity</b>, not just "+X% income." Today the live effects are economic passives (<code>coin_gain_mult</code>, <code>bond_gain_mult</code>); the design adds board-feel boons (diagonal double, cross-collect radius +1, first chain free, an extra upgrade tier, every-Nth-chain seed) so the two paths play differently. Tracked in <a href="../projects/04-roguelite-board-altering-boons.md">project 04</a>.</p>
+    </section>
+  </main>
+
+  <footer>
+    puzzleDrag2 design canon · Systems · numbers in <a href="economy.html">Economy</a> · the always-on wrap in <a href="meta.html">Meta &amp; Money</a>.
+  </footer>
+</div>
+</body>
+</html>

@@ -11,6 +11,24 @@ their folder.
 
 ---
 
+## Game-design, balance & zones prose — superseded by the Design Canon · 2026-06-26
+Merged into the single canonical [`docs/design/`](../design/index.html) set (overview &
+scope, progression, settlement atlas, economy & balance, systems, meta & money, build
+status). The full mapping lives in the canon's
+[build-status → "What this set replaced"](../design/status.html#superseded). Superseded prose:
+
+- [`game-design/`](game-design/index.html) — the six-page Game Design set (overview, systems,
+  towns, buildings, meta-money, status). Its generator `reference/tools/build-game-design-docs.mjs`
+  is retired (guarded to no-op); the canon is hand-authored.
+- `balance-index.html` — the balance ledger prose (numbers now in `design/economy.html`; the live
+  `balance/profile.json`, `progression.baseline.json` & `progression-timeline.html` stay active).
+- `civic-economy.html` — Town Hall tithes/provisions (folded into `design/meta.html#civic`).
+- `strategy-review-2026.html`, `runthrough.html` — review & playthrough (folded into the scope/atlas pages).
+- `ux-redesign-2026.html` — UX atlas, kept as visual reference only (not design canon).
+
+The Zone Atlas generator (`docs/zones/`) is **not** archived — it stays a live layout/art tool;
+`design/towns.html` is now the design canon for the settlement roster.
+
 ## Project briefs — completed & dropped · 2026-06
 [`projects/`](projects/README.md) — implementation briefs moved out of the active
 board once their work shipped (01, 05, 06, 08, 11, 14) or was dropped (15, 16).
