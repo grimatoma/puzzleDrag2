@@ -17,10 +17,10 @@
 </p>
 
 <h2>What the game is</h2>
-<p>A cozy <strong>match-merge farming &amp; settlement</strong> game. On a small board you drag chains of matching tiles; each chain harvests goods <em>and</em> merges tiles into better ones (see [[systems:chaining]] and [[systems:promotion]]). You spend what you grow to build up a settlement, then outfit a caravan and roll out to found new towns across the map — opening and developing several at your own pace. Each town stacks a new board on the last and grows bigger and harder, but the heart never changes: <strong>drag, harvest, grow, complete, move on.</strong></p>
+<p>A cozy <strong>match-merge farming &amp; settlement</strong> game. On a small board you drag chains of matching tiles; each chain harvests goods <em>and</em> merges tiles into better ones (see [[systems:chaining|chaining]] and [[systems:promotion|promotion]]). You spend what you grow to build up a settlement, then outfit a caravan and roll out to found new towns across the map — opening and developing several at your own pace. Each town stacks a new board on the last and grows bigger and harder, but the heart never changes: <strong>drag, harvest, grow, complete, move on.</strong></p>
 
 <p style="background:#f3ece0;border-left:4px solid #c9980a;padding:8px 12px;border-radius:6px;margin:1em 0;">
-  <strong>The fantasy.</strong> You arrive at a cold hearth in a forgotten vale ([[zones:home]]) and someone hands you the tongs. You re-light the farm, build a caravan, and head out across the map — a river valley, a volcano's cooled terraces, a sea-cliff harbour ([[zones:harbor]]), a rat-plagued meadow ([[zones:meadow]]), a deep crystal delve ([[zones:caves]]) — until you raise the capital and wake the kingdom ([[zones:oldcapital]]).
+  <strong>The fantasy.</strong> You arrive at a cold hearth in a forgotten vale ([[zones:home|Hearthwood Vale]]) and someone hands you the tongs. You re-light the farm, build a caravan, and head out across the map — a river valley, a volcano's cooled terraces, a sea-cliff harbour ([[zones:harbor|Saltspray]]), a rat-plagued meadow ([[zones:meadow|Greenmeadow]]), a deep crystal delve ([[zones:caves|Lanternlit Caves]]) — until you raise the capital and wake the kingdom ([[zones:oldcapital|the Old Capital]]).
 </p>
 
 <h2>Design pillars</h2>
@@ -35,17 +35,71 @@
 </table>
 
 <h2>The core loop</h2>
-<p><strong>Play the board → harvest → spend on growth → bigger yield → back to play.</strong> One chain costs one turn; longer chains yield more goods and merge tiles up their family ladder. Raw goods refine at station <a href="#/buildings">buildings</a> (grain → [[resources:flour]] at the [[buildings:mill]] → [[resources:bread]] at the [[buildings:bakery]]); the refined economy is spent to grow the town, which makes the next round bigger. The same four beats repeat in every town, at every scale.</p>
+<p><strong>Play the board → harvest → spend on growth → bigger yield → back to play.</strong> One chain costs one turn; longer chains yield more goods and merge tiles up their family ladder. Raw goods refine at station <a href="#/buildings">buildings</a> (grain → [[resources:flour|flour]] at the [[buildings:mill|Mill]] → [[resources:bread|bread]] at the [[buildings:bakery|Bakery]]); the refined economy is spent to grow the town, which makes the next round bigger. The same four beats repeat in every town, at every scale.</p>
+
+<div style="background:#fff;border:1px solid #e2d6bd;border-radius:10px;padding:12px 12px 6px;margin:1em 0;box-shadow:0 1px 3px rgba(60,40,15,.07);overflow-x:auto;">
+  <svg viewBox="0 0 900 290" width="100%" style="display:block;width:100%;height:auto;max-width:880px;margin:0 auto;" role="img" aria-label="Core loop: play the board, harvest, spend on growth, bigger yield, back to play.">
+    <defs><marker id="a1" markerWidth="11" markerHeight="11" refX="7" refY="3.2" orient="auto"><path d="M0,0 L7,3.2 L0,6.4 Z" fill="#bf7a1e"/></marker></defs>
+    <g font-family="IBM Plex Sans, sans-serif" font-size="13">
+      <rect x="40" y="105" width="190" height="84" rx="12" fill="#eaf0df" stroke="#4f7a3a"/>
+      <text x="135" y="141" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="16" fill="#2c2417">Play the board</text>
+      <text x="135" y="163" text-anchor="middle" fill="#7a6c54">drag chains · merge tiles</text>
+      <rect x="355" y="22" width="190" height="84" rx="12" fill="#f6e7cf" stroke="#bf7a1e"/>
+      <text x="450" y="58" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="16" fill="#2c2417">Harvest</text>
+      <text x="450" y="80" text-anchor="middle" fill="#7a6c54">materials · coins · XP</text>
+      <rect x="670" y="105" width="195" height="84" rx="12" fill="#f6e7cf" stroke="#bf7a1e"/>
+      <text x="767" y="135" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="16" fill="#2c2417">Spend on growth</text>
+      <text x="767" y="156" text-anchor="middle" fill="#7a6c54">build · hire · upgrade</text>
+      <text x="767" y="173" text-anchor="middle" fill="#7a6c54">raise the town</text>
+      <rect x="355" y="188" width="190" height="84" rx="12" fill="#eaf0df" stroke="#4f7a3a"/>
+      <text x="450" y="224" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="16" fill="#2c2417">Bigger yield</text>
+      <text x="450" y="246" text-anchor="middle" fill="#7a6c54">board produces more</text>
+      <path d="M230,130 C290,90 320,75 353,66" fill="none" stroke="#bf7a1e" stroke-width="2.4" marker-end="url(#a1)"/>
+      <path d="M547,66 C590,76 620,91 668,125" fill="none" stroke="#bf7a1e" stroke-width="2.4" marker-end="url(#a1)"/>
+      <path d="M765,189 C720,229 600,245 547,235" fill="none" stroke="#bf7a1e" stroke-width="2.4" marker-end="url(#a1)"/>
+      <path d="M353,235 C300,245 250,227 175,191" fill="none" stroke="#bf7a1e" stroke-width="2.4" marker-end="url(#a1)"/>
+      <text x="450" y="154" text-anchor="middle" fill="#7a6c54" font-style="italic" font-size="12">the loop compounds</text>
+    </g>
+  </svg>
+  <p style="text-align:center;font-size:12px;color:#7a6c54;margin:.3em 0 .2em;">The same four beats repeat in every town, at every scale — your first chain to your last monument.</p>
+</div>
 
 <h2>Boards build on each other</h2>
 <p>What keeps it from being "the same board over and over": <strong>a new board type is always fed by the boards before it.</strong> The farm makes food; food buys mine expeditions; farm food (bait) plus mine metal (tackle) fund the fishery. So every town with a mine also has a farm, and every fishery town has a farm and a mine. This feed-dependency is also the game's main <a href="#/page/design_progression">soft gate</a>. The one deliberate exception is a deep mine with no farm, where provisioning under scarcity is the whole point.</p>
 
+<div style="background:#fff;border:1px solid #e2d6bd;border-radius:10px;padding:12px 12px 6px;margin:1em 0;box-shadow:0 1px 3px rgba(60,40,15,.07);overflow-x:auto;">
+  <svg viewBox="0 0 900 190" width="100%" style="display:block;width:100%;height:auto;max-width:880px;margin:0 auto;" role="img" aria-label="Farm feeds the mine which together feed the fishery.">
+    <defs><marker id="sf" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#bf7a1e"/></marker></defs>
+    <g font-family="IBM Plex Sans, sans-serif" font-size="12">
+      <rect x="30" y="62" width="200" height="74" rx="12" fill="#eaf0df" stroke="#4f7a3a"/>
+      <text x="130" y="88" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="15" fill="#2c2417">Farm</text>
+      <text x="130" y="108" text-anchor="middle" fill="#7a6c54">free base · makes food</text>
+      <text x="130" y="124" text-anchor="middle" fill="#7a6c54" font-size="10.5">always playable</text>
+      <rect x="350" y="62" width="200" height="74" rx="12" fill="#efe3cd" stroke="#8a6d3b"/>
+      <text x="450" y="88" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="15" fill="#2c2417">Mine</text>
+      <text x="450" y="108" text-anchor="middle" fill="#7a6c54">food → expedition turns</text>
+      <text x="450" y="124" text-anchor="middle" fill="#7a6c54" font-size="10.5">pays out ore &amp; metal</text>
+      <rect x="670" y="62" width="200" height="74" rx="12" fill="#dfecf6" stroke="#1d6fb8"/>
+      <text x="770" y="88" text-anchor="middle" font-weight="800" font-family="Fraunces, serif" font-size="15" fill="#2c2417">Fishery</text>
+      <text x="770" y="108" text-anchor="middle" fill="#7a6c54">food (bait) + metal (tackle)</text>
+      <text x="770" y="124" text-anchor="middle" fill="#7a6c54" font-size="10.5">pays out the rare catch</text>
+      <line x1="230" y1="92" x2="348" y2="92" stroke="#bf7a1e" stroke-width="2.4" marker-end="url(#sf)"/>
+      <text x="289" y="84" text-anchor="middle" fill="#bf7a1e" font-size="10.5">food</text>
+      <line x1="550" y1="92" x2="668" y2="92" stroke="#bf7a1e" stroke-width="2.4" marker-end="url(#sf)"/>
+      <text x="609" y="84" text-anchor="middle" fill="#bf7a1e" font-size="10.5">metal</text>
+      <path d="M130,136 C130,172 760,172 770,138" fill="none" stroke="#4f7a3a" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#sf)"/>
+      <text x="450" y="170" text-anchor="middle" fill="#4f7a3a" font-size="10.5" font-style="italic">farm food also feeds the fishery (bait)</text>
+    </g>
+  </svg>
+  <p style="text-align:center;font-size:12px;color:#7a6c54;margin:.3em 0 .2em;">The puzzles stack, and earlier boards never idle — later boards keep buying from them.</p>
+</div>
+
 <table>
   <thead><tr><th>Board</th><th>Eats</th><th>Pays out</th></tr></thead>
   <tbody>
-    <tr><td><strong>Farm</strong> (free base)</td><td>—</td><td>food: [[resources:hay_bundle]], [[resources:flour]], [[resources:eggs]], [[resources:plank]]</td></tr>
-    <tr><td><strong>Mine</strong></td><td>food → expedition turns</td><td>ore &amp; metal: [[resources:block]], [[resources:iron_bar]], [[resources:coke]]</td></tr>
-    <tr><td><strong>Fishery</strong></td><td>food (bait) + metal (tackle)</td><td>the rare catch: [[resources:fish_fillet]], [[resources:pearls]]</td></tr>
+    <tr><td><strong>Farm</strong> (free base)</td><td>—</td><td>food: [[resources:hay_bundle|hay]], [[resources:flour|flour]], [[resources:eggs|eggs]], [[resources:plank|plank]]</td></tr>
+    <tr><td><strong>Mine</strong></td><td>food → expedition turns</td><td>ore &amp; metal: [[resources:block|block]], [[resources:iron_bar|iron bar]], [[resources:coke|coke]]</td></tr>
+    <tr><td><strong>Fishery</strong></td><td>food (bait) + metal (tackle)</td><td>the rare catch: [[resources:fish_fillet|fillet]], [[resources:pearls|pearls]]</td></tr>
   </tbody>
 </table>
 
