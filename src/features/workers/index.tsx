@@ -4,7 +4,6 @@
 // shows the worker, hire / fire buttons, the per-hire effect summary, and
 // the current count out of maxCount.
 import { useState, useMemo } from "react";
-import type { CSSProperties } from "react";
 import { getItem } from "../../constants.js";
 import { TYPE_WORKERS, nextHireCost, nextHireResourceCost } from "./data.js";
 import { isWorkerReachable } from "../../game/reachability.js";
@@ -12,7 +11,6 @@ import type { WorkerAbility, WorkerDef } from "./data.js";
 import Icon from "../../ui/Icon.jsx";
 import DesignIcon from "../../ui/primitives/Icon.jsx";
 import {
-  AbilitySummary,
   BrowserDetailLayout,
   BrowserGrid,
   BrowserItemButton,
@@ -119,7 +117,6 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
   const villagersAvailable = state?.villagers ?? 0;
   const hasVillager = villagersAvailable >= 1;
   const canHire = (state?.coins ?? 0) >= coinCost && canPayResources && hasVillager && count < worker.maxCount;
-  const canFire = count > 0;
   interface CostEntry {
     key: string;
     label: string;
@@ -163,48 +160,28 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
   ];
   return (
     <DetailPane
-      eyebrow="Worker"
+      eyebrow={undefined}
       title={worker.name}
       status={`${count} / ${worker.maxCount} hired`}
       description={worker.description}
-      icon={<Icon iconKey={worker.look?.iconKey} size={64} title="" />}
+      icon={<Icon iconKey={worker.look?.iconKey} size={48} title="" />}
       headerActions={undefined}
       empty={undefined}
       actions={
-        <>
-          <DetailActionButton
-            tone="moss"
-            disabled={!canHire}
-            aria-label={`Hire ${worker.name} for ${coinCost} coins`}
-            onClick={() => dispatch({ type: "WORKERS/HIRE", payload: { id: worker.id } })}
-          >
-            Hire
-          </DetailActionButton>
-          <DetailActionButton
-            tone="iron"
-            variant="soft"
-            disabled={!canFire}
-            aria-label={`Fire one ${worker.name}`}
-            onClick={() => dispatch({ type: "WORKERS/FIRE", payload: { id: worker.id } })}
-          >
-            Fire
-          </DetailActionButton>
-        </>
+        <DetailActionButton
+          tone="moss"
+          disabled={!canHire}
+          aria-label={`Hire ${worker.name} for ${coinCost} coins`}
+          onClick={() => dispatch({ type: "WORKERS/HIRE", payload: { id: worker.id } })}
+        >
+          Hire
+        </DetailActionButton>
       }
     >
-      {worker.flavor && (
-        <div className="hl-flavor" style={{ "--flavor-accent": worker.look?.color } as CSSProperties}>
-          {worker.flavor}
-        </div>
-      )}
       <CostGrid entries={costEntries as never[]} title="Next hire cost" />
-      <div>
-        <div className="hl-section-label mb-1.5">Current effect</div>
-        <div className="hl-text-dim">{effectSummary(worker.abilities, count, worker.maxCount) || "No current effect."}</div>
-      </div>
-      <div>
-        <div className="hl-section-label mb-1.5">Bonuses</div>
-        <AbilitySummary abilities={worker.abilities} effects={undefined} />
+      <div className="flex items-baseline gap-1.5">
+        <span className="hl-section-label">Effect</span>
+        <span className="hl-text-dim">{effectSummary(worker.abilities, count, worker.maxCount) || "None yet."}</span>
       </div>
     </DetailPane>
   );
