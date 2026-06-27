@@ -98,13 +98,17 @@ function TileSlot({ category, selected, locked, activeTileId, variantCount, onTo
   const label = CATEGORY_LABEL[category] ?? category;
   const fallbackGlyph = CATEGORY_GLYPH[category] ?? "•";
   const activeTile: TileTypeDef | null = activeTileId ? ((TILE_TYPES_MAP as Record<string, TileTypeDef | undefined>)[activeTileId] ?? null) : null;
+  // A locked slot only does something on click when there's more than one
+  // discovered variant to swap to. With a single variant there's nothing to
+  // edit, so it shouldn't read as tappable.
+  const interactive = !locked || variantCount > 1;
   const baseStyle = {
     background: selected ? "#fffaf1" : "#dbcfb6",
     color: "#2b2218",
     border: selected ? "3px solid #91bf24" : "3px solid #8c7656",
     boxShadow: selected ? "0 2px 8px rgba(145,191,36,.25)" : "none",
     opacity: locked ? 0.85 : 1,
-    cursor: "pointer",
+    cursor: interactive ? "pointer" : "default",
   };
   // When mustPick is on, a single click toggles inclusion. A dedicated
   // "Change" affordance opens the picker so toggling the slot off doesn't
@@ -338,8 +342,11 @@ export default function StartFarmingModal({ state, dispatch, onClose }: StartFar
   function toggleCategory(cat: string) {
     if (!mustPick) {
       // Locked slots — clicking the slot opens the chooser instead of
-      // toggling.
-      setChooserCat(cat);
+      // toggling. Skip it when there's only a single discovered variant:
+      // there's nothing to swap to, so the picker would be a dead end.
+      if (unlockedRowsForZoneCategory(state, cat).length > 1) {
+        setChooserCat(cat);
+      }
       return;
     }
     setSelected((prev: Set<string>) => {
