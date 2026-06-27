@@ -1,12 +1,10 @@
 import { useState, type ReactNode } from "react";
 import { RECIPES, ITEMS } from "../../constants.js";
 import { isRecipeReachable } from "../../game/reachability.js";
-import { DECORATIONS } from "../decorations/data.js";
 import { effectiveRecipeInputs } from "./slice.js";
-import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
+import IconCanvas from "../../ui/IconCanvas.jsx";
 import { locBuilt } from "../../locBuilt.js";
 import Icon from "../../ui/Icon.jsx";
-import DesignIcon from "../../ui/primitives/Icon.jsx";
 import Button from "../../ui/primitives/Button.jsx";
 import { FeaturePanel } from "../_shared/uiTypes.js";
 import {
@@ -43,13 +41,6 @@ interface ItemDef {
   kind?: string;
 }
 
-interface DecorDef {
-  id: string;
-  name: string;
-  influence: number;
-  cost: Record<string, number>;
-}
-
 interface StationMeta {
   label: string;
   iconKey: string;
@@ -83,7 +74,6 @@ const STATION_META: Record<string, StationMeta> = {
   forge:    { label: "Forge",    iconKey: "station_forge",    bg: "#8898a4", title: "Bram's Forge",   flavor: "Iron, fire, and the steady ring of the hammer." },
   larder:   { label: "Larder",   iconKey: "station_larder",   bg: "#7a9658", title: "The Larder",     flavor: "Preserves and provisions, put by for the lean months." },
   workshop: { label: "Workshop", iconKey: "station_workshop", bg: "#a08c5e", title: "Wren's Workshop", flavor: "Planks, nails, and a carpenter's steady hands." },
-  decor:    { label: "Decor",    iconKey: "station_decor",    bg: "#b07ac0", title: "The Craft Table", flavor: "Small comforts that make the vale feel like home." },
 };
 
 function StationHeader({ meta, pill }: { meta: StationMeta; pill?: string | null }) {
@@ -102,8 +92,8 @@ function StationHeader({ meta, pill }: { meta: StationMeta; pill?: string | null
   );
 }
 
-// Ordered list of all stations (decor appended)
-const STATION_ORDER = ["bakery", "larder", "forge", "workshop", "decor"];
+// Ordered list of all crafting stations.
+const STATION_ORDER = ["bakery", "larder", "forge", "workshop"];
 
 function stationBuilt(built: Record<string, unknown> | null | undefined, station: string): boolean {
   return !!(built && built[station]);
@@ -226,111 +216,6 @@ function RecipeDetail({ recipeKey, recipe, inventory, built, tier2Unlocked, stat
   );
 }
 
-function canAffordDecor(decor: DecorDef, state: GameState): boolean {
-  const { cost } = decor;
-  if ((state.coins ?? 0) < (cost.coins ?? 0)) return false;
-  const inv: Record<string, number> = zoneInventory(state);
-  for (const [k, v] of Object.entries(cost)) {
-    if (k === "coins") continue;
-    if ((inv[k] ?? 0) < v) return false;
-  }
-  return true;
-}
-
-function DecorIcon({ decor, size = 42 }: { decor: DecorDef; size?: number }) {
-  const decorIconKey = `decor_${decor.id}`;
-  if (hasIcon(decorIconKey)) {
-    return <IconCanvas iconKey={decorIconKey} size={size} />;
-  }
-  return (
-    <span className="text-lg font-bold" aria-hidden="true">
-      {decor.name.slice(0, 1)}
-    </span>
-  );
-}
-
-function decorCostEntries(decor: DecorDef, state: GameState) {
-  const inv: Record<string, number> = zoneInventory(state);
-  const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
-  return Object.entries(decor.cost ?? {}).map(([key, amount]: [string, number]) => ({
-    key,
-    label: key === "coins" ? "Coins" : itemMap[key]?.label || key,
-    amount,
-    icon: key === "coins" ? <DesignIcon iconKey="design.currency.coin" size={18} /> : <Icon iconKey={key} size={18} />,
-    have: key === "coins" ? (state.coins ?? 0) : (inv[key] ?? 0),
-    showHave: true,
-    check: true,
-    ok: key === "coins" ? (state.coins ?? 0) >= amount : (inv[key] ?? 0) >= amount,
-  }));
-}
-
-interface DecorBrowserItemProps {
-  decor: DecorDef;
-  state: GameState;
-  selected: boolean;
-  onSelect: () => void;
-}
-
-function DecorationBrowserItem({ decor, state, selected, onSelect }: DecorBrowserItemProps) {
-  const affordable = canAffordDecor(decor, state);
-  const builtAt = (locBuilt(state) as { decorations?: Record<string, number> }).decorations ?? {};
-  const count: number = builtAt[decor.id] ?? 0;
-  return (
-    <BrowserItemButton
-      selected={selected}
-      muted={!affordable}
-      icon={<DecorIcon decor={decor} size={38} />}
-      title={decor.name}
-      subtitle={affordable ? `+${decor.influence} influence` : "Missing cost"}
-      count={count > 0 ? `x${count}` : null}
-      onClick={onSelect}
-      aria-label={`View decor ${decor.name}`}
-    />
-  );
-}
-
-interface DecorDetailProps {
-  decor: DecorDef | null;
-  state: GameState;
-  dispatch: Dispatch;
-}
-
-function DecorationDetail({ decor, state, dispatch }: DecorDetailProps) {
-  if (!decor) return <DetailPane empty="Select decor to inspect it." />;
-  const affordable = canAffordDecor(decor, state);
-  const builtAt = (locBuilt(state) as { decorations?: Record<string, number> }).decorations ?? {};
-  const count: number = builtAt[decor.id] ?? 0;
-
-  return (
-    <DetailPane
-      eyebrow="Decor"
-      title={decor.name}
-      status={affordable ? "Ready to build" : "Missing cost"}
-      description="Build this decoration at the current settlement to raise influence."
-      icon={<DecorIcon decor={decor} size={64} />}
-      actions={
-        <DetailActionButton
-          tone="moss"
-          disabled={!affordable}
-          onClick={() => dispatch({ type: "BUILD_DECORATION", payload: { id: decor.id } })}
-        >
-          Build
-        </DetailActionButton>
-      }
-    >
-      <div className="hl-well">
-        <div className="hl-section-label">Owned here</div>
-        <div className="hl-heading tabular-nums">{count}</div>
-      </div>
-      <div className="hl-well">
-        <div className="hl-section-label">Influence</div>
-        <div className="hl-heading">+{decor.influence}</div>
-      </div>
-      <CostGrid entries={decorCostEntries(decor, state)} title="Cost" />
-    </DetailPane>
-  );
-}
-
 interface StationCardProps {
   station: string;
   state: GameState;
@@ -340,20 +225,14 @@ interface StationCardProps {
   onOpen: () => void;
 }
 
-// Level-1 drill-down card: one per crafting building. Tapping it drills into
-// that building's recipe (or decor) list.
+// Level-1 drill-down card: one per built crafting building. Tapping it drills
+// into that building's recipe list.
 function StationCard({ station, state, built, inventory, tier2Unlocked, onOpen }: StationCardProps) {
   const meta = STATION_META[station];
-  const isDecor = station === "decor";
-  const isBuilt = isDecor ? true : stationBuilt(built, station);
+  const isBuilt = stationBuilt(built, station);
 
   let statusNode: ReactNode;
-  if (isDecor) {
-    const placed = Object.values(
-      ((locBuilt(state) as { decorations?: Record<string, number> }).decorations) ?? {},
-    ).reduce((sum, n) => sum + (Number(n) || 0), 0);
-    statusNode = `${placed} placed`;
-  } else if (!isBuilt) {
+  if (!isBuilt) {
     statusNode = <span className="inline-flex items-center gap-1"><LockGlyph size={11} /> Locked</span>;
   } else {
     const recs = recipesForStation(station);
@@ -397,26 +276,34 @@ interface StationMenuProps {
   onOpen: (station: string) => void;
 }
 
-// Level-1 drill-down view: the grid of building cards.
+// Level-1 drill-down view: the grid of building cards. Only buildings that have
+// actually been built in town appear here.
 function StationMenu({ state, built, inventory, tier2Unlocked, onOpen }: StationMenuProps) {
+  const builtStations = STATION_ORDER.filter((s) => stationBuilt(built, s));
   return (
     <FeaturePanel>
       <FeaturePanel.Header title="Crafting" />
       <FeaturePanel.Body>
-        <p className="mb-3 text-caption text-ink-soft">Choose a workshop to see what you can craft there.</p>
-        <BrowserGrid min={220}>
-          {STATION_ORDER.map((s) => (
-            <StationCard
-              key={s}
-              station={s}
-              state={state}
-              built={built}
-              inventory={inventory}
-              tier2Unlocked={tier2Unlocked}
-              onOpen={() => onOpen(s)}
-            />
-          ))}
-        </BrowserGrid>
+        {builtStations.length === 0 ? (
+          <p className="hl-empty">Build a crafting building in town to start crafting.</p>
+        ) : (
+          <>
+            <p className="mb-3 text-caption text-ink-soft">Choose a workshop to see what you can craft there.</p>
+            <BrowserGrid min={220}>
+              {builtStations.map((s) => (
+                <StationCard
+                  key={s}
+                  station={s}
+                  state={state}
+                  built={built}
+                  inventory={inventory}
+                  tier2Unlocked={tier2Unlocked}
+                  onOpen={() => onOpen(s)}
+                />
+              ))}
+            </BrowserGrid>
+          </>
+        )}
       </FeaturePanel.Body>
     </FeaturePanel>
   );
@@ -433,8 +320,8 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
   const craftedTotals: Record<string, number> = state.craftedTotals ?? {};
   const built = locBuilt(state) as Record<string, unknown>;
 
-  // Drill-down: craftingTab unset → the building menu (level 1); a valid
-  // station → that building's recipe/decor list (level 2). The station lives in
+  // Drill-down: craftingTab unset → the building menu (level 1); a built
+  // station → that building's recipe list (level 2). The station lives in
   // state.craftingTab, which the router projects onto `#/crafting/<station>`,
   // so each drill in/out is its own history entry (browser + button back both
   // work), and the station is preserved when switching to another tab and back.
@@ -447,7 +334,6 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
   // Selection within the active station. Declared unconditionally (before any
   // early return) so hook order stays stable across the menu/detail switch.
   const [selectedRecipeKey, setSelectedRecipeKey] = useState<string | null>(null);
-  const [selectedDecorId, setSelectedDecorId] = useState<string | null>(null);
 
   if (!activeTab) {
     return (
@@ -464,21 +350,15 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
   const meta = STATION_META[activeTab];
   const stationRecipes = recipesForStation(activeTab);
   const selectedRecipeEntry = stationRecipes.find(([key]) => key === selectedRecipeKey) ?? stationRecipes[0] ?? null;
-  const decorations = Object.values(DECORATIONS) as DecorDef[];
-  const selectedDecor = decorations.find((decor: DecorDef) => decor.id === selectedDecorId) ?? decorations[0] ?? null;
 
-  // Header pill: how many recipes are craftable right now (or decor placed).
+  // Header pill: how many recipes are craftable right now (or "Locked" when
+  // the station hasn't been built — only reachable by deep-linking the URL).
   const craftableCount = stationRecipes.filter(([key, recipe]) =>
     canCraft(recipe, effectiveRecipeInputs(state, key, recipe.inputs), inventory, built, tier2Unlocked),
   ).length;
-  const decorPlaced = Object.values(
-    ((locBuilt(state) as { decorations?: Record<string, number> }).decorations) ?? {},
-  ).reduce((sum, n) => sum + (Number(n) || 0), 0);
-  const headerPill = activeTab === "decor"
-    ? `${decorPlaced} placed`
-    : !stationBuilt(built, activeTab)
-      ? "Locked"
-      : `${craftableCount}/${stationRecipes.length} ready`;
+  const headerPill = !stationBuilt(built, activeTab)
+    ? "Locked"
+    : `${craftableCount}/${stationRecipes.length} ready`;
 
   return (
     <FeaturePanel>
@@ -496,69 +376,50 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
 
       <StationHeader meta={meta} pill={headerPill} />
 
-      {activeTab === "decor" ? (
-        <FeaturePanel.Body>
-          <BrowserDetailLayout
-            browser={
-              <BrowserGrid min={170}>
-                {decorations.map((decor: DecorDef) => (
-                  <DecorationBrowserItem
-                    key={decor.id}
-                    decor={decor}
-                    state={state}
-                    selected={selectedDecor?.id === decor.id}
-                    onSelect={() => setSelectedDecorId(decor.id)}
-                  />
-                ))}
-              </BrowserGrid>
-            }
-            detail={<DecorationDetail decor={selectedDecor} state={state} dispatch={dispatch} />}
-          />
-        </FeaturePanel.Body>
-      ) : !stationBuilt(built, activeTab) ? (
+      {!stationBuilt(built, activeTab) ? (
         <div className="flex-1 grid place-items-center px-4">
           <p className="hl-empty">
             Build the {meta.label} in town to unlock these recipes.
           </p>
         </div>
       ) : (
-        <FeaturePanel.Body>
-          <BrowserDetailLayout
-            browser={
-              stationRecipes.length === 0 ? (
-                <div className="hl-empty">No recipes at this station.</div>
-              ) : (
-                <BrowserGrid min={170}>
-                  {stationRecipes.map(([key, recipe]) => (
-                    <RecipeBrowserItem
-                      key={key}
-                      recipeKey={key}
-                      recipe={recipe}
-                      selected={selectedRecipeEntry?.[0] === key}
-                      inventory={inventory}
-                      built={built}
-                      tier2Unlocked={tier2Unlocked}
-                      craftedTotals={craftedTotals}
-                      state={state}
-                      onSelect={() => setSelectedRecipeKey(key)}
-                    />
-                  ))}
-                </BrowserGrid>
-              )
-            }
-            detail={
-              <RecipeDetail
-                recipeKey={selectedRecipeEntry?.[0]}
-                recipe={selectedRecipeEntry?.[1]}
-                inventory={inventory}
-                built={built}
-                tier2Unlocked={tier2Unlocked}
-                state={state}
-                dispatch={dispatch}
-              />
-            }
-          />
-        </FeaturePanel.Body>
+      <FeaturePanel.Body>
+        <BrowserDetailLayout
+          browser={
+            stationRecipes.length === 0 ? (
+              <div className="hl-empty">No recipes at this station.</div>
+            ) : (
+              <BrowserGrid min={170}>
+                {stationRecipes.map(([key, recipe]) => (
+                  <RecipeBrowserItem
+                    key={key}
+                    recipeKey={key}
+                    recipe={recipe}
+                    selected={selectedRecipeEntry?.[0] === key}
+                    inventory={inventory}
+                    built={built}
+                    tier2Unlocked={tier2Unlocked}
+                    craftedTotals={craftedTotals}
+                    state={state}
+                    onSelect={() => setSelectedRecipeKey(key)}
+                  />
+                ))}
+              </BrowserGrid>
+            )
+          }
+          detail={
+            <RecipeDetail
+              recipeKey={selectedRecipeEntry?.[0]}
+              recipe={selectedRecipeEntry?.[1]}
+              inventory={inventory}
+              built={built}
+              tier2Unlocked={tier2Unlocked}
+              state={state}
+              dispatch={dispatch}
+            />
+          }
+        />
+      </FeaturePanel.Body>
       )}
     </FeaturePanel>
   );

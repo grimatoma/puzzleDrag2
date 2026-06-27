@@ -187,7 +187,7 @@ const expectationOverrideById: Record<string, string> = {
   "story-prompt": "The act1_arrival story modal is open with narrative text.",
   "story-win": "The act3 win/victory story beat is presented.",
   "town-market-news": "A market-news ticker bubble (e.g. Wood Shortage) is visible over the town.",
-  "crafting-menu": "The crafting building menu (drill-down level 1): a card per workshop with its ready/placed status.",
+  "crafting-menu": "The crafting building menu (drill-down level 1): a card per BUILT workshop with its ready status. Unbuilt crafting buildings are hidden; there is no decor/Craft Table card.",
   // Retargeted to their real feature views
   "townsfolk-castle": "The Castle contribution view: the three needs with contribute progress and buttons.",
   "townsfolk-bosses": "The Bosses gallery view listing the boss roster.",
