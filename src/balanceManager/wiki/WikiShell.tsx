@@ -535,6 +535,16 @@ export default function WikiShell() {
               <span className="wiki-kbd">⌘K</span>
             </button>
             <a
+              href={`${import.meta.env.BASE_URL}docs/`}
+              target="_blank"
+              rel="noopener"
+              className="wiki-back-btn"
+              title="Open docs"
+              aria-label="Docs"
+            >
+              📄<span className="wiki-back-label"> Docs</span>
+            </a>
+            <a
               href={import.meta.env.BASE_URL}
               className="wiki-back-btn"
               title="Return to the game"
