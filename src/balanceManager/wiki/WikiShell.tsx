@@ -24,6 +24,7 @@ import { parseWikiFocus } from "./conceptEntities.js";
 import { wikiNavTarget } from "./WikiLinkButton.jsx";
 import { WikiViewProvider, useWikiView } from "./wikiView.js";
 import { pushRecent } from "./recents.js";
+import { useAutoReloadReady, applyAutoReload } from "../autoReload.js";
 
 // Lazy-load the heavy article/category/narrative renderers and the two
 // surviving developer utility tabs so they stay out of the shell chunk.
@@ -406,6 +407,7 @@ export default function WikiShell() {
     if (entry?.tab) navigate(wikiNavTarget(entry.tab, entry.id));
   }, [navigate]);
 
+  const autoReloadReady = useAutoReloadReady();
   const parsedFocus = parseWikiFocus(focus);
   const isConceptTab = CONCEPTS.some((c) => c.id === tab);
   // Only treat the focus as an entity article when it actually belongs to the
@@ -716,6 +718,29 @@ export default function WikiShell() {
           </main>
         </div>
       </div>
+    {autoReloadReady && (
+      <div
+        role="status"
+        className="fixed left-1/2 -translate-x-1/2 z-[200] flex items-center gap-3 py-2 pl-4 pr-2 rounded-2xl border-2 shadow-lg"
+        style={{
+          bottom: "24px",
+          maxWidth: "min(420px, calc(100vw - 24px))",
+          background: "#f4e8d0",
+          borderColor: "#b28b62",
+          color: "#5a3a20",
+        }}
+      >
+        <span className="text-[18px] leading-none select-none" aria-hidden="true">✨</span>
+        <span className="text-[13px] font-bold leading-tight">A new version is ready.</span>
+        <button
+          onClick={applyAutoReload}
+          className="ml-auto py-1.5 px-3 text-[13px] font-bold rounded-xl border-2 whitespace-nowrap"
+          style={{ background: "#d6612a", borderColor: "#a84010", color: "#fff" }}
+        >
+          Refresh
+        </button>
+      </div>
+    )}
     </div>
     </WikiViewProvider>
   );
