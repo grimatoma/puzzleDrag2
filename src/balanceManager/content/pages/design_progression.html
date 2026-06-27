@@ -1,0 +1,75 @@
+<p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;"><strong>Progression &amp; unlocking</strong> — how the world opens up: the map of settlements, what gates each one, how a town climbs its own ladder, and the capstone that closes the game. One spine, non-linear to walk, with a few soft gates for pacing — and <strong>no softlock by construction</strong>.</p>
+
+<p>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PROPOSED</span>
+  &nbsp;The roster below is the proposed direction. Ladders for zones that exist today are shown <em>live from code</em>; proposed zones are described qualitatively. The live <a href="#/page/progression">Progression timeline</a> and the <a href="#/zones">Zones</a> catalog are code-truth.
+</p>
+
+<p style="font-size:12.5px;color:#7a6c54;margin:0.6em 0 1em;border-bottom:1px solid #e2d6bd;padding-bottom:0.6em;">
+  <strong>Design (proposed):</strong>
+  <a href="#/page/design_overview">Overview</a> ·
+  <strong>Progression</strong> ·
+  <a href="#/page/design_atlas">Settlement Atlas</a> ·
+  <a href="#/page/design_economy">Economy</a> ·
+  <a href="#/page/design_systems">Systems</a> ·
+  <a href="#/page/design_meta">Meta &amp; Money</a> ·
+  <a href="#/page/design_status">Status &amp; Decisions</a>
+</p>
+
+<h2>The world map of settlements</h2>
+<p>The arc is one reconciled roster: a <strong>required spine</strong> the finale needs, plus <strong>optional frontier</strong> towns for content and cross-zone bonuses. The structural backbone (board-stacking, win tasks, signature buildings, the cozy→hard ramp) comes from the town arc; each settlement's environment, growth topology, hazard and <a href="#/bosses">boss</a> come from the zone atlas. Per-settlement detail is in the <a href="#/page/design_atlas">Settlement Atlas</a>.</p>
+
+<p style="font-weight:700;margin:0.8em 0 0.2em;color:#5d5544;">Required spine — all needed to raise the capital</p>
+<table>
+  <thead><tr><th>#</th><th>Settlement</th><th>Board(s)</th><th>Boss</th><th>In code today</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td><strong>Hearthwood Vale</strong> (home)</td><td>Farm</td><td>—</td><td>[[zones:home]]</td></tr>
+    <tr><td>2</td><td><strong>Two Rivers</strong></td><td>Farm + Mine</td><td>—</td><td><em>proposed</em></td></tr>
+    <tr><td>3</td><td><strong>Cinderhold</strong></td><td>Farm + Mine</td><td>[[bosses:ember_drake]]</td><td><em>proposed</em></td></tr>
+    <tr><td>4</td><td><strong>Gullcliff</strong></td><td>Farm + Mine + Fish</td><td>[[bosses:storm]]</td><td>cf. [[zones:harbor]]</td></tr>
+    <tr><td>5</td><td><strong>Greenmeadow</strong></td><td>Farm + Mine</td><td>[[bosses:mossback]]</td><td>[[zones:meadow]]</td></tr>
+    <tr><td>6</td><td><strong>Glimmerdeep</strong></td><td>Mine only</td><td>[[bosses:old_stoneface]]</td><td>cf. [[zones:caves]]</td></tr>
+    <tr><td>7</td><td><strong>Goldgrass · the Capital</strong> <span style="display:inline-block;font-size:10px;font-weight:700;padding:1px 6px;border-radius:999px;background:#f6dcd6;color:#9a3320;">finale</span></td><td>All</td><td>Goldhorn (proposed)</td><td>cf. [[zones:oldcapital]]</td></tr>
+  </tbody>
+</table>
+
+<p style="font-weight:700;margin:0.8em 0 0.2em;color:#5d5544;">Optional frontier — reachability + caravan, not required for the finale</p>
+<table>
+  <thead><tr><th>Settlement</th><th>Board</th><th>Boss</th><th>In code today</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Mirefen Hollow</strong></td><td>Fish</td><td>[[bosses:quagmire]]</td><td>[[zones:mirefen]]</td></tr>
+    <tr><td><strong>Hoarfrost Hold</strong></td><td>Farm</td><td>[[bosses:frostmaw]]</td><td><em>proposed</em></td></tr>
+    <tr><td><strong>Sunspire Oasis</strong></td><td>Farm</td><td>Sandwyrm (proposed)</td><td><em>proposed</em></td></tr>
+    <tr><td><strong>Aetherreach</strong></td><td>Mine</td><td>Sky Leviathan (proposed)</td><td><em>proposed</em></td></tr>
+    <tr><td><strong>Gravemoor</strong></td><td>special</td><td>Barrow-Lich (proposed)</td><td><em>proposed</em></td></tr>
+  </tbody>
+</table>
+<p style="font-size:13px;color:#7a6c54;"><em>The code already ships the headline bosses (Ember Drake, The Storm, Mossback, Old Stoneface, Quagmire, Frostmaw); the proposed work is the zone structure, names and tier ladders around them.</em></p>
+
+<h2>The founding model — non-linear, softly gated</h2>
+<p>Founding a town requires only that it is <strong>reachable on the map</strong> and that you can <strong>afford the rising caravan cost</strong> (a basket of goods that scales per founding). There is no "finish this town before founding the next." On top of that open base sit a few <strong>light, acyclic, pacing-oriented soft gates</strong>:</p>
+<ul>
+  <li><strong>Board-feed dependency.</strong> You can't run a mine until you own a farm (mines eat food as expedition turns), nor a fish board until you own a farm + mine (bait + tackle). The same stacking shown in the <a href="#/page/design_overview">Overview</a>.</li>
+  <li><strong>Low home-tier nudge.</strong> The first combination town asks a low home tier, so the farm loop is learned before the mine arrives — a nudge, not a wall.</li>
+  <li><strong>Rising caravan cost.</strong> Each successive founding costs more goods, so the frontier unfurls outward over time. Coins fund session tolls and wages, not founding.</li>
+  <li><strong>The finale gate</strong> (the only hard one): the capital opens once every required-spine town is complete.</li>
+</ul>
+
+<h2>The no-softlock invariant</h2>
+<p style="background:#eef4dd;border-left:3px solid #5f7d3a;padding:8px 12px;border-radius:6px;"><strong>A gating resource must be producible by the rung <em>before</em> it is spent.</strong> Every tier-up and founding cost may only demand goods the player can already make — a board resource of a board they own, or a crafted good whose station unlocks earlier. This makes "non-linear + soft gates" safe, and the live progression oracle checks it. (The historical softlock — home once needed [[resources:bread]] whose [[buildings:bakery]] needed a mine good — was exactly a violation of this rule, since re-costed onto farm goods.)</p>
+
+<h2>The home ladder — Hearthwood Vale</h2>
+<p>Home is the spine's anchor: a farm settlement that climbs on <strong>farm goods alone</strong> (no coins, no mine goods — the invariant in action). Each rung raises the plot count and unlocks building types. The live ladder ([[zones:home]] · <span data-wiki-fact="zone.home.rungCount"></span> rungs, <span data-wiki-fact="zone.home.ladderSpan"></span>):</p>
+<div data-wiki-tier-ladder="home"></div>
+<p style="font-size:13px;color:#7a6c54;"><em>Proposed tweak: rename the top rung <strong>City → Town</strong> and re-cost the ladder to the zones&nbsp;1–2 baseline (see <a href="#/page/design_economy">Economy</a>). The embed above always shows what is actually coded.</em></p>
+
+<h2>What a tier-up does (every settlement)</h2>
+<ul>
+  <li><strong>Raises the plot count</strong> — more room for buildings, the core scarcity lever.</li>
+  <li><strong>Unlocks building types</strong> — new stations, [[buildings:housing|houses]], and the town's signature export building.</li>
+  <li><strong>Levels the landmark in place</strong> — the central structure visibly transforms, so growth reads at a glance.</li>
+  <li><strong>Does not change the puzzle math</strong> — turn budget and yield are untouched; what changes is <em>what you can build</em>.</li>
+</ul>
+
+<h2>The finale</h2>
+<p>When every required-spine town is complete, the capital ([[zones:oldcapital]]) opens its capstone. The finale is <strong>narrative + payoff, not a new board type</strong>: a short run of story beats, a choice-reactive epilogue, and the build of a Monument that wakes the kingdom — plus a capstone reward and a place in the Chronicle. This supersedes the legacy "3 Hearth-Tokens" gate (kept as optional flavour). See the finale fiction on the <strong>Story</strong> page and the decision record on <a href="#/page/design_status">Status</a>.</p>

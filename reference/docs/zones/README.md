@@ -1,10 +1,10 @@
 # docs/zones — the Zone Atlas (and zone build-out)
 
-> **Design canon moved.** The canonical settlement roster, gate model and per-town design now
-> live in [`docs/design/towns.html`](../design/towns.html) + [`progression.html`](../design/progression.html).
-> This folder stays a **layout / art generator** — the environments, growth topologies, tier-ladder
-> costs and per-zone Grow play-throughs the canon draws from. Edit zone data here; state design
-> decisions in the canon.
+> **Design canon moved into the app.** The canonical settlement roster, gate model and per-town
+> design now live in the **in-app Wiki** (Dev Panel → *Design (proposed)*;
+> `src/balanceManager/content/pages/design_*.html`). This folder stays a **layout / art generator** —
+> the environments, growth topologies, tier-ladder costs and per-zone Grow play-throughs the canon
+> draws from. Edit zone data here; state design decisions in the in-app Design section.
 
 Ten unique, AAA-bar settlement zones for puzzleDrag2. Each is a different **environment** and a
 different **logic of growth**, built on the [town-layout](../town-layout/) foundation (roads-first,

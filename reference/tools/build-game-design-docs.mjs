@@ -21,13 +21,14 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-// RETIRED 2026-06-26 — superseded by the hand-authored canon at reference/docs/design/.
-// The old game-design/ output is archived under reference/docs/archive/game-design/. This
-// generator is kept for history but guarded to a no-op so it cannot regenerate stale,
-// non-canonical duplicates. Remove this guard intentionally if you ever revive the set.
+// RETIRED 2026-06-26 — superseded by the in-app Wiki "Design (proposed)" section
+// (src/balanceManager/content/pages/design_*.html). The old game-design/ output is archived
+// under reference/docs/archive/game-design/. This generator is kept for history but guarded to a
+// no-op so it cannot regenerate stale, non-canonical duplicates. Remove this guard intentionally
+// if you ever revive the set.
 console.warn(
-  "[build-game-design-docs] RETIRED: the game-design/ set is superseded by " +
-    "reference/docs/design/ (hand-authored). Not regenerating. See reference/docs/archive/README.md.",
+  "[build-game-design-docs] RETIRED: the game-design/ set is superseded by the in-app Wiki " +
+    "Design section (src/balanceManager/content/pages/design_*.html). Not regenerating. See reference/docs/archive/README.md.",
 );
 process.exit(0);
 
