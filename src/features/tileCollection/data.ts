@@ -460,9 +460,8 @@ export const TILE_TYPES = [
     id: "tile_herd_pig", category: "herd_animals", displayName: "Pig",
     baseResource: "tile_herd_pig", tier: 0,
     discovery: { method: "default" },
-    abilities: [{ id: "free_turn_if_chain", params: { minChain: 6 } }],
     effects: {},
-    description: "Chains of 6 or more grant a free move. Surprisingly tidy.",
+    description: "The staple of every farmyard herd — chain it for meat. Surprisingly tidy.",
   },
   {
     id: "tile_herd_hog", category: "herd_animals", displayName: "Hog",
