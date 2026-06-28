@@ -5,6 +5,8 @@ interface TileDef {
   id: string;
   category: string;
   discovery?: { method?: string };
+  abilities?: ReadonlyArray<unknown>;
+  effects?: Record<string, unknown>;
 }
 
 /**
@@ -38,6 +40,25 @@ describe("tile starting defaults", () => {
         defaults.length,
         `category "${category}" should have ${want} default tile(s), got: [${defaults.join(", ")}]`,
       ).toBe(want);
+    }
+  });
+
+  it("no default starting tile carries a power (abilities/effects)", () => {
+    // A brand-new game seeds its active board tiles from the `default`-discovery
+    // tiles, so those must be plain — a fresh first-time player should not start
+    // with any tile powers (e.g. free-move / coin-bonus abilities).
+    for (const t of tiles) {
+      if (t.discovery?.method !== "default") continue;
+      const abilities = t.abilities ?? [];
+      expect(
+        abilities.length,
+        `default tile "${t.id}" must have no abilities, got: ${JSON.stringify(abilities)}`,
+      ).toBe(0);
+      const effectKeys = Object.keys(t.effects ?? {});
+      expect(
+        effectKeys.length,
+        `default tile "${t.id}" must have no effects, got: [${effectKeys.join(", ")}]`,
+      ).toBe(0);
     }
   });
 
