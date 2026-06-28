@@ -1,1 +1,7 @@
-{}
+{
+  "go.goroot": "/home/grimatoma/.local/go",
+  "go.gopath": "/home/grimatoma/go",
+  "terminal.integrated.env.linux": {
+    "PATH": "/home/grimatoma/.local/node/bin:/home/grimatoma/.local/go/bin:${env:PATH}"
+  }
+}

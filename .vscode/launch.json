@@ -1,0 +1,22 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node",
+      "request": "launch",
+      "name": "Start Dev Server",
+      "runtimeExecutable": "/home/grimatoma/.local/node/bin/node",
+      "runtimeArgs": [
+        "/home/grimatoma/.local/node/lib/node_modules/npm/bin/npm-cli.js",
+        "run",
+        "dev",
+        "--",
+        "--host"
+      ],
+      "env": {
+        "PATH": "/home/grimatoma/.local/node/bin:/home/grimatoma/.local/go/bin:${env:PATH}"
+      },
+      "console": "integratedTerminal"
+    }
+  ]
+}
