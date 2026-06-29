@@ -114,7 +114,7 @@
   <header class="hero">
     <h1>Balance Automation</h1>
     <p class="sub">A closed loop that turns brute-force simulation into the thing that tunes the game — so balancing and feature-gating stop being a manual, play-to-verify grind. Built on Hearthlands' existing headless playtest harness.</p>
-    <p class="meta">Engineering design doc · Status: M1–M3 shipped, M4–M5 planned · branch <code>claude/quota-usage-brainstorm-b4bz8g</code> · PR #1392</p>
+    <p class="meta">Engineering design doc · Status: M1–M5 shipped (+ hiring &amp; board-search) · cross-zone mine/fish the one remaining extension · branch <code>claude/quota-usage-brainstorm-b4bz8g</code> · PR #1392</p>
     <div class="chips">
       <span class="chip">deterministic sim</span>
       <span class="chip">codemod write-back</span>
@@ -169,8 +169,10 @@
             <tr><td><b>M1 — Apply loop</b></td><td>Codemod writes a proposed change-list back into <code>constants.ts</code></td><td><span class="pill ok">shipped</span></td></tr>
             <tr><td><b>M2 — Faithful bracket</b></td><td>State-aware policies + macro layer + <code>--compare</code> floor↔ceiling</td><td><span class="pill ok">shipped</span></td></tr>
             <tr><td><b>M3 — Optimizer</b></td><td>Goal-driven, non-destructive knob search → appliable change-list</td><td><span class="pill ok">shipped</span></td></tr>
-            <tr><td><b>M4 — Declarative gating</b></td><td>Finish the progression engine's Phase&nbsp;2 + a CI softlock oracle</td><td><span class="pill warn">next</span></td></tr>
-            <tr><td><b>M5 — Reach more knobs</b></td><td>Data-drive market prices, tier costs, session length</td><td><span class="pill idle">later</span></td></tr>
+            <tr><td><b>M4 — Declarative gating</b></td><td>GameState→facts projector + declarative gates + softlock/coherence CI gate</td><td><span class="pill ok">shipped</span></td></tr>
+            <tr><td><b>M5 — Reach more knobs</b></td><td>Codemod reaches market prices, MAP_NODES tier costs, session length</td><td><span class="pill ok">shipped</span></td></tr>
+            <tr><td><b>+ M2 extensions</b></td><td>Worker hiring + a board-level lookahead search policy</td><td><span class="pill ok">shipped</span></td></tr>
+            <tr><td><b>Cross-zone arc</b></td><td>Sim mine/fish boards + zone sequencing (separate mechanic project)</td><td><span class="pill warn">next</span></td></tr>
           </tbody>
         </table>
       </section>
@@ -388,22 +390,20 @@ npm run playtest -- --compare --runs 60</code></pre>
     <div class="panel" id="roadmap" role="tabpanel" aria-label="Roadmap">
 
       <section id="next">
-        <h2>What's next</h2>
-        <p>The loop is closed for balance; two tracks extend it.</p>
+        <h2>What's shipped since, and what's left</h2>
+        <p>The loop closed with M1–M3; M4, M5, and the M2 extensions then landed too.</p>
 
-        <h3><span class="pill warn">next</span> &nbsp;M4 — Declarative gating + CI oracle</h3>
-        <p>The second manual blocker: feature-gating. A declarative trigger engine already exists at <code>src/config/progression/</code> (<code>ProgTrigger { when, effects, requires }</code>, a pure fact-tree evaluator, a <code>GameState</code>→facts bridge) but is staged at "Phase&nbsp;1: data only, no applier." M4 finishes it:</p>
-        <ul>
-          <li>A <code>GameState → FactSnapshot</code> projector + the missing <code>Effect</code> applier, replacing the scattered hardcoded reducer gates.</li>
-          <li>Resource-prerequisite gates become data: <code>{ fact: "resource.flour.total", op: "gte", value: 50 }</code> instead of hand-wired branches.</li>
-          <li>A CI test running the existing softlock oracle so a gate that soft-locks or strands a zone <em>fails the build</em> — instead of being caught by manual play.</li>
-        </ul>
+        <h3><span class="pill ok">shipped</span> &nbsp;M4 — Declarative gating + CI oracle</h3>
+        <p>The read-only half of the progression engine's Phase&nbsp;2: a pure <code>factsFromGameState</code> projector, so a feature gate is now <em>data</em> — <code>{ fact: "resource.flour.total", op: "gte", value: 50 }</code> evaluates against real state (tested to flip at exactly 50; compound gates compose natively). A coherence test plus the existing softlock/reachability oracle and tier-unlock union invariant mean a bad gate <em>fails the build</em>. <b>Deferred:</b> the live <code>Effect</code> applier that drives unlocks to replace the scattered hardcoded reducer gates — those gates already work, so swapping them is a behavior-preserving reducer refactor with no player-facing change and shouldn't be rushed.</p>
 
-        <h3><span class="pill idle">later</span> &nbsp;M5 — Reach more knobs</h3>
-        <p>About 30% of balance values aren't yet reachable by the codemod/optimizer: market prices, tier upgrade costs, and per-zone session length (<code>baseTurns</code>). M5 extends the codemod's path vocabulary (array-by-<code>id</code> descent already exists for <code>BUILDINGS</code>) so the optimizer can sweep them too — built on demand, as a real objective needs them.</p>
+        <h3><span class="pill ok">shipped</span> &nbsp;M5 — Reach more knobs</h3>
+        <p>The codemod descent generalized to follow id-keyed arrays at any depth, so it now reaches <code>MARKET_PRICES</code>, nested <code>MAP_NODES.&lt;zone&gt;.tiers.&lt;id&gt;.upgradeCost.*</code>, and board-template <code>baseTurns</code> — across both <code>constants.ts</code> and <code>cartography/data.ts</code> in one patch.</p>
 
-        <h3><span class="pill idle">later</span> &nbsp;M2 extensions — a richer ceiling</h3>
-        <p>The bracket can be made more faithful: worker <strong>hiring</strong> (<code>WORKERS/HIRE</code>) in the macro, a <strong>cross-zone</strong> arc (mine/fish boards, real travel/found sequencing) so full-game pacing is measurable, and an optional <strong>search-based</strong> ceiling agent that also surfaces dominant strategies before players do.</p>
+        <h3><span class="pill ok">shipped</span> &nbsp;M2 extensions — hiring + board search</h3>
+        <p>Worker <strong>hiring</strong> (<code>WORKERS/HIRE</code>) in the ceiling macro (build a House → hire farm threshold-reducers, conservatively with surplus), and a <strong>board-level lookahead search</strong> policy that beats greedy on chain coins (~+13% on home) by rolling out candidate moves a few plies.</p>
+
+        <h3><span class="pill warn">next</span> &nbsp;Cross-zone arc — the one substantial remainder</h3>
+        <p>Sequencing the FULL progression (farm → mine → fish → next zone) so cross-zone pacing is measurable. This is genuinely a separate project, not a quick generalization: the mine and fish boards don't share the farm's <code>FARM/ENTER</code> season flow — the mine is an <strong>expedition</strong> system (<code>EXPEDITION/DEPART</code> + food rations) and fishing has its own slice — so it's a mechanic integration, and the only live cross-zone edge today is home→meadow. The campaign's board loop is parameterized and ready; wiring the non-farm mechanics is the work. The optional <strong>reducer-level</strong> search agent (macro-exploit finder) sits behind the same deferred state.ts RNG-injection.</p>
       </section>
 
       <section id="appendix">
@@ -418,6 +418,10 @@ npm run playtest -- --compare --runs 60</code></pre>
               <tr><td>Model the macro-decision layer; ceiling clears the home tier-0 stall</td><td>M2b</td></tr>
               <tr><td>Add policy-bracket comparison harness + <code>--compare</code></td><td>M2d</td></tr>
               <tr><td>Add target-seeking optimizer framework + <code>--optimize</code></td><td>M3</td></tr>
+              <tr><td>Add worker hiring to the ceiling macro</td><td>M2b-2</td></tr>
+              <tr><td>Extend codemod reach to progression + market knobs</td><td>M5</td></tr>
+              <tr><td>Add GameState→FactSnapshot projector + declarative-gate validation</td><td>M4</td></tr>
+              <tr><td>Add a board-level lookahead search policy</td><td>M2e</td></tr>
             </tbody>
           </table>
         </details>
