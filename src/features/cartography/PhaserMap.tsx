@@ -32,6 +32,14 @@ let sharedStash: HTMLDivElement | null = null;
 // the currently-mounted component's dispatch closure.
 const tapHandler: { current: (id: string) => void } = { current: () => {} };
 
+// Latest React-side map state, mirrored at module scope so the (singleton) boot
+// can seed the scene without capturing any one component's closure. A background
+// warm-up boots before any cartography component has mounted, so these stay at
+// their empty defaults until the real view pushes state — which MapScene handles
+// gracefully (it falls back to `{}`).
+let latestPayload: MapPayload = {};
+let latestTapped: string | null = null;
+
 function ensureStash(): HTMLDivElement | null {
   if (typeof document === "undefined") return null;
   if (sharedStash && sharedStash.isConnected) return sharedStash;
@@ -41,6 +49,98 @@ function ensureStash(): HTMLDivElement | null {
   document.body.appendChild(div);
   sharedStash = div;
   return div;
+}
+
+/**
+ * Boot the singleton map game, parented into `host`. Shared by the component's
+ * cold-boot path and the background `warmMapScene()` pre-warm. Idempotent: if
+ * the game already exists (or another caller wins the boot race during the
+ * dynamic import) the existing instance is returned and no second engine is
+ * created.
+ */
+async function bootMapGame(host: HTMLElement, dpr: number): Promise<Phaser.Game | null> {
+  if (sharedGame) return sharedGame;
+  const [{ default: Phaser }, { MapScene }] = await Promise.all([
+    import("phaser"),
+    import("./MapScene.js"),
+  ]);
+  // A concurrent caller may have booted it while we awaited the import.
+  if (sharedGame) return sharedGame;
+
+  const cssW = Math.max(320, host.clientWidth || 320);
+  const cssH = Math.max(240, host.clientHeight || 240);
+  const game = new Phaser.Game({
+    type: Phaser.AUTO,
+    parent: host,
+    width: cssW * dpr,
+    height: cssH * dpr,
+    backgroundColor: "#e9dfc6",
+    scene: MapScene,
+    scale: {
+      mode: Phaser.Scale.NONE,
+      autoCenter: Phaser.Scale.NO_CENTER,
+      zoom: 1 / dpr,
+    },
+    render: {
+      antialias: true,
+      antialiasGL: true,
+      roundPixels: false,
+      pixelArt: false,
+      powerPreference: "low-power",
+    },
+    input: { activePointers: 2 },
+    callbacks: {
+      postBoot: (g: Phaser.Game) => {
+        const scene = g.scene.scenes[0];
+        if (scene) {
+          // Seed the scene from the latest React state once it has created its
+          // textures. For a warm boot this is the empty default; the real view
+          // pushes the true payload when it mounts (changedata → applyState).
+          scene.events.on("create", () => {
+            g.registry.set("carto.payload", latestPayload);
+            g.registry.set("carto.tapped", latestTapped);
+          });
+          scene.events.on("carto.nodetap", (id: string) => tapHandler.current(id));
+        }
+      },
+    },
+  });
+  sharedGame = game;
+  return game;
+}
+
+/**
+ * Background pre-warm: boot the map engine and bake all of its node/board
+ * textures into the offscreen stash *before* the player first opens the Map,
+ * so the first visit takes the instant fast path instead of showing the
+ * "unfurling map…" overlay for 1–2 s. No-op once the game is already booted.
+ * Safe to call any time after startup.
+ */
+export async function warmMapScene(): Promise<void> {
+  if (sharedGame) return;
+  const host = ensureStash();
+  if (!host) return;
+  const dpr = Math.min(typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1, 3);
+  let game: Phaser.Game | null;
+  try {
+    game = await bootMapGame(host, dpr);
+  } catch (err) {
+    console.error("Map scene warm-up failed:", err);
+    return;
+  }
+  if (!game) return;
+  // The bake runs on the scene's first frame (its `create`). Once that's done,
+  // park the render loop to sleep so a warmed-but-unvisited map isn't rendering
+  // offscreen for the rest of the session. Guarded on the canvas still living
+  // in the stash: if the player opened the Map first, its fast path reparented
+  // and woke the loop, and we must not put it back to sleep.
+  const g = game;
+  const parkLoop = () => {
+    if (g.canvas.parentElement === sharedStash) g.loop.sleep();
+  };
+  const scene = g.scene.scenes[0];
+  if (scene) scene.events.once("create", parkLoop);
+  else parkLoop();
 }
 
 /* Mounts the Phaser instance that runs the redesigned Hearthwood map.
@@ -122,48 +222,15 @@ export default function PhaserMap({
 
     (async () => {
       try {
-        const [{ default: Phaser }, { MapScene }] = await Promise.all([
-          import("phaser"),
-          import("./MapScene.js"),
-        ]);
-        if (cancelled || !hostRef.current) return;
-        const game = new Phaser.Game({
-          type: Phaser.AUTO,
-          parent: host,
-          width: cssW * dpr,
-          height: cssH * dpr,
-          backgroundColor: "#e9dfc6",
-          scene: MapScene,
-          scale: {
-            mode: Phaser.Scale.NONE,
-            autoCenter: Phaser.Scale.NO_CENTER,
-            zoom: 1 / dpr,
-          },
-          render: {
-            antialias: true,
-            antialiasGL: true,
-            roundPixels: false,
-            pixelArt: false,
-            powerPreference: "low-power",
-          },
-          input: { activePointers: 2 },
-          callbacks: {
-            postBoot: (g: Phaser.Game) => {
-              const scene = g.scene.scenes[0];
-              if (scene) {
-                scene.events.on("create", () => {
-                  sceneReadyRef.current = true;
-                  pushPayload(g, payload);
-                  pushTapped(g, tapped);
-                });
-                scene.events.on("carto.nodetap", (id: string) => {
-                  tapHandler.current(id);
-                });
-                sceneReadyRef.current = true;
-              }
-            },
-          },
-        });
+        const game = await bootMapGame(host, dpr);
+        if (cancelled || !hostRef.current || !game) return;
+        // A background warm-up may have already booted the game into the
+        // offscreen stash; bring its canvas into this host. If we booted it
+        // ourselves the canvas is already here and this is a no-op.
+        if (game.canvas.parentElement !== host) host.appendChild(game.canvas);
+        game.scale.resize(cssW * dpr, cssH * dpr);
+        game.loop.wake();
+        sceneReadyRef.current = true;
         sharedGame = game;
         gameRef.current = game;
         attachResize(game);
@@ -173,8 +240,8 @@ export default function PhaserMap({
         // never (WebGL context exhaustion) and the overlay would otherwise be
         // permanent.
         if (!cancelled) setLoading(false);
-        // The "create" event might have already fired by the time we attach a
-        // listener — push the initial payload defensively.
+        // The "create" event might have already fired by the time we get here
+        // (especially on a warm handoff) — push the current payload defensively.
         pushPayload(game, payload);
         pushTapped(game, tapped);
       } catch (err) {
@@ -223,12 +290,16 @@ export default function PhaserMap({
 }
 
 function pushPayload(game: Phaser.Game | null, payload: MapPayload): void {
+  // Mirror at module scope so a not-yet-booted (or warm-booted) game can seed
+  // itself from the latest state on `create`.
+  latestPayload = payload;
   const reg = game?.registry;
   if (!reg) return;
   reg.set("carto.payload", payload);
 }
 
 function pushTapped(game: Phaser.Game | null, tapped: string | null): void {
+  latestTapped = tapped;
   const reg = game?.registry;
   if (!reg) return;
   reg.set("carto.tapped", tapped);
