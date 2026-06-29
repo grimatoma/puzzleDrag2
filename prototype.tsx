@@ -1,12 +1,12 @@
 import React, { useEffect, useReducer, useRef, useState } from "react";
-import { COLS, ROWS, TILE, SCENE_EVENTS, dayKeyForDate } from "./src/constants.js";
+import { COLS, ROWS, TILE, SCENE_EVENTS, SEASONS, dayKeyForDate } from "./src/constants.js";
 import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
 import type Phaser from "phaser";
 import type { GameScene } from "./src/GameScene.js";
 import type { GameState, Grid, Action as GameAction, ChainCollectedPayload } from "./src/types/state.js";
 import type { ChainInfo, RuntimeTool } from "./src/ui/puzzleBoard.jsx";
-import { Hud } from "./src/ui/Hud.jsx";
+import { Hud, TideChip } from "./src/ui/Hud.jsx";
 import { TownView } from "./src/ui/Town.jsx";
 import { NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import LevelUpCinematic from "./src/ui/LevelUpCinematic.jsx";
@@ -34,6 +34,7 @@ import {
   PuzzleHotbar,
   PuzzleToolGrid,
   PuzzleToolModal,
+  SeasonIndicator,
   usePinnedTools,
   useMaxFitPins,
   useToolDrag,
@@ -395,6 +396,10 @@ export default function App() {
   const turnBudgetRaw = state.farmRun?.turnBudget;
   const turnBudget = typeof turnBudgetRaw === "number" ? turnBudgetRaw : 0;
   const seasonIdx = seasonIndexInSession(state.turnsUsed ?? 0, turnBudget || 1);
+  const turnsUsed = state.turnsUsed ?? 0;
+  const turnsRemaining = state.farmRun?.turnsRemaining ?? Math.max(0, turnBudget - turnsUsed);
+  const season = SEASONS[seasonIdx];
+  const showTide = state.biomeKey === "fish";
   const inspectedKey = inspectedTool?.key ?? state.toolPending ?? null;
   const dragTool = drag ? TOOL_BY_KEY[drag.key] : null;
   const dragToolWithCount = dragTool
@@ -420,6 +425,32 @@ export default function App() {
       dispatch={dispatch}
       onCloseInspect={() => setInspectedTool(null)}
     />
+  );
+  // Board top-chrome (leave button + season strip + tide) relocated out of the
+  // shared HUD band so the board area can claim the full viewport height. In
+  // landscape it sits atop the left rail; in portrait it spans the top.
+  const boardRailHead = (
+    <div className="flex items-center gap-2" data-testid="board-railhead">
+      <button
+        onClick={() => dispatch({ type: "OPEN_MODAL", modal: "leaveBoard" })}
+        className="w-8 h-8 rounded-lg bg-paper-soft border-2 border-iron flex items-center justify-center text-ink-mid font-bold text-large flex-shrink-0 leading-none"
+        data-testid="menu-btn"
+        aria-label="Leave board"
+        title="Leave board"
+      >←</button>
+      <div className="flex items-center gap-2 flex-1 min-w-0">
+        <SeasonIndicator
+          turnsUsed={turnsUsed}
+          turnBudget={turnBudget || 1}
+          turnsRemaining={turnsRemaining}
+          seasonIdx={seasonIdx}
+          seasonName={season.name}
+        />
+        {showTide && (
+          <TideChip fish={state.fish as React.ComponentProps<typeof TideChip>["fish"]} />
+        )}
+      </div>
+    </div>
   );
   const uiLocked = !!state.modal || state.view !== "board" || storyModalOpen;
   useAudio(state);
@@ -536,13 +567,17 @@ export default function App() {
         className="hl-app-shell relative w-full max-w-[1280px] aspect-[5/4] max-h-[100dvh] max-[1024px]:aspect-auto max-[1024px]:max-h-none max-[1024px]:w-full max-[1024px]:h-full max-[1024px]:max-w-none bg-[#f4ecd6] rounded-2xl max-[1024px]:rounded-none overflow-hidden shadow-2xl border border-[#c9b993] flex flex-col"
         style={{ zIndex: 1 }}
       >
-        {/* HUD bar */}
-        <Hud
-          state={state}
-          dispatch={dispatch}
-          inventorySearchOpen={inventorySearchOpen}
-          onInventorySearchToggle={() => setInventorySearchOpen((o) => !o)}
-        />
+        {/* HUD bar — hidden on the board so the puzzle claims the full
+            height; the board's leave button + season strip live in the
+            BoardLayout rail head instead. */}
+        {state.view !== "board" && (
+          <Hud
+            state={state}
+            dispatch={dispatch}
+            inventorySearchOpen={inventorySearchOpen}
+            onInventorySearchToggle={() => setInventorySearchOpen((o) => !o)}
+          />
+        )}
 
         {/* Main area: board + side panel, or town view */}
         <div className="flex-1 min-h-0 relative">
@@ -553,6 +588,10 @@ export default function App() {
               when in town view. */}
           <div className={`absolute inset-0 ${state.view === "board" ? "" : "invisible"}`}>
             <BoardLayout
+              // Gate on the board view: the board host stays mounted (hidden)
+              // on other views, so rendering the rail head only when active
+              // keeps a single menu-btn / season strip in the DOM at a time.
+              railHead={state.view === "board" ? boardRailHead : null}
               hotbar={
                 // zIndex elevates the hotbar (and its absolute-positioned
                 // dropdown / backdrop children) above the board area so the
