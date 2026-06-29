@@ -14,7 +14,7 @@ const SWAY_SPEED = 1.3;
 // held still for the remainder. Per-tile `_phase` offsets where each tile sits
 // in the cycle, so the gestures roll across the board (a wind front) instead of
 // every tile gusting — and pausing — in lockstep.
-const IDLE_PERIOD_MS = 5000;
+const IDLE_PERIOD_MS = 7500;
 const IDLE_ACTIVE_MS = 2500;
 
 /** Minimal shape of a resource/tile definition that TileObj needs. */
@@ -194,7 +194,9 @@ export class TileObj {
       return;
     }
     const sway = this.res.look?.sway;
-    if (!sway) {
+    // Hold upright when sway is absent, or while motion is off — including the
+    // board's warm-up grace window (scene.motionOn is false until it elapses).
+    if (!sway || this.scene.motionOn === false) {
       if (this.sprite.angle !== 0 && !this._tweenActive) this.sprite.angle = 0;
       return;
     }

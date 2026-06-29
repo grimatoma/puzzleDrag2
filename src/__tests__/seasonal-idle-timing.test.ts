@@ -84,8 +84,8 @@ describe("idleFrameAt — per-cell rest-then-play-once", () => {
     }
   });
 
-  it("the configured calm cadence is 5–10s of rest", () => {
-    expect(IDLE_REST_MIN_MS).toBe(5000);
-    expect(IDLE_REST_MAX_MS).toBe(10000);
+  it("the configured calm cadence is 7.5–15s of rest", () => {
+    expect(IDLE_REST_MIN_MS).toBe(7500);
+    expect(IDLE_REST_MAX_MS).toBe(15000);
   });
 });

@@ -52,6 +52,11 @@ import {
 /** Tile key for the civic-economy "care-package" crate (no biome, never pooled). */
 const CARE_PACKAGE_TILE_KEY = "care_package";
 
+/** Grace delay (ms) after the board mounts before idle animation begins. Tiles hold
+ *  their rest pose for this long so they don't all spring to life on load and the
+ *  motion work stays off the initial render. The animation clock starts at 0 after it. */
+const ANIM_STARTUP_DELAY_MS = 1500;
+
 function registryToolPower(value: unknown): ToolPower | null {
   if (!value || typeof value !== "object") return null;
   const id = (value as { id?: unknown }).id;
@@ -131,6 +136,11 @@ export class GameScene extends Phaser.Scene {
   /** Last time (ms) the seasonal-tile animation pass re-baked (≈20fps throttle). */
   _seasonalAnimLast: number = 0;
   _conceptAnimLast: number = 0;
+  /** Absolute Phaser clock (ms) at the first update() tick after this scene mounts.
+   *  Anchors a warm-up grace delay so idle animation does not all fire the instant the
+   *  board appears (and so the per-frame motion work doesn't pile onto initial load).
+   *  -1 until the first tick. */
+  _animStart: number = -1;
   /** Per-frame snapshot read by TileObj.ambient so each tile can pick its own idle
    *  frame: whether motion is enabled and the current season. Set once per update(). */
   motionOn: boolean = true;
@@ -2070,16 +2080,27 @@ export class GameScene extends Phaser.Scene {
 
   // Called every frame by Phaser. Drives the per-tile ambient sway.
   override update(time: number) {
+    // Warm-up grace delay: anchor an animation clock to the first tick after this
+    // scene mounts and hold idle motion at rest for ANIM_STARTUP_DELAY_MS. This keeps
+    // the board from springing to life the instant it renders (the tiles ease in a
+    // beat later) and keeps the per-frame motion/re-bake work off the busy initial
+    // load. After the delay the animation clock starts at 0, so each tile/key eases in
+    // from its own staggered phase rather than mid-motion.
+    if (this._animStart < 0) this._animStart = time;
+    const animMs = Math.max(0, time - this._animStart - ANIM_STARTUP_DELAY_MS);
+    const warmedUp = animMs > 0;
+
     // Snapshot motion + season once so each tile's ambient() can pick its own idle
-    // frame without recomputing them per cell.
-    this.motionOn = this._motionEnabled();
+    // frame without recomputing them per cell. During warm-up, treat motion as off so
+    // every tile holds its rest frame / upright pose.
+    this.motionOn = this._motionEnabled() && warmedUp;
     this.seasonName = currentSeasonName(this);
     for (let r = 0; r < ROWS; r++) {
       const row = this.grid[r];
       if (!row) continue;
       for (let c = 0; c < COLS; c++) {
         const t = row[c];
-        if (t) t.ambient(time);
+        if (t) t.ambient(animMs);
       }
     }
     // Seasonal tile animation: re-bake the (shared) textures of animated
@@ -2087,19 +2108,19 @@ export class GameScene extends Phaser.Scene {
     // the cost is ≤5 small texture redraws per tick (usually 1, often 0). The
     // ~33ms cadence keeps the bold idle ACTIONS (a peck dip, a hop, a wing
     // flare) from strobing — the slower 50ms cadence read as steppy on fast
-    // gestures.
-    if (this._motionEnabled() && time - this._seasonalAnimLast >= 33) {
+    // gestures. Gated on motionOn so it stays idle through the warm-up window.
+    if (this.motionOn && time - this._seasonalAnimLast >= 33) {
       this._seasonalAnimLast = time;
-      this._animateSeasonalTiles(time / 1000);
+      this._animateSeasonalTiles(animMs / 1000);
     }
     if (isConceptTileIconsEnabled()) {
       if (!conceptTilesPreloadReady()) {
         preloadConceptTileGifs().then(() => {
-          if (this.scene.isActive()) this._animateConceptTiles(time / 1000);
+          if (this.scene.isActive()) this._animateConceptTiles(animMs / 1000);
         });
-      } else if (this._motionEnabled() && time - this._conceptAnimLast >= 50) {
+      } else if (this.motionOn && time - this._conceptAnimLast >= 50) {
         this._conceptAnimLast = time;
-        this._animateConceptTiles(time / 1000);
+        this._animateConceptTiles(animMs / 1000);
       }
     }
   }
