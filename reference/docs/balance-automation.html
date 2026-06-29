@@ -271,7 +271,7 @@ progression spread: tier 0 → 1 (Δ1)</code></pre>
         <pre><code>$ npm run playtest -- --optimize
 loss 329.33 → 0 over 1 pass · ✓ in band
 proposed 7 edit(s):  ITEMS.jade.value → 68 · ITEMS.pearls.value → 101 · …</code></pre>
-        <div class="box warn"><b>Pacing targets are yours to set.</b> An optimizer is only as good as what it optimizes toward, and a pacing goal ("reaching Hamlet should take ~N runs") is a <em>design decision</em>, not something the tool should invent. The current <code>PROGRESSION_TARGETS</code> bands are explicit placeholders. The framework is ready; point it at a real number when you have one.</div>
+        <div class="box warn"><b>Pacing targets are yours to set.</b> An optimizer is only as good as what it optimizes toward, and a pacing goal ("reaching Hamlet should take ~N runs") is a <em>design decision</em>, not something the tool should invent. The current <code>PROGRESSION_TARGETS</code> bands are explicit placeholders. The framework is ready; point it at a real number when you have one. See <a href="#town1">Balancing Town&nbsp;1</a> for the exact fields and the run-it-later loop.</div>
       </section>
     </div>
 
@@ -314,6 +314,60 @@ git diff src/constants.ts
 # 5. re-validate across the bracket
 npm run playtest -- --compare --runs 60</code></pre>
         <div class="box"><b>Check the bracket, not one bot.</b> Before accepting a change, confirm it keeps the <em>floor</em> un-stuck and the <em>ceiling</em> un-trivialized (<code>--compare</code>). A change that fixes one end by breaking the other is a regression the single-policy view would miss.</div>
+      </section>
+
+      <section id="town1">
+        <h2>Balancing Town 1, concretely — what it tunes &amp; where you set it</h2>
+        <p>This is the walkthrough for the most common question: <em>how do I use this to balance finishing Town&nbsp;1, and where do the numbers live?</em> "Completing Town&nbsp;1" means climbing <b>home</b>'s tier ladder — Outpost → Hamlet → Village → City (tiers 0→3). Each rung has a real cost in <code>src/features/cartography/data.ts</code>; that's what pacing is measured against:</p>
+        <pre><code>Hamlet   { plank: 8,  hay_bundle: 10, bread: 6 }
+Village  { plank: 12, bread: 14, pie: 6, eggs: 8 }
+City     { plank: 20, bread: 24, pie: 12, soup: 8 }</code></pre>
+
+        <h3>How completion is measured</h3>
+        <p><b>Campaign mode</b> keeps one persistent state and plays many runs in a row; between runs the macro policy dispatches real <code>BUILD</code> / <code>CRAFTING/CRAFT_RECIPE</code> / <code>TIER_UP</code> actions. Its output <em>is</em> the Town-1 completion pacing — runs to reach each tier, plus where it stalls:</p>
+        <pre><code>npm run playtest -- --campaign --zones home --runs 80 --macro climb</code></pre>
+        <p>The macro you pick is the bracket end. <code>--macro floor</code> never crafts and stalls at tier&nbsp;0 on <code>bread×6</code>; <code>--macro climb</code> builds the Bakery, crafts bread from farm flour+eggs, and climbs. Balance Town&nbsp;1 so <em>both</em> ends land where you want — fast enough that the naive player isn't stuck, slow enough that a min-maxer can't skip it.</p>
+
+        <h3>The metrics, and where each target lives</h3>
+        <p>Every target is a hand-maintained literal in <strong>one file</strong> — <code>src/playtest/targets.ts</code>. That's where you "set" the goals:</p>
+        <table>
+          <thead><tr><th>Metric</th><th>Answers</th><th>Set the target in <code>targets.ts</code></th><th>Auto-tuned?</th></tr></thead>
+          <tbody>
+            <tr><td>Family-value spread</td><td>"Does any resource pay ≫ a staple tile?"</td><td><code>FAMILY_SPREAD_OUTLIER_FACTOR</code> (e.g. <code>3</code>)</td><td><span class="pill ok">yes</span> <code>--optimize</code></td></tr>
+            <tr><td>Coins / run</td><td>"Is one home run worth a sane amount?"</td><td><code>ZONE_COIN_TARGETS[].coinsPerRun</code></td><td><span class="pill idle">measured</span></td></tr>
+            <tr><td>Runs → coin milestone</td><td>"How many runs to afford the next settlement?"</td><td><code>PROGRESSION_TARGETS[].coinMilestones</code></td><td><span class="pill idle">measured</span></td></tr>
+            <tr><td><b>Runs → tier</b> <span class="pill info">Town 1 completion</span></td><td>"How many runs to reach Hamlet / Village / City?"</td><td><code>PROGRESSION_TARGETS[].tierRuns</code> (empty today)</td><td><span class="pill warn">wire it</span></td></tr>
+          </tbody>
+        </table>
+        <p>The <code>tierRuns</code> band is the Town-1-completion knob, and it was deliberately left empty in v1 with a note: <em>"add tier bands once the campaign simulates crafting."</em> The <code>climb</code> macro now does — so the band is ready to fill, e.g. <code>tierRuns: [{ tier: 3, name: "City", runs: [30, 55] }]</code>.</p>
+
+        <div class="box warn"><b>Measured vs. auto-tuned — be clear-eyed.</b> The campaign <em>measures</em> all four metrics and grades each against its band (<code>within</code> / <code>above</code> / <code>below</code> / <code>unreached</code>). But <code>--optimize</code> today only auto-tunes the <em>spread</em> objective, because that one needs no design call. <strong>Pacing — including runs-to-tier — is measured and reported, not yet auto-searched.</strong> Closing that is two steps: <b>(1)</b> set a <code>tierRuns</code> band for home (the design call — "how long <em>should</em> Town&nbsp;1 take?"), and <b>(2)</b> wire a pacing objective (a sibling of <code>spreadObjective</code>) whose loss is the campaign's distance from that band.</div>
+
+        <h3>Which numbers move Town-1 pacing</h3>
+        <p>All of these are codemod-reachable (M1+M5), so the optimizer can propose them and <code>playtest:apply</code> can write them back:</p>
+        <ul>
+          <li><b>Tier costs</b> — <code>MAP_NODES.home.tiers.&lt;rung&gt;.upgradeCost.resources.&lt;k&gt;</code> (e.g. lower City's <code>bread</code> from 24).</li>
+          <li><b>Recipe inputs</b> — <code>RECIPES.rec_bread.inputs.flour</code> (cheaper bread → faster every rung that needs it).</li>
+          <li><b>Tile / item values</b> — <code>ITEMS.&lt;r&gt;.value</code> (raises coins/run, indirectly speeds the coin milestones).</li>
+          <li><b>Market prices &amp; session length</b> — <code>MARKET_PRICES.&lt;k&gt;.*</code>, board-template <code>baseTurns</code>.</li>
+        </ul>
+
+        <h3>Run it later — the Town-1 loop</h3>
+        <pre><code># 1. Measure where Town 1 completion stands, at BOTH bracket ends
+npm run playtest -- --campaign --zones home --runs 80 --macro floor
+npm run playtest -- --campaign --zones home --runs 80 --macro climb
+
+# 2. Decide the target — add a tierRuns band for home in src/playtest/targets.ts:
+#      tierRuns: [{ tier: 3, name: "City", runs: [30, 55] }]
+
+# 3. Adjust a cost (a tier upgradeCost, the bread recipe, or a tile value) —
+#    by hand, or let --optimize propose it — then write it back to source:
+npm run playtest:apply
+
+# 4. Re-measure; the campaign verdict should move toward "within"
+npm run playtest -- --campaign --zones home --runs 80 --macro climb</code></pre>
+
+        <div class="box tip"><b>Next build (optional).</b> Wire a pacing objective so <code>--optimize</code> searches the tier costs / bread recipe to land runs-to-City inside your band automatically — validated across floor <em>and</em> ceiling so it can't "fix" the average player by soft-locking the naive one. The optimizer framework already supports it; it needs the band (step&nbsp;2) plus a ~30-line loss function reading the campaign's runs-to-tier.</div>
       </section>
 
       <section id="example">
