@@ -29,6 +29,14 @@ interface TownPhaserCanvasProps {
    * to town is instant rather than a full cold reboot.
    */
   active?: boolean;
+  /**
+   * Background pre-warm: boot the Phaser engine and bake all of the town's
+   * textures *before* the player first navigates here, even while the view is
+   * still hidden (`active` false). Set once the main board is up so the first
+   * real town visit is instant instead of showing a 1–2 s blank while the
+   * engine cold-boots and bakes. Has no effect once the game is already booted.
+   */
+  warm?: boolean;
   /** Fired once the town's Phaser engine has booted (or failed to) — drives the
    *  initial loading screen dismissal when the game opens straight into town. */
   onReady?: () => void;
@@ -46,6 +54,7 @@ export default function TownPhaserCanvas({
   buildingsMap,
   pendingBuilding,
   active = true,
+  warm = false,
   onReady,
   onPlaceBuilding,
   onClickBuilding,
@@ -55,6 +64,9 @@ export default function TownPhaserCanvas({
   const gameRef = useRef<GameWithObserver | null>(null);
   const dprRef = useRef(Math.min(typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1, 3));
   const [loading, setLoading] = useState(true);
+  // Flips true once the Phaser game has booted. Lets the pause/resume effect
+  // re-run after an async (and possibly hidden, pre-warm) boot completes.
+  const [booted, setBooted] = useState(false);
   // onReady must fire exactly once (the boot effect runs once); read it through
   // a ref and latch so a later prop change can't re-trigger it.
   const onReadyRef = useRef(onReady);
@@ -113,11 +125,15 @@ export default function TownPhaserCanvas({
     }
   }, [builtLots, buildingsMap, pendingBuilding]);
 
-  // Boot Phaser lazily, the first time the town view is shown. Guarded on
-  // gameRef so it only ever runs once; subsequent show/hide toggles are handled
-  // by the pause/resume effect below.
+  // Boot Phaser the first time the town view is shown — or earlier, while still
+  // hidden, when `warm` is set (background pre-warm after the board is up).
+  // Guarded on gameRef so it only ever runs once; subsequent show/hide toggles
+  // are handled by the pause/resume effect below. When warming while hidden the
+  // host has no measured size, so the boot falls back to a default canvas size
+  // (see cssW/cssH below) and the pause/resume effect resizes to the real host
+  // on first show.
   useEffect(() => {
-    if (!active || gameRef.current || !hostRef.current) return undefined;
+    if ((!active && !warm) || gameRef.current || !hostRef.current) return undefined;
     const host = hostRef.current;
     const dpr = dprRef.current;
     let cancelled = false;
@@ -214,6 +230,13 @@ export default function TownPhaserCanvas({
 
         gameRef.current = game as GameWithObserver;
         if (!cancelled) setLoading(false);
+        // Signal the pause/resume effect to (re)evaluate now that the game
+        // exists. Matters for a background pre-warm: the engine booted while
+        // hidden (active false), and the pause/resume effect already ran at
+        // mount before the game existed, so the scene would otherwise keep
+        // rendering offscreen. Re-running it now pauses the hidden scene; the
+        // same effect wakes it on first show.
+        if (!cancelled) setBooted(true);
         fireReady();
       } catch (err) {
         console.error("Failed to boot Phaser TownScene:", err);
@@ -226,7 +249,7 @@ export default function TownPhaserCanvas({
     return () => {
       cancelled = true;
     };
-  }, [active]);
+  }, [active, warm]);
 
   // When the settlement changes (different zone, or a tier upgrade rebuilds the
   // plan), restart the existing scene in place rather than rebuilding the whole
@@ -272,7 +295,7 @@ export default function TownPhaserCanvas({
       scene?.scene.pause();
       game.loop.sleep?.();
     }
-  }, [active]);
+  }, [active, booted]);
 
   // Unmount-only teardown: this is the single place the game is destroyed.
   useEffect(() => {
