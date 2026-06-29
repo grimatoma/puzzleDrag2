@@ -201,6 +201,7 @@ export * from "./metrics.js";
 export * from "./emitChangeList.js";
 export * from "./board.js";
 export * from "./policy.js";
+export * from "./macro.js";
 export * from "./payload.js";
 export * from "./prng.js";
 export * from "./campaign.js";

@@ -59,7 +59,7 @@ globalThis.localStorage = {
 };
 
 function parseArgs(argv) {
-  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, accept: false, apply: false, applyFrom: null, format: false, snapshot: true };
+  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", macro: "floor", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, accept: false, apply: false, applyFrom: null, format: false, snapshot: true };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const val = () => argv[++i];
@@ -68,6 +68,7 @@ function parseArgs(argv) {
       case "--runs": out.runs = Math.max(1, parseInt(val(), 10) || 1); break;
       case "--seed": out.seed = parseInt(val(), 10) || 0; break;
       case "--policy": out.policy = val(); break;
+      case "--macro": out.macro = val(); break;
       case "--rows": out.rows = Math.max(3, parseInt(val(), 10) || 6); break;
       case "--cols": out.cols = Math.max(3, parseInt(val(), 10) || 6); break;
       case "--out": out.outDir = val(); break;
@@ -167,7 +168,7 @@ async function main() {
     } else if (args.campaign) {
       campaign = mod.runCampaign({
         zoneId: args.zones[0], runs: args.runs, seed: args.seed,
-        policy: args.policy, rows: args.rows, cols: args.cols,
+        policy: args.policy, macro: args.macro, rows: args.rows, cols: args.cols,
       });
     } else {
       report = mod.runPlaytest({
