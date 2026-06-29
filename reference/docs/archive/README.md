@@ -11,6 +11,18 @@ their folder.
 
 ---
 
+## Town/board feature specs — shipped or dropped · 2026-06-29
+Point-in-time proposals and prototype boards for features now resolved in `src/`, newest first:
+
+- `town1-2-economy-design.html` — superseded redirect stub ("this doc moved into the game"); design canon now in the in-app Wiki.
+- `mobile-horizontal-layout/` — shipped: mobile landscape "maximize the board" layout (`src/game/layout.ts`, `GameScene`).
+- `road-system-proposal.html` + `road-proposal-assets/` — shipped: cohesive road/cobble/plaza tiles live in `src/ui/town/townMaps.ts` + `TownScene`.
+- `town-orientation/` — superseded perspective study ("three looks"); the ¾ top-down decision was settled by the still-active `town-camera/` study (kept live; it's the mandate for open project `18-town-2d-lighting`).
+- `icon-tile-audit/` — completed one-time audit; fixes landed across the icon waves.
+- `tile-resource-proposal.md` — shipped: the tile→tier-1 yield rule is implemented in `src/game/producedResource.ts` + the `tilePower` schema (`producesResource`).
+- `hd2d-village/`, `hd2d-village-sim/` — dropped: R3F/three.js HD-2D 3D direction was not adopted (no `three`/`@react-three` dependency; the game stayed Phaser/Canvas).
+- `building-art/` — dropped: proposed a pixel-art building pass; town buildings shipped as vector art (`tiles/townProps.ts`).
+
 ## Game-design, balance & zones prose — superseded by the in-app Design section · 2026-06-26
 Merged into the consolidated **Design (proposed)** section of the in-app Wiki (Dev Panel → Design;
 `src/balanceManager/content/pages/design_*.html`) — overview & scope, progression, settlement
