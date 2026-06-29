@@ -273,6 +273,7 @@ export interface GameState {
     discovered: Record<string, boolean>;
     researchProgress: Record<string, number>;
     activeByCategory: Record<string, string | null>;
+    researchByCategory: Record<string, string | null>;
     freeMoves: number;
     [k: string]: unknown;
   };

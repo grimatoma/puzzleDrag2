@@ -114,6 +114,8 @@ describe("getCategoryViewModel", () => {
       tileCollection: {
         discovered: {},
         researchProgress: { tile_grass_spiky: 7 },
+        // Focused on this tile → status reads "Researching" with the live fraction.
+        researchByCategory: { grass: "tile_grass_spiky" },
       },
     };
     const rows = getCategoryViewModel(state, "grass");

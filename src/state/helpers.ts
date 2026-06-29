@@ -90,6 +90,8 @@ export interface TileCollectionSlice {
   discovered: Record<string, boolean>;
   researchProgress: Record<string, number>;
   activeByCategory: Record<string, string | null>;
+  /** Per-category research focus: category -> the tileId currently being researched, or null. */
+  researchByCategory: Record<string, string | null>;
   freeMoves: number;
   [extra: string]: unknown;
 }
@@ -105,7 +107,11 @@ export function defaultTileCollectionSlice(): TileCollectionSlice {
   const discovered: Record<string, boolean> = {};
   const researchProgress: Record<string, number> = {};
   const activeByCategory: Record<string, string | null> = {};
-  for (const c of CATEGORIES as readonly string[]) activeByCategory[c] = null;
+  const researchByCategory: Record<string, string | null> = {};
+  for (const c of CATEGORIES as readonly string[]) {
+    activeByCategory[c] = null;
+    researchByCategory[c] = null;
+  }
   for (const t of TILE_TYPES as readonly TileTypeEntry[]) {
     if (t.discovery.method === "default") {
       discovered[t.id] = true;
@@ -116,7 +122,7 @@ export function defaultTileCollectionSlice(): TileCollectionSlice {
       researchProgress[t.id] = 0;
     }
   }
-  return { discovered, researchProgress, activeByCategory, freeMoves: 0 };
+  return { discovered, researchProgress, activeByCategory, researchByCategory, freeMoves: 0 };
 }
 
 /**
@@ -137,8 +143,11 @@ export function mergeLoadedState(saved: Record<string, unknown> | null | undefin
     const discovered = { ...freshTileCollection.discovered, ...(src.discovered ?? {}) };
     const researchProgress = { ...freshTileCollection.researchProgress, ...(src.researchProgress ?? {}) };
     const activeByCategory = { ...freshTileCollection.activeByCategory, ...(src.activeByCategory ?? {}) };
+    // Old saves predate research focus → fresh all-null map (nothing researching).
+    // researchProgress above is preserved but stays paused until a tile is re-selected.
+    const researchByCategory = { ...freshTileCollection.researchByCategory, ...(src.researchByCategory ?? {}) };
     const freeMoves = typeof src.freeMoves === "number" ? src.freeMoves : 0;
-    tileCollection = { discovered, researchProgress, activeByCategory, freeMoves };
+    tileCollection = { discovered, researchProgress, activeByCategory, researchByCategory, freeMoves };
   }
   const out = { ...savedRec };
   delete out.species; // remove legacy key if present

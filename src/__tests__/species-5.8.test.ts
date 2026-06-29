@@ -23,7 +23,8 @@ describe("Phase 5.8 — Tile Collection panel UI (getCategoryViewModel)", () => 
     expect(meadowRow.status).toBe("Locked — chain 20 grass to discover");
 
     // Display strips the catalog category prefix → user sees "grass" not "tile_grass_grass".
-    expect(spikyRow.status).toBe("Researching grass: 0 / 50");
+    // A fresh save has no research focus selected, so research tiles read as paused.
+    expect(spikyRow.status).toBe("Paused — grass: 0 / 50");
   });
 
   it("B: chain-discovered tile type shows discovered status", () => {
@@ -44,6 +45,8 @@ describe("Phase 5.8 — Tile Collection panel UI (getCategoryViewModel)", () => 
       tileCollection: {
         ...base.tileCollection,
         researchProgress: { ...base.tileCollection.researchProgress, tile_grass_spiky: 12 },
+        // Tile is the player's active research focus → status reads "Researching".
+        researchByCategory: { ...base.tileCollection.researchByCategory, grass: "tile_grass_spiky" },
       },
     };
     const grassRows = getCategoryViewModel(c0, "grass");

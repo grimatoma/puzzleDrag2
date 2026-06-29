@@ -48,6 +48,26 @@ describe("Phase 5.2 — state.tileCollection slice", () => {
     }
   });
 
+  it("researchByCategory seeded to null for every category (no research focus at start)", () => {
+    const s0 = initialState();
+    expect(s0.tileCollection.researchByCategory).toBeTruthy();
+    for (const v of Object.values(s0.tileCollection.researchByCategory)) {
+      expect(v).toBe(null);
+    }
+    // A specific known category is present and null.
+    expect(s0.tileCollection.researchByCategory.grass).toBe(null);
+  });
+
+  it("mergeLoadedState backfills researchByCategory for old saves and round-trips a selection", () => {
+    const s0 = initialState();
+    // Old save with no researchByCategory key → backfilled to all-null.
+    const legacy = mergeLoadedState({ tileCollection: { discovered: {}, researchProgress: {}, activeByCategory: {} } });
+    expect(legacy.tileCollection.researchByCategory.grass).toBe(null);
+    // A saved selection survives the merge.
+    const withFocus = mergeLoadedState({ tileCollection: { ...s0.tileCollection, researchByCategory: { grass: "tile_grass_spiky" } } });
+    expect(withFocus.tileCollection.researchByCategory.grass).toBe("tile_grass_spiky");
+  });
+
   it("save → load preserves tileCollection slice", () => {
     const s0 = initialState();
     const saved = JSON.parse(JSON.stringify(s0));

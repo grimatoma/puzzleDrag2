@@ -10,7 +10,7 @@ import { gotoFresh, getReactState, dispatchAction } from './helpers';
 test('BUY_TILE debits coins and marks the tile discovered', async ({ page }) => {
   await gotoFresh(page, {
     coins: 10000,
-    tileCollection: { discovered: {}, researchProgress: {}, activeByCategory: {}, freeMoves: 0 },
+    tileCollection: { discovered: {}, researchProgress: {}, activeByCategory: {}, researchByCategory: {}, freeMoves: 0 },
   });
   // Pick any buyable tile id from constants. The reducer ignores ids whose
   // discovery.method !== "buy", so we use one we know is buyable.
@@ -28,7 +28,7 @@ test('Re-buying an already-discovered tile is a no-op', async ({ page }) => {
     coins: 10000,
     tileCollection: {
       discovered: { tile_flower_pansy: true },
-      researchProgress: {}, activeByCategory: {}, freeMoves: 0,
+      researchProgress: {}, activeByCategory: {}, researchByCategory: {}, freeMoves: 0,
     },
   });
   const before = await getReactState(page);
