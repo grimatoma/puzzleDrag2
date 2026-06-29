@@ -1,10 +1,16 @@
 import { describe, it, expect } from "vitest";
 import { ICON_ANIMATIONS, ANIMATED_ICON_KEYS, iconAnimation, hasIconAnimation } from "../textures/iconAnimations.js";
 import { ICON_REGISTRY } from "../textures/iconRegistry.js";
+import { CONCEPT_ICON_BATCHES } from "../textures/conceptIconBatches.js";
 
 describe("icon animations", () => {
   it("every animation key maps to a registered static icon", () => {
-    const orphans = [...ANIMATED_ICON_KEYS].filter((k) => !ICON_REGISTRY[k]);
+    // A static draw may live in the in-game registry OR the Dev-Panel-only
+    // concept batches (kept out of the `/` bundle — health review #10/OPT-5).
+    // Both render in the Dev Panel Icons tab where animations overlay the still.
+    const orphans = [...ANIMATED_ICON_KEYS].filter(
+      (k) => !ICON_REGISTRY[k] && !(k in CONCEPT_ICON_BATCHES),
+    );
     if (orphans.length) console.log("Orphan animation keys:\n  " + orphans.join("\n  "));
     expect(orphans).toEqual([]);
   });

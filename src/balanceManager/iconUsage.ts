@@ -17,6 +17,7 @@ import { TOOL_CATALOG } from "../ui/toolRegistry.js";
 import { BOSSES } from "../features/bosses/data.js";
 import { DECORATIONS } from "../features/decorations/data.js";
 import { ICON_REGISTRY } from "../textures/iconRegistry.js";
+import { CONCEPT_ICON_KEYS } from "../textures/conceptIconBatches.js";
 
 // Hard-coded list of icon keys referenced by JSX literals (e.g. ui_lock in
 // Town.jsx:362), rich-text placeholders (e.g. [icon:ui_star] in NPC bubbles),
@@ -164,7 +165,10 @@ export function getUsedIconKeys(): Set<string> {
   // referenced via template-literal lookups (cat_${cat}, etc.) or by id
   // through indirection layers (storyEditor character map, hazard catalogs).
   // Explicitly excludes `legacy_` so archived entries still flag as unused.
-  for (const key of Object.keys(ICON_REGISTRY || {})) {
+  // Scans both the in-game registry and the Dev-Panel-only concept batches
+  // (e.g. `bld_*`, consumed by the wiki) so usage badging is unaffected by the
+  // concept art living in a separate module — see conceptIconBatches.ts.
+  for (const key of [...Object.keys(ICON_REGISTRY || {}), ...CONCEPT_ICON_KEYS]) {
     if (key.startsWith("legacy_")) continue;
     if (DYNAMIC_PREFIXES_CANVAS.some((p) => key.startsWith(p))) add(key);
   }

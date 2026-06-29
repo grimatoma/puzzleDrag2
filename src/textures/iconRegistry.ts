@@ -38,28 +38,18 @@ import { ICONS as G_ACHIEVEMENTS } from "./categories/achievements.js";
 import { ICONS as G_QUESTS } from "./categories/quests.js";
 import { ICONS as G_CURRENCIES } from "./categories/currencies.js";
 import { ICONS as G_FIXED_ICONS } from "./categories/fixed-icons.js";
-import { ICONS as G_GEMS } from "./categories/gems.js";
-import { ICONS as G_WEATHER } from "./categories/weather.js";
-import { ICONS as G_DISHES } from "./categories/dishes.js";
-import { ICONS as G_REEF } from "./categories/reef.js";
-import { ICONS as G_CRITTERS } from "./categories/critters.js";
-import { ICONS as G_ARCANE } from "./categories/arcane.js";
+// In-game town props: `cozyDecor` and `nature` draws are consumed by
+// `src/ui/town/tiles/manifest.ts`, so they remain registered in-game (NOT moved
+// to the Dev-Panel-only concept batches).
 import { ICONS as G_COZY_DECOR } from "./categories/cozyDecor.js";
-import { ICONS as G_CELESTIAL } from "./categories/celestial.js";
-import { ICONS as G_ORES } from "./categories/ores.js";
-import { ICONS as G_PETS } from "./categories/pets.js";
-import { ICONS as G_TREASURE } from "./categories/treasure.js";
-import { ICONS as G_DRINKS } from "./categories/drinks.js";
-import { ICONS as G_FURNITURE } from "./categories/furniture.js";
-import { ICONS as G_INSTRUMENTS } from "./categories/instruments.js";
-import { ICONS as G_FESTIVE } from "./categories/festive.js";
-import { ICONS as G_CROPS } from "./categories/crops.js";
-import { ICONS as G_WORKSHOP_TOOLS } from "./categories/workshopTools.js";
 import { ICONS as G_NATURE } from "./categories/nature.js";
-import { ICONS as G_WEAPONS } from "./categories/weapons.js";
-import { ICONS as G_SPELLS } from "./categories/spells.js";
-import { ICONS as G_BUILDINGS } from "./categories/buildings.js";
-import { ICONS as G_ARCHIVED } from "./categories/archivedIcons.js";
+// NOTE: 20 decorative "concept" category batches (gems, weather, dishes, reef,
+// critters, arcane, celestial, ores, pets, treasure, drinks, furniture,
+// instruments, festive, crops, workshopTools, weapons, spells, buildings,
+// archivedIcons) used to be imported and spread here. They are Dev-Panel-only
+// (never referenced by any in-game catalog) and now live in
+// `./conceptIconBatches.ts`, imported only by the Dev Panel Icons tab, so their
+// large draw code stays OUT of the `/` game bundle. See health review #10/OPT-5.
 import { paintSeasonalReference, ensureSeasonalArtLoaded, ensureAllSeasonalArtLoaded, seasonalArtActive, seasonalBakedActive, isPotentialBakedSubject, hasSeasonalArtFolder } from "./seasonal/seasonalArt.js";
 
 export interface IconRegistryEntry {
@@ -149,33 +139,13 @@ const REGISTRY_DRAFT: IconRegistryDictionary = {
   ...G_QUESTS,
   ...G_CURRENCIES,
   ...G_FIXED_ICONS,
-  // Decorative concept batches — additive icons that surface in the Dev Panel
-  // Icons tab (grouped by key prefix). Not referenced by any catalog yet.
-  ...G_GEMS,
-  ...G_WEATHER,
-  ...G_DISHES,
-  ...G_REEF,
-  ...G_CRITTERS,
-  ...G_ARCANE,
+  // In-game town props (consumed by ui/town/tiles/manifest.ts).
   ...G_COZY_DECOR,
-  ...G_CELESTIAL,
-  ...G_ORES,
-  ...G_PETS,
-  ...G_TREASURE,
-  ...G_DRINKS,
-  ...G_FURNITURE,
-  ...G_INSTRUMENTS,
-  ...G_FESTIVE,
-  ...G_CROPS,
-  ...G_WORKSHOP_TOOLS,
   ...G_NATURE,
-  ...G_WEAPONS,
-  ...G_SPELLS,
-  ...G_BUILDINGS,
-  // Archived legacy draws live under `legacy_<key>` keys. They render in the
-  // Dev Panel's Icons tab but are never used in-game. Spread last so
-  // they can never accidentally override an active key.
-  ...G_ARCHIVED,
+  // The remaining decorative "concept" batches + archived legacy draws that used to
+  // be spread here are now Dev-Panel-only — see `./conceptIconBatches.ts` and
+  // the import note above. The game registry holds only icons reachable from
+  // in-game catalogs.
 };
 aliasIconKeys(REGISTRY_DRAFT);
 export const ICON_REGISTRY: Readonly<IconRegistryDictionary> = Object.freeze(REGISTRY_DRAFT);
