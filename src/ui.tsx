@@ -67,6 +67,7 @@ export function BottomNav({ view, dispatch, state }: { view: string; dispatch: D
       <Tab itemKey="crafting" iconKey="ui_build" label="Craft" />
       <Tab itemKey="cartography" iconKey="ui_map" label="Map" />
       <Tab itemKey="townsfolk" iconKey="ui_people" label="Townsfolk" />
+      <Tab itemKey="quests" iconKey="quest_book" label="Quests" />
     </TabBar>
   );
 }

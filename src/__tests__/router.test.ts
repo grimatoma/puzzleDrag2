@@ -45,10 +45,9 @@ describe("router.parseHash", () => {
     });
   });
 
-  it("captures the quests / achievements / townsfolk sub-tab", () => {
+  it("captures the quests / achievements sub-tab", () => {
     expect(parseHash("#/quests/almanac").viewParams).toEqual({ tab: "almanac" });
     expect(parseHash("#/achievements/collection").viewParams).toEqual({ tab: "collection" });
-    expect(parseHash("#/townsfolk/bosses").viewParams).toEqual({ tab: "bosses" });
   });
 
   it("captures the cartography zone segment", () => {
@@ -130,7 +129,7 @@ describe("router.buildHash", () => {
       { view: "crafting", modal: null, viewParams: { tab: "tools" }, modalParams: {} },
       { view: "quests", modal: null, viewParams: { tab: "almanac" }, modalParams: {} },
       { view: "achievements", modal: null, viewParams: { tab: "collection" }, modalParams: {} },
-      { view: "townsfolk", modal: null, viewParams: { tab: "bosses" }, modalParams: {} },
+      { view: "townsfolk", modal: null, viewParams: {}, modalParams: {} },
       { view: "cartography", modal: null, viewParams: { zone: "orchard" }, modalParams: {} },
       { view: "cartography", modal: null, viewParams: {}, modalParams: {} },
       { view: "chronicle", modal: null, viewParams: {}, modalParams: {} },
@@ -166,7 +165,7 @@ describe("router.routeFromState", () => {
   });
 
   it("projects viewParams.tab onto the route for tab-bearing views", () => {
-    for (const view of ["quests", "achievements", "townsfolk"]) {
+    for (const view of ["quests", "achievements"]) {
       const state = { view, modal: null, viewParams: { tab: "alpha" } };
       expect(routeFromState(state).viewParams).toEqual({ tab: "alpha" });
     }

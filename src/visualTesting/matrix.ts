@@ -136,11 +136,11 @@ const BASE_VISUAL_SCENARIOS: VisualScenario[] = [
   { id: "charter-terms", state: "charter", view: "charter", diff: domDiff },
   { id: "charter-term-dialog", state: "charter", view: "charter", actions: [clickText("Drive out only what bites")], diff: domDiff },
 
-  { id: "townsfolk-workers", state: "rich", hash: "#/townsfolk/workers", diff: domDiff },
-  { id: "townsfolk-quests", state: "rich", hash: "#/townsfolk/quests", diff: domDiff },
-  // castle + bosses are their own feature views now (NOT townsfolk tabs — TABS is ["workers","quests"]).
-  // The old "#/townsfolk/castle|bosses" hashes silently fell through to the Workers tab, producing
-  // duplicate goldens. Target the real views directly (mirrors how charter/boons use `view`).
+  { id: "townsfolk-workers", state: "rich", hash: "#/townsfolk", diff: domDiff },
+  { id: "quests", state: "rich", hash: "#/quests", diff: domDiff },
+  // Townsfolk (workers roster) and Quests are now separate top-level tabs, each its
+  // own feature view. castle + bosses are likewise their own feature views — target
+  // the real views directly (mirrors how charter/boons use `view`).
   { id: "townsfolk-castle", state: "castleContrib", view: "castle", diff: domDiff },
   { id: "townsfolk-bosses", state: "bossGallery", view: "bosses", diff: domDiff },
   // Use view+modal (not a #/town hash): buildVisualState derives `modal` from the hash route,

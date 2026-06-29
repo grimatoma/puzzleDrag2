@@ -27,12 +27,9 @@ test('open Inventory screen', async ({ page }) => {
 
 test('open Quests screen', async ({ page }) => {
   await gotoFresh(page);
-  // Quests moved from a standalone nav button into a tab inside the Townsfolk
-  // view (src/features/townsfolk/index.tsx). Navigate there, then open the tab.
-  await page.locator('[data-tour="nav-townsfolk"]').click();
-  await waitForState(page, (s) => s.view === 'townsfolk');
-  await page.getByRole('button', { name: 'Quests' }).click();
-  await waitForState(page, (s) => (s.viewParams?.tab ?? '') === 'quests');
+  // Quests is its own top-level nav tab (src/ui.tsx BottomNav).
+  await page.locator('[data-tour="nav-quests"]').click();
+  await waitForState(page, (s) => s.view === 'quests');
 });
 
 test('open Map screen', async ({ page }) => {

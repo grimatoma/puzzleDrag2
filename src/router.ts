@@ -62,7 +62,6 @@ const VIEWS_WITH_TAB = new Set<string>([
   "crafting",
   "quests",
   "achievements",
-  "townsfolk",
 ]);
 
 function viewFromSegment(seg: string | undefined): string {
