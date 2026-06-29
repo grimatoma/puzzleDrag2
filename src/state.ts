@@ -1056,8 +1056,6 @@ function coreReducer(state: GameState, action: Action): GameState {
       }
       return afterBuildStory;
     }
-    case "POP_NPC":
-      return { ...state, bubble: { id: Date.now(), npc: action.npc, text: action.text, ms: action.ms ?? 1800 } };
     case "DISMISS_BUBBLE":
       return state.bubble && state.bubble.id === action.id ? { ...state, bubble: null } : state;
     case "CLOSE_SEASON": {

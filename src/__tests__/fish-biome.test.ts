@@ -106,7 +106,10 @@ describe("fish biome (MVP)", () => {
       mapVisited: ["home", "harbor"],
       mapCurrent: "home",
     };
-    const s1 = gameReducer(s0, { type: "CARTO/TRAVEL", payload: { nodeId: "harbor" } });
+    // CARTO/TRAVEL reads a top-level `nodeId` (see cartography/slice.ts and the
+    // production dispatch in cartography/index.tsx), not `payload.nodeId`. The
+    // old `payload` shape was a no-op that only "passed" via leftover save state.
+    const s1 = gameReducer(s0, { type: "CARTO/TRAVEL", nodeId: "harbor" });
     expect(s1.biomeKey).toBe("fish");
     expect(s1.view).toBe("town");
   });
