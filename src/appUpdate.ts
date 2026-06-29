@@ -1,19 +1,22 @@
 // App-update watcher for the installed PWA.
 //
-// The service worker (vite-plugin-pwa, `registerType: "prompt"`) precaches the
-// build for offline play. In `prompt` mode a freshly deployed SW *installs but
-// waits* instead of silently taking over — so we can surface a "refresh" button
-// rather than yanking the board out from under the player mid-run.
+// The service worker (vite-plugin-pwa, `registerType: "autoUpdate"`) precaches
+// the build for offline play. In `autoUpdate` mode a freshly deployed SW skips
+// waiting and takes control on its own, and the plugin's injected registerSW
+// reloads the page once onto the new build — so installs self-heal onto config
+// fixes without the player doing anything.
 //
-// An installed PWA that's kept resident (resumed from the background) rarely
-// re-checks for a new deploy on its own, which is how players get stranded on a
-// stale build with no easy way to update. This module fixes that by:
+// What still needs this module: an installed PWA that's kept resident (resumed
+// from the background) rarely re-checks for a new deploy on its own, which is
+// how players get stranded on a stale build. This module forces that check by:
 //   1. polling `registration.update()` on an interval and whenever the app
 //      returns to the foreground, and
-//   2. flipping an `updateReady` flag once a new SW is installed + waiting.
+//   2. flipping an `updateReady` flag if a new SW is ever installed + waiting.
 //
-// `applyUpdate()` tells the waiting SW to `skipWaiting()`; the resulting
-// `controllerchange` then reloads the page once onto the new build.
+// In `autoUpdate` mode step 2 is a rare fallback (the SW normally activates
+// without waiting), but if a waiting worker does appear `applyUpdate()` tells it
+// to `skipWaiting()`; the resulting `controllerchange` reloads the page once
+// onto the new build.
 //
 // This is a module-level singleton exposed to React via `useSyncExternalStore`
 // so the banner and the Settings menu share one watcher (one interval, one set
@@ -108,7 +111,8 @@ function start(): void {
     });
 }
 
-// Activate the waiting build. The SW (prompt mode) listens for SKIP_WAITING;
+// Activate a waiting build (fallback path — autoUpdate usually skips waiting on
+// its own). The generated SW listens for SKIP_WAITING;
 // once it activates, the controllerchange handler above reloads the page.
 export function applyUpdate(): void {
   const waiting = registration?.waiting;
