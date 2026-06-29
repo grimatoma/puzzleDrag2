@@ -11,6 +11,13 @@
  *
  * Flags: --zones <csv>  --runs <n>  --seed <n>  --policy <name>
  *        --rows <n>  --cols <n>  --out <dir>  --no-write  --campaign  --progression
+ *        --apply [--apply-from <path>] [--format] [--no-snapshot]
+ *
+ * --apply CLOSES the balance loop: it writes a proposed change-list.json (from a
+ * prior run, default <out>/change-list.json) BACK into src/constants.ts via the
+ * codemod in src/playtest/applyPatch.ts, then regenerates the harness drift-guard
+ * snapshot (the fixed-seed metrics move by design on a balance edit, so the
+ * snapshot diff is the reviewable record). No hand-editing of constants.
  *
  * --campaign switches to the sequential progression sim (src/playtest/campaign.ts):
  * one persistent state, runs carried forward, measuring runs-to-coin-milestone +
@@ -30,7 +37,11 @@
  * shipped) and does the argv + filesystem work.
  */
 import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import path from "node:path";
+
+const execFileP = promisify(execFile);
 // The same plugin vite.config.js / vitest.config.js register — provides the
 // `virtual:seasonal-subjects` module that the texture registry imports.
 import { seasonalSubjects } from "../vite/seasonalSubjects.mjs";
@@ -48,7 +59,7 @@ globalThis.localStorage = {
 };
 
 function parseArgs(argv) {
-  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, accept: false };
+  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", macro: "floor", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, compare: false, optimize: false, accept: false, apply: false, applyFrom: null, format: false, snapshot: true };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const val = () => argv[++i];
@@ -57,13 +68,20 @@ function parseArgs(argv) {
       case "--runs": out.runs = Math.max(1, parseInt(val(), 10) || 1); break;
       case "--seed": out.seed = parseInt(val(), 10) || 0; break;
       case "--policy": out.policy = val(); break;
+      case "--macro": out.macro = val(); break;
       case "--rows": out.rows = Math.max(3, parseInt(val(), 10) || 6); break;
       case "--cols": out.cols = Math.max(3, parseInt(val(), 10) || 6); break;
       case "--out": out.outDir = val(); break;
       case "--no-write": out.write = false; break;
       case "--campaign": out.campaign = true; break;
       case "--progression": out.progression = true; break;
+      case "--compare": out.compare = true; break;
+      case "--optimize": out.optimize = true; break;
       case "--accept": out.accept = true; break;
+      case "--apply": out.apply = true; break;
+      case "--apply-from": out.applyFrom = val(); break;
+      case "--format": out.format = true; break;
+      case "--no-snapshot": out.snapshot = false; break;
       default:
         if (a.startsWith("--")) console.warn(`[playtest] ignoring unknown flag: ${a}`);
     }
@@ -86,8 +104,38 @@ function replaceMarkerBlock(html, name, payload) {
   return html.slice(0, a) + `${START}\n${payload}\n${END}` + html.slice(b + END.length);
 }
 
+// ── Apply mode: write a proposed change-list back into constants.ts ──────────
+async function runApply(args) {
+  const { applyChangeList, summarizeApply } = await import("./applyChangeList.mjs");
+  const patchPath = path.resolve(process.cwd(), args.applyFrom ?? path.join(args.outDir, "change-list.json"));
+  console.log(`\npuzzleDrag2 — applying balance patch from ${path.relative(process.cwd(), patchPath)}`);
+  const res = await applyChangeList({ patchPath, write: args.write, format: args.format });
+  summarizeApply(res);
+  if (!res.ok) { process.exitCode = 1; return; }
+
+  // A balance edit moves the fixed-seed harness metrics BY DESIGN; regenerate the
+  // drift-guard snapshot so the loop self-heals and the snapshot diff becomes the
+  // reviewable record of the change. Skip on no-op / --no-write / --no-snapshot.
+  if (args.write && args.snapshot && res.applied.length) {
+    console.log(`\n[apply] regenerating harness drift-guard snapshot…`);
+    try {
+      const { stdout } = await execFileP(
+        "npx", ["vitest", "run", "src/__tests__/playtest-harness.test.ts", "-u"],
+        { cwd: process.cwd(), maxBuffer: 64 * 1024 * 1024 },
+      );
+      console.log(stdout.trim().split("\n").slice(-4).join("\n"));
+      console.log(`[apply] snapshot updated — review src/__tests__/__snapshots__/ alongside the constants diff.`);
+    } catch (e) {
+      console.warn(`[apply] snapshot regen reported issues (review manually):\n${String(e.stdout || e.message || "").slice(-1000)}`);
+    }
+  } else if (res.applied.length) {
+    console.log(`\n[apply] note: harness snapshot NOT regenerated (run \`npm test -- -u src/__tests__/playtest-harness.test.ts\` or drop --no-snapshot).`);
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.apply) { await runApply(args); return; }
   const { createServer } = await import("vite");
   const server = await createServer({
     configFile: false,
@@ -102,9 +150,17 @@ async function main() {
   let report;
   let campaign;
   let progression;
+  let comparison;
+  let optimization;
   try {
     const mod = await server.ssrLoadModule("/src/playtest/index.ts");
-    if (args.progression) {
+    if (args.optimize) {
+      optimization = mod.optimize(mod.spreadObjective());
+    } else if (args.compare) {
+      comparison = mod.runComparison({
+        zoneId: args.zones[0], runs: args.runs, seed: args.seed, rows: args.rows, cols: args.cols,
+      });
+    } else if (args.progression) {
       const spine = mod.buildProgressionSpine();
       // Diff the fresh spine against the committed baseline (the last reviewed
       // state) so a balance pass sees what moved. Baseline lives OUTSIDE the
@@ -122,7 +178,7 @@ async function main() {
     } else if (args.campaign) {
       campaign = mod.runCampaign({
         zoneId: args.zones[0], runs: args.runs, seed: args.seed,
-        policy: args.policy, rows: args.rows, cols: args.cols,
+        policy: args.policy, macro: args.macro, rows: args.rows, cols: args.cols,
       });
     } else {
       report = mod.runPlaytest({
@@ -132,6 +188,44 @@ async function main() {
     }
   } finally {
     await server.close();
+  }
+
+  // ── Optimize mode: search knobs toward a goal, emit an appliable change-list ─
+  if (optimization) {
+    const o = optimization;
+    const edits = Object.entries(o.changeList);
+    console.log(`\npuzzleDrag2 optimizer — family-value spread objective\n`);
+    console.log(`  loss ${fmt(o.before)} → ${fmt(o.after)} over ${o.passes} pass(es) · ${o.acceptable ? "✓ in band" : "⚠ not fully in band"}`);
+    console.log(`  proposed ${edits.length} edit(s):`);
+    for (const [p, v] of edits) console.log(`     ${p} → ${v}`);
+    if (!args.write) { console.log("\n(--no-write: skipped file output)\n"); return; }
+    const outDir = path.resolve(process.cwd(), args.outDir);
+    await mkdir(outDir, { recursive: true });
+    // Write the proposal as a change-list.json so `npm run playtest:apply` writes
+    // it back to constants.ts — closing the loop: optimize → apply → re-sim.
+    await writeFile(path.join(outDir, "change-list.json"), JSON.stringify(o.changeList, null, 2) + "\n", "utf8");
+    await writeFile(path.join(outDir, "optimize-report.json"), JSON.stringify(o, null, 2) + "\n", "utf8");
+    console.log(`\n  wrote change-list.json (apply with: npm run playtest:apply), optimize-report.json → ${args.outDir}\n`);
+    return;
+  }
+
+  // ── Compare mode: same seeds across the floor↔ceiling policy bracket ─────
+  if (comparison) {
+    const { rows } = comparison;
+    console.log(`\npuzzleDrag2 policy bracket — zone ${args.zones[0]}, ${args.runs} run(s), seed ${args.seed}\n`);
+    for (const r of rows) {
+      console.log(`  ${r.label.padEnd(8)} [${r.policy}/${r.macro}] · tier ${r.finalTier} · net/run ${fmt(r.netCoinsPerRunMean)} · bal ${fmt(r.finalBalance)}` +
+        (r.stall ? ` · stall ${r.stall}` : ""));
+    }
+    const tiers = rows.map((r) => r.finalTier);
+    console.log(`\n  progression spread: tier ${Math.min(...tiers)} → ${Math.max(...tiers)} (Δ${Math.max(...tiers) - Math.min(...tiers)})`);
+    if (!args.write) { console.log("\n(--no-write: skipped file output)\n"); return; }
+    const outDir = path.resolve(process.cwd(), args.outDir);
+    await mkdir(outDir, { recursive: true });
+    await writeFile(path.join(outDir, "compare-report.md"), comparison.reportMarkdown + "\n", "utf8");
+    await writeFile(path.join(outDir, "compare.json"), JSON.stringify(comparison, null, 2) + "\n", "utf8");
+    console.log(`\n  wrote compare-report.md, compare.json → ${args.outDir}\n`);
+    return;
   }
 
   // ── Progression mode: the code-derived spine + softlock oracle + diff ────

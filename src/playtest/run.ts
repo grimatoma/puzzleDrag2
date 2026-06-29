@@ -137,7 +137,7 @@ export function simulateRun(opts: SimulateRunOpts): RunResult {
         grid = makeBoard(pool, rng, rows, cols);
         continue;
       }
-      const chain = policy(chains);
+      const chain = policy({ chains, state: s, zoneId, grid, rng, turnsRemaining: s.farmRun.turnsRemaining });
       if (!chain) break;
       const payload = buildChainCollectedPayload(chain);
       s = rootReducer(s, { type: "CHAIN_COLLECTED", payload });

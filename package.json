@@ -12,6 +12,7 @@
     "typecheck:tests": "tsc --noEmit -p tsconfig.tests.json",
     "typecheck:test-files": "node tools/scan-test-tsc.mjs",
     "playtest": "node tools/playtest/cli.mjs",
+    "playtest:apply": "node tools/playtest/cli.mjs --apply",
     "action-types:list": "node tools/list-action-types.mjs",
     "action-types:emit": "node tools/list-action-types.mjs --emit",
     "action-types:check": "node tools/list-action-types.mjs --check",
