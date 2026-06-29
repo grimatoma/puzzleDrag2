@@ -114,6 +114,8 @@ export class TownScene extends Phaser.Scene {
   private _fxTime = 0; // seconds accumulator driving the smoke wobble
 
   isDragging = false;
+  // Arrow-key cursors for keyboard panning (set up in setupCameraControls).
+  private cursors?: Phaser.Types.Input.Keyboard.CursorKeys;
   // Once the player pans/zooms, stop auto-recentring on resize so we don't yank
   // the camera away from where they left it. Until then the resting framing
   // tracks the viewport (matching the historical centre-lock behaviour).
@@ -870,6 +872,26 @@ export class TownScene extends Phaser.Scene {
     // Visual-test harness: hold a single deterministic frame (see
     // freezeAmbientForVisualTest) — no smoke/water/villager advancement.
     if (this.visualTesting) return;
+
+    // Arrow keys pan the camera, matching drag-pan: same clamp, and they mark
+    // the camera as user-adjusted so we stop auto-recentring on resize.
+    if (this.cursors) {
+      const cam = this.cameras.main;
+      // ~600 world px/sec, framerate-independent and scaled by zoom so the
+      // on-screen pan speed feels constant.
+      const step = (600 * (delta / 1000)) / cam.zoom;
+      let dx = 0, dy = 0;
+      if (this.cursors.left.isDown) dx -= step;
+      if (this.cursors.right.isDown) dx += step;
+      if (this.cursors.up.isDown) dy -= step;
+      if (this.cursors.down.isDown) dy += step;
+      if (dx !== 0 || dy !== 0) {
+        cam.scrollX += dx;
+        cam.scrollY += dy;
+        this.userAdjustedCamera = true;
+        this.clampCamera();
+      }
+    }
     // Ambient chimney smoke. Driven here (and via the ember flicker tweens), so
     // a paused/slept scene stops it dead — no off-screen CPU.
     if (this.smokeColumns.length || this.waterOverlay) {
@@ -1014,6 +1036,10 @@ export class TownScene extends Phaser.Scene {
   setupCameraControls() {
     let startDist = 0;
     let startZoom = 1;
+
+    // Arrow keys pan the camera (handled in update()). Guard against headless
+    // contexts where the keyboard plugin may be absent.
+    this.cursors = this.input.keyboard?.createCursorKeys();
 
     this.input.on("pointerdown", () => {
       const p1 = this.input.pointer1, p2 = this.input.pointer2;
