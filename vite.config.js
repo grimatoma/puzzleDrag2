@@ -31,16 +31,19 @@ export default defineConfig(({ command }) => ({
     // for offline play. The web app manifest + icons already live in the repo
     // (public/site.webmanifest, public/icon-*.png, favicons — linked from
     // index.html), so `manifest: false` keeps those authoritative and this
-    // plugin contributes ONLY the service worker. `prompt` means a freshly
-    // deployed SW installs but *waits* instead of silently reloading mid-run;
-    // src/appUpdate.ts polls for it, surfaces a "refresh" banner, and applies it
-    // via SKIP_WAITING when the player taps Refresh. (Installed PWAs that stay
-    // resident rarely re-check on their own, which is how players got stranded
-    // on a stale build — the poller fixes that.) Emits sw.js / workbox-*.js /
-    // registerSW.js at the dist ROOT (not dist/assets/), so the phase-12-build
-    // asset guardrails are unaffected.
+    // plugin contributes ONLY the service worker. `autoUpdate` means a freshly
+    // deployed SW skips waiting, takes control immediately, and the injected
+    // registerSW reloads the page once onto the new build — so a config fix
+    // (e.g. the /docs/ navigation denylist below) reaches existing installs on
+    // their next visit without the player having to tap a refresh banner. The
+    // trade-off vs. `prompt`: an update that lands mid-session reloads the page,
+    // which can interrupt an in-progress board. src/appUpdate.ts still polls
+    // `registration.update()` (installed PWAs that stay resident rarely re-check
+    // on their own) so resumed installs pick the new build up promptly. Emits
+    // sw.js / workbox-*.js / registerSW.js at the dist ROOT (not dist/assets/),
+    // so the phase-12-build asset guardrails are unaffected.
     VitePWA({
-      registerType: "prompt",
+      registerType: "autoUpdate",
       injectRegister: "auto",
       // Use the hand-authored public/site.webmanifest instead of generating one.
       manifest: false,
