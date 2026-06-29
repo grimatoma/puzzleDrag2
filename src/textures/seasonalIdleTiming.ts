@@ -17,16 +17,16 @@
 /** ms per idle frame — matches the bake cadence in `seasonalArt.ts` (IDLE_MS). */
 export const IDLE_FRAME_MS = 130;
 /** Shortest hold on the rest frame between gestures. */
-export const IDLE_REST_MIN_MS = 5000;
+export const IDLE_REST_MIN_MS = 7500;
 /** Longest hold on the rest frame between gestures. */
-export const IDLE_REST_MAX_MS = 10000;
+export const IDLE_REST_MAX_MS = 15000;
 
 /** ms per special-gesture frame — same cadence as the idle clip. */
 export const GESTURE_FRAME_MS = 130;
 /** Shortest wait between a cell's special gestures (rarer than the idle loop). */
-export const GESTURE_INTERVAL_MIN_MS = 18000;
+export const GESTURE_INTERVAL_MIN_MS = 27000;
 /** Longest wait between a cell's special gestures. */
-export const GESTURE_INTERVAL_MAX_MS = 40000;
+export const GESTURE_INTERVAL_MAX_MS = 60000;
 
 /** Stable FNV-1a hash of a salted cell key mapped to [0, 1). */
 function cellRand01(col: number, row: number, salt: string): number {

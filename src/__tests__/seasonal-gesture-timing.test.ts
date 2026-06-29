@@ -69,14 +69,20 @@ describe("gestureFrameAt — rare per-cell special gesture", () => {
   it("gesture timing is independent of the idle loop (different salts)", () => {
     // The gesture must not deterministically co-fire with the idle clip. Over a
     // long sweep, find instants where the gesture is active and confirm the idle
-    // frame at those instants is not always the same value.
-    const col = 4, row = 7;
+    // frame at those instants is not always the same value. Sampled across a grid
+    // of cells: any single cell's gesture window may happen to fall entirely inside
+    // its idle rest (idle frame 0), so the independence property is asserted over the
+    // board rather than over one phase-specific cell.
     const idleFramesDuringGesture = new Set<number>();
     let gestureSamples = 0;
-    for (let t = 0; t < MAX_CYCLE * 3; t += 9) {
-      if (gestureFrameAt(t, col, row, GFRAMES) >= 0) {
-        gestureSamples++;
-        idleFramesDuringGesture.add(idleFrameAt(t, col, row, 9));
+    for (let col = 0; col < 6; col++) {
+      for (let row = 0; row < 6; row++) {
+        for (let t = 0; t < MAX_CYCLE * 3; t += 9) {
+          if (gestureFrameAt(t, col, row, GFRAMES) >= 0) {
+            gestureSamples++;
+            idleFramesDuringGesture.add(idleFrameAt(t, col, row, 9));
+          }
+        }
       }
     }
     expect(gestureSamples).toBeGreaterThan(0);
@@ -91,8 +97,8 @@ describe("gestureFrameAt — rare per-cell special gesture", () => {
     }
   });
 
-  it("uses the configured rare cadence (18–40s between gestures)", () => {
-    expect(GESTURE_INTERVAL_MIN_MS).toBe(18000);
-    expect(GESTURE_INTERVAL_MAX_MS).toBe(40000);
+  it("uses the configured rare cadence (27–60s between gestures)", () => {
+    expect(GESTURE_INTERVAL_MIN_MS).toBe(27000);
+    expect(GESTURE_INTERVAL_MAX_MS).toBe(60000);
   });
 });

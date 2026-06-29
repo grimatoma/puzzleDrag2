@@ -19,7 +19,7 @@
 /** Seconds of animation motion delivered per loop before the rest pause. */
 export const IDLE_ACTIVE_SEC = 4.2;
 /** Seconds the animation holds at rest between loops. */
-export const IDLE_REST_SEC = 2.4;
+export const IDLE_REST_SEC = 3.6;
 const CYCLE_SEC = IDLE_ACTIVE_SEC + IDLE_REST_SEC;
 
 /** Stable FNV-1a hash of `key` mapped to [0, 1) — the per-key stagger phase. */
