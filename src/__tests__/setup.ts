@@ -1,4 +1,6 @@
 // Minimal localStorage mock so slice modules can load in Node without errors.
+import { beforeEach } from "vitest";
+
 const store: Record<string, string> = {};
 globalThis.localStorage = {
   getItem: (k: string) => store[k] ?? null,
@@ -18,3 +20,11 @@ globalThis.localStorage = {
     return Object.keys(store).length;
   },
 } as Storage;
+
+// Reset persisted state between tests so no test can pass by reading another
+// test's leftover save. Catches the order-dependent / shared-pollution class
+// of failure (a test that asserts a reducer path that never actually runs).
+// Guarded: some tests swap in their own localStorage stub that omits clear().
+beforeEach(() => {
+  globalThis.localStorage?.clear?.();
+});
