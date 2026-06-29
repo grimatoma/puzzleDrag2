@@ -8,21 +8,10 @@
 //
 // Pure + dependency-free. No game logic lives here.
 
-/**
- * mulberry32 — a tiny, fast, well-distributed 32-bit PRNG. Same seed → same
- * sequence of floats in [0, 1). Chosen over xorshift only because its avalanche
- * is a touch better at small seeds; either would do.
- */
-export function mulberry32(seed: number): () => number {
-  let a = seed >>> 0;
-  return function next(): number {
-    a |= 0;
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+// mulberry32 lives in the shared, bundle-neutral src/rng.ts; re-exported here so
+// existing playtest imports keep working. (Health review #13.)
+export { mulberry32 } from "../rng.js";
+import { mulberry32 } from "../rng.js";
 
 /**
  * Run `fn` with `Math.random` replaced by a fresh seeded stream, restoring the

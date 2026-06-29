@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { MAP_NODES, MAP_EDGES, REGIONS, type MapNode } from "./data.js";
 import { ICON_DESIGN_BOX, paintIcon } from "../../textures/paintIcon.js";
 import { isAdjacent } from "./slice.js";
+import { mulberry32 } from "../../rng.js";
 
 const nodesById = new Map(MAP_NODES.map(n => [n.id, n]));
 
@@ -1314,14 +1315,4 @@ function computeStatus(node: MapNode, visited: Set<string>, discovered: Set<stri
 function toInt(hex: string | number): number {
   if (typeof hex === "number") return hex;
   return parseInt(String(hex).replace("#", ""), 16);
-}
-
-function mulberry32(a: number): () => number {
-  return function (): number {
-    a |= 0; a = (a + 0x6D2B79F5) | 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
 }
