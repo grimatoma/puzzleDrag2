@@ -8,6 +8,7 @@ import type { GameState, Grid, Action as GameAction, ChainCollectedPayload } fro
 import type { ChainInfo, RuntimeTool } from "./src/ui/puzzleBoard.jsx";
 import { Hud, TideChip } from "./src/ui/Hud.jsx";
 import { TownView } from "./src/ui/Town.jsx";
+import { warmMapScene } from "./src/features/cartography/PhaserMap.jsx";
 import { NpcBubble, StoryModal } from "./src/ui/Modals.jsx";
 import LevelUpCinematic from "./src/ui/LevelUpCinematic.jsx";
 import BossCinematic from "./src/ui/BossCinematic.jsx";
@@ -373,7 +374,11 @@ export default function App() {
   // full cold reboot. See TownPhaserCanvas's lazy boot / pause-resume handling.
   const [townEverOpened, setTownEverOpened] = useState(false);
   if (state.view === "town" && !townEverOpened) setTownEverOpened(true);
-  const keepTownMounted = state.view === "town" || townEverOpened;
+  // Background pre-warm: once the board is up and the player is idle, mount the
+  // town (hidden) and warm the map engine so their *first* visit is instant
+  // instead of a 1–2 s cold-boot blank. See the boardReady effect below.
+  const [warmExtras, setWarmExtras] = useState(false);
+  const keepTownMounted = state.view === "town" || townEverOpened || warmExtras;
   const [pins, pinActions] = usePinnedTools();
   const hotbarRef = useRef<HTMLDivElement>(null);
   const maxFitPins = useMaxFitPins(hotbarRef);
@@ -390,6 +395,36 @@ export default function App() {
   useEffect(() => {
     if (boardReady && (!startedInTownRef.current || townReady)) dismissBootSplash();
   }, [boardReady, townReady]);
+  // Background pre-warm of the town & map engines. Each is a separate Phaser
+  // instance that cold-boots and bakes all of its own textures on first visit —
+  // the source of the 1–2 s blank when first entering town or the map. Once the
+  // board is up, wait for the browser to go idle (so we don't compete with the
+  // board's own first paint / the player's first interactions), then mount the
+  // town hidden+warm and warm the map into its offscreen stash. Both are
+  // one-shot and guarded internally, so this only ever pays the cost once.
+  useEffect(() => {
+    if (!boardReady || warmExtras) return undefined;
+    type IdleWindow = Window & {
+      requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const w = (typeof window !== "undefined" ? window : undefined) as IdleWindow | undefined;
+    let idleHandle: number | undefined;
+    let timerHandle: ReturnType<typeof setTimeout> | undefined;
+    const run = () => {
+      setWarmExtras(true);
+      void warmMapScene();
+    };
+    if (w?.requestIdleCallback) {
+      idleHandle = w.requestIdleCallback(run, { timeout: 4000 });
+    } else {
+      timerHandle = setTimeout(run, 1200);
+    }
+    return () => {
+      if (idleHandle !== undefined) w?.cancelIdleCallback?.(idleHandle);
+      if (timerHandle !== undefined) clearTimeout(timerHandle);
+    };
+  }, [boardReady, warmExtras]);
   const storyModalOpen = !!state.story?.queuedBeat;
   const armedTool = state.toolPending ? state.tools ? { key: state.toolPending, count: state.tools[state.toolPending] ?? 0 } : null : null;
   const armedTapTarget = !!state.toolPending && isTapTargetTool(state.toolPending);
@@ -668,7 +703,7 @@ export default function App() {
               className={`absolute inset-0 z-20 ${state.view === "town" ? "view-enter-down" : "hidden"}`}
               aria-hidden={state.view !== "town"}
             >
-              <TownView state={state} dispatch={dispatch} active={state.view === "town"} onReady={() => setTownReady(true)} />
+              <TownView state={state} dispatch={dispatch} active={state.view === "town"} warm={warmExtras} onReady={() => setTownReady(true)} />
             </div>
           )}
 
