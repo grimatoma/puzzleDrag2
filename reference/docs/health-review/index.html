@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codebase Health Review — puzzleDrag2</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ════ THEME — "field checkup" : moss green + signal amber on cool paper ════ */
+  :root{
+    --ink:#1b2419; --muted:#5d6b58; --line:#e2e8de; --bg:#f5f8f3;
+    --paper:#ffffff; --code:#eef3ea;
+    --accent:#2f7d4f;       /* moss green (health / growth)        */
+    --accent2:#c77d12;      /* signal amber (attention)            */
+    --shadow:0 1px 2px rgba(20,30,18,.06), 0 6px 20px -10px rgba(20,30,18,.22);
+    --ok:#2f9e44; --warn:#e8920c; --info:#1971c2; --danger:#c0392b; --idle:#868e96;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font:400 16px/1.62 var(--sans); color:var(--ink); margin:0;
+    background:
+      radial-gradient(1200px 520px at 84% -8%, color-mix(in srgb,var(--accent) 10%,transparent), transparent 60%),
+      radial-gradient(1000px 460px at -10% 4%, color-mix(in srgb,var(--accent2) 8%,transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, #eaf0e6 100%);
+    background-attachment:fixed; background-color:var(--bg);
+  }
+  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{background:var(--code);padding:.06rem .34rem;border-radius:4px;font:.83em var(--mono);color:#2c5238;white-space:nowrap;}
+  .page{max-width:1180px;margin:0 auto;padding:1.5rem 1.25rem 5rem;}
+
+  header.hero{
+    border-bottom:3px solid var(--accent); padding:1.6rem 1.7rem 1.2rem; margin-bottom:1.2rem;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 11%,transparent), color-mix(in srgb,var(--accent2) 8%,transparent));
+    border-radius:14px 14px 6px 6px; box-shadow:var(--shadow);
+  }
+  header.hero h1{font:800 2.7rem/1.06 var(--serif);letter-spacing:-.018em;margin:.1rem 0 .35rem;color:var(--ink);}
+  .sub{color:#33402f;font-size:1.06rem;margin:.2rem 0 .8rem;max-width:74ch;}
+  .meta{font-size:.82rem;color:var(--muted);margin:.4rem 0 .2rem;}
+  .meta b{color:var(--accent);font-weight:700;}
+
+  nav.toc{position:sticky;top:0;z-index:5;display:flex;flex-wrap:wrap;gap:.3rem;padding:.55rem .4rem;margin:0 0 1.4rem;
+    background:color-mix(in srgb,var(--bg) 86%,transparent);backdrop-filter:blur(8px);border-bottom:2px solid var(--line);}
+  nav.toc a{font:600 .9rem/1 var(--sans);padding:.45rem .8rem;border-radius:8px;color:var(--muted);}
+  nav.toc a:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 9%,transparent);text-decoration:none;}
+
+  section{scroll-margin-top:3.4rem;}
+  h2{font:800 1.8rem/1.15 var(--serif);letter-spacing:-.01em;margin:2.4rem 0 .2rem;border-bottom:1px solid var(--line);padding-bottom:.25rem;color:var(--ink);}
+  section:first-of-type h2{margin-top:.6rem;}
+  h3{font:600 1.18rem/1.25 var(--serif);margin-top:1.4rem;color:var(--ink);}
+  p,li{margin:.42rem 0;}
+
+  table{border-collapse:collapse;width:100%;margin:.9rem 0;font-size:.85rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  th,td{border:1px solid var(--line);padding:.5rem .6rem;text-align:left;vertical-align:top;}
+  th{background:color-mix(in srgb,var(--accent) 9%,#fff);color:var(--ink);font-weight:700;}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg) 60%,#fff);}
+  td code{white-space:normal;word-break:break-word;}
+  td.loc{font:.78rem/1.5 var(--mono);color:#3a5240;width:23%;}
+  td.num{text-align:center;font-weight:700;color:var(--muted);width:2.2rem;}
+
+  .pill{display:inline-block;font-size:.7rem;font-weight:700;padding:.12rem .5rem;border-radius:999px;color:#fff;letter-spacing:.02em;white-space:nowrap;}
+  .pill.high{background:var(--danger);} .pill.med{background:var(--warn);color:#3a2900;} .pill.low{background:var(--idle);}
+  .pill.ok{background:var(--ok);} .pill.eff{background:#fff;color:var(--muted);border:1px solid var(--line);}
+  .tag{display:inline-block;font:600 .72rem var(--sans);padding:.1rem .45rem;border-radius:6px;background:var(--code);color:#3a5240;}
+
+  .box{background:color-mix(in srgb,var(--accent) 7%,#fff);border-left:4px solid var(--accent);padding:.8rem 1.1rem;margin:1.1rem 0;border-radius:0 8px 8px 0;box-shadow:var(--shadow);}
+  .box.warn{background:color-mix(in srgb,var(--danger) 7%,#fff);border-left-color:var(--danger);}
+  .box.tip{background:color-mix(in srgb,var(--ok) 9%,#fff);border-left-color:var(--ok);}
+  .box.amber{background:color-mix(in srgb,var(--accent2) 9%,#fff);border-left-color:var(--accent2);}
+  .box b{font-family:var(--serif);}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr;}}
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:.9rem 1.1rem;box-shadow:var(--shadow);}
+  .card h4{margin:.1rem 0 .4rem;font:700 1rem var(--serif);}
+  .card.good{border-left:5px solid var(--ok);}
+  .card.gap{border-left:5px solid var(--accent2);}
+
+  .scorecard{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:.7rem;margin:1.1rem 0;}
+  .score{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:.7rem .85rem;box-shadow:var(--shadow);}
+  .score .d{font:700 .95rem var(--serif);color:var(--ink);}
+  .score .v{font-size:.78rem;color:var(--muted);margin-top:.25rem;}
+  .dot{display:inline-block;width:.62rem;height:.62rem;border-radius:50%;margin-right:.35rem;vertical-align:baseline;}
+  .dot.g{background:var(--ok);} .dot.a{background:var(--warn);} .dot.r{background:var(--danger);}
+
+  ul.tight{margin:.3rem 0 .3rem 1.1rem;padding:0;} ul.tight li{margin:.22rem 0;}
+  footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);font-size:.8rem;color:var(--muted);}
+  .legend{font-size:.78rem;color:var(--muted);margin:.5rem 0;display:flex;gap:.9rem;flex-wrap:wrap;align-items:center;}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <div class="meta"><b>Internal review artifact</b> · reference/docs/health-review</div>
+  <h1>Codebase Health Review — puzzleDrag2</h1>
+  <p class="sub">A deep, adversarially-verified pass over the React&nbsp;+&nbsp;Phaser tile-drag
+  match/merge game: dead code, system duplication &amp; drift, wiring footguns, type-safety,
+  doc drift, test health, texture/art bloat, performance, config/balance, and architecture.</p>
+  <div class="meta">Scope reviewed: <code>src/</code>, <code>prototype.tsx</code>, the three Vite entries, tests, config &amp; textures
+  (<b>~260k lines / 973 source files</b>; ~136k of that is hand-authored art). <code>reference/</code> is supporting material, not reviewed as game code.</div>
+  <div class="meta">Method: 21-agent verified review workflow (10 dimensions, each finder + an independent skeptic) + a focused perf pass + a completeness critic.
+  Ground truth: <code>typecheck</code> ✅ and <code>lint</code> ✅ both pass with zero warnings.</div>
+</header>
+
+<nav class="toc">
+  <a href="#summary">Summary</a>
+  <a href="#healthy">What's healthy</a>
+  <a href="#scorecard">Scorecard</a>
+  <a href="#high">High</a>
+  <a href="#medium">Medium</a>
+  <a href="#low">Low</a>
+  <a href="#opt">Optimization</a>
+  <a href="#gaps">Operational gaps</a>
+  <a href="#notes">How to read this</a>
+</nav>
+
+<section id="summary">
+  <h2>Executive summary</h2>
+  <p><b>Overall verdict: <span class="pill ok">mostly-healthy</span></b>. puzzleDrag2 is a well-built
+  codebase. The two hardest architectural boundaries — the React-reducer ↔ Phaser-canvas split (via a
+  typed registry bridge) and the three isolated Vite entries (game / Dev&nbsp;Panel / Story&nbsp;Editor,
+  with Phaser deliberately kept out of the latter two) — are genuinely sound. Slice/action wiring
+  discipline is strong, TypeScript is strict with zero <code>: any</code>, and CI's static gates are green.</p>
+
+  <p>The real problems are structural, not surface-level, and cluster into four themes:</p>
+  <ol>
+    <li><b>Resource-economy single-source-of-truth violations.</b> The same fact (a tile's product, an
+    item's sell price, a category's tier-0 divisor) is hand-encoded in two places with no guard — and
+    several already disagree, producing a real gameplay bug (a tile yields the wrong resource and a
+    quest is uncompletable) and mis-priced goods.</li>
+    <li><b>A dead run-summary UI path.</b> The "Story beats" recap can never populate because its action
+    is dispatched only into the story slice, never the top-level reducer chain.</li>
+    <li><b>Test-gate blind spots.</b> One test passes only via never-reset shared <code>localStorage</code>
+    pollution (it asserts a reducer path that never runs), and the coverage gate excludes the riskiest
+    logic directories (game rules, save migrations, config).</li>
+    <li><b>Module-graph debt.</b> The core tile catalog is misfiled inside a feature folder yet imported
+    by 27 modules (anchoring a 62-file import cycle), alongside a ~1455-line god reducer.</li>
+  </ol>
+  <p>Everything else is low-severity hygiene: a handful of dead modules/handlers, copy-pasted helpers
+  (PRNG, clamp, draw kernels), ~34.5k lines of Dev-Panel-only icon art shipping in the game bundle, and
+  some stale docs. <b>A small set of guard tests</b> (tile-product ↔ produced-resource, value ↔ market
+  sell, lineBase ↔ thresholds, uiMeta ↔ boss targets) would convert a whole class of silent drift into
+  CI failures.</p>
+
+  <div class="box amber"><b>Scope of this document.</b> This is a <b>report only</b> — no source files were
+  changed. Each finding carries its own evidence and a recommended fix so any subset can be actioned later.
+  Where a fix needs a design call (the blackberry product; whether crafted-good prices should rise ~10×),
+  both options are presented rather than chosen.</div>
+</section>
+
+<section id="healthy">
+  <h2>What's genuinely healthy</h2>
+  <p>Worth stating explicitly so these aren't mistaken for unreviewed — each was checked against the code.</p>
+  <div class="grid2">
+    <div class="card good"><h4>React ↔ Phaser boundary</h4><code>GameScene</code> never imports the reducer;
+      it reads a fully-typed registry contract (<code>src/types/phaserRegistry.ts</code>) and emits back via
+      <code>SCENE_EVENTS</code>. Async boot/teardown guards against the unmount-mid-load race.</div>
+    <div class="card good"><h4>Three isolated Vite entries</h4><code>vite.config.js</code> <code>manualChunks</code>
+      deliberately keeps Phaser out of the <code>/b/</code> (Dev Panel) and <code>/story/</code> bundles; both pull zero Phaser.</div>
+    <div class="card good"><h4>Slice/action wiring</h4>All 18 feature slices are imported and registered in the
+      <code>slices</code> array; every slice-exclusive action is in <code>SLICE_PRIMARY_ACTIONS</code>; all 18 slices
+      preserve referential equality for no-ops; the action-type catalog is in sync (93 types).</div>
+    <div class="card good"><h4>Type safety &amp; static gates</h4>Strict <code>tsconfig</code>, <b>zero</b> <code>: any</code>
+      annotations, no <code>@ts-ignore</code> outside tests, all 16 <code>eslint-disable</code> justified. <code>typecheck</code>
+      and <code>lint</code> pass clean.</div>
+    <div class="card good"><h4>PWA / service worker</h4><code>autoUpdate</code> + skip-waiting, a singleton update poller with
+      HMR-disposed listeners, a controllerchange double-reload guard, and a navigate-fallback denylist that correctly excludes
+      <code>/b/</code>, <code>/story/</code>, <code>/docs/</code>.</div>
+    <div class="card good"><h4>Accessibility &amp; secrets</h4>Dedicated <code>a11y.ts</code> + <code>a11y.test.tsx</code>, aria across
+      ~94 components, a feature error boundary, <code>prefers-reduced-motion</code> honored. No credentials/API keys in shipped <code>src/</code>.</div>
+  </div>
+</section>
+
+<section id="scorecard">
+  <h2>Dimension scorecard</h2>
+  <div class="legend"><span><span class="dot g"></span>healthy</span><span><span class="dot a"></span>some concerns</span><span><span class="dot r"></span>needs attention</span> · confidence is high across the board (claims cross-checked against the code).</div>
+  <div class="scorecard">
+    <div class="score"><div class="d"><span class="dot g"></span>Dead code</div><div class="v">Small, high-confidence set of orphans; dynamic wiring is genuine.</div></div>
+    <div class="score"><div class="d"><span class="dot a"></span>Duplication / drift</div><div class="v">Flag systems &amp; persistence cleanly layered; real dup in PRNG, helpers, a dead boss path.</div></div>
+    <div class="score"><div class="d"><span class="dot a"></span>Wiring footguns</div><div class="v">Core wiring disciplined; a few dead handlers + one user-visible empty UI path.</div></div>
+    <div class="score"><div class="d"><span class="dot g"></span>Type safety</div><div class="v">Strict, zero any; weakness is <code>as unknown as</code> slice bridges + god units.</div></div>
+    <div class="score"><div class="d"><span class="dot a"></span>Doc drift</div><div class="v">Localized: stale feature README + a few wrong CLAUDE.md anchors/locations.</div></div>
+    <div class="score"><div class="d"><span class="dot a"></span>Test health</div><div class="v">Broad &amp; disciplined; one order-dependent test + coverage-scope blind spots.</div></div>
+    <div class="score"><div class="d"><span class="dot a"></span>Textures / art</div><div class="v">Mostly disciplined; ~34.5k lines of Dev-Panel-only art ship in-game; copy-pasted kernels.</div></div>
+    <div class="score"><div class="d"><span class="dot g"></span>Performance</div><div class="v">Lazy Phaser, throttled loop, rAF-coalesced saves; a few real React/persist wins.</div></div>
+    <div class="score"><div class="d"><span class="dot r"></span>Config / balance</div><div class="v">Several single-source-of-truth violations, two already-broken; dead config.</div></div>
+    <div class="score"><div class="d"><span class="dot a"></span>Architecture</div><div class="v">Boundaries sound; module graph has a 62-file cycle + misfiled core catalog + god reducer.</div></div>
+  </div>
+</section>
+
+<section id="high">
+  <h2>High-severity findings</h2>
+  <p class="legend">Correctness-bearing or actively-wrong today. <span class="pill high">high</span> severity · effort tags are rough.</p>
+  <table>
+    <thead><tr><th class="num">#</th><th>Finding</th><th>Locations</th><th>Why it matters &amp; fix</th><th>Effort</th></tr></thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td><b>Blackberry tile yields the wrong resource</b> — declares <code>next:'jam'</code> but actually produces <code>pie</code>.</td>
+        <td class="loc">constants.ts:431<br>tileCollection/data.ts:282<br>game/producedResource.ts:17-24<br>game/reachability.ts:270<br>quests/templates.ts:33</td>
+        <td>The tile entry has <code>effects:{}</code>, so <code>producedResource</code> falls through to the fruits-family default → chaining blackberries credits <b>pie</b>. But <code>next:'jam'</code> is unioned into the board-obtainable set, so the reachability/wiki layer wrongly believes jam is board-obtainable; no recipe outputs jam, so the <code>craft_jam</code> quest is <b>unsatisfiable</b>. <i>Fix:</i> pick one source of truth (set <code>effects.producesResource='jam'</code> + give jam a family/threshold, <i>or</i> change <code>next</code> to <code>pie</code> and add a real jam recipe), then add a guard test asserting <code>ITEMS[t].next === producedResource(t)</code> for every tile. <span class="tag">design call</span></td>
+        <td><span class="pill med">medium</span></td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td><b>Crafted goods sell at ~10× wrong price</b> via the <code>SELL_RATE</code> fallback.</td>
+        <td class="loc">constants.ts:396-421<br>constants.ts:588-591<br>constants.ts:1052-1102<br>market/pricing.ts:9-44<br>ui/Inventory.tsx:489-497</td>
+        <td><code>item.value</code> and <code>MARKET_PRICES.sell</code> are kept equal by hand with no guard. Crafted resources without a market entry (<code>harvestpie/honeyroll/preserve/tincture</code>, which lack a <code>biome</code> field) land in the items bucket and sell at <code>round(value*0.10)</code> — e.g. harvestpie <b>18 vs pie 90</b>, in the live economy. <code>pricing.ts:31</code>'s comment is also false. <i>Fix:</i> derive <code>MARKET_PRICES.sell</code> from <code>value</code> (or add explicit entries/biome for every sellable crafted good); fix the comment; add a <code>value === sell</code> test. <span class="tag">design call</span></td>
+        <td><span class="pill med">medium</span></td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td><b>Run-summary "Story beats" block never populates.</b></td>
+        <td class="loc">runSummary/slice.ts:182-193<br>runSummary/index.tsx:206<br>state/storyEffects.ts:37,51<br>state.ts:1788-1806</td>
+        <td><code>STORY/BEAT_FIRED</code> is dispatched only as direct <code>storySlice.reduce(...)</code> calls in <code>storyEffects.ts</code>, never through the top-level chain — and it isn't in <code>SLICE_PRIMARY_ACTIONS</code>/<code>ALWAYS_RUN_SLICES</code>, so the <code>runSummary</code> slice handler never runs and <code>BeatsBlock</code> is always empty. <i>Fix:</i> fold the fired beat into <code>runSummary.beatsTriggered</code> from <code>storyEffects.ts</code> (mirroring how core-handled actions feed the slice), <i>or</i> delete the dead handler + field + UI block.</td>
+        <td><span class="pill med">medium</span></td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td><b>Order-dependent test masked by shared <code>localStorage</code>.</b></td>
+        <td class="loc">__tests__/fish-biome.test.ts:104-109<br>features/cartography/slice.ts:63<br>__tests__/setup.ts:2<br>state.ts:1849</td>
+        <td>The harbor-travel test FAILS in isolation, PASSES in file order: it dispatches <code>CARTO/TRAVEL</code> with <code>payload.nodeId</code> but the reducer reads top-level <code>a.nodeId</code>, so it asserts a path that never runs and only passes because an earlier test primes the shared store. The global mock in <code>setup.ts</code> is never reset; 9 of 17 reducer test files are order-dependent. <i>Fix:</i> add one global <code>beforeEach(() =&gt; localStorage.clear())</code>, then fix the test to the real <code>{type:'CARTO/TRAVEL', nodeId:'harbor'}</code> shape.</td>
+        <td><span class="pill low">small</span></td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td><b>Core tile catalog is misfiled inside a feature</b> — <code>TILE_TYPES</code>/<code>CATEGORIES</code> imported by 27 modules.</td>
+        <td class="loc">features/tileCollection/data.ts:4<br>game/spawnPool.ts:9<br>config/productionLines.ts:1<br>state.ts:23 · GameScene.ts:6<br>balanceManager/wiki/memberTiles.ts:12</td>
+        <td>The master tile taxonomy lives in a feature folder yet is imported by the engine (<code>game/*</code>), config, state, <code>GameScene</code>, and the Phaser-free wiki — a layering inversion that anchors a 62-file strongly-connected import cycle, making the graph hard to reason about, test in isolation, or tree-shake. <i>Fix:</i> promote the catalog to a core module (<code>src/config/tiles.ts</code>) and re-export from <code>tileCollection</code>; no behavior change.</td>
+        <td><span class="pill med">medium</span></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="medium">
+  <h2>Medium-severity findings</h2>
+  <p class="legend">Maintainability / latent-risk / fragile-but-working. <span class="pill med">medium</span> severity.</p>
+  <table>
+    <thead><tr><th class="num">#</th><th>Finding</th><th>Locations</th><th>Why it matters &amp; fix</th><th>Effort</th></tr></thead>
+    <tbody>
+      <tr><td class="num">6</td>
+        <td><b>Coverage gate excludes the highest-risk logic dirs.</b></td>
+        <td class="loc">vitest.config.js:21,24<br>src/game/** · src/state/**<br>src/config/**</td>
+        <td><code>coverage.include</code> is <code>['src/utils.ts','src/state.ts','src/features/**']</code> at a 70% line floor. <code>src/state.ts</code> is one file, so the <code>src/state/</code> directory (persistence, saveMigrations, init) is unmeasured; <code>src/game/**</code> and <code>src/config/**</code> too — exactly where match/merge rules and save-corruption risk live (these <i>are</i> tested, just not gated). <i>Fix:</i> widen include to those dirs with a per-dir floor and ratchet up.</td>
+        <td><span class="pill med">medium</span></td></tr>
+      <tr><td class="num">7</td>
+        <td><b><code>PRODUCTION_LINES.lineBase</code> silently duplicates <code>UPGRADE_THRESHOLDS</code> tier-0 divisors.</b></td>
+        <td class="loc">config/productionLines.ts:25-48<br>config/upgradeThresholds.ts:12-45<br>constants.ts:360-366</td>
+        <td>Every <code>lineBase</code> mirrors the matching tier-0 threshold, but tier-0 income divisors derive from <code>lineBase</code>, not the thresholds — two separately-edited tables encoding the same number. The only test re-hardcodes the literals. Retuning a threshold without touching <code>productionLines</code> would silently decouple the upgrade gate from income. <i>Fix:</i> derive one from the other, or add an equality guard test.</td>
+        <td><span class="pill low">small</span></td></tr>
+      <tr><td class="num">8</td>
+        <td><b>Slice state shapes under-declared, bridged by <code>as unknown as</code>.</b></td>
+        <td class="loc">types/state.ts:233,293<br>bosses/data.ts:149<br>mine/mysterious_ore.ts:76<br>fish/pearl.ts:98</td>
+        <td><code>GameState</code> declares <code>boss</code>/<code>mysteriousOre</code>/<code>fishPearl</code> as UI subsets / index-only shapes while slices store richer runtime shapes and bridge with load-bearing <code>as unknown as</code> casts. Reads of <code>season/year/target/turnsRemaining</code> aren't type-checked — a rename compiles clean. <i>Fix:</i> widen the declared fields to the full interfaces and drop the casts, or expose typed selectors.</td>
+        <td><span class="pill med">medium</span></td></tr>
+      <tr><td class="num">9</td>
+        <td><b><code>state.ts</code> is a god-module</b> — ~1455-line <code>coreReducer</code> switch + ~20 feature-internal imports.</td>
+        <td class="loc">state.ts:260-1715<br>state.ts:9-56</td>
+        <td>46 case labels inline board/inventory/economy mutation across unrelated domains in one scope; beyond the slices array, the core reducer reaches directly into ~20 feature-internal modules (rats, hazards, pearl, bond…), eroding the "feature owns its slice" boundary. Working, but a merge-conflict magnet and hard to unit-test. <i>Fix:</i> extract per-domain case bodies into named pure helpers; migrate hand-called per-tick logic into owning slices.</td>
+        <td><span class="pill high">large</span></td></tr>
+      <tr><td class="num">10</td>
+        <td><b>~34.5k lines of Dev-Panel-only concept icon art ship in the game bundle.</b></td>
+        <td class="loc">textures/iconRegistry.ts:152-174<br>textures/iconAnimations.ts:16-61<br>textures.ts:14<br>balanceManager/iconUsage.ts:44-59</td>
+        <td>20 concept <code>G_*</code> batches (self-documented "Not referenced by any catalog yet") are spread <b>eagerly</b> into the frozen registries imported by 30+ game UI files, so they ship to players — repo-wide grep of the concept keys returns zero in-game references; only the Dev Panel draws them. <i>Fix:</i> move concept batches behind the existing feature-flag/lazy boundary, or wire the slated keys and delete the rest; add a guard test.</td>
+        <td><span class="pill high">large</span></td></tr>
+      <tr><td class="num">11</td>
+        <td><b>Dead action handlers with no production dispatcher.</b></td>
+        <td class="loc">state.ts:1053 (POP_NPC)<br>state.ts:877 (KEEPER/APPEASE)<br>state.ts:1372 (GRANT_RUNES)<br>state.ts:1543 (TILE_DISCOVERED)<br>state.ts:873-883 (trial)</td>
+        <td><code>POP_NPC</code> and <code>KEEPER/APPEASE</code> have zero references anywhere; <code>GRANT_RUNES</code>, <code>TILE_DISCOVERED</code>, <code>KEEPER/START_TRIAL</code>, <code>KEEPER/TRIAL_RESOLVE</code> are dispatched only in tests — production grants/discovery/trial flow through the real inline paths. Redundant entry points = a mis-wiring trap. <i>Fix:</i> delete the truly dead ones + their type defs; point tests at the real paths or mark the rest test-only.</td>
+        <td><span class="pill low">small</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="low">
+  <h2>Low-severity findings (hygiene)</h2>
+  <p class="legend">No correctness impact today; forward-looking traps, duplication, and doc/cleanup. <span class="pill low">low</span> severity.</p>
+  <table>
+    <thead><tr><th class="num">#</th><th>Finding</th><th>Locations</th><th>Why it matters &amp; fix</th></tr></thead>
+    <tbody>
+      <tr><td class="num">12</td><td><b>Unreachable rune-wildcard mechanic.</b></td>
+        <td class="loc">state.ts:1433-1438,126,665<br>audio/toolSounds.ts</td>
+        <td><code>ACTIVATE_RUNE_WILDCARD</code> is dispatched only in tests; the stash can neither accrue nor be spent in production, yet the audio layer reads it as a live channel. <i>Fix:</i> add the UI affordance if shipping, else delete the handler + refund branches + audio plumbing.</td></tr>
+      <tr><td class="num">13</td><td><b><code>mulberry32</code> PRNG copy-pasted across 6 town/map sites.</b></td>
+        <td class="loc">playtest/prng.ts:16 (canonical)<br>ui/town/townMaps.ts:46,77<br>townLayout.ts:24 · TownScene.ts:547,825</td>
+        <td>The identical core is hand-rewritten despite an exported canonical no renderer imports. <i>Fix:</i> promote one shared util + string-hash and import it; treat the intentionally-reordered <code>MapScene</code> variant separately to avoid shifting its seeded stream.</td></tr>
+      <tr><td class="num">14</td><td><b><code>features/README.md</code> is fully stale.</b></td>
+        <td class="loc">src/features/README.md:3-14<br>src/ui.tsx:95</td>
+        <td>Names <code>index.jsx</code>/<code>slice.js</code>/<code>src/ui.jsx</code> (none exist post-TS-migration) and omits the #1 slice-gating footgun — the doc an agent reads first when adding a feature. <i>Fix:</i> update to <code>.tsx</code>/<code>.ts</code> + <code>src/ui.tsx</code> (note <code>.js</code> import specifiers stay) and add the slice-registration steps.</td></tr>
+      <tr><td class="num">15</td><td><b><code>CLAUDE.md</code> stale anchors &amp; wrong balance locations.</b></td>
+        <td class="loc">CLAUDE.md:79,108,113<br>state.ts:99,1722<br>config/upgradeThresholds.ts:12</td>
+        <td>Slices anchor says <code>:73</code> (is <code>:99</code>), <code>SLICE_PRIMARY_ACTIONS</code> says <code>:1608</code> (is <code>:1722</code>); the three balance constants are said to live in <code>src/config/balance/</code> but live in <code>upgradeThresholds.ts</code> / <code>zones/data.ts</code> / <code>constants.ts</code>. <i>Fix:</i> reference by symbol name (line numbers drift) and repoint the locations.</td></tr>
+      <tr><td class="num">16</td><td><b>Orphaned modules &amp; dead helper clusters.</b></td>
+        <td class="loc">features/mine/tools.ts<br>config/overrideStrict.ts<br>ui/town/decor.tsx<br>state/zoneInventory.ts:36-62<br>state/boardMutations.ts:61,124</td>
+        <td><code>mine/tools.ts</code> (dead twin of live <code>farm/tools.ts</code>), <code>overrideStrict.ts</code> (superseded validator), <code>town/decor.tsx</code> (pre-Phaser legacy), 4 dead <code>zoneInventory</code> mutators, <code>sweepTileKeys</code>/<code>transformAtCoords</code>, and 3 single-symbol helpers — all zero importers (cross-checked against dynamic wiring). <i>Fix:</i> delete.</td></tr>
+      <tr><td class="num">17</td><td><b>Dead parallel boss-resolution path + drifted boss UI goals.</b></td>
+        <td class="loc">bosses/data.ts:152 (tickBossTurn)<br>boss/slice.ts:155 · uiMeta.ts:38<br>bosses/data.ts:64</td>
+        <td><code>tickBossTurn</code> is test-only and diverges from the live <code>BOSS/RESOLVE</code> (omits the gem + 25 XP). Separately, <code>BOSS_UI</code> goal strings drift from targets and reach the HUD: mossback's goal describes the hide modifier instead of the actual 30-blackberry tribute. <i>Fix:</i> delete <code>tickBossTurn</code>; derive goal text from the single <code>BOSSES</code> def (keep <code>bossReward</code> — it's live).</td></tr>
+      <tr><td class="num">18</td><td><b>Dead orthogonal-only <code>isAdjacent</code> encodes the wrong rule.</b></td>
+        <td class="loc">utils.ts:49<br>game/chain.ts:47,94</td>
+        <td>The <code>utils.ts</code> copy is 4-directional and has zero production callers; the live board rule is the 8-directional <code>chain.ts</code> version. A latent autocomplete trap — a dev reaching for <code>isAdjacent</code> could pick the wrong rule. <i>Fix:</i> delete it (and the test that locks in the wrong semantics).</td></tr>
+      <tr><td class="num">19</td><td><b>Duplicated / missing small helpers.</b></td>
+        <td class="loc">workers/index.tsx:179,219<br>ui/Town.tsx:248<br>seasonStripPhaser.tsx:45 (+3)<br>textures/categories/*, seasonal/*</td>
+        <td>Three <code>CostEntry</code> shapes + gratuitous <code>as never[]</code> casts (proven unnecessary, now masking field drift); a redundant double-cast on <code>buildTownPlan</code>; a <code>devicePixelRatio</code> clamp magic number ×4 (one copy already dropped its SSR guard); <code>clamp</code>/<code>clamp01</code> re-defs; pure math/shadow/round-rect kernels copy-pasted 48–81× across texture modules. <i>Fix:</i> export shared helpers (<code>clampedDpr</code>, <code>clamp01</code>, <code>_util</code>/<code>_draw</code>) and reuse; fold opportunistically.</td></tr>
+      <tr><td class="num">20</td><td><b>Misc hygiene.</b></td>
+        <td class="loc">ui/puzzleBoard.tsx (1799 ln)<br>GameScene.ts:1825 · config/abilities.ts:42-54<br>vitest.config.js:9 · story.ts:453</td>
+        <td>1799-line multi-component <code>puzzleBoard.tsx</code>; hardcoded <code>?? 200</code> inventory-cap fallback (+ an <code>inventoryCap</code> registry key never written, so the fallback always fires — cosmetic float-text only); 4 plumbed-but-unattached abilities; <code>vitest</code> include omits <code>tests/**/*.test.tsx</code> (latent silent-skip); a module-mutable story-beat singleton mutated by an import-time side effect; a harmless type-only <code>constants.ts↔catalogKeys.ts</code> cycle. <i>Fix:</i> address opportunistically; the vitest-include and registry-cap ones are quick.</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="opt">
+  <h2>Optimization findings</h2>
+  <p>The runtime is <b>broadly well-optimized</b>: Phaser and <code>GameScene</code> are lazy-imported
+  (<code>import("phaser")</code>), the town canvas is kept mounted/hidden to avoid cold reboots, the per-frame
+  <code>GameScene.update()</code> loop is throttled (≤33ms seasonal / ≤50ms concept re-bakes) with distinct-key
+  dedup and reduced-motion gating, and <code>persistState</code> is rAF-coalesced. The real wins are React-side.</p>
+  <table>
+    <thead><tr><th>ID</th><th>Hotness</th><th>Opportunity</th><th>Locations</th><th>Fix</th><th>Effort</th></tr></thead>
+    <tbody>
+      <tr><td><b>OPT-1</b></td><td><span class="tag">per-drag-move</span></td>
+        <td>Board-local React state (<code>chainInfo</code>, <code>inspectedTool</code>, <code>toolModalOpen</code>) lives in top-level <code>App</code> and updates frequently mid-drag (Phaser fires <code>CHAIN_UPDATE</code> as the chain grows). Each update re-renders the <b>entire</b> tree — including the always-mounted, board-irrelevant <code>FeatureScreens</code>/<code>FeatureModals</code>, the hidden <code>TownView</code>, and the cinematics — none of which are <code>React.memo</code>-wrapped.</td>
+        <td class="loc">prototype.tsx:367-369,642-672<br>src/ui.tsx · ui/Hud.tsx · ui/Modals.tsx</td>
+        <td>Since <code>state</code> identity is unchanged on a <code>chainInfo</code>-only update, wrap those subtrees in <code>React.memo</code> (or move board-local UI state into a child) so they skip per-drag-move re-renders.</td>
+        <td><span class="pill med">medium</span></td></tr>
+      <tr><td><b>OPT-2</b></td><td><span class="tag">per-render</span></td>
+        <td><code>infoPanelEl</code> calls <code>currentCap(state)</code> + <code>zoneInventory(state)</code> inline, un-memoized — and the code itself documents <code>currentCap</code> as a "heavy aggregation" (<code>computeAggregatedAbilities + locBuilt</code>). The registry-sync effect was deliberately narrowed to avoid this every dispatch; the inline render call wasn't.</td>
+        <td class="loc">prototype.tsx:416-428<br>prototype.tsx:332-337 (the narrowed effect)</td>
+        <td><code>useMemo</code> keyed on its real inputs (<code>built</code>, <code>mapCurrent</code>, <code>workers</code>, <code>tileCollection</code>).</td>
+        <td><span class="pill low">small</span></td></tr>
+      <tr><td><b>OPT-3</b></td><td><span class="tag">per-dispatch</span></td>
+        <td><code>persistState(next)</code> runs on every state-changing dispatch; each rAF-coalesced flush does a full <code>JSON.stringify</code> of the entire non-volatile state (grid + inventory + all slices). The debounce caps it at ≤1/frame, but full-state serialization on every meaningful action during active play is real main-thread cost (and the silent-quota risk below).</td>
+        <td class="loc">state.ts:1850<br>state/persistence.ts:47-56,86-95</td>
+        <td>Persist on checkpoints (chain settle / turn end / view change) or diff, rather than every dispatch.</td>
+        <td><span class="pill med">medium</span></td></tr>
+      <tr><td><b>OPT-4</b></td><td><span class="tag">per-frame</span></td>
+        <td><code>GameScene.update()</code> calls <code>this._motionEnabled()</code> twice per frame (it snapshots to <code>this.motionOn</code>, then re-calls), each invoking <code>window.matchMedia(...)</code>.</td>
+        <td class="loc">GameScene.ts:2074,2090</td>
+        <td>Reuse the <code>this.motionOn</code> snapshot at the throttle check. Tiny, but it's in the per-frame loop.</td>
+        <td><span class="pill low">small</span></td></tr>
+      <tr><td><b>OPT-5</b></td><td><span class="tag">boot / bundle</span></td>
+        <td>Same root as finding&nbsp;#10: the ~34.5k lines of Dev-Panel-only concept icon art are spread <b>eagerly</b> into the frozen registries 30+ game UI files import, so they're in the game's initial bundle and parsed/executed at boot (textures generate synchronously).</td>
+        <td class="loc">textures/iconRegistry.ts:152-174<br>textures/iconAnimations.ts:16-61</td>
+        <td>Lazy-load behind the existing dev-panel/feature-flag boundary — the single biggest bundle-weight lever. (Phaser-out-of-<code>/b/</code>-and-<code>/story/</code> isolation is already correct.)</td>
+        <td><span class="pill med">medium</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section id="gaps">
+  <h2>Operational gaps (outside the 10 dimensions)</h2>
+  <p>Surfaced by a completeness critic — categories the dimensional review didn't target. Each was spot-checked against the code.</p>
+  <div class="grid2">
+    <div class="card gap"><h4>Dependency advisories <span class="pill low">low (dev-only)</span></h4>
+      <code>npm audit</code> reports 3 — two <b>HIGH</b> on <code>vite &lt;=6.4.2</code> + an <code>undici</code> cluster, all <b>dev/build-time</b> transitive deps (not shipped to players). React 18 / Phaser 3 / Tailwind 3 / Vite 6 / TS 5 are each a major version behind. A genuine blind spot, but player-facing risk is low.</div>
+    <div class="card gap"><h4>Silent save-quota failure <span class="pill med">medium</span></h4>
+      <code>persistStateNow</code> serializes the entire state every frame; on <code>QuotaExceededError</code> it logs one console line and silently stops saving — no user-facing signal, no size budget. A save-size guard test belongs here (same class as the economy guards).</div>
+    <div class="card gap"><h4>PWA precache size <span class="pill low">low</span></h4>
+      <code>globPatterns</code> precaches all PNG/GIF/WebP plus the ~34.5k lines of Dev-Panel-only icon art; only a per-file cap exists, no total precache budget. Worth a one-time check of the generated <code>sw.js</code> manifest size.</div>
+    <div class="card good"><h4>Checked &amp; healthy</h4>
+      PWA/service-worker correctness, async Phaser teardown, memory/listener cleanup, accessibility, and secret-hygiene were all spot-checked and are in good shape. i18n is a deliberate non-goal for a single-developer English game.</div>
+  </div>
+</section>
+
+<section id="notes">
+  <h2>How to read this &amp; suggested order of operations</h2>
+  <div class="box tip"><b>Highest value for least risk:</b> the four <span class="tag">guard test</span> opportunities
+  (tile-product ↔ produced-resource, value ↔ market-sell, lineBase ↔ thresholds, uiMeta ↔ boss targets) plus the
+  single global <code>localStorage.clear()</code> in test setup. These are small, safe, and convert silent drift into
+  CI failures — do them first, even before fixing the bugs they guard.</div>
+  <ol>
+    <li><b>Decide the two economy design calls</b> (#1 blackberry product, #2 crafted-good prices), then fix + add their guards.</li>
+    <li><b>Fix the dead run-summary path</b> (#3) and the <b>test pollution</b> (#4) — both correctness/clarity, low effort.</li>
+    <li><b>Safe deletions</b> (#11, #16, #17, #18, plus the dead abilities/handlers) — zero behavior change, shrinks surface area.</li>
+    <li><b>Doc fixes</b> (#14, #15) — the feature README is actively misleading for the task it governs.</li>
+    <li><b>Widen the coverage gate</b> (#6) and add <code>tests/**/*.test.tsx</code> to the vitest include (#20).</li>
+    <li><b>Quick perf wins</b> (OPT-2, OPT-4) are small; <b>OPT-1 / OPT-3 / OPT-5 + #5 / #9 / #10</b> are larger refactors to schedule deliberately (run visual goldens for any UI-touching change).</li>
+  </ol>
+  <p class="meta">Verification discipline: every finding was produced by a finder and then independently re-checked by a skeptic
+  that re-grepped/re-read the cited code and refuted false positives (dead-code claims were cross-checked against
+  <code>import.meta.glob</code> feature auto-discovery, string-keyed dispatch, the Phaser registry bridge, router keys, and texture
+  keys). The two headline economy/wiring bugs were additionally confirmed first-hand.</p>
+</section>
+
+<footer>
+  Codebase Health Review — puzzleDrag2 · generated for branch <code>claude/codebase-health-review-9fnfm1</code> ·
+  report only, no source changed. Code is the source of truth; <code>reference/</code> is supporting material.
+</footer>
+
+</div>
+</body>
+</html>
