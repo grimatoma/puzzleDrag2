@@ -217,10 +217,14 @@
     <li><b>#20</b> closed — the two named spots (<code>config/abilities</code>, <code>story.ts</code>) are live/intentional; nothing else safely fixable.</li>
     <li><b>OPT-1/OPT-2</b> <code>React.memo</code> on the chainInfo-only re-render path + memoized <code>currentCap</code>. <b>OPT-3</b> was already rAF-coalesced (only a risky save-diff remains); <b>OPT-4</b> was already satisfied in current code.</li>
   </ul>
-  <b>Still open — design calls (deliberately not guessed):</b> <b>#1</b> blackberry/jam (two valid fixes) and
-  <b>#2</b> crafted-good sell price — where investigation found the codebase's own tests (<code>farm-10.3</code>,
-  <code>preexisting-recipes</code>, <code>sell-price-unify</code>) assert the 10%-of-value crafted-sell rule as
-  <i>intended</i>, contradicting the finding's premise. Both change game balance and await an explicit decision.
+  <b>The two design calls — now decided by the maintainer:</b>
+  <b>#1</b> blackberry/jam → <i>fixed</i>: blackberry honestly declares <code>pie</code> and a new <code>rec_jam</code>
+  larder recipe (1 <code>pie</code> → jam) makes jam a genuine crafted good, so the <code>craft_jam</code> quest is
+  completable and jam's downstream recipes have a real source.
+  <b>#2</b> crafted-good sell price → <i>closed as by-design (no change)</i>: the codebase's own tests
+  (<code>farm-10.3</code>, <code>preexisting-recipes</code>, <code>sell-price-unify</code>) assert the
+  10%-of-value crafted-sell rule as intended (market resale of raw resources is full value; direct sale of
+  crafted goods is 10%), contradicting the finding's premise — so it was kept rather than changed.
   <div style="margin-top:.6rem;font-size:.85rem;">Row status key (in the tables below):
   <span class="pill ok">✓ done · wave 1</span> completed &amp; greyed ·
   <span class="pill part">◐ partial · wave 1</span> part landed ·
@@ -274,16 +278,16 @@
   <table>
     <thead><tr><th class="num">#</th><th>Finding</th><th>Locations</th><th>Why it matters &amp; fix</th><th>Effort</th></tr></thead>
     <tbody>
-      <tr>
+      <tr class="done">
         <td class="num">1</td>
-        <td><span class="status"><span class="pill open">○ open</span></span><b>Blackberry tile yields the wrong resource</b> — declares <code>next:'jam'</code> but actually produces <code>pie</code>.</td>
+        <td><span class="status"><span class="pill ok">✓ done · wave 2</span></span><b>Blackberry tile yields the wrong resource</b> — declares <code>next:'jam'</code> but actually produces <code>pie</code>.</td>
         <td class="loc">constants.ts:431<br>tileCollection/data.ts:282<br>game/producedResource.ts:17-24<br>game/reachability.ts:270<br>quests/templates.ts:33</td>
         <td>The tile entry has <code>effects:{}</code>, so <code>producedResource</code> falls through to the fruits-family default → chaining blackberries credits <b>pie</b>. But <code>next:'jam'</code> is unioned into the board-obtainable set, so the reachability/wiki layer wrongly believes jam is board-obtainable; no recipe outputs jam, so the <code>craft_jam</code> quest is <b>unsatisfiable</b>. <i>Fix:</i> pick one source of truth (set <code>effects.producesResource='jam'</code> + give jam a family/threshold, <i>or</i> change <code>next</code> to <code>pie</code> and add a real jam recipe), then add a guard test asserting <code>ITEMS[t].next === producedResource(t)</code> for every tile. <span class="tag">design call</span></td>
         <td><span class="pill med">medium</span></td>
       </tr>
-      <tr>
+      <tr class="done">
         <td class="num">2</td>
-        <td><span class="status"><span class="pill open">○ open</span></span><b>Crafted goods sell at ~10× wrong price</b> via the <code>SELL_RATE</code> fallback.</td>
+        <td><span class="status"><span class="pill ok">✓ by design · wave 2</span></span><b>Crafted goods sell at ~10× wrong price</b> via the <code>SELL_RATE</code> fallback.</td>
         <td class="loc">constants.ts:396-421<br>constants.ts:588-591<br>constants.ts:1052-1102<br>market/pricing.ts:9-44<br>ui/Inventory.tsx:489-497</td>
         <td><code>item.value</code> and <code>MARKET_PRICES.sell</code> are kept equal by hand with no guard. Crafted resources without a market entry (<code>harvestpie/honeyroll/preserve/tincture</code>, which lack a <code>biome</code> field) land in the items bucket and sell at <code>round(value*0.10)</code> — e.g. harvestpie <b>18 vs pie 90</b>, in the live economy. <code>pricing.ts:31</code>'s comment is also false. <i>Fix:</i> derive <code>MARKET_PRICES.sell</code> from <code>value</code> (or add explicit entries/biome for every sellable crafted good); fix the comment; add a <code>value === sell</code> test. <span class="tag">design call</span></td>
         <td><span class="pill med">medium</span></td>
