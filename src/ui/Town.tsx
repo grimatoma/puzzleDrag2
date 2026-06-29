@@ -155,15 +155,14 @@ function TierUpgradeBanner({ state, dispatch }: { state: GameState; dispatch: Di
   const canCoins = (state.coins ?? 0) >= coinCost;
   const missingRes = Object.entries(resCost).filter(([k, v]) => inventoryQty(inv, k) < v);
   const blocked = !canCoins || missingRes.length > 0;
+  // Single have/needed (x/n) progress label — replaces the old duplicate of
+  // a "total cost" button label plus a separate "shortfall" pill.
   const costLabel = [
-    coinCost ? `${coinCost}◉` : null,
-    ...Object.entries(resCost).map(([k, v]) => `${v} ${getItem(k)?.label ?? k}`),
+    coinCost ? `${Math.min(state.coins ?? 0, coinCost)}/${coinCost}◉` : null,
+    ...Object.entries(resCost).map(
+      ([k, v]) => `${Math.min(inventoryQty(inv, k), v)}/${v} ${getItem(k)?.label ?? k}`,
+    ),
   ].filter(Boolean).join("  ·  ");
-  const blockedReason = !canCoins
-    ? `Need ${coinCost}◉`
-    : missingRes.length > 0
-      ? `Need ${missingRes.map(([k, v]) => `${v - inventoryQty(inv, k)} more ${getItem(k)?.label ?? k}`).join(", ")}`
-      : undefined;
   return (
     <div className="absolute top-12 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-1 pointer-events-none">
       <button
@@ -178,18 +177,10 @@ function TierUpgradeBanner({ state, dispatch }: { state: GameState; dispatch: Di
           opacity: blocked ? 0.85 : 1,
           boxShadow: blocked ? "none" : "0 3px 10px rgba(0,0,0,.45)",
         }}
-        title={blocked ? blockedReason : `Grow into a ${next.name}`}
+        title={blocked ? `Keep gathering to grow into a ${next.name}` : `Grow into a ${next.name}`}
       >
         ⬆ Upgrade to {next.name}  ·  {costLabel || "free"}
       </button>
-      {blocked && blockedReason && (
-        <div
-          className="pointer-events-none rounded px-2 py-0.5 text-[10px] font-semibold text-white"
-          style={{ background: "rgba(120,30,30,.85)", border: "1px solid rgba(255,255,255,.2)" }}
-        >
-          {blockedReason}
-        </div>
-      )}
     </div>
   );
 }
