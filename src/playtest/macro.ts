@@ -32,8 +32,17 @@ import { canPayForRecipe } from "../features/crafting/slice.js";
 import { locBuilt } from "../locBuilt.js";
 import { zoneInventory } from "../state/zoneInventory.js";
 import { inventoryQty } from "../types/inventory.js";
+import { WorkerTypeId } from "../types/catalogKeys.js";
 import type { GameState } from "../types/state.js";
 import type { Action } from "../types/actionPayloads.js";
+
+/** Repeatable House building id — grants Villagers (the hiring currency). */
+const HOUSING_ID = "housing";
+/** Farm-relevant hires the ceiling pursues: threshold-reducers + the bread Baker. */
+const FARM_HIRES: string[] = [
+  WorkerTypeId.Baker, WorkerTypeId.Farmer, WorkerTypeId.Peasant,
+  WorkerTypeId.Poultryman, WorkerTypeId.Lumberjack, WorkerTypeId.VegetablePicker,
+];
 
 /** Advance the persistent campaign state by the between-run macro decisions. */
 export type MacroPolicy = (state: GameState, zoneId: string) => GameState;
@@ -109,6 +118,23 @@ export const climbMacro: MacroPolicy = (state, zoneId) => {
 
     // 3) Tier up while affordable.
     s = tierUpWhileAffordable(s, zoneId);
+
+    // 4) Lift future yields: once Housing is unlocked (Hamlet+), build a House for
+    // Villagers, then hire the farm threshold-reducers + bread Baker. Each dispatch
+    // is gated by the reducer (cap / coins / villagers / resources); we keep a
+    // change only when it actually took.
+    if (new Set<string>(unlockedBuildings(zoneId, settlementTier(s, zoneId))).has(HOUSING_ID)) {
+      const built = rootReducer(s, { type: "BUILD", payload: { id: HOUSING_ID } } as Action);
+      if ((built.villagers ?? 0) > (s.villagers ?? 0)) s = built; // a House actually raised Villagers
+      for (const id of FARM_HIRES) {
+        let guard = 0;
+        while (guard++ < 16) {
+          const next = rootReducer(s, { type: "WORKERS/HIRE", payload: { id } } as Action);
+          if (next === s) break; // hire rejected (cap / coins / villagers / resources)
+          s = next;
+        }
+      }
+    }
 
     if (s === before) break; // fixpoint — nothing changed this pass
   }

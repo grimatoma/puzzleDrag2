@@ -8,6 +8,7 @@
 
 import { describe, it, expect } from "vitest";
 import { createInitialState } from "../state.js";
+import type { GameState } from "../types/state.js";
 import { runCampaign } from "./campaign.js";
 import { floorMacro, climbMacro } from "./macro.js";
 
@@ -32,6 +33,26 @@ describe("campaign macro bracket — climb clears the home tier-0 bread stall", 
     // Climb builds the Bakery and crafts bread from farm-produced flour+eggs, so
     // it clears the bread blocker and climbs at least to tier 1.
     expect(climb.metrics.finalTier).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("climb macro — worker hiring", () => {
+  it("hires farm threshold-reducers when Villagers + resources are on hand", () => {
+    const s = createInitialState();
+    // Hamlet (tier 1) so Housing is unlocked and hiring is permitted.
+    s.settlements = { ...s.settlements, home: { founded: true, tier: 1 } };
+    (s as GameState & { mapCurrent?: string }).mapCurrent = "home";
+    s.coins = 100_000;
+    s.villagers = 9; // hiring currency (normally granted by built Houses)
+    s.inventory = {
+      ...s.inventory,
+      home: { ...(s.inventory?.home as Record<string, number> ?? {}),
+        flour: 60, eggs: 60, tile_grass_grass: 60, plank: 60, hay_bundle: 60, bread: 60 },
+    };
+    const out = climbMacro(s, "home");
+    const hired = (out.workers?.hired ?? {}) as Record<string, number>;
+    const total = Object.values(hired).reduce((a, b) => a + b, 0);
+    expect(total).toBeGreaterThan(0); // the ceiling actually invests in workers
   });
 });
 
