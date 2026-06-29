@@ -4,7 +4,6 @@ import type { BossInstance } from "../features/bosses/data.js";
 import {
   BOSS_WINDOW_TURNS,
   spawnBoss,
-  tickBossTurn,
 } from "../features/bosses/data.js";
 import { mergeTestState } from "../testUtils/testState.js";
 
@@ -32,36 +31,12 @@ describe("8.3 — 1-season boss window", () => {
     expect(((s.story as { flags?: Record<string, boolean> }).flags ?? {}).frostmaw_active).toBe(true);
   });
 
-  it("tick: turnsRemaining decrements from 10 to 9, not resolved", () => {
-    let s = mergeTestState({ year: 1 });
-    s = spawnBoss(s, "frostmaw", 1);
-    const t = tickBossTurn(s);
-    expect(dataBoss(t)!.turnsRemaining).toBe(9);
-    expect(t.boss).not.toBeNull();
-  });
-
-  it("turn 10 with progress < target: boss cleared (failed)", () => {
-    let s = mergeTestState({ year: 1 });
-    s = spawnBoss(s, "frostmaw", 1);
-    const b0 = dataBoss(s)!;
-    const s2 = mergeTestState(s, { boss: { ...b0, turnsRemaining: 1, progress: 12 } });
-    const r2 = tickBossTurn(s2);
-    expect(r2.boss).toBeNull();
-    expect(r2.coins).toBe(s2.coins);
-    expect(((r2.story as { flags?: Record<string, boolean> }).flags ?? {}).frostmaw_defeated).not.toBe(true);
-    expect(((r2.story as { flags?: Record<string, boolean> }).flags ?? {}).frostmaw_active).toBe(false);
-  });
-
-  it("cross target before turn 10: resolves immediately as defeated", () => {
-    let s = mergeTestState({ year: 1, coins: 0 });
-    s = spawnBoss(s, "frostmaw", 1);
-    const b0 = dataBoss(s)!;
-    const s3 = mergeTestState(s, { year: 1, coins: 0, boss: { ...b0, turnsRemaining: 5, progress: 30 } });
-    const r3 = tickBossTurn(s3);
-    expect(r3.boss).toBeNull();
-    expect(r3.coins).toBe(200);
-    expect(((r3.story as { flags?: Record<string, boolean> }).flags ?? {}).frostmaw_defeated).toBe(true);
-  });
+  // NOTE: the per-turn boss resolution (decrement / fail-at-window / cross-target
+  // defeat / forced resolve) was historically tested here against the standalone
+  // tickBossTurn() helper, a dead parallel implementation never called in
+  // production. That helper was removed (health review #17); the live path lives
+  // in features/boss/slice.ts (BOSS/RESOLVE + turn progress) and is covered by
+  // audit-boss / boss-coverage / storm-boss / reducers tests.
 
   it("save/load round-trip preserves all canonical fields", () => {
     let s = mergeTestState({ year: 1 });
@@ -80,11 +55,4 @@ describe("8.3 — 1-season boss window", () => {
     expect(JSON.stringify(dataBoss(spawnBoss(s, "ember_drake", 1)))).toBe(before);
   });
 
-  it("0 turnsRemaining forces resolve — no carry-over", () => {
-    let s = mergeTestState({ year: 1 });
-    s = spawnBoss(s, "frostmaw", 1);
-    const b0 = dataBoss(s)!;
-    const s5 = mergeTestState(s, { boss: { ...b0, turnsRemaining: 0, progress: 5 } });
-    expect(tickBossTurn(s5).boss).toBeNull();
-  });
 });

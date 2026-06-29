@@ -58,6 +58,7 @@ import { ResourceKey } from "./types/catalogKeys.js";
 import { inventoryPut, inventoryQty } from "./types/inventory.js";
 import { inventoryZone, zoneInventory, zoneResourceProgress } from "./state/zoneInventory.js";
 import type { Action, GameState, Grid, Order, Tile } from "./types/state";
+import type { CraftToolAction, ToolFiredAction, UseToolAction, KeeperConfrontAction, KeeperStartTrialAction, KeeperTrialResolveAction } from "./types/actionPayloads.js";
 import { addCappedResourceMut, hasAllInventory, deductInventory, defaultTileCollectionSlice, mergeLoadedState, resourceByKey, pickNpcKey, makeOrder, seedOrderIdSeq, SEASON_END_BONUS_COINS, xpForLevel } from "./state/helpers.js";
 export { addCappedResourceMut, hasAllInventory, deductInventory, defaultTileCollectionSlice, mergeLoadedState, resourceByKey, pickNpcKey, makeOrder, seedOrderIdSeq, SEASON_END_BONUS_COINS, xpForLevel };
 import { loadSavedState, persistStateNow, persistState, flushPersistState, clearSave } from "./state/persistence.js";
@@ -104,7 +105,7 @@ const slices = [crafting, quests, achievements, tutorial, settings, boss, cartog
 // Disarm every armed tool in one shot, mirroring the existing CANCEL_TOOL +
 // USE_TOOL(fertilizer self-disarm) sequences so the player is left whole:
 // tap-target arms spent no charge to refund, instant arms get their charge
-// back, rune wildcard returns to the rune stash, and fertilizer refunds its
+// back, and fertilizer refunds its
 // charge. Used whenever the player navigates away from the board (or loads
 // a save) — anything other than directly using the tool deselects it.
 export function disarmAllTools(state: GameState): GameState {
@@ -122,8 +123,6 @@ export function disarmAllTools(state: GameState): GameState {
     const legacyPower = getItem(pending)?.power;
     if (legacyPower?.id && isTapTargetPower(legacyPower.id)) {
       next = { ...next, toolPending: null };
-    } else if (pending === "rune_wildcard") {
-      next = { ...next, toolPending: null, runeStash: (next.runeStash ?? 0) + 1 };
     } else {
       next = {
         ...next,
@@ -261,6 +260,110 @@ function applyTileCollectionChainEffects(state: GameState, key: string, length: 
     tileCollection: { ...tcSlice, researchProgress: progress, discovered, activeByCategory, researchByCategory, freeMoves },
     bubble,
   };
+}
+
+// ── Tool lifecycle handlers ────────────────────────────────────────────────
+// Extracted from coreReducer's switch to keep the dispatcher readable (health
+// review #9). Kept in-module so they share the reducer's helpers (toolCount,
+// locBuilt, …) without an import cycle; the switch delegates with the action
+// already narrowed, so each handler is independently legible and testable.
+
+function reduceCraftTool(state: GameState, action: CraftToolAction): GameState {
+  // Phase 10.1 — craft a Workshop tool (rake / axe / fertilizer / cat / etc.)
+  const toolId = action.id ?? action.payload?.id;
+  if (!toolId) return state;
+  const toolRecipe = WORKSHOP_RECIPES[toolId];
+  if (!toolRecipe) return state;
+  // Workshop must be built
+  if (!locBuilt(state).workshop) return state;
+  if (!hasAllInventory(state, toolRecipe.inputs)) return state;
+  const craftZone = (state.mapCurrent as string | undefined) ?? "home";
+  const toolInv = zoneInventory(state, craftZone);
+  return {
+    ...state,
+    inventory: { ...state.inventory, [craftZone]: deductInventory(toolInv, toolRecipe.inputs) },
+    tools: { ...state.tools, [toolId]: toolCount(state.tools, toolId) + 1 },
+  };
+}
+
+function reduceCancelTool(state: GameState): GameState {
+  // Disarm an armed tool. Tap-target tools (bomb / rake / axe / magic_wand)
+  // never consumed a charge on arm, so there is nothing to refund. Tools
+  // that briefly arm during their fire effect (clear / basic / rare /
+  // shuffle) did spend, so refund those.
+  const pending = state.toolPending;
+  if (!pending) return state;
+  const itemEntry = getItem(pending) as { power?: { id?: string } } | undefined;
+  const cancelPower = state.toolPendingPower ?? itemEntry?.power;
+  if (cancelPower?.id && isTapTargetPower(cancelPower.id)) {
+    return { ...state, toolPending: null, toolPendingPower: null };
+  }
+  return {
+    ...state,
+    toolPending: null,
+    tools: { ...state.tools, [pending]: toolCount(state.tools, pending) + 1 },
+  };
+}
+
+function reduceToolFired(state: GameState, action: ToolFiredAction): GameState {
+  // Dispatched by GameScene after a tool effect actually executes. For
+  // tap-target tools the charge is spent here (USE_TOOL only armed). For
+  // instant tools that briefly set toolPending so the scene could pick it
+  // up, we just clear toolPending — the charge was already spent in
+  // USE_TOOL. Either way, this is the canonical end-of-fire signal that
+  // keeps React state and the Phaser registry in sync.
+  const key = action.key ?? action.payload?.key ?? state.toolPending;
+  if (!key) return state;
+  // Phase 2 (tool-powers overhaul) — typed tap-target powers stash the
+  // armed power config in state.toolPendingPower. If present, apply it
+  // here at the tap site instead of the key-based legacy branches below.
+  const armedPower = state.toolPendingPower;
+  if (armedPower?.id && isTapTargetPower(armedPower.id)) {
+    const row = action.row ?? action.payload?.row;
+    const col = action.col ?? action.payload?.col;
+    return applyTapTargetPower(state, key, armedPower, row, col);
+  }
+  return { ...state, toolPending: null, toolPendingPower: null };
+}
+
+function reduceUseTool(state: GameState, action: UseToolAction): GameState {
+  const payload = action.payload;
+  const rawKey = payload?.id ?? payload?.key ?? action.key;
+  const key = resolveToolDispatchKey(rawKey);
+  if (!key) return state;
+  const explicitPower = payload?.power;
+  if (explicitPower?.id) {
+    return applyToolPower(state, key, explicitPower);
+  }
+  if (key === "fertilizer" && isFillBiasArmed(state)) {
+    return disarmFillBias(state);
+  }
+  const item = getItem(key) as { power?: { id?: string; [k: string]: unknown } } | undefined;
+  const itemPower = item?.power ?? null;
+  if (itemPower?.id) {
+    return applyToolPower(state, key, itemPower as { id: string; [k: string]: unknown });
+  }
+  if (toolCount(state.tools, key) <= 0) return state;
+  return { ...state, tools: { ...state.tools, [key]: toolCount(state.tools, key) - 1 } };
+}
+
+// ── Keeper-trial handlers ──────────────────────────────────────────────────
+// The keeper encounter/trial flow (health review #9). Self-contained: delegates
+// to state/keeperTrials.js, no shared module-scope helpers.
+
+function reduceKeeperConfront(state: GameState, action: KeeperConfrontAction): GameState {
+  const zoneId = action.payload?.zoneId ?? action.zoneId;
+  const path = action.payload?.path ?? action.path;
+  return startKeeperTrial(state, zoneId, path);
+}
+
+function reduceKeeperStartTrial(state: GameState, action: KeeperStartTrialAction): GameState {
+  const zoneId = action.payload?.zoneId ?? action.zoneId;
+  return startKeeperTrial(state, zoneId, action.payload?.path ?? action.path ?? "driveout");
+}
+
+function reduceKeeperTrialResolve(state: GameState, action: KeeperTrialResolveAction): GameState {
+  return resolveKeeperTrial(state, action.payload?.won ?? action.won);
 }
 
 function coreReducer(state: GameState, action: Action): GameState {
@@ -637,85 +740,10 @@ function coreReducer(state: GameState, action: Action): GameState {
       };
       return evaluateAndApplyStoryBeat(afterOrder, { type: "order_fulfilled", id: o.id, key: o.key, npc: o.npc, count: 1 });
     }
-    case "CRAFT_TOOL": {
-      // Phase 10.1 — craft a Workshop tool (rake / axe / fertilizer / cat / etc.)
-      const toolId = action.id ?? action.payload?.id;
-      if (!toolId) return state;
-      const toolRecipe = WORKSHOP_RECIPES[toolId];
-      if (!toolRecipe) return state;
-      // Workshop must be built
-      if (!locBuilt(state).workshop) return state;
-      if (!hasAllInventory(state, toolRecipe.inputs)) return state;
-      const craftZone = (state.mapCurrent as string | undefined) ?? "home";
-      const toolInv = zoneInventory(state, craftZone);
-      return {
-        ...state,
-        inventory: { ...state.inventory, [craftZone]: deductInventory(toolInv, toolRecipe.inputs) },
-        tools: { ...state.tools, [toolId]: toolCount(state.tools, toolId) + 1 },
-      };
-    }
-
-    case "CANCEL_TOOL": {
-      // Disarm an armed tool. Tap-target tools (bomb / rake / axe / magic_wand)
-      // never consumed a charge on arm, so there is nothing to refund. Tools
-      // that briefly arm during their fire effect (clear / basic / rare /
-      // shuffle) and the rune-wildcard arming flow did spend, so refund those.
-      const pending = state.toolPending;
-      if (!pending) return state;
-      const itemEntry = getItem(pending) as { power?: { id?: string } } | undefined;
-      const cancelPower = state.toolPendingPower ?? itemEntry?.power;
-      if (cancelPower?.id && isTapTargetPower(cancelPower.id)) {
-        return { ...state, toolPending: null, toolPendingPower: null };
-      }
-      if (pending === "rune_wildcard") {
-        return { ...state, toolPending: null, runeStash: (state.runeStash ?? 0) + 1 };
-      }
-      return {
-        ...state,
-        toolPending: null,
-        tools: { ...state.tools, [pending]: toolCount(state.tools, pending) + 1 },
-      };
-    }
-    case "TOOL_FIRED": {
-      // Dispatched by GameScene after a tool effect actually executes. For
-      // tap-target tools the charge is spent here (USE_TOOL only armed). For
-      // instant tools that briefly set toolPending so the scene could pick it
-      // up, we just clear toolPending — the charge was already spent in
-      // USE_TOOL. Either way, this is the canonical end-of-fire signal that
-      // keeps React state and the Phaser registry in sync.
-      const key = action.key ?? action.payload?.key ?? state.toolPending;
-      if (!key) return state;
-      // Phase 2 (tool-powers overhaul) — typed tap-target powers stash the
-      // armed power config in state.toolPendingPower. If present, apply it
-      // here at the tap site instead of the key-based legacy branches below.
-      const armedPower = state.toolPendingPower;
-      if (armedPower?.id && isTapTargetPower(armedPower.id)) {
-        const row = action.row ?? action.payload?.row;
-        const col = action.col ?? action.payload?.col;
-        return applyTapTargetPower(state, key, armedPower, row, col);
-      }
-      return { ...state, toolPending: null, toolPendingPower: null };
-    }
-    case "USE_TOOL": {
-      const payload = action.payload;
-      const rawKey = payload?.id ?? payload?.key ?? action.key;
-      const key = resolveToolDispatchKey(rawKey);
-      if (!key) return state;
-      const explicitPower = payload?.power;
-      if (explicitPower?.id) {
-        return applyToolPower(state, key, explicitPower);
-      }
-      if (key === "fertilizer" && isFillBiasArmed(state)) {
-        return disarmFillBias(state);
-      }
-      const item = getItem(key) as { power?: { id?: string; [k: string]: unknown } } | undefined;
-      const itemPower = item?.power ?? null;
-      if (itemPower?.id) {
-        return applyToolPower(state, key, itemPower as { id: string; [k: string]: unknown });
-      }
-      if (toolCount(state.tools, key) <= 0) return state;
-      return { ...state, tools: { ...state.tools, [key]: toolCount(state.tools, key) - 1 } };
-    }
+    case "CRAFT_TOOL": return reduceCraftTool(state, action);
+    case "CANCEL_TOOL": return reduceCancelTool(state);
+    case "TOOL_FIRED": return reduceToolFired(state, action);
+    case "USE_TOOL": return reduceUseTool(state, action);
     case "SWITCH_BIOME": {
       // Support both legacy action.key and Phase 12.5 action.payload.biome
       const key = action.key ?? action.payload?.biome;
@@ -871,22 +899,9 @@ function coreReducer(state: GameState, action: Action): GameState {
         bubble: { id: Date.now(), npc: "mira", text: `${displayZoneName(state, zoneId)} grew into a ${next.name}!`, ms: 2600 },
       };
     }
-    case "KEEPER/CONFRONT": {
-      const zoneId = action.payload?.zoneId ?? action.zoneId;
-      const path = action.payload?.path ?? action.path;
-      return startKeeperTrial(state, zoneId, path);
-    }
-    case "KEEPER/START_TRIAL": {
-      const zoneId = action.payload?.zoneId ?? action.zoneId;
-      return startKeeperTrial(state, zoneId, action.payload?.path ?? action.path ?? "driveout");
-    }
-    case "KEEPER/APPEASE": {
-      const zoneId = action.payload?.zoneId ?? action.zoneId;
-      return finalizeKeeperPath(state, zoneId, "coexist");
-    }
-    case "KEEPER/TRIAL_RESOLVE": {
-      return resolveKeeperTrial(state, action.payload?.won ?? action.won);
-    }
+    case "KEEPER/CONFRONT": return reduceKeeperConfront(state, action);
+    case "KEEPER/START_TRIAL": return reduceKeeperStartTrial(state, action);
+    case "KEEPER/TRIAL_RESOLVE": return reduceKeeperTrialResolve(state, action);
     case "OPEN_MODAL":
       return { ...state, modal: action.modal, settingsTab: action.settingsTab ?? "main" };
     case "CLOSE_MODAL":
@@ -1373,6 +1388,10 @@ function coreReducer(state: GameState, action: Action): GameState {
       return { ...state, inventory: { ...state.inventory, [craftZone]: newInv } };
     }
 
+    // Test-support action: no production dispatcher (runes are granted inline by
+    // the mysterious-ore chain, boss/almanac/daily rewards). Retained as a
+    // deterministic affordance for unit tests that need to seed runes directly
+    // (runes.test.ts, phase-3-economy.test.ts). Health review #11.
     case "GRANT_RUNES": {
       const amt = Math.max(0, (action.payload?.amount ?? 0) | 0);
       return { ...state, runes: (state.runes ?? 0) + amt };
@@ -1432,20 +1451,6 @@ function coreReducer(state: GameState, action: Action): GameState {
         return spawnPearl(afterSetBiome);
       }
       return afterSetBiome;
-    }
-
-    case "ACTIVATE_RUNE_WILDCARD": {
-      if ((state.runeStash ?? 0) < 1) return state;
-      return {
-        ...state,
-        runeStash: state.runeStash - 1,
-        toolPending: "rune_wildcard",
-        toolPendingPower: {
-          id: "tap_clear_type",
-          params: {},
-          tint: 0xffd248,
-        },
-      };
     }
 
     case "FERTILIZER/CONSUMED": {
@@ -1567,6 +1572,10 @@ function coreReducer(state: GameState, action: Action): GameState {
       };
     }
 
+    // Test-support action: production tile discovery happens inline in
+    // applyTileCollectionChainEffects (chain-collect path). Retained as a direct
+    // affordance for tests that assert discovery effects (species-5.4.test.ts).
+    // Health review #11.
     case "TILE_DISCOVERED": {
       const ids = action.payload.ids ?? [];
       const known = state.tileCollection?.discovered ?? {};

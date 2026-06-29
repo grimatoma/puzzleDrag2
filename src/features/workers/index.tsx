@@ -171,10 +171,10 @@ function computeHireInfo(worker: WorkerDef, count: number, state: GameState): Hi
   return { coinCost, costEntries, canHire };
 }
 
-// Body shared between the side panel and the inline accordion: cost grid +
-// effect summary + the Hire button.
-function WorkerHireBody({ worker, count, state, dispatch }: WorkerDetailProps & { worker: WorkerDef }) {
-  const { coinCost, costEntries, canHire } = computeHireInfo(worker, count, state);
+// Cost grid + effect summary, shared by the side panel (WorkerDetail) and the
+// inline accordion (WorkerHireBody). The Hire button is NOT included here
+// because the two callers place it differently (inline vs. DetailPane actions).
+function HireCostAndEffect({ worker, count, costEntries }: { worker: WorkerDef; count: number; costEntries: unknown[] }) {
   return (
     <>
       <CostGrid entries={costEntries as never[]} title="Next hire cost" />
@@ -182,6 +182,17 @@ function WorkerHireBody({ worker, count, state, dispatch }: WorkerDetailProps & 
         <span className="hl-section-label">Effect</span>
         <span className="hl-text-dim">{effectSummary(worker.abilities, count, worker.maxCount) || "None yet."}</span>
       </div>
+    </>
+  );
+}
+
+// Body shared between the side panel and the inline accordion: cost grid +
+// effect summary + the Hire button.
+function WorkerHireBody({ worker, count, state, dispatch }: WorkerDetailProps & { worker: WorkerDef }) {
+  const { coinCost, costEntries, canHire } = computeHireInfo(worker, count, state);
+  return (
+    <>
+      <HireCostAndEffect worker={worker} count={count} costEntries={costEntries} />
       <DetailActionButton
         tone="moss"
         disabled={!canHire}
@@ -217,11 +228,7 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
         </DetailActionButton>
       }
     >
-      <CostGrid entries={costEntries as never[]} title="Next hire cost" />
-      <div className="flex items-baseline gap-1.5">
-        <span className="hl-section-label">Effect</span>
-        <span className="hl-text-dim">{effectSummary(worker.abilities, count, worker.maxCount) || "None yet."}</span>
-      </div>
+      <HireCostAndEffect worker={worker} count={count} costEntries={costEntries} />
     </DetailPane>
   );
 }

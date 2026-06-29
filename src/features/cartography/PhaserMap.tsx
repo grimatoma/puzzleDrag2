@@ -1,3 +1,4 @@
+import { getDevicePixelRatio } from "../../dpr.js";
 import { useEffect, useRef, useState } from "react";
 import type Phaser from "phaser";
 
@@ -120,7 +121,7 @@ export async function warmMapScene(): Promise<void> {
   if (sharedGame) return;
   const host = ensureStash();
   if (!host) return;
-  const dpr = Math.min(typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1, 3);
+  const dpr = getDevicePixelRatio(3);
   let game: Phaser.Game | null;
   try {
     game = await bootMapGame(host, dpr);
@@ -170,7 +171,7 @@ export default function PhaserMap({
   useEffect(() => {
     if (!hostRef.current) return;
     const host = hostRef.current;
-    const dpr = Math.min(typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1, 3);
+    const dpr = getDevicePixelRatio(3);
     const cssW = Math.max(320, host.clientWidth);
     const cssH = Math.max(240, host.clientHeight);
 

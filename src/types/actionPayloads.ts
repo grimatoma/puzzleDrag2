@@ -181,12 +181,6 @@ export interface KeeperStartTrialAction {
   path?: string;
 }
 
-export interface KeeperAppeaseAction {
-  type: "KEEPER/APPEASE";
-  payload?: KeeperPayload;
-  zoneId?: string;
-}
-
 export interface KeeperTrialResolveAction {
   type: "KEEPER/TRIAL_RESOLVE";
   payload?: KeeperPayload;
@@ -428,10 +422,6 @@ export interface AdvanceSeasonAction {
   type: "ADVANCE_SEASON";
 }
 
-export interface ActivateRuneWildcardAction {
-  type: "ACTIVATE_RUNE_WILDCARD";
-}
-
 export interface FishForceTideFlipAction {
   type: "FISH/FORCE_TIDE_FLIP";
 }
@@ -585,7 +575,6 @@ export type TypedActionType =
   | TierUpAction["type"]
   | KeeperConfrontAction["type"]
   | KeeperStartTrialAction["type"]
-  | KeeperAppeaseAction["type"]
   | KeeperTrialResolveAction["type"]
   | OpenModalAction["type"]
   | RouteApplyAction["type"]
@@ -629,7 +618,6 @@ export type TypedActionType =
   | EndTurnAction["type"]
   | CloseSeasonAction["type"]
   | AdvanceSeasonAction["type"]
-  | ActivateRuneWildcardAction["type"]
   | FishForceTideFlipAction["type"]
   | CancelToolAction["type"]
   | CloseModalAction["type"]
@@ -677,7 +665,6 @@ export type TypedAction =
   | TierUpAction
   | KeeperConfrontAction
   | KeeperStartTrialAction
-  | KeeperAppeaseAction
   | KeeperTrialResolveAction
   | OpenModalAction
   | RouteApplyAction
@@ -721,7 +708,6 @@ export type TypedAction =
   | EndTurnAction
   | CloseSeasonAction
   | AdvanceSeasonAction
-  | ActivateRuneWildcardAction
   | FishForceTideFlipAction
   | CancelToolAction
   | CloseModalAction

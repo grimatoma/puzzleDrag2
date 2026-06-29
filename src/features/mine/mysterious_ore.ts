@@ -71,10 +71,10 @@ export function spawnMysteriousOre(state: GameState, rng: () => number = Math.ra
  */
 export function tickMysteriousOre(state: GameState): GameState {
   if (!state.mysteriousOre) return state;
-  // GameState's `mysteriousOre` field has `turnsRemaining?: number`; the slice
-  // always seeds it on spawn, so default to 0 at the read boundary.
-  const ore = state.mysteriousOre as unknown as MysteriousOreState;
-  const next = (ore.turnsRemaining ?? 0) - 1;
+  // GameState now declares `mysteriousOre: MysteriousOreState | null`, so the
+  // null guard above narrows it directly — no `as unknown as` bridge. (#8)
+  const ore = state.mysteriousOre;
+  const next = ore.turnsRemaining - 1;
   if (next > 0) {
     return {
       ...state,

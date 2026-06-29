@@ -9,6 +9,7 @@
  * renderer.
  */
 
+import { getDevicePixelRatio } from "../dpr.js";
 import { useEffect, useRef, useState } from "react";
 import type Phaser from "phaser";
 
@@ -42,7 +43,7 @@ export function SeasonStripPhaser({
   useEffect(() => {
     if (!hostRef.current || gameRef.current) return undefined;
     const host = hostRef.current;
-    const dpr = Math.min(typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1, 3);
+    const dpr = getDevicePixelRatio(3);
     let cancelled = false;
 
     (async () => {

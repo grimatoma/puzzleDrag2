@@ -485,7 +485,7 @@ function profileState(profile: string): VisualStateTree {
       g[1][1] = { key: "tile_mine_stone", rubble: true };
       g[2][2] = { key: "mysterious_ore" };
       g[3][3] = { key: "lava" };
-      return { ...st, grid: g, hazards: { ...(st.hazards ?? {}), caveIn: { row: 1, col: 1 }, gasVent: { row: 0, col: 3, turnsLeft: 3 }, lava: { cells: [{ row: 3, col: 3 }], turnsToSpread: 1 } }, mysteriousOre: { row: 2, col: 2 } };
+      return { ...st, grid: g, hazards: { ...(st.hazards ?? {}), caveIn: { row: 1, col: 1 }, gasVent: { row: 0, col: 3, turnsLeft: 3 }, lava: { cells: [{ row: 3, col: 3 }], turnsToSpread: 1 } }, mysteriousOre: { row: 2, col: 2, turnsRemaining: 3 } };
     }
     case "boardFish": return boardState("fish");
     case "boardSeasonSpring": return boardWithSeason(1);
@@ -497,7 +497,7 @@ function profileState(profile: string): VisualStateTree {
       const grid0 = (st.grid ?? []) as Grid;
       const g = grid0.map((row) => row.map((cell) => ({ ...cell }))) as Grid;
       g[2][2] = { key: "tile_special_giant_pearl" };
-      return { ...st, grid: g, fish: { tide: "low", tideTurn: 2 }, fishPearl: { row: 2, col: 2 } };
+      return { ...st, grid: g, fish: { tide: "low", tideTurn: 2 }, fishPearl: { row: 2, col: 2, turnsRemaining: 3 } };
     }
     case "boardBossMinimized": return { ...boardState("farm"), bossMinimized: true, boss: { key: "quagmire", name: "The Quagmire", emoji: "🌿", resource: "tile_grass_grass", targetCount: 50, progress: 22, turnsLeft: 4, goal: "Drain the bog: harvest 50 hay.", description: null, modifierDescription: null, minChain: null, spawnBias: null, modifier: { type: "", params: {} } } };
     case "boardBossWeather": return { ...boardState("fish"), boss: { key: "storm", name: "The Storm", emoji: "🌩", resource: "fish_fillet", targetCount: 6, progress: 2, turnsLeft: 5, minChain: 4, goal: "Land 6 fish fillets in 10 turns. Short chains slip the line.", description: null, modifierDescription: "Chains of fewer than 4 fish tiles slip the line: they consume a turn but yield nothing.", spawnBias: null, modifier: { type: "", params: {} } }, fish: { tide: "high", tideTurn: 3 } };

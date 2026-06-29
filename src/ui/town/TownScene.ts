@@ -11,6 +11,7 @@ import {
 } from "../../textures/smoke.js";
 import { TOWN_TILES, ttKey, ttOriginY, TREE_SPECIES } from "./tiles/manifest.js";
 import { makeWaterOverlay, advanceWaterOverlay, destroyWaterOverlay, type WaterOverlay } from "./water.js";
+import { mulberry32 } from "../../rng.js";
 
 interface Pt { x: number; y: number }
 
@@ -543,8 +544,7 @@ export class TownScene extends Phaser.Scene {
   /** Sprinkle deterministic grass variants + flower clusters for life. */
   scatterGroundDetail() {
     // Seeded by plan dimensions so it's stable per zone render.
-    let seed = (this.plan.lots.length * 2654435761) >>> 0;
-    const rnd = () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const rnd = mulberry32((this.plan.lots.length * 2654435761) >>> 0);
     for (let x = 0; x < GRID_COLS; x++) {
       for (let y = 0; y < GRID_ROWS; y++) {
         const tile = this.groundLayer.getTileAt(x, y);
@@ -821,8 +821,7 @@ export class TownScene extends Phaser.Scene {
     const waypoints = this.plan.waypoints;
     if (waypoints.length === 0) return;
 
-    let seed = (waypoints.length * 40503 + 12345) >>> 0;
-    const rnd = () => { seed = (seed + 0x6d2b79f5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    const rnd = mulberry32((waypoints.length * 40503 + 12345) >>> 0);
 
     const count = Math.min(7, Math.max(4, Math.floor(waypoints.length / 4)));
     for (let i = 0; i < count; i++) {

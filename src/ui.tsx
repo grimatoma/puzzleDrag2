@@ -52,7 +52,7 @@ interface BottomNavOrder {
   [extra: string]: unknown;
 }
 
-export function BottomNav({ view, dispatch, state }: { view: string; dispatch: Dispatch; state: GameState }) {
+export const BottomNav = React.memo(function BottomNav({ view, dispatch, state }: { view: string; dispatch: Dispatch; state: GameState }) {
   const orders = (state?.orders ?? []) as BottomNavOrder[];
   const inventory = zoneInventory(state ?? { inventory: {}, farmRun: null, activeZone: "home", mapCurrent: "home" } as import("./types/state.js").GameState);
   const ordersReady = orders.filter((o) => inventoryQty(inventory, o.key) >= o.need).length;
@@ -70,7 +70,7 @@ export function BottomNav({ view, dispatch, state }: { view: string; dispatch: D
       <Tab itemKey="quests" iconKey="quest_book" label="Quests" />
     </TabBar>
   );
-}
+});
 
 // ─── Feature extension points ─────────────────────────────────────────────
 // Auto-discover features. Each feature's index.jsx must export:
@@ -104,7 +104,7 @@ const FEATURES: FeatureEntry[] = Object.values(featureModules).map((m) => {
   };
 });
 
-export function FeatureModals({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
+export const FeatureModals = React.memo(function FeatureModals({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
   // Always-mounted features manage their own visibility internally
   const alwaysFeatures = FEATURES.filter(f => f.alwaysMounted);
 
@@ -138,7 +138,7 @@ export function FeatureModals({ state, dispatch }: { state: GameState; dispatch:
       })()}
     </>
   );
-}
+});
 
 export function FeatureScreens({
   state,

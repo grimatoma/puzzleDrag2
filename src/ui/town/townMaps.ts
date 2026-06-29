@@ -21,6 +21,7 @@
 // Ground uses the same Tuxemon tileset indices `TownScene` references.
 import type { TownPlan } from "./TownScene.js";
 import { blankMask, maskBandH, maskBandV, maskDisc, maskRect, paintSandPaths } from "./roadAutotile.js";
+import { mulberry32 } from "../../rng.js";
 import type { GroundSpec, GroundRoad, GroundMaterial } from "./proceduralGround.js";
 
 // Design space — must match TownScene's grid (40×30 @ 32px → 1280×960).
@@ -43,15 +44,7 @@ const WATER = 250; // deep solid water (mirrors TownScene's T.WATER)
 const DIRT = 173;  // clean tan path / bridge-deck / dock plank (sand-blob centre)
 
 /** Deterministic mulberry32 RNG (shared by the forest scatter). */
-function makeRng(seed: number): () => number {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
+const makeRng = mulberry32;
 
 /** Distance from (px,py) to segment (ax,ay)-(bx,by). */
 function distToSeg(px: number, py: number, ax: number, ay: number, bx: number, by: number): number {
@@ -73,13 +66,7 @@ function blankGrid(fill = GRASS): Grid {
 
 /** Deterministic grass variants + flower clusters so plain grass reads alive. */
 function decorateGrass(grid: Grid, seedBase: number): void {
-  let seed = (seedBase * 2654435761) >>> 0;
-  const rnd = () => {
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
+  const rnd = mulberry32((seedBase * 2654435761) >>> 0);
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
       if (grid[y][x] !== GRASS) continue;

@@ -1747,7 +1747,7 @@ export class GameScene extends Phaser.Scene {
   // tiles are the ones that will actually do something.
   applyToolDimForPower(power: ToolPower, toolKey: string): void {
     const strategy = dimStrategyForPower(power.id) ?? "none";
-    if (strategy === "type_multi" || toolKey === "rune_wildcard") {
+    if (strategy === "type_multi") {
       // Sweep-by-type tools — dim resources that appear only once (sweeping
       // them only clears the tile the player tapped, which is wasted).
       const counts: Record<string, number> = {};

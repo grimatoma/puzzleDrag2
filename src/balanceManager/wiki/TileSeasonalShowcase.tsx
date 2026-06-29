@@ -13,6 +13,7 @@
  * caller still shows the general icon in the infobox.
  */
 
+import { getDevicePixelRatio } from "../../dpr.js";
 import { useEffect, useRef, useState } from "react";
 import { COLORS } from "../shared.jsx";
 import { ICON_DESIGN_BOX } from "../../textures/paintIcon.js";
@@ -63,7 +64,7 @@ function AnimCell({ paint, label }: { paint: Paint | null; label: string }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1;
+    const dpr = getDevicePixelRatio();
     canvas.width = CELL * dpr;
     canvas.height = CELL * dpr;
     const ctx = canvas.getContext("2d");
