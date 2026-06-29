@@ -38,20 +38,6 @@ export function contrastRatio(hexA: number, hexB: number): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-interface GridCell {
-  row: number;
-  col: number;
-}
-
-/**
- * Returns true if tiles a and b are orthogonally adjacent on the grid.
- */
-export function isAdjacent(a: GridCell, b: GridCell): boolean {
-  const dr = Math.abs(a.row - b.row);
-  const dc = Math.abs(a.col - b.col);
-  return (dr === 1 && dc === 0) || (dr === 0 && dc === 1);
-}
-
 interface ChainTile {
   key: string;
 }

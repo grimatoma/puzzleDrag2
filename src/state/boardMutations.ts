@@ -53,28 +53,6 @@ const HAZARD_LOCKED = (cell: MutableCell | Tile | null | undefined): boolean =>
   !!(cell && ((cell as MutableCell).rubble || (cell as MutableCell).gas || (cell as MutableCell).frozen || cell.key === "rat"));
 
 /**
- * Sweep all cells whose key matches any of the supplied tile keys. Returns
- * `{ grid, collected }` where `collected` is a map of `tileKey -> count`.
- * Hazard-locked cells are skipped. Cells set to `key: null` and tagged with
- * `_emptied: true` so the Phaser collapse pipeline picks them up next sync.
- */
-export function sweepTileKeys<G extends AnyGrid | Grid>(board: G | null | undefined, tileKeys: Set<string> | string[]): { grid: G; collected: Record<string, number> } {
-  if (!board) return { grid: (board as unknown as G), collected: {} };
-  const keySet = tileKeys instanceof Set ? tileKeys : new Set(tileKeys);
-  if (keySet.size === 0) return { grid: board, collected: {} };
-  const collected: Record<string, number> = {};
-  const grid = (board as MutableGrid).map((row) =>
-    row.map((cell) => {
-      if (!cell || HAZARD_LOCKED(cell)) return cell;
-      if (cell.key == null || !keySet.has(cell.key)) return cell;
-      collected[cell.key] = (collected[cell.key] ?? 0) + 1;
-      return { ...cell, key: null, _emptied: true };
-    }),
-  ) as unknown as G;
-  return { grid, collected };
-}
-
-/**
  * Clear every cell within `radius` (Chebyshev distance) of `(row, col)`,
  * regardless of key. Hazard-locked cells are skipped to keep parity with
  * the other sweep helpers. Returns `{ grid, collected }`.
@@ -116,24 +94,6 @@ export function sweepAtCoords<G extends AnyGrid | Grid>(board: G | null | undefi
     }),
   ) as unknown as G;
   return { grid, collected };
-}
-
-/**
- * Replace cells at listed coordinates with `toKey`.
- */
-export function transformAtCoords<G extends AnyGrid | Grid>(board: G | null | undefined, cells: CellCoord[], toKey: string): { grid: G; transformed: number } {
-  if (!board || !cells?.length || !toKey) return { grid: (board as unknown as G), transformed: 0 };
-  const coordSet = new Set(cells.map((c) => `${c.row},${c.col}`));
-  let transformed = 0;
-  const grid = (board as MutableGrid).map((row, ri) =>
-    row.map((cell, ci) => {
-      if (!coordSet.has(`${ri},${ci}`)) return cell;
-      if (!cell || HAZARD_LOCKED(cell)) return cell;
-      transformed += 1;
-      return { ...cell, key: toKey };
-    }),
-  ) as unknown as G;
-  return { grid, transformed };
 }
 
 /**

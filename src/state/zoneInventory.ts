@@ -51,24 +51,6 @@ export function updateZoneInventory(
   return withZoneInventory(state, updater(zoneInventory(state, z)), z);
 }
 
-export function withZoneResourceProgress(
-  state: GameState,
-  progress: Partial<Record<ResourceKey, number>>,
-  zoneId?: string,
-): GameState {
-  const z = zoneId ?? inventoryZone(state);
-  return { ...state, resourceProgress: { ...state.resourceProgress, [z]: progress } };
-}
-
-export function updateZoneResourceProgress(
-  state: GameState,
-  updater: (progress: Partial<Record<ResourceKey, number>>) => Partial<Record<ResourceKey, number>>,
-  zoneId?: string,
-): GameState {
-  const z = zoneId ?? inventoryZone(state);
-  return withZoneResourceProgress(state, updater(zoneResourceProgress(state, z)), z);
-}
-
 export function inventoryForStory(
   gameState: Pick<GameState, "inventory" | "farmRun" | "activeZone" | "mapCurrent"> | { inventory?: GameState["inventory"] } | null | undefined,
 ): Record<string, number> {

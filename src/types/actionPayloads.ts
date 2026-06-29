@@ -446,13 +446,6 @@ export interface CloseModalAction {
   type: "CLOSE_MODAL";
 }
 
-export interface PopNpcAction {
-  type: "POP_NPC";
-  npc: string;
-  text: string;
-  ms?: number;
-}
-
 export interface DismissBubbleAction {
   type: "DISMISS_BUBBLE";
   id: number;
@@ -640,7 +633,6 @@ export type TypedActionType =
   | FishForceTideFlipAction["type"]
   | CancelToolAction["type"]
   | CloseModalAction["type"]
-  | PopNpcAction["type"]
   | DismissBubbleAction["type"]
   | MigrateApplyCapsAction["type"]
   | RunSummaryOpenAction["type"]
@@ -733,7 +725,6 @@ export type TypedAction =
   | FishForceTideFlipAction
   | CancelToolAction
   | CloseModalAction
-  | PopNpcAction
   | DismissBubbleAction
   | MigrateApplyCapsAction
   | RunSummaryOpenAction

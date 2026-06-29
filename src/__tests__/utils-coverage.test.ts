@@ -5,7 +5,6 @@ import { describe, it, expect, vi } from "vitest";
 import {
   clamp,
   contrastRatio,
-  isAdjacent,
   canExtendChain,
   upgradeCountForChain,
   rollResource,
@@ -93,12 +92,6 @@ describe("utils — clamp / contrast / adjacency", () => {
     expect(contrastRatio(0x000000, 0x000001)).toBeLessThan(1.01);
   });
 
-  it("isAdjacent: orthogonal only", () => {
-    expect(isAdjacent({ row: 0, col: 0 }, { row: 0, col: 1 })).toBe(true);
-    expect(isAdjacent({ row: 0, col: 0 }, { row: 1, col: 0 })).toBe(true);
-    expect(isAdjacent({ row: 0, col: 0 }, { row: 1, col: 1 })).toBe(false);
-    expect(isAdjacent({ row: 0, col: 0 }, { row: 0, col: 0 })).toBe(false);
-  });
 
   it("canExtendChain: empty chain accepts any tile; non-empty checks key", () => {
     expect(canExtendChain([], { key: "x" })).toBe(true);

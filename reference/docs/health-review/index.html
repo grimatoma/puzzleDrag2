@@ -151,10 +151,50 @@
   sell, lineBase ↔ thresholds, uiMeta ↔ boss targets) would convert a whole class of silent drift into
   CI failures.</p>
 
-  <div class="box amber"><b>Scope of this document.</b> This is a <b>report only</b> — no source files were
-  changed. Each finding carries its own evidence and a recommended fix so any subset can be actioned later.
-  Where a fix needs a design call (the blackberry product; whether crafted-good prices should rise ~10×),
-  both options are presented rather than chosen.</div>
+  <div class="box amber"><b>Scope of this document.</b> Originally a <b>report only</b>. A first remediation pass
+  (<b>“wave one”</b>) has since landed the safe, no-gameplay-change subset — see the box below. Each remaining
+  finding still carries its own evidence and a recommended fix so any subset can be actioned later. Where a fix
+  needs a design call (the blackberry product; whether crafted-good prices should rise ~10×), both options are
+  presented rather than chosen.</div>
+
+  <div class="box tip"><b>Wave one — applied (safe, no gameplay change).</b> The following were fixed in code,
+  verified by <code>typecheck</code> / <code>lint</code> / <code>action-types:check</code> / full <code>vitest</code>
+  (304 files, 3606 tests) / <code>build</code> — all green.
+  <ul class="tight">
+    <li><b>#4 Test pollution</b> — added a guarded global <code>localStorage.clear()</code> in
+      <code>src/__tests__/setup.ts</code> and fixed <code>fish-biome.test.ts</code> to dispatch the real
+      <code>CARTO/TRAVEL</code> shape (top-level <code>nodeId</code>, not <code>payload.nodeId</code>); it no longer
+      passes via leftover save state. <span class="pill ok">done</span></li>
+    <li><b>#7 lineBase ↔ thresholds guard</b> — new <code>productionLines.guard.test.ts</code>. It <b>caught real
+      drift</b>: <code>fish</code> <code>lineBase</code> (5) ≠ its tier-0 tile threshold (6). Reconciling that is a
+      balance call, so the value is left as-is and <b>pinned</b> as a known divergence; the other 14 categories
+      mirror and any new drift now trips CI. <span class="pill ok">done</span></li>
+    <li><b>#11 Dead handlers</b> — removed the truly-dead standalone <code>POP_NPC</code> action (handler + type +
+      catalog). <code>KEEPER/APPEASE</code> (live keeper-trial feature surface) and the test-exercised
+      <code>GRANT_RUNES</code> / <code>TILE_DISCOVERED</code> were left for a deliberate later call.
+      <span class="pill ok">partial</span></li>
+    <li><b>#14 Stale feature README</b> — <code>src/features/README.md</code> rewritten to the real
+      <code>.tsx</code>/<code>.ts</code> auto-discovery contract (incl. the “slices are NOT auto-discovered”
+      footgun). <span class="pill ok">done</span></li>
+    <li><b>#15 Stale CLAUDE.md anchors</b> — corrected the <code>slices</code> array (→ <code>state.ts:99</code>),
+      <code>SLICE_PRIMARY_ACTIONS</code> (→ <code>state.ts:1751</code>), and the balance-values locations
+      (<code>UPGRADE_THRESHOLDS</code> lives in <code>config/upgradeThresholds.ts</code>).
+      <span class="pill ok">done</span></li>
+    <li><b>#16 Orphans &amp; dead helpers</b> — deleted <code>features/mine/tools.ts</code>,
+      <code>config/overrideStrict.ts</code>, <code>ui/town/decor.tsx</code> (zero importers) plus the unused
+      <code>withZoneResourceProgress</code>/<code>updateZoneResourceProgress</code> pair and
+      <code>sweepTileKeys</code>/<code>transformAtCoords</code> in <code>state/boardMutations.ts</code>.
+      <span class="pill ok">done</span></li>
+    <li><b>#18 Dead <code>isAdjacent</code></b> — removed the orthogonal-only <code>utils.ts</code> helper (and its
+      now-unused <code>GridCell</code> type + coverage test); the live adjacency rules in <code>game/chain.ts</code>
+      and cartography are untouched. <span class="pill ok">done</span></li>
+    <li><b>#20 Vitest include</b> — added <code>tests/**/*.test.tsx</code> so future co-located TSX tests can’t be
+      silently skipped. <span class="pill ok">done</span></li>
+  </ul>
+  <b>Deferred from wave one</b> (correct but not “clear + zero-gameplay-risk”): <b>#17</b> dead
+  <code>tickBossTurn</code> — it’s exercised by a substantial phased boss suite and the finding’s other half
+  (deriving boss UI goal text) is gameplay-facing. All <span class="pill high">high</span>/design-call economy
+  items (<b>#1, #2, #3</b>) and larger refactors (<b>#5, #6, #8–#13</b>, the rest) are untouched.</div>
 </section>
 
 <section id="healthy">
@@ -393,8 +433,9 @@
 </section>
 
 <footer>
-  Codebase Health Review — puzzleDrag2 · generated for branch <code>claude/codebase-health-review-9fnfm1</code> ·
-  report only, no source changed. Code is the source of truth; <code>reference/</code> is supporting material.
+  Codebase Health Review — puzzleDrag2 · originally generated for branch <code>claude/codebase-health-review-9fnfm1</code> ·
+  wave-one remediation applied (see the “Wave one — applied” box in the summary). Code is the source of truth;
+  <code>reference/</code> is supporting material.
 </footer>
 
 </div>

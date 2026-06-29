@@ -76,7 +76,7 @@ deliberately kept out of the `/b/` and `/story/` bundles.
 | Core game rules (chains, spawns, produced resources) | `src/game/*.ts` (`chain.ts`, `spawnPool.ts`, `producedResource.ts`) |
 | New feature panel (HUD, modal, screen) | `src/features/<name>/index.tsx` + `slice.ts` |
 | New view or modal route | `src/router.ts` (`KNOWN_VIEWS` / `KNOWN_MODALS`) |
-| Tune balance values | `src/constants.ts` + `src/config/balance/` (`UPGRADE_THRESHOLDS`, `ZONES[].entryCost`, `DAILY_REWARDS`) |
+| Tune balance values | `src/config/upgradeThresholds.ts` (`UPGRADE_THRESHOLDS`), `src/constants.ts` (`ZONES[].entryCost`, `DAILY_REWARDS`); runtime overrides load via `src/config/balance/` |
 | Story beat content | `src/story.ts`, `src/features/story/slice.ts`, `src/state/storyEffects.ts` |
 | Reusable game UI (Hud, Inventory, Tools, Town) | `src/ui/` and `src/ui.tsx` |
 | Town / settlement scene + layout | `src/ui/town/`, `src/townLayout.ts` (see `growing-settlement-layout`, `zone-design`, `tileset-scene-design` skills) |
@@ -105,12 +105,12 @@ and mount whichever component's `viewKey`/`modalKey` matches `state.view` /
 **Reducer slices are NOT auto-discovered — this is the #1 footgun.** A new
 slice must be:
 1. imported in `src/state.ts`, and
-2. added to the `slices` array (around `src/state.ts:73`).
+2. added to the `slices` array (around `src/state.ts:99`).
 
 Additionally, if an action type is owned *exclusively* by a slice (the core
 reducer has no handler for it), it must be listed in `SLICE_PRIMARY_ACTIONS`
 (or `ALWAYS_RUN_SLICES` when the core reducer also partially handles it) near
-`src/state.ts:1608`. Otherwise the reducer short-circuits: when `coreReducer`
+`src/state.ts:1751`. Otherwise the reducer short-circuits: when `coreReducer`
 returns the same state reference, slices are skipped and your action silently
 "does nothing". Use the **check-slice-action** skill to validate this.
 
