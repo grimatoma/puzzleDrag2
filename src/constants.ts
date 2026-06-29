@@ -428,7 +428,7 @@ const ITEMS_DATA = {
   tile_fruit_apple: { kind: "tile", biome: "farm", label: "Apple", value: 1, next: "pie", food: { rationTurns: 1 }, look: { color: 0xd4543a, dark: 0x6a2a18, sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } } },
   tile_fruit_pear: { kind: "tile", biome: "farm", label: "Pear", value: 1, next: "pie", look: { color: 0xbcc436, dark: 0x5e6018, sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } } },
   tile_fruit_golden_apple: { kind: "tile", biome: "farm", label: "Golden Apple", value: 1, next: "pie", look: { color: 0xf4c430, dark: 0x7a6010, sway: { amp: 1.2, freq: 0.00040, gust: 0.06 } } },
-  tile_fruit_blackberry: { kind: "tile", biome: "farm", label: "Blackberry", value: 1, next: "jam", look: { color: 0x3a1a4a, dark: 0x180a20, sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } } },
+  tile_fruit_blackberry: { kind: "tile", biome: "farm", label: "Blackberry", value: 1, next: "pie", look: { color: 0x3a1a4a, dark: 0x180a20, sway: { amp: 1.0, freq: 0.00038, gust: 0.05 } } },
   tile_fruit_rambutan: { kind: "tile", biome: "farm", label: "Rambutan", value: 1, next: "pie", look: { color: 0xd8344a, dark: 0x6a1820, sway: { amp: 1.4, freq: 0.00042, gust: 0.07 } } },
   tile_fruit_starfruit: { kind: "tile", biome: "farm", label: "Starfruit", value: 1, next: "pie", look: { color: 0xe8c83c, dark: 0x726018, sway: { amp: 1.0, freq: 0.00040, gust: 0.05 } } },
   tile_fruit_coconut: { kind: "tile", biome: "farm", label: "Coconut", value: 1, next: "pie", look: { color: 0x5e3a14, dark: 0x2e1c08, sway: { amp: 0.8, freq: 0.00030, gust: 0.04 } } },
@@ -985,6 +985,11 @@ export const RECIPES: RecipeRecord = {
   rec_bread:       { item: "bread",         station: "bakery", tier: 1, inputs: { flour: 3, eggs: 1 }},
   rec_honeyroll:   { item: "honeyroll",     station: "bakery", tier: 2, inputs: { flour: 2, eggs: 1, jam: 1 }},
   rec_harvestpie:  { item: "harvestpie",    station: "bakery", tier: 2, inputs: { flour: 2, jam: 1, eggs: 1 }},
+  // Jam is a larder preserve cooked down from the fruit harvest (the "pie"
+  // resource that fruit tiles, incl. blackberry, produce). Health review #1:
+  // previously nothing produced jam, so the craft_jam quest and the recipes
+  // below that consume jam had no real source.
+  rec_jam:         { item: "jam",           station: "larder", tier: 1, inputs: { pie: 1 }},
   rec_preserve:    { item: "preserve",      station: "larder", tier: 1, inputs: { jam: 2, eggs: 1 }},
   rec_tincture:    { item: "tincture",      station: "larder", tier: 1, inputs: { jam: 3 }},
   rec_iron_hinge:  { item: "iron_hinge",    station: "forge",  tier: 2, inputs: { iron_bar: 2, coke: 1 }},
