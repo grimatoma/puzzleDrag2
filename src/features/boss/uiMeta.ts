@@ -35,7 +35,7 @@ export const BOSS_UI: Readonly<Record<string, BossUiEntry>> = Object.freeze({
     displayName: "Mossback",
     emoji: "🌱",
     flavor: "A mossy titan lurks in the spring glades. Four mystery tiles hide its weakness — reveal them all.",
-    goal: "Hide ~4 mystery tiles that flip on chain.",
+    goal: "Harvest 30 blackberries to expose its weakness and drive it from the vale.",
   },
   storm: {
     displayName: "The Storm",

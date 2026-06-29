@@ -181,12 +181,6 @@ export interface KeeperStartTrialAction {
   path?: string;
 }
 
-export interface KeeperAppeaseAction {
-  type: "KEEPER/APPEASE";
-  payload?: KeeperPayload;
-  zoneId?: string;
-}
-
 export interface KeeperTrialResolveAction {
   type: "KEEPER/TRIAL_RESOLVE";
   payload?: KeeperPayload;
@@ -585,7 +579,6 @@ export type TypedActionType =
   | TierUpAction["type"]
   | KeeperConfrontAction["type"]
   | KeeperStartTrialAction["type"]
-  | KeeperAppeaseAction["type"]
   | KeeperTrialResolveAction["type"]
   | OpenModalAction["type"]
   | RouteApplyAction["type"]
@@ -677,7 +670,6 @@ export type TypedAction =
   | TierUpAction
   | KeeperConfrontAction
   | KeeperStartTrialAction
-  | KeeperAppeaseAction
   | KeeperTrialResolveAction
   | OpenModalAction
   | RouteApplyAction

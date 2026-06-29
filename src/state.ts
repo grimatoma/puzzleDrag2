@@ -880,10 +880,6 @@ function coreReducer(state: GameState, action: Action): GameState {
       const zoneId = action.payload?.zoneId ?? action.zoneId;
       return startKeeperTrial(state, zoneId, action.payload?.path ?? action.path ?? "driveout");
     }
-    case "KEEPER/APPEASE": {
-      const zoneId = action.payload?.zoneId ?? action.zoneId;
-      return finalizeKeeperPath(state, zoneId, "coexist");
-    }
     case "KEEPER/TRIAL_RESOLVE": {
       return resolveKeeperTrial(state, action.payload?.won ?? action.won);
     }

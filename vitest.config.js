@@ -19,7 +19,18 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "html", "json-summary"],
-      include: ["src/utils.ts", "src/state.ts", "src/features/**"],
+      include: [
+        "src/utils.ts",
+        "src/state.ts",
+        "src/features/**",
+        // Highest-risk logic dirs — core game rules, reducer helpers, and
+        // balance config — now measured by the gate (health review #6). These
+        // already sit comfortably above threshold; including them stops future
+        // regressions in the riskiest code from sliding past the coverage gate.
+        "src/game/**",
+        "src/state/**",
+        "src/config/**",
+      ],
       // Spec scopes the gate to logic; React UI components and slice glue
       // for unrendered/legacy panels aren't part of the 70% target.
       exclude: ["**/*.{jsx,tsx}", "src/features/cartography/**", "src/features/townsfolk/**"],

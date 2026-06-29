@@ -1,9 +1,21 @@
 import { INITIAL_STORY_STATE, evaluateStoryTriggers, evaluateSideBeats } from "../story.js";
 import { applyFlagTriggersWithResult } from "../flags.js";
 import * as storySlice from "../features/story/slice.js";
+import * as runSummarySlice from "../features/runSummary/slice.js";
 import * as boss from "../features/boss/slice.js";
 import { zoneInventory, inventoryZone } from "./zoneInventory.js";
-import type { GameState } from "../types/state.js";
+import type { Action, GameState } from "../types/state.js";
+
+// A fired story beat must reach BOTH the story slice (which records it into
+// state.story) and the runSummary slice (which collects beats for the per-run
+// recap). These evaluator call sites invoke the story slice's reduce directly
+// rather than dispatching through the top-level chain, so the runSummary slice
+// never saw STORY/BEAT_FIRED and its "Story beats" recap block stayed empty.
+// Feed the identical action to both; runSummary dedupes by beat id, so this is
+// idempotent. (Health review #3.)
+function recordBeat(state: GameState, action: Action): GameState {
+  return runSummarySlice.reduce(storySlice.reduce(state, action), action);
+}
 
 /** Event payload accepted by the story-beat evaluator. Shape is event-type dependent. */
 export interface StoryEvent {
@@ -34,7 +46,7 @@ export function evaluateAndApplyStoryBeat(state: GameState, event: StoryEvent): 
   const totals = zoneInventory(next) as Record<string, number>;
   const baseStory = (next.story ?? { ...INITIAL_STORY_STATE, flags: {} }) as Parameters<typeof evaluateStoryTriggers>[0];
   const result = evaluateStoryTriggers(baseStory, event, totals);
-  if (result) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: result });
+  if (result) next = recordBeat(next, { type: "STORY/BEAT_FIRED", payload: result });
   if (next.pendingBossKey) {
     const bossKey = next.pendingBossKey;
     const { pendingBossKey: _omit, ...withoutPendingBoss } = next;
@@ -48,16 +60,16 @@ export function evaluateAndApplyStoryBeat(state: GameState, event: StoryEvent): 
     next = evaluateAndApplyStoryBeat(next, { type: "act_entered", act: actAfter });
   }
   const sideResult = evaluateSideBeats(next, event);
-  if (sideResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: sideResult });
+  if (sideResult) next = recordBeat(next, { type: "STORY/BEAT_FIRED", payload: sideResult });
 
   const flagResult = applyFlagTriggersWithResult(next, event);
   next = flagResult.state;
   if (flagResult.changed) {
     const storyForFlag = (next.story ?? { ...INITIAL_STORY_STATE, flags: {} }) as Parameters<typeof evaluateStoryTriggers>[0];
     const storyFlagResult = evaluateStoryTriggers(storyForFlag, event, zoneInventory(next) as Record<string, number>, { onlyFlagConditions: true });
-    if (storyFlagResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: storyFlagResult });
+    if (storyFlagResult) next = recordBeat(next, { type: "STORY/BEAT_FIRED", payload: storyFlagResult });
     const sideFlagResult = evaluateSideBeats(next, event, { onlyFlagConditions: true });
-    if (sideFlagResult) next = storySlice.reduce(next, { type: "STORY/BEAT_FIRED", payload: sideFlagResult });
+    if (sideFlagResult) next = recordBeat(next, { type: "STORY/BEAT_FIRED", payload: sideFlagResult });
   }
   return next;
 }
