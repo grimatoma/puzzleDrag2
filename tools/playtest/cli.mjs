@@ -59,7 +59,7 @@ globalThis.localStorage = {
 };
 
 function parseArgs(argv) {
-  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", macro: "floor", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, compare: false, accept: false, apply: false, applyFrom: null, format: false, snapshot: true };
+  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", macro: "floor", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, compare: false, optimize: false, accept: false, apply: false, applyFrom: null, format: false, snapshot: true };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const val = () => argv[++i];
@@ -76,6 +76,7 @@ function parseArgs(argv) {
       case "--campaign": out.campaign = true; break;
       case "--progression": out.progression = true; break;
       case "--compare": out.compare = true; break;
+      case "--optimize": out.optimize = true; break;
       case "--accept": out.accept = true; break;
       case "--apply": out.apply = true; break;
       case "--apply-from": out.applyFrom = val(); break;
@@ -150,9 +151,12 @@ async function main() {
   let campaign;
   let progression;
   let comparison;
+  let optimization;
   try {
     const mod = await server.ssrLoadModule("/src/playtest/index.ts");
-    if (args.compare) {
+    if (args.optimize) {
+      optimization = mod.optimize(mod.spreadObjective());
+    } else if (args.compare) {
       comparison = mod.runComparison({
         zoneId: args.zones[0], runs: args.runs, seed: args.seed, rows: args.rows, cols: args.cols,
       });
@@ -184,6 +188,25 @@ async function main() {
     }
   } finally {
     await server.close();
+  }
+
+  // ── Optimize mode: search knobs toward a goal, emit an appliable change-list ─
+  if (optimization) {
+    const o = optimization;
+    const edits = Object.entries(o.changeList);
+    console.log(`\npuzzleDrag2 optimizer — family-value spread objective\n`);
+    console.log(`  loss ${fmt(o.before)} → ${fmt(o.after)} over ${o.passes} pass(es) · ${o.acceptable ? "✓ in band" : "⚠ not fully in band"}`);
+    console.log(`  proposed ${edits.length} edit(s):`);
+    for (const [p, v] of edits) console.log(`     ${p} → ${v}`);
+    if (!args.write) { console.log("\n(--no-write: skipped file output)\n"); return; }
+    const outDir = path.resolve(process.cwd(), args.outDir);
+    await mkdir(outDir, { recursive: true });
+    // Write the proposal as a change-list.json so `npm run playtest:apply` writes
+    // it back to constants.ts — closing the loop: optimize → apply → re-sim.
+    await writeFile(path.join(outDir, "change-list.json"), JSON.stringify(o.changeList, null, 2) + "\n", "utf8");
+    await writeFile(path.join(outDir, "optimize-report.json"), JSON.stringify(o, null, 2) + "\n", "utf8");
+    console.log(`\n  wrote change-list.json (apply with: npm run playtest:apply), optimize-report.json → ${args.outDir}\n`);
+    return;
   }
 
   // ── Compare mode: same seeds across the floor↔ceiling policy bracket ─────
