@@ -13,6 +13,7 @@ import {
   type ComponentType,
 } from "react";
 import { ICON_REGISTRY } from "../../textures/iconRegistry.js";
+import { CONCEPT_ICON_BATCHES } from "../../textures/conceptIconBatches.js";
 import { ICON_DESIGN_BOX } from "../../textures/paintIcon.js";
 import { DESIGN_ICONS_MAP } from "../../ui/icons/index.jsx";
 import { getUsedIconKeys } from "../iconUsage.js";
@@ -56,7 +57,15 @@ interface DesignSvgRenderProps {
   fill: string;
 }
 
-const CANVAS_ENTRIES = Object.entries(ICON_REGISTRY as unknown as Record<string, CanvasEntryRaw>).map(
+// The Dev Panel browses the full icon set: the in-game registry PLUS the
+// concept-only batches that are kept out of the `/` game bundle. Concept
+// batches spread last to mirror the legacy in-registry order.
+const ALL_CANVAS_ICONS = {
+  ...ICON_REGISTRY,
+  ...CONCEPT_ICON_BATCHES,
+} as unknown as Record<string, CanvasEntryRaw>;
+
+const CANVAS_ENTRIES = Object.entries(ALL_CANVAS_ICONS).map(
   ([key, entry]) => ({
     key,
     label: entry.label ?? key,
