@@ -69,7 +69,14 @@
   .pill{display:inline-block;font-size:.7rem;font-weight:700;padding:.12rem .5rem;border-radius:999px;color:#fff;letter-spacing:.02em;white-space:nowrap;}
   .pill.high{background:var(--danger);} .pill.med{background:var(--warn);color:#3a2900;} .pill.low{background:var(--idle);}
   .pill.ok{background:var(--ok);} .pill.eff{background:#fff;color:var(--muted);border:1px solid var(--line);}
+  .pill.part{background:var(--warn);color:#3a2900;} .pill.open{background:#fff;color:var(--muted);border:1px solid var(--line);}
   .tag{display:inline-block;font:600 .72rem var(--sans);padding:.1rem .45rem;border-radius:6px;background:var(--code);color:#3a5240;}
+
+  /* Wave-one status: grey out completed finding rows so open work stands out. */
+  tr.done > td{background:#edf1ec !important;color:#8d9a8c;}
+  tr.done b{color:#73806f;} tr.done code{color:#73806f;background:#e3e9e1;}
+  tr.partial > td{background:color-mix(in srgb,var(--accent2) 8%,#fff) !important;}
+  .status{display:block;margin-bottom:.3rem;}
 
   .box{background:color-mix(in srgb,var(--accent) 7%,#fff);border-left:4px solid var(--accent);padding:.8rem 1.1rem;margin:1.1rem 0;border-radius:0 8px 8px 0;box-shadow:var(--shadow);}
   .box.warn{background:color-mix(in srgb,var(--danger) 7%,#fff);border-left-color:var(--danger);}
@@ -194,7 +201,12 @@
   <b>Deferred from wave one</b> (correct but not “clear + zero-gameplay-risk”): <b>#17</b> dead
   <code>tickBossTurn</code> — it’s exercised by a substantial phased boss suite and the finding’s other half
   (deriving boss UI goal text) is gameplay-facing. All <span class="pill high">high</span>/design-call economy
-  items (<b>#1, #2, #3</b>) and larger refactors (<b>#5, #6, #8–#13</b>, the rest) are untouched.</div>
+  items (<b>#1, #2, #3</b>) and larger refactors (<b>#5, #6, #8–#13</b>, the rest) are untouched.
+  <div style="margin-top:.6rem;font-size:.85rem;">Row status key (in the tables below):
+  <span class="pill ok">✓ done · wave 1</span> completed &amp; greyed ·
+  <span class="pill part">◐ partial · wave 1</span> part landed ·
+  <span class="pill open">⏸ deferred</span> consciously held ·
+  <span class="pill open">○ open</span> not started.</div></div>
 </section>
 
 <section id="healthy">
@@ -245,35 +257,35 @@
     <tbody>
       <tr>
         <td class="num">1</td>
-        <td><b>Blackberry tile yields the wrong resource</b> — declares <code>next:'jam'</code> but actually produces <code>pie</code>.</td>
+        <td><span class="status"><span class="pill open">○ open</span></span><b>Blackberry tile yields the wrong resource</b> — declares <code>next:'jam'</code> but actually produces <code>pie</code>.</td>
         <td class="loc">constants.ts:431<br>tileCollection/data.ts:282<br>game/producedResource.ts:17-24<br>game/reachability.ts:270<br>quests/templates.ts:33</td>
         <td>The tile entry has <code>effects:{}</code>, so <code>producedResource</code> falls through to the fruits-family default → chaining blackberries credits <b>pie</b>. But <code>next:'jam'</code> is unioned into the board-obtainable set, so the reachability/wiki layer wrongly believes jam is board-obtainable; no recipe outputs jam, so the <code>craft_jam</code> quest is <b>unsatisfiable</b>. <i>Fix:</i> pick one source of truth (set <code>effects.producesResource='jam'</code> + give jam a family/threshold, <i>or</i> change <code>next</code> to <code>pie</code> and add a real jam recipe), then add a guard test asserting <code>ITEMS[t].next === producedResource(t)</code> for every tile. <span class="tag">design call</span></td>
         <td><span class="pill med">medium</span></td>
       </tr>
       <tr>
         <td class="num">2</td>
-        <td><b>Crafted goods sell at ~10× wrong price</b> via the <code>SELL_RATE</code> fallback.</td>
+        <td><span class="status"><span class="pill open">○ open</span></span><b>Crafted goods sell at ~10× wrong price</b> via the <code>SELL_RATE</code> fallback.</td>
         <td class="loc">constants.ts:396-421<br>constants.ts:588-591<br>constants.ts:1052-1102<br>market/pricing.ts:9-44<br>ui/Inventory.tsx:489-497</td>
         <td><code>item.value</code> and <code>MARKET_PRICES.sell</code> are kept equal by hand with no guard. Crafted resources without a market entry (<code>harvestpie/honeyroll/preserve/tincture</code>, which lack a <code>biome</code> field) land in the items bucket and sell at <code>round(value*0.10)</code> — e.g. harvestpie <b>18 vs pie 90</b>, in the live economy. <code>pricing.ts:31</code>'s comment is also false. <i>Fix:</i> derive <code>MARKET_PRICES.sell</code> from <code>value</code> (or add explicit entries/biome for every sellable crafted good); fix the comment; add a <code>value === sell</code> test. <span class="tag">design call</span></td>
         <td><span class="pill med">medium</span></td>
       </tr>
       <tr>
         <td class="num">3</td>
-        <td><b>Run-summary "Story beats" block never populates.</b></td>
+        <td><span class="status"><span class="pill open">○ open</span></span><b>Run-summary "Story beats" block never populates.</b></td>
         <td class="loc">runSummary/slice.ts:182-193<br>runSummary/index.tsx:206<br>state/storyEffects.ts:37,51<br>state.ts:1788-1806</td>
         <td><code>STORY/BEAT_FIRED</code> is dispatched only as direct <code>storySlice.reduce(...)</code> calls in <code>storyEffects.ts</code>, never through the top-level chain — and it isn't in <code>SLICE_PRIMARY_ACTIONS</code>/<code>ALWAYS_RUN_SLICES</code>, so the <code>runSummary</code> slice handler never runs and <code>BeatsBlock</code> is always empty. <i>Fix:</i> fold the fired beat into <code>runSummary.beatsTriggered</code> from <code>storyEffects.ts</code> (mirroring how core-handled actions feed the slice), <i>or</i> delete the dead handler + field + UI block.</td>
         <td><span class="pill med">medium</span></td>
       </tr>
-      <tr>
+      <tr class="done">
         <td class="num">4</td>
-        <td><b>Order-dependent test masked by shared <code>localStorage</code>.</b></td>
+        <td><span class="status"><span class="pill ok">✓ done · wave 1</span></span><b>Order-dependent test masked by shared <code>localStorage</code>.</b></td>
         <td class="loc">__tests__/fish-biome.test.ts:104-109<br>features/cartography/slice.ts:63<br>__tests__/setup.ts:2<br>state.ts:1849</td>
         <td>The harbor-travel test FAILS in isolation, PASSES in file order: it dispatches <code>CARTO/TRAVEL</code> with <code>payload.nodeId</code> but the reducer reads top-level <code>a.nodeId</code>, so it asserts a path that never runs and only passes because an earlier test primes the shared store. The global mock in <code>setup.ts</code> is never reset; 9 of 17 reducer test files are order-dependent. <i>Fix:</i> add one global <code>beforeEach(() =&gt; localStorage.clear())</code>, then fix the test to the real <code>{type:'CARTO/TRAVEL', nodeId:'harbor'}</code> shape.</td>
         <td><span class="pill low">small</span></td>
       </tr>
       <tr>
         <td class="num">5</td>
-        <td><b>Core tile catalog is misfiled inside a feature</b> — <code>TILE_TYPES</code>/<code>CATEGORIES</code> imported by 27 modules.</td>
+        <td><span class="status"><span class="pill open">○ open</span></span><b>Core tile catalog is misfiled inside a feature</b> — <code>TILE_TYPES</code>/<code>CATEGORIES</code> imported by 27 modules.</td>
         <td class="loc">features/tileCollection/data.ts:4<br>game/spawnPool.ts:9<br>config/productionLines.ts:1<br>state.ts:23 · GameScene.ts:6<br>balanceManager/wiki/memberTiles.ts:12</td>
         <td>The master tile taxonomy lives in a feature folder yet is imported by the engine (<code>game/*</code>), config, state, <code>GameScene</code>, and the Phaser-free wiki — a layering inversion that anchors a 62-file strongly-connected import cycle, making the graph hard to reason about, test in isolation, or tree-shake. <i>Fix:</i> promote the catalog to a core module (<code>src/config/tiles.ts</code>) and re-export from <code>tileCollection</code>; no behavior change.</td>
         <td><span class="pill med">medium</span></td>
@@ -289,32 +301,32 @@
     <thead><tr><th class="num">#</th><th>Finding</th><th>Locations</th><th>Why it matters &amp; fix</th><th>Effort</th></tr></thead>
     <tbody>
       <tr><td class="num">6</td>
-        <td><b>Coverage gate excludes the highest-risk logic dirs.</b></td>
+        <td><span class="status"><span class="pill open">○ open</span></span><b>Coverage gate excludes the highest-risk logic dirs.</b></td>
         <td class="loc">vitest.config.js:21,24<br>src/game/** · src/state/**<br>src/config/**</td>
         <td><code>coverage.include</code> is <code>['src/utils.ts','src/state.ts','src/features/**']</code> at a 70% line floor. <code>src/state.ts</code> is one file, so the <code>src/state/</code> directory (persistence, saveMigrations, init) is unmeasured; <code>src/game/**</code> and <code>src/config/**</code> too — exactly where match/merge rules and save-corruption risk live (these <i>are</i> tested, just not gated). <i>Fix:</i> widen include to those dirs with a per-dir floor and ratchet up.</td>
         <td><span class="pill med">medium</span></td></tr>
-      <tr><td class="num">7</td>
-        <td><b><code>PRODUCTION_LINES.lineBase</code> silently duplicates <code>UPGRADE_THRESHOLDS</code> tier-0 divisors.</b></td>
+      <tr class="done"><td class="num">7</td>
+        <td><span class="status"><span class="pill ok">✓ done · wave 1</span></span><b><code>PRODUCTION_LINES.lineBase</code> silently duplicates <code>UPGRADE_THRESHOLDS</code> tier-0 divisors.</b></td>
         <td class="loc">config/productionLines.ts:25-48<br>config/upgradeThresholds.ts:12-45<br>constants.ts:360-366</td>
         <td>Every <code>lineBase</code> mirrors the matching tier-0 threshold, but tier-0 income divisors derive from <code>lineBase</code>, not the thresholds — two separately-edited tables encoding the same number. The only test re-hardcodes the literals. Retuning a threshold without touching <code>productionLines</code> would silently decouple the upgrade gate from income. <i>Fix:</i> derive one from the other, or add an equality guard test.</td>
         <td><span class="pill low">small</span></td></tr>
       <tr><td class="num">8</td>
-        <td><b>Slice state shapes under-declared, bridged by <code>as unknown as</code>.</b></td>
+        <td><span class="status"><span class="pill open">○ open</span></span><b>Slice state shapes under-declared, bridged by <code>as unknown as</code>.</b></td>
         <td class="loc">types/state.ts:233,293<br>bosses/data.ts:149<br>mine/mysterious_ore.ts:76<br>fish/pearl.ts:98</td>
         <td><code>GameState</code> declares <code>boss</code>/<code>mysteriousOre</code>/<code>fishPearl</code> as UI subsets / index-only shapes while slices store richer runtime shapes and bridge with load-bearing <code>as unknown as</code> casts. Reads of <code>season/year/target/turnsRemaining</code> aren't type-checked — a rename compiles clean. <i>Fix:</i> widen the declared fields to the full interfaces and drop the casts, or expose typed selectors.</td>
         <td><span class="pill med">medium</span></td></tr>
       <tr><td class="num">9</td>
-        <td><b><code>state.ts</code> is a god-module</b> — ~1455-line <code>coreReducer</code> switch + ~20 feature-internal imports.</td>
+        <td><span class="status"><span class="pill open">○ open</span></span><b><code>state.ts</code> is a god-module</b> — ~1455-line <code>coreReducer</code> switch + ~20 feature-internal imports.</td>
         <td class="loc">state.ts:260-1715<br>state.ts:9-56</td>
         <td>46 case labels inline board/inventory/economy mutation across unrelated domains in one scope; beyond the slices array, the core reducer reaches directly into ~20 feature-internal modules (rats, hazards, pearl, bond…), eroding the "feature owns its slice" boundary. Working, but a merge-conflict magnet and hard to unit-test. <i>Fix:</i> extract per-domain case bodies into named pure helpers; migrate hand-called per-tick logic into owning slices.</td>
         <td><span class="pill high">large</span></td></tr>
       <tr><td class="num">10</td>
-        <td><b>~34.5k lines of Dev-Panel-only concept icon art ship in the game bundle.</b></td>
+        <td><span class="status"><span class="pill open">○ open</span></span><b>~34.5k lines of Dev-Panel-only concept icon art ship in the game bundle.</b></td>
         <td class="loc">textures/iconRegistry.ts:152-174<br>textures/iconAnimations.ts:16-61<br>textures.ts:14<br>balanceManager/iconUsage.ts:44-59</td>
         <td>20 concept <code>G_*</code> batches (self-documented "Not referenced by any catalog yet") are spread <b>eagerly</b> into the frozen registries imported by 30+ game UI files, so they ship to players — repo-wide grep of the concept keys returns zero in-game references; only the Dev Panel draws them. <i>Fix:</i> move concept batches behind the existing feature-flag/lazy boundary, or wire the slated keys and delete the rest; add a guard test.</td>
         <td><span class="pill high">large</span></td></tr>
-      <tr><td class="num">11</td>
-        <td><b>Dead action handlers with no production dispatcher.</b></td>
+      <tr class="partial"><td class="num">11</td>
+        <td><span class="status"><span class="pill part">◐ partial · wave 1</span></span><b>Dead action handlers with no production dispatcher.</b> <i>(<code>POP_NPC</code> removed; <code>KEEPER/APPEASE</code> + test-only handlers left.)</i></td>
         <td class="loc">state.ts:1053 (POP_NPC)<br>state.ts:877 (KEEPER/APPEASE)<br>state.ts:1372 (GRANT_RUNES)<br>state.ts:1543 (TILE_DISCOVERED)<br>state.ts:873-883 (trial)</td>
         <td><code>POP_NPC</code> and <code>KEEPER/APPEASE</code> have zero references anywhere; <code>GRANT_RUNES</code>, <code>TILE_DISCOVERED</code>, <code>KEEPER/START_TRIAL</code>, <code>KEEPER/TRIAL_RESOLVE</code> are dispatched only in tests — production grants/discovery/trial flow through the real inline paths. Redundant entry points = a mis-wiring trap. <i>Fix:</i> delete the truly dead ones + their type defs; point tests at the real paths or mark the rest test-only.</td>
         <td><span class="pill low">small</span></td></tr>
@@ -328,31 +340,31 @@
   <table>
     <thead><tr><th class="num">#</th><th>Finding</th><th>Locations</th><th>Why it matters &amp; fix</th></tr></thead>
     <tbody>
-      <tr><td class="num">12</td><td><b>Unreachable rune-wildcard mechanic.</b></td>
+      <tr><td class="num">12</td><td><span class="status"><span class="pill open">○ open</span></span><b>Unreachable rune-wildcard mechanic.</b></td>
         <td class="loc">state.ts:1433-1438,126,665<br>audio/toolSounds.ts</td>
         <td><code>ACTIVATE_RUNE_WILDCARD</code> is dispatched only in tests; the stash can neither accrue nor be spent in production, yet the audio layer reads it as a live channel. <i>Fix:</i> add the UI affordance if shipping, else delete the handler + refund branches + audio plumbing.</td></tr>
-      <tr><td class="num">13</td><td><b><code>mulberry32</code> PRNG copy-pasted across 6 town/map sites.</b></td>
+      <tr><td class="num">13</td><td><span class="status"><span class="pill open">○ open</span></span><b><code>mulberry32</code> PRNG copy-pasted across 6 town/map sites.</b></td>
         <td class="loc">playtest/prng.ts:16 (canonical)<br>ui/town/townMaps.ts:46,77<br>townLayout.ts:24 · TownScene.ts:547,825</td>
         <td>The identical core is hand-rewritten despite an exported canonical no renderer imports. <i>Fix:</i> promote one shared util + string-hash and import it; treat the intentionally-reordered <code>MapScene</code> variant separately to avoid shifting its seeded stream.</td></tr>
-      <tr><td class="num">14</td><td><b><code>features/README.md</code> is fully stale.</b></td>
+      <tr class="done"><td class="num">14</td><td><span class="status"><span class="pill ok">✓ done · wave 1</span></span><b><code>features/README.md</code> is fully stale.</b></td>
         <td class="loc">src/features/README.md:3-14<br>src/ui.tsx:95</td>
         <td>Names <code>index.jsx</code>/<code>slice.js</code>/<code>src/ui.jsx</code> (none exist post-TS-migration) and omits the #1 slice-gating footgun — the doc an agent reads first when adding a feature. <i>Fix:</i> update to <code>.tsx</code>/<code>.ts</code> + <code>src/ui.tsx</code> (note <code>.js</code> import specifiers stay) and add the slice-registration steps.</td></tr>
-      <tr><td class="num">15</td><td><b><code>CLAUDE.md</code> stale anchors &amp; wrong balance locations.</b></td>
+      <tr class="done"><td class="num">15</td><td><span class="status"><span class="pill ok">✓ done · wave 1</span></span><b><code>CLAUDE.md</code> stale anchors &amp; wrong balance locations.</b></td>
         <td class="loc">CLAUDE.md:79,108,113<br>state.ts:99,1722<br>config/upgradeThresholds.ts:12</td>
         <td>Slices anchor says <code>:73</code> (is <code>:99</code>), <code>SLICE_PRIMARY_ACTIONS</code> says <code>:1608</code> (is <code>:1722</code>); the three balance constants are said to live in <code>src/config/balance/</code> but live in <code>upgradeThresholds.ts</code> / <code>zones/data.ts</code> / <code>constants.ts</code>. <i>Fix:</i> reference by symbol name (line numbers drift) and repoint the locations.</td></tr>
-      <tr><td class="num">16</td><td><b>Orphaned modules &amp; dead helper clusters.</b></td>
+      <tr class="done"><td class="num">16</td><td><span class="status"><span class="pill ok">✓ done · wave 1</span></span><b>Orphaned modules &amp; dead helper clusters.</b></td>
         <td class="loc">features/mine/tools.ts<br>config/overrideStrict.ts<br>ui/town/decor.tsx<br>state/zoneInventory.ts:36-62<br>state/boardMutations.ts:61,124</td>
         <td><code>mine/tools.ts</code> (dead twin of live <code>farm/tools.ts</code>), <code>overrideStrict.ts</code> (superseded validator), <code>town/decor.tsx</code> (pre-Phaser legacy), 4 dead <code>zoneInventory</code> mutators, <code>sweepTileKeys</code>/<code>transformAtCoords</code>, and 3 single-symbol helpers — all zero importers (cross-checked against dynamic wiring). <i>Fix:</i> delete.</td></tr>
-      <tr><td class="num">17</td><td><b>Dead parallel boss-resolution path + drifted boss UI goals.</b></td>
+      <tr><td class="num">17</td><td><span class="status"><span class="pill open">⏸ deferred</span></span><b>Dead parallel boss-resolution path + drifted boss UI goals.</b></td>
         <td class="loc">bosses/data.ts:152 (tickBossTurn)<br>boss/slice.ts:155 · uiMeta.ts:38<br>bosses/data.ts:64</td>
         <td><code>tickBossTurn</code> is test-only and diverges from the live <code>BOSS/RESOLVE</code> (omits the gem + 25 XP). Separately, <code>BOSS_UI</code> goal strings drift from targets and reach the HUD: mossback's goal describes the hide modifier instead of the actual 30-blackberry tribute. <i>Fix:</i> delete <code>tickBossTurn</code>; derive goal text from the single <code>BOSSES</code> def (keep <code>bossReward</code> — it's live).</td></tr>
-      <tr><td class="num">18</td><td><b>Dead orthogonal-only <code>isAdjacent</code> encodes the wrong rule.</b></td>
+      <tr class="done"><td class="num">18</td><td><span class="status"><span class="pill ok">✓ done · wave 1</span></span><b>Dead orthogonal-only <code>isAdjacent</code> encodes the wrong rule.</b></td>
         <td class="loc">utils.ts:49<br>game/chain.ts:47,94</td>
         <td>The <code>utils.ts</code> copy is 4-directional and has zero production callers; the live board rule is the 8-directional <code>chain.ts</code> version. A latent autocomplete trap — a dev reaching for <code>isAdjacent</code> could pick the wrong rule. <i>Fix:</i> delete it (and the test that locks in the wrong semantics).</td></tr>
-      <tr><td class="num">19</td><td><b>Duplicated / missing small helpers.</b></td>
+      <tr><td class="num">19</td><td><span class="status"><span class="pill open">○ open</span></span><b>Duplicated / missing small helpers.</b></td>
         <td class="loc">workers/index.tsx:179,219<br>ui/Town.tsx:248<br>seasonStripPhaser.tsx:45 (+3)<br>textures/categories/*, seasonal/*</td>
         <td>Three <code>CostEntry</code> shapes + gratuitous <code>as never[]</code> casts (proven unnecessary, now masking field drift); a redundant double-cast on <code>buildTownPlan</code>; a <code>devicePixelRatio</code> clamp magic number ×4 (one copy already dropped its SSR guard); <code>clamp</code>/<code>clamp01</code> re-defs; pure math/shadow/round-rect kernels copy-pasted 48–81× across texture modules. <i>Fix:</i> export shared helpers (<code>clampedDpr</code>, <code>clamp01</code>, <code>_util</code>/<code>_draw</code>) and reuse; fold opportunistically.</td></tr>
-      <tr><td class="num">20</td><td><b>Misc hygiene.</b></td>
+      <tr class="partial"><td class="num">20</td><td><span class="status"><span class="pill part">◐ partial · wave 1</span></span><b>Misc hygiene.</b> <i>(vitest <code>tests/**/*.test.tsx</code> include added; rest open.)</i></td>
         <td class="loc">ui/puzzleBoard.tsx (1799 ln)<br>GameScene.ts:1825 · config/abilities.ts:42-54<br>vitest.config.js:9 · story.ts:453</td>
         <td>1799-line multi-component <code>puzzleBoard.tsx</code>; hardcoded <code>?? 200</code> inventory-cap fallback (+ an <code>inventoryCap</code> registry key never written, so the fallback always fires — cosmetic float-text only); 4 plumbed-but-unattached abilities; <code>vitest</code> include omits <code>tests/**/*.test.tsx</code> (latent silent-skip); a module-mutable story-beat singleton mutated by an import-time side effect; a harmless type-only <code>constants.ts↔catalogKeys.ts</code> cycle. <i>Fix:</i> address opportunistically; the vitest-include and registry-cap ones are quick.</td></tr>
     </tbody>
@@ -365,6 +377,7 @@
   (<code>import("phaser")</code>), the town canvas is kept mounted/hidden to avoid cold reboots, the per-frame
   <code>GameScene.update()</code> loop is throttled (≤33ms seasonal / ≤50ms concept re-bakes) with distinct-key
   dedup and reduced-motion gating, and <code>persistState</code> is rAF-coalesced. The real wins are React-side.</p>
+  <p class="legend"><span class="pill open">○ open</span> None of OPT-1…OPT-5 were addressed in wave one — all are perf refactors that touch rendering/persistence and need visual-golden runs, so they're scheduled deliberately.</p>
   <table>
     <thead><tr><th>ID</th><th>Hotness</th><th>Opportunity</th><th>Locations</th><th>Fix</th><th>Effort</th></tr></thead>
     <tbody>
