@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Balance Automation — Hearthlands closed-loop tuning &amp; gating</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  /* ── Theme: growth-green + harvest-amber on warm paper (fits Hearthlands). ── */
+  :root{
+    --ink:#22271f; --muted:#6b7280; --line:#e3e7dc; --bg:#f8faf4;
+    --paper:#fffef9; --code:#eef1e6;
+    --accent:#2f8f57;       /* growth green — dominant */
+    --accent2:#c2790f;      /* harvest amber — secondary */
+    --shadow:0 1px 2px rgba(24,32,16,.06), 0 6px 20px -10px rgba(24,32,16,.22);
+    --ok:#2f9e44; --warn:#e8590c; --info:#1971c2; --danger:#b5341f; --idle:#868e96;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font:400 16px/1.64 var(--sans); color:var(--ink); margin:0;
+    background:
+      radial-gradient(1200px 520px at 80% -8%, color-mix(in srgb,var(--accent) 9%,transparent), transparent 60%),
+      radial-gradient(1000px 460px at -10% 4%, color-mix(in srgb,var(--accent2) 8%,transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, #eef3e6 100%);
+    background-attachment:fixed; background-color:var(--bg);
+  }
+  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{background:var(--code);padding:.08rem .36rem;border-radius:4px;font:.84em var(--mono);color:#3f6b3f;}
+  pre{background:var(--code);padding:.9rem 1.05rem;border-radius:10px;overflow-x:auto;box-shadow:var(--shadow);font:.84rem/1.5 var(--mono);}
+  pre code{background:none;padding:0;color:var(--ink);}
+  .page{max-width:1100px;margin:0 auto;padding:1.5rem 1.25rem 5rem;}
+
+  header.hero{
+    border-bottom:3px solid var(--accent); padding:1.4rem 1.5rem 1.1rem; margin-bottom:1.2rem;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 9%,transparent), color-mix(in srgb,var(--accent2) 7%,transparent));
+    border-radius:14px 14px 6px 6px; box-shadow:var(--shadow);
+  }
+  header.hero h1{font:800 2.7rem/1.08 var(--serif);letter-spacing:-.015em;margin:.1rem 0 .35rem;color:var(--ink);}
+  .sub{color:var(--muted);font-size:1.04rem;margin:.2rem 0 .75rem;max-width:66ch;}
+  .meta{font-size:.8rem;color:var(--muted);margin:.4rem 0 .7rem;}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .chip{font-size:.78rem;font-weight:600;padding:.2rem .6rem;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,#fff);color:var(--accent);border:1px solid color-mix(in srgb,var(--accent) 30%,#fff);}
+
+  nav.tabs{display:flex;flex-wrap:wrap;gap:.35rem;border-bottom:2px solid var(--line);margin:.1rem 0 1.7rem;}
+  nav.tabs .tab{font:700 1rem/1 var(--serif);letter-spacing:-.01em;padding:.62rem 1.15rem;cursor:pointer;color:var(--muted);background:transparent;border:1px solid transparent;border-bottom:none;border-radius:11px 11px 0 0;margin-bottom:-2px;transition:color .14s,background .14s,border-color .14s;}
+  nav.tabs .tab:hover{color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,transparent);}
+  nav.tabs .tab.active{color:var(--ink);background:var(--paper);border-color:var(--line);border-top:3px solid var(--accent);box-shadow:0 -5px 16px -9px rgba(24,32,16,.30);}
+  html.tabs-on main>.panel{display:none;}
+  html.tabs-on main>.panel.active{display:block;}
+
+  main{min-width:0;}
+  section{scroll-margin-top:1rem;}
+  h2{font:800 1.85rem/1.15 var(--serif);letter-spacing:-.01em;margin-top:0;border-bottom:1px solid var(--line);padding-bottom:.25rem;color:var(--ink);}
+  section + section h2{margin-top:2.4rem;}
+  h3{font:600 1.22rem/1.25 var(--serif);margin-top:1.5rem;color:var(--ink);}
+  p,li{margin:.45rem 0;}
+
+  table{border-collapse:collapse;width:100%;margin:.9rem 0;font-size:.88rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  th,td{border:1px solid var(--line);padding:.46rem .65rem;text-align:left;vertical-align:top;}
+  th{background:color-mix(in srgb,var(--accent) 9%,#fff);color:var(--ink);font-weight:700;}
+  tbody tr:nth-child(even){background:color-mix(in srgb,var(--bg) 60%,#fff);}
+
+  .box{background:color-mix(in srgb,var(--accent2) 8%,#fff);border-left:4px solid var(--accent2);padding:.75rem 1.05rem;margin:1.1rem 0;border-radius:0 8px 8px 0;box-shadow:var(--shadow);}
+  .box.warn{background:color-mix(in srgb,var(--danger) 7%,#fff);border-left-color:var(--danger);}
+  .box.tip{background:color-mix(in srgb,var(--ok) 8%,#fff);border-left-color:var(--ok);}
+  .box b{font-family:var(--serif);}
+
+  .pill{display:inline-block;font-size:.72rem;font-weight:700;padding:.1rem .5rem;border-radius:999px;color:#fff;}
+  .pill.ok{background:var(--ok);} .pill.warn{background:var(--warn);} .pill.info{background:var(--info);}
+  .pill.danger{background:var(--danger);} .pill.idle{background:var(--idle);}
+  .legend{font-size:.78rem;color:var(--muted);margin:.4rem 0;display:flex;gap:.8rem;flex-wrap:wrap;}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-left:6px solid var(--accent);border-radius:10px;padding:.7rem 1.1rem;margin:.85rem 0;box-shadow:var(--shadow);transition:transform .14s,box-shadow .14s;}
+  .card:hover{transform:translateY(-2px);box-shadow:0 2px 4px rgba(24,32,16,.08),0 12px 28px -12px rgba(24,32,16,.3);}
+  .card.amber{border-left-color:var(--accent2);}
+  .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1rem;margin:1rem 0;}
+  .grid .card{margin:0;}
+
+  .diagram{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:1.1rem;margin:1.1rem 0;overflow-x:auto;box-shadow:var(--shadow);}
+
+  .filterbar{display:flex;flex-wrap:wrap;gap:.35rem;margin:.6rem 0 .2rem;align-items:center;}
+  .filterbar .lbl{font-size:.8rem;color:var(--muted);margin-right:.2rem;}
+  .filterbar button{font:600 .8rem/1 var(--sans);padding:.34rem .65rem;border:1px solid var(--line);background:var(--paper);border-radius:7px;cursor:pointer;color:var(--ink);transition:background .14s,color .14s,border-color .14s;}
+  .filterbar button:hover{border-color:var(--accent);color:var(--accent);}
+  .filterbar button.on{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+  details{border:1px solid var(--line);border-radius:10px;padding:.2rem .9rem;margin:.85rem 0;background:var(--paper);box-shadow:var(--shadow);}
+  details>summary{cursor:pointer;font:600 1.02rem/1.3 var(--serif);padding:.45rem 0;color:var(--ink);}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  header.hero{animation:fadeUp .55s cubic-bezier(.21,.61,.35,1) both;}
+  html.tabs-on main>.panel.active{animation:fadeUp .4s cubic-bezier(.21,.61,.35,1) both;}
+
+  @media (max-width:820px){
+    header.hero h1{font-size:2.1rem;}
+    nav.tabs{gap:.2rem;}
+    nav.tabs .tab{padding:.5rem .8rem;font-size:.92rem;}
+  }
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} *{animation:none!important;transition:none!important;} .card:hover{transform:none;} }
+  @media print{ nav.tabs,.filterbar{display:none;} details{border:0;box-shadow:none;} a{color:inherit;} body{background:#fff;} header.hero,table,.box,.diagram,.card,details,pre{box-shadow:none;} html.tabs-on main>.panel{display:block!important;} }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="hero">
+    <h1>Balance Automation</h1>
+    <p class="sub">A closed loop that turns brute-force simulation into the thing that tunes the game — so balancing and feature-gating stop being a manual, play-to-verify grind. Built on Hearthlands' existing headless playtest harness.</p>
+    <p class="meta">Engineering design doc · Status: M1–M3 shipped, M4–M5 planned · branch <code>claude/quota-usage-brainstorm-b4bz8g</code> · PR #1392</p>
+    <div class="chips">
+      <span class="chip">deterministic sim</span>
+      <span class="chip">codemod write-back</span>
+      <span class="chip">floor↔ceiling bracket</span>
+      <span class="chip">target-seeking optimizer</span>
+      <span class="chip">no fakes</span>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" data-tab="overview">Overview</button>
+    <button class="tab" role="tab" data-tab="loop">The Loop</button>
+    <button class="tab" role="tab" data-tab="using">Using it</button>
+    <button class="tab" role="tab" data-tab="architecture">Architecture</button>
+    <button class="tab" role="tab" data-tab="roadmap">Roadmap</button>
+  </nav>
+
+  <main>
+
+    <!-- ─────────────────────────── OVERVIEW ─────────────────────────── -->
+    <div class="panel" id="overview" role="tabpanel" aria-label="Overview">
+
+      <section id="summary">
+        <h2>What this is</h2>
+        <p>Hearthlands is a deep game with a mature, <strong>production-grade</strong> headless simulator (<code>tools/playtest/</code>, <code>src/playtest/</code>) that plays the <em>real</em> reducer deterministically and already <em>proposes</em> balance changes. What it lacked was the loop around it: nothing applied the proposals, nothing searched for good values, and the sim's bot played nothing like a real player.</p>
+        <p>This system closes that loop. The bottleneck on finishing the game was never writing code — it was that <strong>balancing and feature-gating were manual</strong>: hand-edit a number, play to check, repeat; hand-wire an unlock gate, play to verify it's reachable. That is exactly the work brute-force simulation is built for.</p>
+        <div class="box tip"><b>TL;DR.</b> <code>run the sim → it proposes edits → the optimizer searches for values that hit a goal → a codemod writes them back into <code>constants.ts</code> → re-sim</code>. Balance is evaluated across a <strong>floor↔ceiling bracket</strong> of how differently players play, so the numbers transfer to real humans — not to a naive bot. Every auto-tune is a reviewable git diff.</p>
+      </section>
+
+      <section id="principle">
+        <h2>The validity principle</h2>
+        <p>The load-bearing idea, and the reason this isn't just "auto-cut some numbers":</p>
+        <div class="box"><b>Sim-derived balance is only as trustworthy as the player policy the sim runs.</b> A bot that always grabs the longest chain and never builds or crafts will make the optimizer tune the game for a player who doesn't exist.</p>
+        <p>So we don't chase one "true" player. We <strong>bracket</strong> play between a <em>floor</em> (naive: longest-chain, greedy tier-up, never builds or crafts) and a <em>ceiling</em> (near-optimal: need-aware chains + a build→craft→tier macro). Real players live between. Balance is healthy when <strong>both ends are acceptable</strong> — the floor isn't soft-locked and the ceiling can't trivialize the game. The spread between them is honest uncertainty, far better than one bot's point estimate.</p>
+        <div class="grid">
+          <div class="card"><h3>Floor agent</h3><p><code>greedy</code> board policy + <code>floor</code> macro. Models a player who never builds or crafts. On home it permanently stalls at tier&nbsp;0 on crafted <code>bread</code>.</p></div>
+          <div class="card amber"><h3>Ceiling agent</h3><p><code>climb</code> board policy + <code>climb</code> macro. Builds the Bakery, crafts bread from farm flour+eggs, climbs to Hamlet (tier&nbsp;1+). ~55% higher coins/run.</p></div>
+        </div>
+      </section>
+
+      <section id="status-snapshot">
+        <h2>Status at a glance</h2>
+        <p class="legend">
+          <span><span class="pill ok">shipped</span> built &amp; verified</span>
+          <span><span class="pill info">wip</span> in progress</span>
+          <span><span class="pill warn">next</span> planned</span>
+          <span><span class="pill idle">later</span> deferred</span>
+        </p>
+        <table>
+          <thead><tr><th>Milestone</th><th>What it delivers</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td><b>M1 — Apply loop</b></td><td>Codemod writes a proposed change-list back into <code>constants.ts</code></td><td><span class="pill ok">shipped</span></td></tr>
+            <tr><td><b>M2 — Faithful bracket</b></td><td>State-aware policies + macro layer + <code>--compare</code> floor↔ceiling</td><td><span class="pill ok">shipped</span></td></tr>
+            <tr><td><b>M3 — Optimizer</b></td><td>Goal-driven, non-destructive knob search → appliable change-list</td><td><span class="pill ok">shipped</span></td></tr>
+            <tr><td><b>M4 — Declarative gating</b></td><td>Finish the progression engine's Phase&nbsp;2 + a CI softlock oracle</td><td><span class="pill warn">next</span></td></tr>
+            <tr><td><b>M5 — Reach more knobs</b></td><td>Data-drive market prices, tier costs, session length</td><td><span class="pill idle">later</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+    </div>
+
+    <!-- ─────────────────────────── THE LOOP ─────────────────────────── -->
+    <div class="panel" id="loop" role="tabpanel" aria-label="The Loop">
+
+      <section id="diagram">
+        <h2>The closed loop</h2>
+        <p>Five stages, one cycle. The catalog (<code>constants.ts</code>) is the single source of truth; everything reads it, the codemod writes it.</p>
+        <div class="diagram">
+          <svg viewBox="0 0 920 240" width="100%" role="img" aria-label="Closed balance loop: constants to sim+bracket to proposal to optimizer to apply codemod and back to constants">
+            <defs>
+              <marker id="arr" markerWidth="10" markerHeight="10" refX="7.5" refY="3" orient="auto">
+                <path d="M0,0 L7,3 L0,6 Z" fill="var(--muted)"/>
+              </marker>
+            </defs>
+            <g font-family="IBM Plex Sans, sans-serif" font-size="13.5" font-weight="600">
+              <!-- top row -->
+              <rect x="20"  y="30" width="170" height="58" rx="11" fill="color-mix(in srgb,var(--accent) 13%,#fff)" stroke="var(--accent)"/>
+              <text x="105" y="55" text-anchor="middle" fill="var(--ink)">constants.ts</text>
+              <text x="105" y="73" text-anchor="middle" fill="var(--muted)" font-size="11.5" font-weight="400">catalog = source of truth</text>
+
+              <rect x="255" y="30" width="190" height="58" rx="11" fill="color-mix(in srgb,var(--accent2) 13%,#fff)" stroke="var(--accent2)"/>
+              <text x="350" y="55" text-anchor="middle" fill="var(--ink)">deterministic sim</text>
+              <text x="350" y="73" text-anchor="middle" fill="var(--muted)" font-size="11.5" font-weight="400">real reducer · floor↔ceiling</text>
+
+              <rect x="510" y="30" width="180" height="58" rx="11" fill="color-mix(in srgb,var(--info) 13%,#fff)" stroke="var(--info)"/>
+              <text x="600" y="55" text-anchor="middle" fill="var(--ink)">proposal</text>
+              <text x="600" y="73" text-anchor="middle" fill="var(--muted)" font-size="11.5" font-weight="400">dotted-path change-list</text>
+
+              <rect x="725" y="30" width="175" height="58" rx="11" fill="color-mix(in srgb,var(--info) 13%,#fff)" stroke="var(--info)"/>
+              <text x="812" y="55" text-anchor="middle" fill="var(--ink)">optimizer</text>
+              <text x="812" y="73" text-anchor="middle" fill="var(--muted)" font-size="11.5" font-weight="400">search knobs → goal</text>
+
+              <line x1="190" y1="59" x2="252" y2="59" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <line x1="445" y1="59" x2="507" y2="59" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <line x1="690" y1="59" x2="722" y2="59" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+
+              <!-- down + back -->
+              <line x1="812" y1="88" x2="812" y2="150" stroke="var(--muted)" stroke-width="2" marker-end="url(#arr)"/>
+              <rect x="600" y="150" width="290" height="58" rx="11" fill="color-mix(in srgb,var(--ok) 14%,#fff)" stroke="var(--ok)"/>
+              <text x="745" y="175" text-anchor="middle" fill="var(--ink)">apply codemod (M1)</text>
+              <text x="745" y="193" text-anchor="middle" fill="var(--muted)" font-size="11.5" font-weight="400">text-span splice → reviewable diff</text>
+              <line x1="812" y1="150" x2="892" y2="150" stroke="none"/>
+              <!-- back arrow to constants -->
+              <path d="M600,179 L120,179 L120,90" fill="none" stroke="var(--muted)" stroke-width="2" stroke-dasharray="5 4" marker-end="url(#arr)"/>
+              <text x="350" y="174" text-anchor="middle" fill="var(--muted)" font-size="11.5" font-weight="500">re-sim &amp; re-validate</text>
+            </g>
+          </svg>
+        </div>
+        <div class="box"><b>Why a loop, not a script.</b> Each stage is independently usable (audit the economy, compare the bracket, just apply a hand-written patch). Chained, they let the game tune itself toward a goal you set, while you review the diff at the end.</div>
+      </section>
+
+      <section id="m1">
+        <h2>M1 — Close the apply loop</h2>
+        <p>The sim and the Dev Panel both emit the same machine-readable patch — a flat map of dotted constants paths to new numbers:</p>
+        <pre><code>{ "ITEMS.pearls.value": 101, "RECIPES.rec_bread.inputs.flour": 2,
+  "BUILDINGS.mill.cost.plank": 6 }</code></pre>
+        <p>Until M1 that was a dead end: a human pasted it into an LLM to hand-edit the file. Now <code>src/playtest/applyPatch.ts</code> parses <code>constants.ts</code> with the <strong>TypeScript compiler API</strong>, walks each path down to its numeric literal, and rewrites <em>only that literal</em> by text-span splice. It does not re-print the AST — every other byte (formatting, comments, trailing commas) is preserved, so the only diff is the changed numbers.</p>
+        <ul>
+          <li><b>Handles the real shapes:</b> the <code>ITEMS</code>→<code>ITEMS_DATA</code> spread aliases, and array-by-<code>id</code> descent for <code>BUILDINGS</code>.</li>
+          <li><b>Fails loud:</b> any path that doesn't resolve to a numeric literal aborts the whole apply — a silent half-write is the one outcome we never want.</li>
+          <li><b>Self-healing snapshot:</b> a balance edit moves the fixed-seed metrics by design, so <code>--apply</code> regenerates the harness drift-guard snapshot — that snapshot diff is the reviewable record.</li>
+        </ul>
+      </section>
+
+      <section id="m2">
+        <h2>M2 — A faithful player bracket</h2>
+        <p>Three pieces give the sim a real player model instead of a longest-chain bot.</p>
+        <h3>M2a · State-aware board policies</h3>
+        <p>The per-chain policy widened from "see only the chain list" to a full <code>PolicyContext</code> (live state, zone, board, RNG). Policies: <code>greedy</code> (longest — the floor), <code>value</code> (coin-chaser), and <code>climb</code> / <code>needAwareClimb</code> — the first policy that reads game state to steer chain choice toward the next tier rung's shortfalls.</p>
+        <h3>M2b · The macro-decision layer</h3>
+        <p>What actually paces progression isn't the per-chain choice — it's the <em>between-run</em> decisions: what you build, what you craft, when you tier up. <code>src/playtest/macro.ts</code> models them with <strong>real reducer actions</strong> (<code>BUILD</code> / <code>CRAFTING/CRAFT_RECIPE</code> / <code>TIER_UP</code>):</p>
+        <ul>
+          <li><code>floorMacro</code> — greedy tier-up only (the original behavior; default, so existing snapshots are byte-identical).</li>
+          <li><code>climbMacro</code> — each pass: build the crafting <em>stations</em> the next rung needs, craft those goods up to the requirement, then tier up — to a fixpoint.</li>
+        </ul>
+        <div class="box tip"><b>Result.</b> The documented "home stalls at tier&nbsp;0 on crafted <code>bread</code>" finding is a <em>floor</em> artifact: the ceiling macro builds the Bakery and crafts bread from farm-produced flour+eggs, clearing the stall and climbing to Hamlet. That's a real floor↔ceiling gap on <em>progression</em>, not just per-run economy.</div>
+        <h3>M2d · The comparison harness</h3>
+        <p><code>src/playtest/compare.ts</code> runs the same seeds under each agent and tabulates the spread. <code>npm run playtest -- --compare</code>:</p>
+        <pre><code>floor    [greedy/floor] tier 0 · net/run 37.6 · stall Hamlet: bread×6
+ceiling  [climb/climb]  tier 1 · net/run 58.4 · stall Village
+progression spread: tier 0 → 1 (Δ1)</code></pre>
+      </section>
+
+      <section id="m3">
+        <h2>M3 — The target-seeking optimizer</h2>
+        <p><code>src/playtest/optimizer.ts</code> is the framework that ties it together. Given a set of <strong>knobs</strong> (each a live get/set onto a constants value with bounds) and a <strong>loss</strong> to minimize, it runs coordinate descent — sample candidate values per knob, keep the one that most reduces the loss, repeat — then emits the winning values as a change-list for M1 to apply.</p>
+        <div class="grid">
+          <div class="card"><h3>Non-destructive</h3><p>It evaluates each candidate by mutating the in-memory catalog, then <em>always</em> restores the originals. Nothing changes on disk — it returns a proposal. Disk edits happen later, reviewably, via <code>playtest:apply</code>.</p></div>
+          <div class="card amber"><h3>Goal-driven</h3><p>The loss is supplied by the caller, <em>never invented here</em>. The bundled <code>spreadObjective</code> targets the objective family-value-spread audit; pacing/economy goals plug into the same <code>optimize()</code> once their target bands are set.</p></div>
+        </div>
+        <p>The worked example needs no design input: drive every high family-value outlier under the ceiling <code>factor × median</code> (no resource should pay more than 3× a typical tile-spend). Live run:</p>
+        <pre><code>$ npm run playtest -- --optimize
+loss 329.33 → 0 over 1 pass · ✓ in band
+proposed 7 edit(s):  ITEMS.jade.value → 68 · ITEMS.pearls.value → 101 · …</code></pre>
+        <div class="box warn"><b>Pacing targets are yours to set.</b> An optimizer is only as good as what it optimizes toward, and a pacing goal ("reaching Hamlet should take ~N runs") is a <em>design decision</em>, not something the tool should invent. The current <code>PROGRESSION_TARGETS</code> bands are explicit placeholders. The framework is ready; point it at a real number when you have one.</div>
+      </section>
+    </div>
+
+    <!-- ─────────────────────────── USING IT ─────────────────────────── -->
+    <div class="panel" id="using" role="tabpanel" aria-label="Using it">
+
+      <section id="commands">
+        <h2>Commands</h2>
+        <p>Everything runs through the one harness CLI (Vite SSR loads the real TS, so enums and <code>.js</code>→<code>.ts</code> specifiers resolve exactly as shipped). Output lands in <code>reference/docs/playtest/</code> (git-ignored).</p>
+        <table>
+          <thead><tr><th>Command</th><th>What it does</th></tr></thead>
+          <tbody>
+            <tr><td><code>npm run playtest</code></td><td>Per-zone economy snapshot + the family-value spread audit + a proposed <code>change-list.json</code>.</td></tr>
+            <tr><td><code>npm run playtest -- --campaign</code></td><td>Sequential progression pacing for a zone: runs-to-milestone, runs-to-tier, the stall finding.</td></tr>
+            <tr><td><code>npm run playtest -- --compare</code></td><td>Run the floor↔ceiling <b>bracket</b> on the same seeds; side-by-side table.</td></tr>
+            <tr><td><code>npm run playtest -- --optimize</code></td><td>Search knobs toward the goal; write an appliable <code>change-list.json</code>.</td></tr>
+            <tr><td><code>npm run playtest -- --progression</code></td><td>Code-derived reachability + softlock oracle (no runs played).</td></tr>
+            <tr><td><code>npm run playtest:apply</code></td><td>Write a <code>change-list.json</code> back into <code>constants.ts</code> and regenerate the snapshot.</td></tr>
+          </tbody>
+        </table>
+        <h3>Useful flags</h3>
+        <p><code>--zones home,meadow</code> · <code>--runs 60</code> · <code>--seed 1</code> · <code>--policy greedy|value|climb</code> · <code>--macro floor|climb</code> · <code>--no-write</code> · <code>--apply-from &lt;path&gt;</code></p>
+      </section>
+
+      <section id="workflow">
+        <h2>The end-to-end loop, by hand</h2>
+        <p>The whole point — tune toward a goal and review the diff:</p>
+        <pre><code># 1. See where the economy stands + get a proposal
+npm run playtest -- --zones home --runs 5 --seed 1
+
+# 2. (or) let the optimizer search for values that hit the goal
+npm run playtest -- --optimize
+
+# 3. apply the proposal back into constants.ts (+ snapshot regen)
+npm run playtest:apply
+
+# 4. review — the diff is just the changed numbers
+git diff src/constants.ts
+
+# 5. re-validate across the bracket
+npm run playtest -- --compare --runs 60</code></pre>
+        <div class="box"><b>Check the bracket, not one bot.</b> Before accepting a change, confirm it keeps the <em>floor</em> un-stuck and the <em>ceiling</em> un-trivialized (<code>--compare</code>). A change that fixes one end by breaking the other is a regression the single-policy view would miss.</div>
+      </section>
+
+      <section id="example">
+        <h2>Worked example — the bread stall</h2>
+        <p>Why the bracket matters, concretely. Home's Hamlet rung needs <code>bread</code> (a crafted good). The two agents diverge:</p>
+        <table>
+          <thead><tr><th></th><th>Floor</th><th>Ceiling</th></tr></thead>
+          <tbody>
+            <tr><th>Board play</th><td>longest chain</td><td>steer toward the rung's farm shortfalls</td></tr>
+            <tr><th>Macro</th><td>tier-up only</td><td>build Bakery → craft bread → tier up</td></tr>
+            <tr><th>Outcome (home, 60 runs)</th><td>stuck tier&nbsp;0, blocked on <code>bread×6</code></td><td>reaches Hamlet (tier&nbsp;1), +55% coins/run</td></tr>
+          </tbody>
+        </table>
+        <p>A naive-only sim would conclude home is soft-locked and "fix" it by slashing the bread cost — over-correcting for a player who simply never crafts. The bracket shows the rung is reachable; the real question becomes <em>pacing</em> (how many runs <em>should</em> Hamlet take), which is a design target, not a softlock.</p>
+      </section>
+    </div>
+
+    <!-- ─────────────────────────── ARCHITECTURE ─────────────────────── -->
+    <div class="panel" id="architecture" role="tabpanel" aria-label="Architecture">
+
+      <section id="modules">
+        <h2>Module map</h2>
+        <p class="legend">
+          <span><span class="pill ok">new</span> added by this system</span>
+          <span><span class="pill info">existing</span> pre-existing harness reused</span>
+        </p>
+        <div class="filterbar">
+          <span class="lbl">Filter:</span>
+          <button class="on" data-filter="all">All</button>
+          <button data-filter="ok">New</button>
+          <button data-filter="info">Existing</button>
+        </div>
+        <table id="status-table">
+          <thead><tr><th>File</th><th>Role</th><th></th></tr></thead>
+          <tbody>
+            <tr data-status="ok"><td><code>src/playtest/applyPatch.ts</code></td><td>M1 codemod core — dotted path → numeric-literal text-span splice.</td><td><span class="pill ok">new</span></td></tr>
+            <tr data-status="ok"><td><code>tools/playtest/applyChangeList.mjs</code></td><td>fs shell for the codemod; fails loud, writes nothing on an unresolved path.</td><td><span class="pill ok">new</span></td></tr>
+            <tr data-status="ok"><td><code>src/playtest/policy.ts</code></td><td>State-aware board policies (<code>greedy</code>/<code>value</code>/<code>climb</code>) + <code>PolicyContext</code>.</td><td><span class="pill ok">new</span></td></tr>
+            <tr data-status="ok"><td><code>src/playtest/macro.ts</code></td><td>Between-run macro policies (<code>floor</code>/<code>climb</code>) via real reducer actions.</td><td><span class="pill ok">new</span></td></tr>
+            <tr data-status="ok"><td><code>src/playtest/compare.ts</code></td><td>Bracket comparison harness (<code>runComparison</code>, agent specs).</td><td><span class="pill ok">new</span></td></tr>
+            <tr data-status="ok"><td><code>src/playtest/optimizer.ts</code></td><td>Coordinate-descent <code>optimize()</code> + <code>spreadObjective()</code>; non-destructive.</td><td><span class="pill ok">new</span></td></tr>
+            <tr data-status="info"><td><code>src/playtest/run.ts</code> · <code>campaign.ts</code></td><td>Single-run + sequential campaign loops over the real reducer.</td><td><span class="pill info">existing</span></td></tr>
+            <tr data-status="info"><td><code>src/playtest/board.ts</code> · <code>prng.ts</code></td><td>Synthetic board + chain enumeration; seeded determinism.</td><td><span class="pill info">existing</span></td></tr>
+            <tr data-status="info"><td><code>src/playtest/metrics.ts</code> · <code>emitChangeList.ts</code></td><td>Family-value spread audit + the proposal it emits.</td><td><span class="pill info">existing</span></td></tr>
+            <tr data-status="info"><td><code>src/playtest/progression.ts</code> · <code>targets.ts</code></td><td>Code-derived spine + softlock oracle; target bands.</td><td><span class="pill info">existing</span></td></tr>
+            <tr data-status="info"><td><code>tools/playtest/cli.mjs</code></td><td>The one CLI entry; gained <code>--apply</code> / <code>--compare</code> / <code>--optimize</code>.</td><td><span class="pill info">existing</span></td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="decisions">
+        <h2>Key design decisions</h2>
+        <div class="grid">
+          <div class="card"><h3>constants.ts is the single source of truth</h3><p>A committed overrides layer was deliberately removed previously. M1 honors that by writing the canonical literals directly via codemod — no split-brain between an overrides file and the catalog, and every tune is a normal git diff.</p></div>
+          <div class="card amber"><h3>No fakes — real reducer actions</h3><p>The macro layer dispatches genuine <code>BUILD</code>/<code>CRAFT</code>/<code>TIER_UP</code> through the same <code>rootReducer</code> the game and unit tests use. The sim measures real economy numbers, never re-implemented arithmetic.</p></div>
+          <div class="card"><h3>Deterministic by construction</h3><p>A seeded <code>Math.random</code> override wraps every run; macros and the optimizer use no RNG and fixed iteration order. Same seed → byte-identical metrics. A committed snapshot guards against silent drift.</p></div>
+          <div class="card amber"><h3>The optimizer never touches disk</h3><p>Candidates are evaluated by mutating the in-memory catalog and restoring it in a <code>finally</code>. The optimizer returns a <em>proposal</em>; the reviewable write is a separate, explicit step.</p></div>
+        </div>
+      </section>
+
+      <section id="testing">
+        <h2>Verification</h2>
+        <p>Each piece ships with unit + integration tests; the default-path snapshots stay byte-identical (proving the additions don't disturb existing behavior).</p>
+        <ul>
+          <li><b>Codemod:</b> single-literal rewrite, idempotent re-apply, unresolved-path failure, array-by-id descent, byte-clean neighbors.</li>
+          <li><b>Policies/macro/compare:</b> selection logic, the floor-stalls-on-bread contract, the ceiling-clears-it result, determinism.</li>
+          <li><b>Optimizer:</b> synthetic convergence + non-destructiveness, the real spread objective driving loss → 0, deterministic proposal.</li>
+        </ul>
+        <p>Full suite at time of writing: <b>4073 pass</b>; <code>lint</code> / <code>typecheck</code> / <code>typecheck:tests</code> clean.</p>
+      </section>
+    </div>
+
+    <!-- ─────────────────────────── ROADMAP ──────────────────────────── -->
+    <div class="panel" id="roadmap" role="tabpanel" aria-label="Roadmap">
+
+      <section id="next">
+        <h2>What's next</h2>
+        <p>The loop is closed for balance; two tracks extend it.</p>
+
+        <h3><span class="pill warn">next</span> &nbsp;M4 — Declarative gating + CI oracle</h3>
+        <p>The second manual blocker: feature-gating. A declarative trigger engine already exists at <code>src/config/progression/</code> (<code>ProgTrigger { when, effects, requires }</code>, a pure fact-tree evaluator, a <code>GameState</code>→facts bridge) but is staged at "Phase&nbsp;1: data only, no applier." M4 finishes it:</p>
+        <ul>
+          <li>A <code>GameState → FactSnapshot</code> projector + the missing <code>Effect</code> applier, replacing the scattered hardcoded reducer gates.</li>
+          <li>Resource-prerequisite gates become data: <code>{ fact: "resource.flour.total", op: "gte", value: 50 }</code> instead of hand-wired branches.</li>
+          <li>A CI test running the existing softlock oracle so a gate that soft-locks or strands a zone <em>fails the build</em> — instead of being caught by manual play.</li>
+        </ul>
+
+        <h3><span class="pill idle">later</span> &nbsp;M5 — Reach more knobs</h3>
+        <p>About 30% of balance values aren't yet reachable by the codemod/optimizer: market prices, tier upgrade costs, and per-zone session length (<code>baseTurns</code>). M5 extends the codemod's path vocabulary (array-by-<code>id</code> descent already exists for <code>BUILDINGS</code>) so the optimizer can sweep them too — built on demand, as a real objective needs them.</p>
+
+        <h3><span class="pill idle">later</span> &nbsp;M2 extensions — a richer ceiling</h3>
+        <p>The bracket can be made more faithful: worker <strong>hiring</strong> (<code>WORKERS/HIRE</code>) in the macro, a <strong>cross-zone</strong> arc (mine/fish boards, real travel/found sequencing) so full-game pacing is measurable, and an optional <strong>search-based</strong> ceiling agent that also surfaces dominant strategies before players do.</p>
+      </section>
+
+      <section id="appendix">
+        <h2>Appendix</h2>
+        <details>
+          <summary>Commit trail (branch <code>claude/quota-usage-brainstorm-b4bz8g</code>)</summary>
+          <table>
+            <thead><tr><th>Commit</th><th>Milestone</th></tr></thead>
+            <tbody>
+              <tr><td>Add balance change-list write-back codemod</td><td>M1</td></tr>
+              <tr><td>Widen sim policy interface to be state-aware</td><td>M2a</td></tr>
+              <tr><td>Model the macro-decision layer; ceiling clears the home tier-0 stall</td><td>M2b</td></tr>
+              <tr><td>Add policy-bracket comparison harness + <code>--compare</code></td><td>M2d</td></tr>
+              <tr><td>Add target-seeking optimizer framework + <code>--optimize</code></td><td>M3</td></tr>
+            </tbody>
+          </table>
+        </details>
+        <details>
+          <summary>Glossary</summary>
+          <p><b>Knob</b> — a tunable balance value (a live get/set onto a constants field) with bounds. <b>Loss</b> — a number the optimizer minimizes; 0 = goal met. <b>Floor / ceiling</b> — the naive and near-optimal ends of the player bracket. <b>Macro policy</b> — between-run build/craft/tier decisions. <b>Family-value spread</b> — the ratio of realized value-per-tile across resources; a premium resource paying ≫ a staple is a balance smell. <b>Softlock oracle</b> — a code-derived check that the progression spine is reachable end-to-end.</p>
+        </details>
+      </section>
+    </div>
+
+  </main>
+</div>
+
+<script>
+  (function(){
+    var root = document.documentElement;
+    var tabs = [].slice.call(document.querySelectorAll('nav.tabs .tab'));
+    var panels = [].slice.call(document.querySelectorAll('main > .panel'));
+    if(!tabs.length || !panels.length) return;
+    root.classList.add('tabs-on');
+    function resolve(id){
+      for(var i = 0; i < panels.length; i++){
+        if(panels[i].id === id) return { panel: panels[i], section: null };
+        var sec = id && panels[i].querySelector('#' + (window.CSS && CSS.escape ? CSS.escape(id) : id));
+        if(sec) return { panel: panels[i], section: sec };
+      }
+      return null;
+    }
+    function activate(id, push, scrollToSection){
+      var hit = resolve(id) || { panel: panels[0], section: null };
+      panels.forEach(function(p){ p.classList.toggle('active', p === hit.panel); });
+      tabs.forEach(function(t){
+        var on = t.getAttribute('data-tab') === hit.panel.id;
+        t.classList.toggle('active', on); t.setAttribute('aria-selected', on ? 'true' : 'false');
+      });
+      if(scrollToSection && hit.section) hit.section.scrollIntoView({ block: 'start' });
+      else window.scrollTo(0, 0);
+      if(push){ var h = '#' + id; if(location.hash !== h) history.pushState(null, '', h); }
+    }
+    tabs.forEach(function(t){ t.addEventListener('click', function(){ activate(t.getAttribute('data-tab'), true, false); }); });
+    document.addEventListener('click', function(e){
+      var a = e.target.closest('a[href^="#"]'); if(!a) return;
+      var id = a.getAttribute('href').slice(1);
+      if(resolve(id)){ e.preventDefault(); activate(id, true, true); }
+    });
+    window.addEventListener('popstate', function(){ activate((location.hash || '').slice(1), false, true); });
+    activate((location.hash || '').slice(1), false, true);
+  })();
+  (function(){
+    var bar = document.querySelector('.filterbar');
+    if(!bar) return;
+    bar.addEventListener('click', function(e){
+      var btn = e.target.closest('button'); if(!btn) return;
+      bar.querySelectorAll('button').forEach(function(b){ b.classList.remove('on'); });
+      btn.classList.add('on');
+      var f = btn.dataset.filter;
+      document.querySelectorAll('#status-table tbody tr').forEach(function(tr){
+        tr.style.display = (f === 'all' || tr.dataset.status === f) ? '' : 'none';
+      });
+    });
+  })();
+</script>
+</body>
+</html>
