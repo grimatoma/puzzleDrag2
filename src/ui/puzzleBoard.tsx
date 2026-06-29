@@ -25,6 +25,8 @@ import { BIOMES } from "../constants.js";
 import { TOOL_BY_KEY, isTapTargetTool, DEFAULT_TOOL_PINS } from "./toolRegistry.js";
 import { visiblePuzzleTools } from "./puzzleToolFilter.js";
 import { isResourceReachable } from "../game/reachability.js";
+import { producingTileForResource } from "../game/producedResource.js";
+import { useTooltip, Tooltip } from "./Tooltip.js";
 import type { ToolEntry } from "./toolRegistry.js";
 import { isFillBiasArmed } from "../state/fillBias.js";
 import { lazy, Suspense } from "react";
@@ -208,6 +210,26 @@ interface BiomeResource {
   [extra: string]: unknown;
 }
 
+interface ResourceTipData {
+  label: string;
+  tile: { id: string; displayName: string } | null;
+}
+
+function ResourceTooltipContent({ data }: { data: ResourceTipData }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="font-bold">{data.label}</div>
+      {data.tile && (
+        <div className="flex items-center gap-1.5 opacity-90">
+          <span className="text-[11px]">from</span>
+          <LegacyIcon iconKey={data.tile.id} size={20} />
+          <span>{data.tile.displayName}</span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function IdleView({ inventory, biomeKey, cap }: { inventory: Inventory; biomeKey: string; cap: number }) {
   // Only show resources that are reachable in the configured game, then cap at
   // 12 so the 4-column grid stays tight and predictable.
@@ -215,6 +237,7 @@ function IdleView({ inventory, biomeKey, cap }: { inventory: Inventory; biomeKey
     return (BIOMES[biomeKey]?.resources ?? []).filter((r) => isResourceReachable(r.key)).slice(0, 12);
   }, [biomeKey]);
   const ownedCount = list.filter((r) => (inventory?.[r.key] ?? 0) > 0).length;
+  const { tip, handlers } = useTooltip<ResourceTipData>();
   return (
     <>
       <PanelHeader left="Stockpile" right={`${ownedCount}/${list.length} kinds`} />
@@ -223,16 +246,20 @@ function IdleView({ inventory, biomeKey, cap }: { inventory: Inventory; biomeKey
           const count = inventory?.[r.key] ?? 0;
           const empty = count === 0;
           const pct = Math.min(1, count / Math.max(1, cap));
+          const tipData: ResourceTipData = {
+            label: r.label ?? r.key,
+            tile: producingTileForResource(r.key),
+          };
           return (
             <div
               key={r.key}
-              className="flex items-center gap-1.5 px-2 py-1 rounded-md relative overflow-hidden"
+              className="flex items-center gap-1.5 px-2 py-1 rounded-md relative overflow-hidden cursor-help"
               style={{
                 background: empty ? "rgba(138,106,71,0.10)" : "var(--board-chip-bg)",
                 border: `1px solid ${empty ? "transparent" : "var(--board-chip-border)"}`,
                 opacity: empty ? 0.55 : 1,
               }}
-              title={`${r.label ?? r.key}: ${count}`}
+              {...handlers(tipData)}
             >
               <div
                 className="absolute inset-y-0 left-0 pointer-events-none"
@@ -248,6 +275,17 @@ function IdleView({ inventory, biomeKey, cap }: { inventory: Inventory; biomeKey
           );
         })}
       </div>
+      {tip && (
+        <Tooltip
+          anchorX={tip.x}
+          anchorY={tip.y}
+          className="z-[9999] pointer-events-none bg-ink text-cream text-caption rounded-md px-2 py-1.5 shadow-lg border border-iron/60"
+          style={{ maxWidth: 220 }}
+          arrowClassName="border-4 border-transparent border-t-ink"
+        >
+          <ResourceTooltipContent data={tip.data} />
+        </Tooltip>
+      )}
     </>
   );
 }

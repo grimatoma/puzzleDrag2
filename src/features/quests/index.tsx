@@ -13,6 +13,7 @@ interface DisplayReward {
   xp?: number;
   almanacXp?: number;
   tools?: Record<string, number>;
+  items?: Record<string, number>;
   structural?: string;
   tool?: string;
   amt?: number;
@@ -109,6 +110,11 @@ function rewardLabel(reward: DisplayReward | null | undefined): string {
       parts.push(`+${v} ${k}`);
     }
   }
+  if (reward.items) {
+    for (const [k, v] of Object.entries(reward.items)) {
+      parts.push(`+${v} ${k}`);
+    }
+  }
   if (reward.structural) {
     const structuralLabels: Record<string, string> = {
       startingExtraScythe: "Extra Scythe (permanent)",
@@ -166,7 +172,7 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
 
   return (
     <div
-      className={`quest-card max-w-sm w-full self-center ${claimable ? "quest-card--ready" : ""} ${claimed ? "quest-card--done" : ""}`}
+      className={`quest-card w-full ${claimable ? "quest-card--ready" : ""} ${claimed ? "quest-card--done" : ""}`}
       style={{ "--q-accent": meta.accent } as CSSProperties}
     >
       {/* Category tag + reward token */}

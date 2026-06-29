@@ -4,6 +4,8 @@
 import { describe, it, expect } from "vitest";
 import { rollQuests } from "../src/features/quests/data.js";
 import { createInitialState, rootReducer } from "../src/state.js";
+import { zoneInventory } from "../src/state/zoneInventory.js";
+import { inventoryQty } from "../src/types/inventory.js";
 
 function fresh() {
   global.localStorage?.clear?.();
@@ -110,5 +112,52 @@ describe("Fix 4 — deterministic 6-slot quests", () => {
     };
     const next = rootReducer(s, { type: "QUESTS/CLAIM_QUEST", id: "qclaim1" });
     expect(next.quests[0].claimed).toBe(true);
+  });
+
+  it("CLAIM_QUEST grants tool rewards (multiple tools at once)", () => {
+    const base = fresh();
+    const beforeBasic = (base.tools.basic as number | undefined) ?? 0;
+    const beforeRare = (base.tools.rare as number | undefined) ?? 0;
+    const s = {
+      ...base,
+      quests: [{
+        id: "qtool1", template: "collect_hay", category: "collect", key: "tile_grass_grass",
+        target: 10, progress: 10, claimed: false,
+        reward: { coins: 50, xp: 20, tools: { basic: 2, rare: 1 } },
+      }],
+    };
+    const next = rootReducer(s, { type: "QUESTS/CLAIM_QUEST", id: "qtool1" });
+    expect(next.quests[0].claimed).toBe(true);
+    expect((next.tools.basic as number) - beforeBasic).toBe(2);
+    expect((next.tools.rare as number) - beforeRare).toBe(1);
+  });
+
+  it("CLAIM_QUEST grants resource item rewards into the active zone inventory", () => {
+    const base = fresh();
+    const beforePlank = inventoryQty(zoneInventory(base), "plank");
+    const s = {
+      ...base,
+      quests: [{
+        id: "qitem1", template: "collect_hay", category: "collect", key: "tile_grass_grass",
+        target: 10, progress: 10, claimed: false,
+        reward: { coins: 50, xp: 20, items: { plank: 5 } },
+      }],
+    };
+    const next = rootReducer(s, { type: "QUESTS/CLAIM_QUEST", id: "qitem1" });
+    expect(inventoryQty(zoneInventory(next), "plank") - beforePlank).toBe(5);
+  });
+
+  it("CLAIM_QUEST without item/tool rewards leaves tools and inventory untouched", () => {
+    const base = fresh();
+    const beforeTools = JSON.stringify(base.tools);
+    const s = {
+      ...base,
+      quests: [{
+        id: "qplain1", template: "collect_hay", category: "collect", key: "tile_grass_grass",
+        target: 10, progress: 10, claimed: false, reward: { coins: 50, xp: 20 },
+      }],
+    };
+    const next = rootReducer(s, { type: "QUESTS/CLAIM_QUEST", id: "qplain1" });
+    expect(JSON.stringify(next.tools)).toBe(beforeTools);
   });
 });

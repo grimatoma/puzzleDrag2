@@ -8,6 +8,12 @@
  * title on the board. It names the folk of the vale (Mira the baker, Old
  * Tomas, Bram the smith, Sister Liss, Wren the carpenter) so the daily
  * tasks read like requests from neighbours rather than chores.
+ *
+ * ITEM REWARDS (optional): besides coins, a template may grant tools and/or
+ * resource items when the quest is claimed. Add either field to any template:
+ *   rewardTools: { basic: 2, rare: 1 }   // global tool counts (one or many)
+ *   rewardItems: { plank: 5 }            // resources, into the active zone's inventory
+ * Both default to nothing; coins are always granted from coinBase/coinPerUnit.
  */
 export const QUEST_TEMPLATES = [
   // ── collect-resource ────────────────────────────────────────────────────────
@@ -26,6 +32,15 @@ export const QUEST_TEMPLATES = [
   { id: "collect_flour", category: "collect", key: "flour", label: "Collect {n} flour",
     flavor: "The hearth bakes nothing from empty sacks. Grind some flour.",
     targetMin: 4,  targetMax: 10, coinBase: 50, coinPerUnit: 4 },
+  // ── TEST quests — easy targets, item rewards (remove before release) ───────────
+  { id: "test_tool_reward", category: "collect", key: "tile_grass_grass", label: "[TEST] Collect {n} grass for a tool",
+    flavor: "Test quest: rewards tools on claim.",
+    targetMin: 1, targetMax: 1, coinBase: 10, coinPerUnit: 1,
+    rewardTools: { basic: 2, rare: 1 } },
+  { id: "test_item_reward", category: "collect", key: "tile_grass_grass", label: "[TEST] Collect {n} grass for planks",
+    flavor: "Test quest: rewards resource items on claim.",
+    targetMin: 1, targetMax: 1, coinBase: 10, coinPerUnit: 1,
+    rewardItems: { plank: 5 } },
   // ── craft-item ──────────────────────────────────────────────────────────────
   { id: "craft_bread",   category: "craft",   item: "bread",   label: "Bake {n} bread",
     flavor: "A village runs on its bread. Mira will trade dearly for warm loaves.",

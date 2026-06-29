@@ -1,5 +1,5 @@
 import { QUEST_TEMPLATES } from "./templates.js";
-import { QUEST_CLAIM_XP, claimQuest, tickQuest } from "./data.js";
+import { QUEST_CLAIM_XP, claimQuest, grantQuestRewardExtras, tickQuest } from "./data.js";
 import type { Quest, QuestEvent, QuestTemplate } from "./data.js";
 import { awardXp, claimAlmanacTier } from "../almanac/data.js";
 import { inventoryQty } from "../../types/inventory.js";
@@ -38,7 +38,11 @@ function rollFresh(): QuestDailyLegacy[] {
       progress: 0,
       done: false,
       claimed: false,
-      reward: { coins: tpl.coinBase },
+      reward: {
+        coins: tpl.coinBase,
+        ...(tpl.rewardTools ? { tools: tpl.rewardTools } : {}),
+        ...(tpl.rewardItems ? { items: tpl.rewardItems } : {}),
+      },
       key,
     });
   }
@@ -92,7 +96,11 @@ export function reduce(state: GameState, action: Action): GameState {
         dailies,
         coins: (state.coins || 0) + (q.reward.coins || 0),
       };
-      const { newState: afterXp } = awardXp(afterCoins, QUEST_CLAIM_XP);
+      const afterExtras = grantQuestRewardExtras(
+        afterCoins,
+        q.reward as { tools?: Record<string, number>; items?: Record<string, number> },
+      );
+      const { newState: afterXp } = awardXp(afterExtras, QUEST_CLAIM_XP);
       return afterXp;
     }
     case "QUESTS/CLAIM_ALMANAC": {
