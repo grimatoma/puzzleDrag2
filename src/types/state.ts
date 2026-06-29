@@ -20,6 +20,11 @@ import type {
   TutorialState,
 } from "./gameStateFields.js";
 import type { ZoneInventoryMap, ZoneResourceProgressMap } from "./inventory.js";
+// Type-only imports of slice-owned shapes (erased at runtime — no import cycle).
+// Lets the slice fields below be declared precisely so reducers don't need
+// `as unknown as` bridges to read them. (Health review #8.)
+import type { MysteriousOreState } from "../features/mine/mysterious_ore.js";
+import type { PearlState } from "../features/fish/pearl.js";
 
 export type {
   BossState,
@@ -230,8 +235,8 @@ export interface GameState {
   /** Armed typed-power descriptor, or null. */
   toolPendingPower: { id: string; key?: string | null; [k: string]: unknown } | null;
   fillBiasTarget: { key?: string | null; [k: string]: unknown } | null;
-  mysteriousOre: { turnsRemaining?: number; [k: string]: unknown } | null;
-  fishPearl: { turnsRemaining?: number; [k: string]: unknown } | null;
+  mysteriousOre: MysteriousOreState | null;
+  fishPearl: PearlState | null;
   hazards: Hazards;
   grid: Grid;
   _biomeRestored: boolean;

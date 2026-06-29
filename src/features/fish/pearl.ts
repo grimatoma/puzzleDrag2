@@ -93,10 +93,10 @@ export function spawnPearl(state: GameState, rng: () => number = Math.random): G
  */
 export function tickPearl(state: GameState): GameState {
   if (!state.fishPearl) return state;
-  // GameState's `fishPearl` field has `turnsRemaining?: number`; the slice
-  // always seeds it on spawn, so default to 0 at the read boundary.
-  const fishPearl = state.fishPearl as unknown as PearlState;
-  const next = (fishPearl.turnsRemaining ?? 0) - 1;
+  // GameState now declares `fishPearl: PearlState | null`, so the null guard
+  // above narrows it directly — no `as unknown as` bridge. (#8)
+  const fishPearl = state.fishPearl;
+  const next = fishPearl.turnsRemaining - 1;
   if (next > 0) {
     return {
       ...state,
