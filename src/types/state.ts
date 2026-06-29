@@ -251,7 +251,6 @@ export interface GameState {
   market: MarketState;
   season: number;
   runes: number;
-  runeStash: number;
   embers: number;
   coreIngots: number;
   gems: number;
