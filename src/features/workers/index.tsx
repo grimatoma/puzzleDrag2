@@ -18,6 +18,7 @@ import {
   DetailActionButton,
   DetailPane,
 } from "../../ui/primitives/BrowserDetail.jsx";
+import { useAccordion, ExpandRow } from "../../ui/primitives/ExpandList.jsx";
 import type { Dispatch, GameState } from "../../types/state.js";
 import { zoneInventory } from "../../state/zoneInventory.js";
 import { inventoryQty } from "../../types/inventory.js";
@@ -225,44 +226,6 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
   );
 }
 
-interface WorkerRowExpandedProps {
-  worker: WorkerDef;
-  count: number;
-  state: GameState;
-  dispatch: Dispatch;
-  onCollapse: () => void;
-}
-
-// Mobile-portrait inline row: collapsed it reads like a list item, expanded it
-// reveals the hire body in place (same accordion model as the Inventory tab).
-function WorkerRowExpanded({ worker, count, state, dispatch, onCollapse }: WorkerRowExpandedProps) {
-  return (
-    <div className="hl-browser-item is-selected hl-browser-item--expanded">
-      <button
-        type="button"
-        className="hl-browser-item__row"
-        onClick={onCollapse}
-        aria-expanded="true"
-        aria-label={`Collapse ${worker.name}`}
-      >
-        <span className="hl-browser-item__icon">
-          <Icon iconKey={worker.look?.iconKey} size={40} title="" />
-        </span>
-        <span className="hl-browser-item__main">
-          <span className="hl-browser-item__title">{worker.name}</span>
-          <span className="hl-browser-item__subtitle">{worker.description}</span>
-        </span>
-        <span className="hl-browser-item__meta">
-          <span className="tabular-nums">{count}/{worker.maxCount}</span>
-        </span>
-      </button>
-      <div className="hl-browser-item__details">
-        <WorkerHireBody worker={worker} count={count} state={state} dispatch={dispatch} />
-      </div>
-    </div>
-  );
-}
-
 interface WorkersPanelProps {
   state: GameState;
   dispatch: Dispatch;
@@ -289,8 +252,9 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
   const stacked = useViewportBelow(BREAKPOINTS.browserStack);
   // Accordion: which row is expanded inline (null = all collapsed). Kept
   // separate from `selectedId` so portrait opens with everything closed
-  // rather than auto-expanding the first worker.
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  // rather than auto-expanding the first worker. Shared engine = same
+  // open/close animation as the Inventory tab.
+  const accordion = useAccordion();
 
   const sections = SECTION_ORDER.map((section) => ({
     section,
@@ -320,26 +284,26 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
             <div key={section}>
               <div className="hl-section-label mb-1.5">{section}</div>
               <div className="flex flex-col gap-2">
-                {workers.map((w) =>
-                  expandedId === w.id ? (
-                    <WorkerRowExpanded
+                {workers.map((w) => {
+                  const count = hired[w.id] ?? 0;
+                  return (
+                    <ExpandRow
                       key={w.id}
-                      worker={w}
-                      count={hired[w.id] ?? 0}
-                      state={state}
-                      dispatch={dispatch}
-                      onCollapse={() => setExpandedId(null)}
-                    />
-                  ) : (
-                    <WorkerBrowserItem
-                      key={w.id}
-                      worker={w}
-                      count={hired[w.id] ?? 0}
-                      selected={false}
-                      onSelect={() => setExpandedId(w.id)}
-                    />
-                  )
-                )}
+                      open={accordion.displayedKey === w.id}
+                      isOpen={accordion.isOpen}
+                      icon={<Icon iconKey={w.look?.iconKey} size={40} title="" />}
+                      title={w.name}
+                      subtitle={w.description}
+                      meta={`${count}/${w.maxCount}`}
+                      onToggle={() => accordion.select(w.id)}
+                      onClosed={accordion.onClosed}
+                      expandLabel={`View ${w.name}`}
+                      collapseLabel={`Collapse ${w.name}`}
+                    >
+                      <WorkerHireBody worker={w} count={count} state={state} dispatch={dispatch} />
+                    </ExpandRow>
+                  );
+                })}
               </div>
             </div>
           ))}

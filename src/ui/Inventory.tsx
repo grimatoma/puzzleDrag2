@@ -1,4 +1,4 @@
-import { useState, useReducer, useCallback, useEffect, useLayoutEffect, useRef, forwardRef, memo } from "react";
+import { useState, useCallback, useEffect, useLayoutEffect, useRef, forwardRef, memo } from "react";
 import { BIOMES, getItem, ITEMS, RECIPES } from "../constants.js";
 import type { ResourceKey } from "../types/catalogKeys.js";
 import type { BiomeItemEntry, ItemEntry, ResourceItemEntry } from "../constants.js";
@@ -20,6 +20,7 @@ import {
   BrowserItemButton,
   DetailPane,
 } from "./primitives/BrowserDetail.jsx";
+import { useAccordion } from "./primitives/ExpandList.jsx";
 import type { Dispatch, GameState } from "../types/state.js";
 
 interface InventoryEntry {
@@ -95,79 +96,10 @@ function matchesQuery(key: string, label: string, query: string) {
   return key.toLowerCase().includes(q) || label.toLowerCase().includes(q);
 }
 
-interface AccordionState {
-  displayedKey: string | null;
-  isOpen: boolean;
-  pendingKey: string | null;
-}
-
-interface AccordionAction {
-  type: "SELECT" | "SELECT_IN_PLACE" | "OPEN" | "CLOSE" | "TRANSITION_END" | "RESET";
-  key?: string;
-}
-
-export const accordionInitialState: AccordionState = { displayedKey: null, isOpen: false, pendingKey: null };
-
-export function accordionReducer(state: AccordionState, action: AccordionAction): AccordionState {
-  switch (action.type) {
-    case "SELECT": {
-      const { key } = action;
-      if (key === state.displayedKey && state.isOpen) {
-        return { ...state, isOpen: false, pendingKey: null };
-      }
-      if (state.displayedKey && state.isOpen) {
-        return { ...state, isOpen: false, pendingKey: key ?? null };
-      }
-      if (!state.displayedKey) {
-        return { displayedKey: key ?? null, isOpen: false, pendingKey: null };
-      }
-      return { ...state, pendingKey: key ?? null };
-    }
-    case "SELECT_IN_PLACE": {
-      const { key } = action;
-      if (key === state.displayedKey) {
-        return { ...state, isOpen: false, pendingKey: null };
-      }
-      return { displayedKey: key ?? null, isOpen: true, pendingKey: null };
-    }
-    case "OPEN":
-      return { ...state, isOpen: true };
-    case "CLOSE":
-      return { ...state, isOpen: false, pendingKey: null };
-    // Fully clear the selection in one step. List view collapses instantly
-    // (no max-height animation, so no TRANSITION_END fires to finalize the
-    // close), so it needs to drop `displayedKey` directly instead of leaving
-    // a closed-but-still-displayed item stuck in its expanded render.
-    case "RESET":
-      return accordionInitialState;
-    case "TRANSITION_END":
-      if (state.isOpen) return state;
-      return state.pendingKey
-        ? { displayedKey: state.pendingKey, isOpen: false, pendingKey: null }
-        : { displayedKey: null, isOpen: false, pendingKey: null };
-    default:
-      return state;
-  }
-}
-
-function useAccordion() {
-  const [state, dispatch] = useReducer(accordionReducer, accordionInitialState);
-
-  // Trigger the enter animation after displayedKey is set (next frame)
-  useEffect(() => {
-    if (!state.displayedKey) return;
-    const id = requestAnimationFrame(() => dispatch({ type: "OPEN" }));
-    return () => cancelAnimationFrame(id);
-  }, [state.displayedKey]);
-
-  const select = useCallback((key: string) => dispatch({ type: "SELECT", key }), []);
-  const selectInPlace = useCallback((key: string) => dispatch({ type: "SELECT_IN_PLACE", key }), []);
-  const close = useCallback(() => dispatch({ type: "CLOSE" }), []);
-  const closeImmediate = useCallback(() => dispatch({ type: "RESET" }), []);
-  const onClosed = useCallback(() => dispatch({ type: "TRANSITION_END" }), []);
-
-  return { displayedKey: state.displayedKey, isOpen: state.isOpen, select, selectInPlace, close, closeImmediate, onClosed };
-}
+// The accordion engine (reducer + useAccordion hook) now lives in the shared
+// ExpandList primitive. Re-exported here so existing tests keep their import
+// path (src/__tests__/inventory-view-mode.test.ts).
+export { accordionReducer, accordionInitialState } from "./primitives/ExpandList.jsx";
 
 // Memoized via primitive props + stable `onSelect` (see InventoryGrid). The
 // parent rebuilds `entries`/closures every render, so we deliberately accept
