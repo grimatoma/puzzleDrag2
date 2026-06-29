@@ -1,3 +1,4 @@
+import { getDevicePixelRatio } from "../../dpr.js";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   TILE_TYPES_MAP,
@@ -132,7 +133,7 @@ export function TileIcon({ tileId, size = 40, locked = false }: TileIconProps) {
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas || !res) return;
-    const dpr = Math.min(window.devicePixelRatio || 1, 3);
+    const dpr = getDevicePixelRatio(3);
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     const ctx = canvas.getContext("2d");

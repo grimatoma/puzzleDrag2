@@ -1,6 +1,7 @@
 // Icons viewer tab — renders ICON_REGISTRY (canvas) and DESIGN_ICONS_MAP
 // (React SVG) entries so designers can browse, search, filter, and copy keys.
 
+import { getDevicePixelRatio } from "../../dpr.js";
 import {
   useState,
   useMemo,
@@ -231,7 +232,7 @@ const IconCell = memo(function IconCell({
     if (!isCanvas) return;
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1;
+    const dpr = getDevicePixelRatio();
     canvas.width = ICON_SIZE * dpr;
     canvas.height = ICON_SIZE * dpr;
     const ctx = canvas.getContext("2d");

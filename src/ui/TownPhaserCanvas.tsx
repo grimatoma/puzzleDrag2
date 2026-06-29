@@ -1,3 +1,4 @@
+import { getDevicePixelRatio } from "../dpr.js";
 import { useEffect, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import type Phaser from "phaser";
@@ -62,7 +63,7 @@ export default function TownPhaserCanvas({
 }: TownPhaserCanvasProps) {
   const hostRef = useRef<HTMLDivElement | null>(null);
   const gameRef = useRef<GameWithObserver | null>(null);
-  const dprRef = useRef(Math.min(typeof window !== "undefined" ? (window.devicePixelRatio || 1) : 1, 3));
+  const dprRef = useRef(getDevicePixelRatio(3));
   const [loading, setLoading] = useState(true);
   // Flips true once the Phaser game has booted. Lets the pause/resume effect
   // re-run after an async (and possibly hidden, pre-warm) boot completes.

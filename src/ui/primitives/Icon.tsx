@@ -1,3 +1,4 @@
+import { getDevicePixelRatio } from "../../dpr.js";
 import { useEffect, useRef } from "react";
 import { iconColor, iconLabel } from "../../textures/iconRegistry.js";
 import { paintIcon } from "../../textures/paintIcon.js";
@@ -60,7 +61,7 @@ function CanvasIcon({ iconKey, size, tone, title }: { iconKey: string; size: num
   useEffect(() => {
     const canvas = ref.current;
     if (!canvas) return;
-    const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1;
+    const dpr = getDevicePixelRatio();
     canvas.width = size * dpr;
     canvas.height = size * dpr;
     const ctx = canvas.getContext("2d");

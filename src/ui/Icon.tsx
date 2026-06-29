@@ -1,3 +1,4 @@
+import { getDevicePixelRatio } from "../dpr.js";
 import { useState, useEffect } from "react";
 import { ICON_REGISTRY, type IconVariant } from "../textures/iconRegistry.js";
 import { paintIcon } from "../textures/paintIcon.js";
@@ -49,7 +50,7 @@ export default function Icon({ iconKey, size = 24, variant = "auto", className =
       const entry = (ICON_REGISTRY as Record<string, unknown>)[iconKey];
       if (!entry) return null;
 
-      const dpr = (typeof window !== "undefined" ? window.devicePixelRatio : 1) || 1;
+      const dpr = getDevicePixelRatio();
       const cacheKey = `${iconKey}_${size}_${dpr}_${variant}`;
 
       if (ICON_CACHE.has(cacheKey)) {
