@@ -5,7 +5,7 @@ import LegacyIcon from "./Icon.jsx";
 import Icon from "./primitives/Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
 import Popover from "./primitives/Popover.jsx";
-import { useEffect, useRef } from "react";
+import { memo, useEffect, useRef } from "react";
 import { useCountUp } from "./primitives/useCountUp.js";
 import { useReceiptChips } from "./primitives/useReceiptChips.js";
 import { setCoinAnchorEl } from "./rewardEvents.js";
@@ -112,7 +112,9 @@ interface HudProps {
   onInventorySearchToggle: (() => void) | undefined;
 }
 
-export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchToggle }: HudProps) {
+// Memoized: on a chainInfo-only update (separate state in App), `state`/`dispatch`
+// and the now-stable callback props keep referential identity, so this skips re-render.
+export const Hud = memo(function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchToggle }: HudProps) {
   const { coins, turnsUsed, view } = state;
   const level = state.almanac?.level ?? state.level ?? 1;
   const totalXp = state.almanac?.xp ?? state.xp ?? 0;
@@ -251,4 +253,4 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
       </div>
     </div>
   );
-}
+});

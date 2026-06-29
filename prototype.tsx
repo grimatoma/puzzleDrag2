@@ -1,4 +1,4 @@
-import React, { useEffect, useReducer, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 import { COLS, ROWS, TILE, SCENE_EVENTS, SEASONS, dayKeyForDate } from "./src/constants.js";
 import { runSelfTests, currentCap } from "./src/utils.js";
 import { gameReducer, initialState } from "./src/state.js";
@@ -369,6 +369,9 @@ export default function App() {
   const [inspectedTool, setInspectedTool] = useState<RuntimeTool | null>(null);
   const [toolModalOpen, setToolModalOpen] = useState(false);
   const [inventorySearchOpen, setInventorySearchOpen] = useState(false);
+  // Stable identity so React.memo'd children (Hud) aren't re-rendered by an
+  // inline arrow changing every render (e.g. on chainInfo-only updates mid-drag).
+  const handleInventorySearchToggle = useCallback(() => setInventorySearchOpen((o) => !o), []);
   // Once the player has opened the town, keep its (expensive) Phaser canvas
   // mounted — hidden behind CSS — so returning to it is instant instead of a
   // full cold reboot. See TownPhaserCanvas's lazy boot / pause-resume handling.
@@ -448,6 +451,12 @@ export default function App() {
         armed: state.toolPending === drag?.key,
       }
     : null;
+  // currentCap runs heavy aggregation (computeAggregatedAbilities + locBuilt);
+  // memoize on its real inputs (built buildings, active location, workers,
+  // discovered/active tile selection) so it doesn't re-run on every App render
+  // (e.g. each chainInfo update mid-drag). Mirrors the registry-sync effect deps.
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: deps are currentCap's real inputs, not whole state
+  const cap = useMemo(() => currentCap(state) ?? 200, [state.built, state.mapCurrent, state.workers, state.tileCollection?.discovered, state.tileCollection?.activeByCategory]);
   const infoPanelEl = (
     <PuzzleActionPanel
       chainInfo={chainInfo}
@@ -456,7 +465,7 @@ export default function App() {
       fillBiasArmed={!!(state.fillBiasTarget || (state.magicFertilizerCharges ?? 0) > 0)}
       inventory={zoneInventory(state)}
       biomeKey={state.biomeKey}
-      cap={currentCap(state)}
+      cap={cap}
       dispatch={dispatch}
       onCloseInspect={() => setInspectedTool(null)}
     />
@@ -610,7 +619,7 @@ export default function App() {
             state={state}
             dispatch={dispatch}
             inventorySearchOpen={inventorySearchOpen}
-            onInventorySearchToggle={() => setInventorySearchOpen((o) => !o)}
+            onInventorySearchToggle={handleInventorySearchToggle}
           />
         )}
 
@@ -712,7 +721,7 @@ export default function App() {
             state={state}
             dispatch={dispatch}
             inventorySearchOpen={inventorySearchOpen}
-            onInventorySearchToggle={() => setInventorySearchOpen((o) => !o)}
+            onInventorySearchToggle={handleInventorySearchToggle}
             viewDirection={viewDirection}
           />
         </div>
