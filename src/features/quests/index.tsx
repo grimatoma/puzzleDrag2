@@ -13,6 +13,7 @@ interface DisplayReward {
   xp?: number;
   almanacXp?: number;
   tools?: Record<string, number>;
+  items?: Record<string, number>;
   structural?: string;
   tool?: string;
   amt?: number;
@@ -106,6 +107,11 @@ function rewardLabel(reward: DisplayReward | null | undefined): string {
   if (reward.coins) parts.push(`+${reward.coins}◉`);
   if (reward.tools) {
     for (const [k, v] of Object.entries(reward.tools)) {
+      parts.push(`+${v} ${k}`);
+    }
+  }
+  if (reward.items) {
+    for (const [k, v] of Object.entries(reward.items)) {
       parts.push(`+${v} ${k}`);
     }
   }
