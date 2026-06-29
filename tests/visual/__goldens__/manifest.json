@@ -714,6 +714,17 @@
       "Compare UI and canvas output to the golden image."
     ]
   },
+  "iphone-portrait/quests.png": {
+    "scenarioId": "quests",
+    "routeHash": "#/quests",
+    "view": null,
+    "actions": [],
+    "expectation": "Scenario quests renders correctly at #/quests.",
+    "checklist": [
+      "Open #/quests.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
   "iphone-portrait/run-summary.png": {
     "scenarioId": "run-summary",
     "routeHash": "#/town",
@@ -1214,25 +1225,14 @@
       "Compare UI and canvas output to the golden image."
     ]
   },
-  "iphone-portrait/townsfolk-quests.png": {
-    "scenarioId": "townsfolk-quests",
-    "routeHash": "#/townsfolk/quests",
-    "view": null,
-    "actions": [],
-    "expectation": "Scenario townsfolk-quests renders correctly at #/townsfolk/quests.",
-    "checklist": [
-      "Open #/townsfolk/quests.",
-      "Compare UI and canvas output to the golden image."
-    ]
-  },
   "iphone-portrait/townsfolk-workers.png": {
     "scenarioId": "townsfolk-workers",
-    "routeHash": "#/townsfolk/workers",
+    "routeHash": "#/townsfolk",
     "view": null,
     "actions": [],
-    "expectation": "Scenario townsfolk-workers renders correctly at #/townsfolk/workers.",
+    "expectation": "Scenario townsfolk-workers renders correctly at #/townsfolk.",
     "checklist": [
-      "Open #/townsfolk/workers.",
+      "Open #/townsfolk.",
       "Compare UI and canvas output to the golden image."
     ]
   },
