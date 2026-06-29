@@ -22,6 +22,7 @@ import type { Dispatch, GameState } from "../../types/state.js";
 import { zoneInventory } from "../../state/zoneInventory.js";
 import { inventoryQty } from "../../types/inventory.js";
 import { CATEGORY_TO_SUBCATEGORY } from "../tileCollection/data.js";
+import { BREAKPOINTS, useViewportBelow } from "../../ui/breakpoints.js";
 
 // Section a worker by the board/role it serves, derived from its primary ability.
 // Keeps the ~29-worker roster scannable without per-worker JSX.
@@ -105,8 +106,26 @@ interface WorkerDetailProps {
   dispatch: Dispatch;
 }
 
-function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
-  if (!worker) return <DetailPane empty="Select a worker type to inspect it." title={undefined} eyebrow={undefined} icon={undefined} status={undefined} description={undefined} actions={undefined} headerActions={undefined}>{undefined}</DetailPane>;
+interface HireCostEntry {
+  key: string;
+  label: string;
+  amount: number;
+  icon: JSX.Element;
+  have: number;
+  showHave: boolean;
+  check: boolean;
+  ok?: boolean;
+}
+
+interface HireInfo {
+  coinCost: number;
+  costEntries: HireCostEntry[];
+  canHire: boolean;
+}
+
+// Shared next-hire computation so the wide side panel and the mobile inline
+// accordion render identical cost/effect/hire affordances.
+function computeHireInfo(worker: WorkerDef, count: number, state: GameState): HireInfo {
   // Phase 6 — show the cost of the *next* hire so the player can see the
   // ramp build up. When the worker is already at maxCount the ramp call
   // is moot but we still pass `count` for a stable display.
@@ -117,17 +136,7 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
   const villagersAvailable = state?.villagers ?? 0;
   const hasVillager = villagersAvailable >= 1;
   const canHire = (state?.coins ?? 0) >= coinCost && canPayResources && hasVillager && count < worker.maxCount;
-  interface CostEntry {
-    key: string;
-    label: string;
-    amount: number;
-    icon: JSX.Element;
-    have: number;
-    showHave: boolean;
-    check: boolean;
-    ok?: boolean;
-  }
-  const costEntries: CostEntry[] = [
+  const costEntries: HireCostEntry[] = [
     {
       key: "coins",
       label: "Coins",
@@ -158,6 +167,35 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
       ok: inventoryQty(inv, key) >= amount,
     })),
   ];
+  return { coinCost, costEntries, canHire };
+}
+
+// Body shared between the side panel and the inline accordion: cost grid +
+// effect summary + the Hire button.
+function WorkerHireBody({ worker, count, state, dispatch }: WorkerDetailProps & { worker: WorkerDef }) {
+  const { coinCost, costEntries, canHire } = computeHireInfo(worker, count, state);
+  return (
+    <>
+      <CostGrid entries={costEntries as never[]} title="Next hire cost" />
+      <div className="flex items-baseline gap-1.5">
+        <span className="hl-section-label">Effect</span>
+        <span className="hl-text-dim">{effectSummary(worker.abilities, count, worker.maxCount) || "None yet."}</span>
+      </div>
+      <DetailActionButton
+        tone="moss"
+        disabled={!canHire}
+        aria-label={`Hire ${worker.name} for ${coinCost} coins`}
+        onClick={() => dispatch({ type: "WORKERS/HIRE", payload: { id: worker.id } })}
+      >
+        Hire
+      </DetailActionButton>
+    </>
+  );
+}
+
+function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
+  if (!worker) return <DetailPane empty="Select a worker type to inspect it." title={undefined} eyebrow={undefined} icon={undefined} status={undefined} description={undefined} actions={undefined} headerActions={undefined}>{undefined}</DetailPane>;
+  const { coinCost, costEntries, canHire } = computeHireInfo(worker, count, state);
   return (
     <DetailPane
       eyebrow={undefined}
@@ -187,6 +225,44 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
   );
 }
 
+interface WorkerRowExpandedProps {
+  worker: WorkerDef;
+  count: number;
+  state: GameState;
+  dispatch: Dispatch;
+  onCollapse: () => void;
+}
+
+// Mobile-portrait inline row: collapsed it reads like a list item, expanded it
+// reveals the hire body in place (same accordion model as the Inventory tab).
+function WorkerRowExpanded({ worker, count, state, dispatch, onCollapse }: WorkerRowExpandedProps) {
+  return (
+    <div className="hl-browser-item is-selected hl-browser-item--expanded">
+      <button
+        type="button"
+        className="hl-browser-item__row"
+        onClick={onCollapse}
+        aria-expanded="true"
+        aria-label={`Collapse ${worker.name}`}
+      >
+        <span className="hl-browser-item__icon">
+          <Icon iconKey={worker.look?.iconKey} size={40} title="" />
+        </span>
+        <span className="hl-browser-item__main">
+          <span className="hl-browser-item__title">{worker.name}</span>
+          <span className="hl-browser-item__subtitle">{worker.description}</span>
+        </span>
+        <span className="hl-browser-item__meta">
+          <span className="tabular-nums">{count}/{worker.maxCount}</span>
+        </span>
+      </button>
+      <div className="hl-browser-item__details">
+        <WorkerHireBody worker={worker} count={count} state={state} dispatch={dispatch} />
+      </div>
+    </div>
+  );
+}
+
 interface WorkersPanelProps {
   state: GameState;
   dispatch: Dispatch;
@@ -206,6 +282,20 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
   const selected = visibleWorkers.find((w) => w.id === selectedId) ?? visibleWorkers[0] ?? null;
   const totalHired = Object.values(hired).reduce((sum, n) => sum + (Number(n) || 0), 0);
   const villagersAvailable = state?.villagers ?? 0;
+  // Mobile portrait: collapse the two-pane browser/detail into inline
+  // expand/collapse rows (matching the Inventory/Crafting tabs). The 720px
+  // boundary is where BrowserDetailLayout already drops its side-by-side
+  // layout (BREAKPOINTS.browserStack), so it's the natural switch point.
+  const stacked = useViewportBelow(BREAKPOINTS.browserStack);
+  // Accordion: which row is expanded inline (null = all collapsed). Kept
+  // separate from `selectedId` so portrait opens with everything closed
+  // rather than auto-expanding the first worker.
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+
+  const sections = SECTION_ORDER.map((section) => ({
+    section,
+    workers: visibleWorkers.filter((w) => sectionForWorker(w) === section),
+  })).filter((s) => s.workers.length > 0);
 
   return (
     <div className="w-full h-full min-h-0 flex flex-col gap-3">
@@ -224,14 +314,42 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
       <div className="hl-text-faint px-1 text-[11px] leading-snug">
         Each hire costs 1 Villager plus materials. Build Housing Blocks in town to earn Villagers each season. Hires shave a tile off the listed chain (or an input off a recipe), stacking up to the max count.
       </div>
-      <BrowserDetailLayout
-        toolbar={undefined}
-        browser={
-          <div className="flex flex-col gap-3">
-            {SECTION_ORDER.map((section) => {
-              const workers = visibleWorkers.filter((w) => sectionForWorker(w) === section);
-              if (workers.length === 0) return null;
-              return (
+      {stacked ? (
+        <div className="hl-browser-list flex-1 min-h-0 flex flex-col gap-3">
+          {sections.map(({ section, workers }) => (
+            <div key={section}>
+              <div className="hl-section-label mb-1.5">{section}</div>
+              <div className="flex flex-col gap-2">
+                {workers.map((w) =>
+                  expandedId === w.id ? (
+                    <WorkerRowExpanded
+                      key={w.id}
+                      worker={w}
+                      count={hired[w.id] ?? 0}
+                      state={state}
+                      dispatch={dispatch}
+                      onCollapse={() => setExpandedId(null)}
+                    />
+                  ) : (
+                    <WorkerBrowserItem
+                      key={w.id}
+                      worker={w}
+                      count={hired[w.id] ?? 0}
+                      selected={false}
+                      onSelect={() => setExpandedId(w.id)}
+                    />
+                  )
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <BrowserDetailLayout
+          toolbar={undefined}
+          browser={
+            <div className="flex flex-col gap-3">
+              {sections.map(({ section, workers }) => (
                 <div key={section}>
                   <div className="hl-section-label mb-1.5">{section}</div>
                   <BrowserGrid min={180}>
@@ -246,19 +364,19 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
                     ))}
                   </BrowserGrid>
                 </div>
-              );
-            })}
-          </div>
-        }
-        detail={
-          <WorkerDetail
-            worker={selected}
-            count={selected ? hired[selected.id] ?? 0 : 0}
-            state={state}
-            dispatch={dispatch}
-          />
-        }
-      />
+              ))}
+            </div>
+          }
+          detail={
+            <WorkerDetail
+              worker={selected}
+              count={selected ? hired[selected.id] ?? 0 : 0}
+              state={state}
+              dispatch={dispatch}
+            />
+          }
+        />
+      )}
     </div>
   );
 }
