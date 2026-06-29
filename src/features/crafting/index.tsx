@@ -15,6 +15,8 @@ import {
   DetailActionButton,
   DetailPane,
 } from "../../ui/primitives/BrowserDetail.jsx";
+import { useAccordion, ExpandRow } from "../../ui/primitives/ExpandList.jsx";
+import { BREAKPOINTS, useViewportBelow } from "../../ui/breakpoints.js";
 import type { GameState, Dispatch } from "../../types/state.js";
 import { zoneInventory } from "../../state/zoneInventory.js";
 import { settlementTier } from "../zones/data.js";
@@ -216,6 +218,85 @@ function RecipeDetail({ recipeKey, recipe, inventory, built, tier2Unlocked, stat
   );
 }
 
+// Body shared with the portrait inline-expand row: description + cost grid +
+// Craft button. Mirrors WorkerHireBody — the row header already supplies the
+// icon/title/status, so this is just the actionable detail.
+function RecipeCraftBody({ recipeKey, recipe, inventory, built, tier2Unlocked, state, dispatch }: RecipeDetailProps & { recipeKey: string; recipe: RecipeDef }) {
+  const inputs = effectiveRecipeInputs(state, recipeKey, recipe.inputs);
+  const craftable = canCraft(recipe, inputs, inventory, built, tier2Unlocked);
+  const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
+  const desc = recipe.desc || itemMap[recipe.item]?.desc;
+  const entries = Object.entries(inputs).map(([res, need]: [string, number]) => ({
+    key: res,
+    label: itemMap[res]?.label || res,
+    amount: need,
+    icon: <Icon iconKey={res} size={18} />,
+    have: (inventory || {})[res] || 0,
+    showHave: true,
+    check: true,
+    ok: ((inventory || {})[res] || 0) >= need,
+  }));
+  const rawChanged = Object.entries(inputs).some(([res, need]) => need !== recipe.inputs[res]);
+  return (
+    <>
+      {desc && <p className="hl-text-dim text-caption leading-snug">{desc}</p>}
+      <CostGrid entries={entries} title={rawChanged ? "Inputs after worker bonuses" : "Inputs"} />
+      <DetailActionButton
+        tone="moss"
+        disabled={!craftable}
+        onClick={() => dispatch({ type: "CRAFTING/CRAFT_RECIPE", payload: { key: recipeKey }, recipeKey })}
+      >
+        Craft
+      </DetailActionButton>
+    </>
+  );
+}
+
+interface RecipeExpandRowProps extends Omit<RecipeBrowserItemProps, "selected" | "onSelect"> {
+  open: boolean;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClosed: () => void;
+  dispatch: Dispatch;
+}
+
+// Portrait inline-expand recipe row (shared ExpandRow). Wide mode keeps the
+// two-pane BrowserDetailLayout below.
+function RecipeExpandRow({ recipeKey, recipe, inventory, built, tier2Unlocked, craftedTotals, state, dispatch, open, isOpen, onToggle, onClosed }: RecipeExpandRowProps) {
+  const inputs = effectiveRecipeInputs(state, recipeKey, recipe.inputs);
+  const craftable = canCraft(recipe, inputs, inventory, built, tier2Unlocked);
+  const stationOk = stationBuilt(built, recipe.station);
+  const tierOk = !(recipe.tier === 2) || tier2Unlocked;
+  const itemMap = ITEMS as unknown as Record<string, ItemDef | undefined>;
+  const itemName = itemMap[recipe.item]?.label || recipe.item;
+  const timesBuilt = (craftedTotals || {})[recipeKey] || 0;
+  return (
+    <ExpandRow
+      open={open}
+      isOpen={isOpen}
+      icon={<Icon iconKey={recipe.item} size={40} />}
+      title={itemName}
+      subtitle={!tierOk ? TIER2_GATE_LABEL : !stationOk ? "No station" : craftable ? "Ready" : "Missing inputs"}
+      meta={timesBuilt > 0 ? `x${timesBuilt}` : null}
+      muted={!craftable}
+      onToggle={onToggle}
+      onClosed={onClosed}
+      expandLabel={`View recipe ${itemName}`}
+      collapseLabel={`Collapse ${itemName}`}
+    >
+      <RecipeCraftBody
+        recipeKey={recipeKey}
+        recipe={recipe}
+        inventory={inventory}
+        built={built}
+        tier2Unlocked={tier2Unlocked}
+        state={state}
+        dispatch={dispatch}
+      />
+    </ExpandRow>
+  );
+}
+
 interface StationCardProps {
   station: string;
   state: GameState;
@@ -273,12 +354,77 @@ interface StationMenuProps {
   built: Record<string, unknown>;
   inventory: Record<string, number>;
   tier2Unlocked: boolean;
+  craftedTotals: Record<string, number>;
+  dispatch: Dispatch;
+  stacked: boolean;
   onOpen: (station: string) => void;
 }
 
-// Level-1 drill-down view: the grid of building cards. Only buildings that have
-// actually been built in town appear here.
-function StationMenu({ state, built, inventory, tier2Unlocked, onOpen }: StationMenuProps) {
+// Portrait building list: each built workshop is an expandable row that reveals
+// its recipes inline (nested RecipeExpandRow), instead of drilling into a
+// separate level-2 screen. Two accordions — one for buildings, one shared
+// across recipes — so a single building and a single recipe stay open at once.
+function StationExpandList({ state, built, inventory, tier2Unlocked, craftedTotals, dispatch }: Omit<StationMenuProps, "stacked" | "onOpen">) {
+  const builtStations = STATION_ORDER.filter((s) => stationBuilt(built, s));
+  const buildingAcc = useAccordion();
+  const recipeAcc = useAccordion();
+  return (
+    <div className="hl-browser-list flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto">
+      {builtStations.map((s) => {
+        const meta = STATION_META[s];
+        const recs = recipesForStation(s);
+        const ready = recs.filter(([key, recipe]) =>
+          canCraft(recipe, effectiveRecipeInputs(state, key, recipe.inputs), inventory, built, tier2Unlocked),
+        ).length;
+        return (
+          <ExpandRow
+            key={s}
+            open={buildingAcc.displayedKey === s}
+            isOpen={buildingAcc.isOpen}
+            bodyClassName="hl-expand-body--tall"
+            icon={<IconCanvas iconKey={meta.iconKey} size={36} />}
+            title={meta.title}
+            subtitle={meta.label}
+            meta={`${ready}/${recs.length}`}
+            onToggle={() => buildingAcc.select(s)}
+            onClosed={buildingAcc.onClosed}
+            expandLabel={`Open ${meta.label}`}
+            collapseLabel={`Collapse ${meta.label}`}
+          >
+            {recs.length === 0 ? (
+              <p className="hl-empty">No recipes at this station.</p>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {recs.map(([key, recipe]) => (
+                  <RecipeExpandRow
+                    key={key}
+                    recipeKey={key}
+                    recipe={recipe}
+                    inventory={inventory}
+                    built={built}
+                    tier2Unlocked={tier2Unlocked}
+                    craftedTotals={craftedTotals}
+                    state={state}
+                    dispatch={dispatch}
+                    open={recipeAcc.displayedKey === key}
+                    isOpen={recipeAcc.isOpen}
+                    onToggle={() => recipeAcc.select(key)}
+                    onClosed={recipeAcc.onClosed}
+                  />
+                ))}
+              </div>
+            )}
+          </ExpandRow>
+        );
+      })}
+    </div>
+  );
+}
+
+// Level-1 building menu. Portrait expands buildings inline (StationExpandList);
+// wide keeps the drill-down grid of cards (tap → level-2 recipe list). Only
+// buildings that have actually been built in town appear here.
+function StationMenu({ state, built, inventory, tier2Unlocked, craftedTotals, dispatch, stacked, onOpen }: StationMenuProps) {
   const builtStations = STATION_ORDER.filter((s) => stationBuilt(built, s));
   return (
     <FeaturePanel>
@@ -286,6 +432,15 @@ function StationMenu({ state, built, inventory, tier2Unlocked, onOpen }: Station
       <FeaturePanel.Body>
         {builtStations.length === 0 ? (
           <p className="hl-empty">Build a crafting building in town to start crafting.</p>
+        ) : stacked ? (
+          <StationExpandList
+            state={state}
+            built={built}
+            inventory={inventory}
+            tier2Unlocked={tier2Unlocked}
+            craftedTotals={craftedTotals}
+            dispatch={dispatch}
+          />
         ) : (
           <>
             <p className="mb-3 text-caption text-ink-soft">Choose a workshop to see what you can craft there.</p>
@@ -334,6 +489,10 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
   // Selection within the active station. Declared unconditionally (before any
   // early return) so hook order stays stable across the menu/detail switch.
   const [selectedRecipeKey, setSelectedRecipeKey] = useState<string | null>(null);
+  // Portrait inline-expand state; wide mode (>= browserStack) uses the two-pane
+  // BrowserDetailLayout instead. Both hooks declared before the early return.
+  const accordion = useAccordion();
+  const stacked = useViewportBelow(BREAKPOINTS.browserStack);
 
   if (!activeTab) {
     return (
@@ -342,6 +501,9 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
         built={built}
         inventory={inventory}
         tier2Unlocked={tier2Unlocked}
+        craftedTotals={craftedTotals}
+        dispatch={dispatch}
+        stacked={stacked}
         onOpen={openStation}
       />
     );
@@ -382,6 +544,32 @@ export default function CraftingScreen({ state, dispatch }: CraftingScreenProps)
             Build the {meta.label} in town to unlock these recipes.
           </p>
         </div>
+      ) : stacked ? (
+        <FeaturePanel.Body>
+          {stationRecipes.length === 0 ? (
+            <div className="hl-empty">No recipes at this station.</div>
+          ) : (
+            <div className="hl-browser-list flex-1 min-h-0 flex flex-col gap-2 overflow-y-auto">
+              {stationRecipes.map(([key, recipe]) => (
+                <RecipeExpandRow
+                  key={key}
+                  recipeKey={key}
+                  recipe={recipe}
+                  inventory={inventory}
+                  built={built}
+                  tier2Unlocked={tier2Unlocked}
+                  craftedTotals={craftedTotals}
+                  state={state}
+                  dispatch={dispatch}
+                  open={accordion.displayedKey === key}
+                  isOpen={accordion.isOpen}
+                  onToggle={() => accordion.select(key)}
+                  onClosed={accordion.onClosed}
+                />
+              ))}
+            </div>
+          )}
+        </FeaturePanel.Body>
       ) : (
       <FeaturePanel.Body>
         <BrowserDetailLayout

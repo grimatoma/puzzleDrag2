@@ -311,6 +311,23 @@
     padding-top: 0.625rem;
   }
 
+  /* Animated reveal for an inline-expanding row body (ExpandRow). Mirrors the
+     Inventory grid accordion timing (.inv-accordion__body). */
+  .hl-expand-body {
+    overflow: hidden;
+    max-height: 0;
+    transition: max-height 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .hl-expand-body.is-open {
+    max-height: 700px;
+    transition: max-height 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  /* Taller open cap for a row whose body holds a nested expand list (e.g. a
+     crafting building revealing its recipes). */
+  .hl-expand-body--tall.is-open {
+    max-height: 1800px;
+  }
+
   /* ── Inventory icon grid (WoW-style) ── */
   .inv-grid {
     display: grid;
