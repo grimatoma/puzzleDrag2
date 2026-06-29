@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>puzzleDrag2 — Mobile Landscape Layout Proposal</title>
+<style>
+  :root{
+    /* Game palette, sampled from the running app + screenshot */
+    --parch:#f4ecd6;
+    --parch-2:#e9dfc6;
+    --panel-top:#fffefa;
+    --panel-bot:#faf3e4;
+    --paper-soft:#f6efe0;
+    --ink:#2b2218;
+    --ink-mid:#5b3a1e;
+    --edge:#c9b993;
+    --edge-strong:#8a6a47;
+    --gold:#e2b24a;
+    --ember:#d97a2a;
+    --moss:#7cb342;
+    --chip-bg:#f3ead4;
+    --chip-border:#d8c69a;
+    /* field tints (spring) */
+    --field-top:#bfe08a;
+    --field-bot:#9ccB5f;
+    --frame:#3a2412;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      radial-gradient(1200px 600px at 50% -10%, #fbf6e8, transparent),
+      var(--parch-2);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    padding:28px 20px 80px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:24px;margin:0 0 4px;letter-spacing:.2px}
+  .sub{color:#6f6047;font-size:14px;margin:0 0 22px;max-width:760px;line-height:1.5}
+  .sub b{color:var(--ink-mid)}
+
+  /* ── toggle ─────────────────────────────────────────── */
+  .toggle{display:inline-flex;background:#efe6cd;border:1px solid var(--edge);border-radius:12px;padding:4px;gap:4px;margin-bottom:18px}
+  .toggle button{
+    appearance:none;border:0;cursor:pointer;font:inherit;font-weight:700;font-size:13px;
+    padding:8px 16px;border-radius:9px;color:#7a6a4c;background:transparent;transition:.15s;
+  }
+  .toggle button.on{background:#fff;color:var(--ink);box-shadow:0 1px 0 rgba(0,0,0,.08),0 0 0 1px var(--edge)}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:#6f6047;margin:0 0 18px}
+  .legend .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:middle}
+
+  /* ── device frame ───────────────────────────────────── */
+  .stage{display:flex;flex-direction:column;gap:26px;align-items:center}
+  .device-col{width:100%;max-width:840px;min-width:0}
+  .device-label{font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.12em;color:#8a795a;margin:0 0 8px}
+  .device{
+    position:relative;
+    /* landscape phone ~ 19.5:9 → use 880x406 logical */
+    width:100%;aspect-ratio:880/406;
+    background:#0b0b0d;border-radius:30px;padding:9px 12px;
+    box-shadow:0 18px 40px -12px rgba(0,0,0,.45),0 0 0 2px #1c1c20;
+  }
+  .screen{
+    position:relative;width:100%;height:100%;border-radius:20px;overflow:hidden;
+    background:var(--parch);display:flex;flex-direction:column;
+    --hud-h:50px;
+  }
+  /* notch / home indicator hint */
+  .device::after{content:"";position:absolute;left:50%;bottom:5px;transform:translateX(-50%);
+    width:90px;height:4px;border-radius:3px;background:rgba(255,255,255,.35)}
+
+  /* ── shared chrome ──────────────────────────────────── */
+  .hud{
+    height:var(--hud-h);flex:0 0 auto;display:flex;align-items:center;gap:8px;
+    padding:0 10px;background:#efe4c8;border-bottom:1px solid var(--edge);
+  }
+  .iconbtn{width:30px;height:30px;border-radius:8px;background:var(--paper-soft);
+    border:2px solid var(--edge-strong);display:grid;place-items:center;font-weight:800;color:var(--ink-mid);flex:0 0 auto;font-size:15px}
+  .main{flex:1 1 auto;min-height:0;display:flex;gap:7px;padding:7px}
+
+  /* season strip (horizontal) */
+  .season{
+    position:relative;height:100%;border-radius:7px;overflow:hidden;border:1.5px solid var(--frame);
+    display:flex;font-weight:800;color:rgba(60,40,15,.8);font-size:9px;letter-spacing:.06em;
+  }
+  .season .seg{flex:1;display:flex;align-items:center;justify-content:center;position:relative}
+  .s-spring{background:linear-gradient(180deg,#f6d7e6,#cfe8b0)}
+  .s-summer{background:linear-gradient(180deg,#ffe9a8,#ffd36b)}
+  .s-autumn{background:linear-gradient(180deg,#f7c98a,#e88f4a)}
+  .s-winter{background:linear-gradient(180deg,#cfe2f2,#a9c8e6)}
+  .turns{display:flex;flex-direction:column;align-items:center;justify-content:center;
+    background:var(--paper-soft);color:#7a3c12;padding:0 9px;border-left:1.5px solid var(--frame)}
+  .turns b{font-size:15px;line-height:1}
+  .turns span{font-size:6.5px;font-weight:800;letter-spacing:.08em}
+
+  /* panel card */
+  .card{background:linear-gradient(180deg,var(--panel-top),var(--panel-bot));
+    border:1.5px solid var(--edge);border-radius:11px;box-shadow:0 2px 0 rgba(0,0,0,.06);overflow:hidden}
+  .card-h{display:flex;justify-content:space-between;align-items:center;padding:5px 8px;
+    border-bottom:1px dashed var(--edge-strong);font-size:8px;font-weight:800;text-transform:uppercase;
+    letter-spacing:.12em;color:#7a5520}
+  .card-h .r{color:#a08a5e}
+
+  /* stockpile chips */
+  .stock{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;padding:7px}
+  .stock.col2{grid-template-columns:repeat(2,1fr)}
+  .chip{display:flex;align-items:center;gap:4px;background:var(--chip-bg);border:1px solid var(--chip-border);
+    border-radius:7px;padding:3px 5px;font-size:11px;font-weight:700;font-variant-numeric:tabular-nums;color:#4a3a22}
+  .chip.empty{opacity:.5;background:rgba(138,106,71,.10);border-color:transparent}
+  .chip .e{font-size:14px;line-height:1}
+
+  /* tools */
+  .tools{display:grid;gap:6px}
+  .tool{aspect-ratio:1;border-radius:10px;background:rgba(58,36,18,.92);border:1.5px solid #6b4a23;
+    display:grid;place-items:center;font-size:20px;position:relative;color:#f6e3bf}
+  .tool .b{position:absolute;top:2px;right:3px;font-size:8px;font-weight:800;background:rgba(10,5,3,.85);
+    color:#fff8e7;border-radius:5px;padding:0 4px}
+  .tool.dim{opacity:.5}
+
+  /* board */
+  .board-area{flex:1 1 auto;min-width:0;display:flex;align-items:center;justify-content:center;
+    border-radius:12px;overflow:hidden;
+    background:linear-gradient(180deg,var(--field-top),var(--field-bot));
+    box-shadow:0 4px 0 rgba(0,0,0,.2) inset, 0 0 0 1px rgba(0,0,0,.06);
+    position:relative}
+  .board-area::before{ /* decorative furrow ovals like the screenshot */
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background:
+      radial-gradient(closest-side, rgba(255,255,255,.18), transparent 70%) -6% 18%/9% 16% no-repeat,
+      radial-gradient(closest-side, rgba(255,255,255,.18), transparent 70%) -6% 50%/9% 16% no-repeat,
+      radial-gradient(closest-side, rgba(255,255,255,.18), transparent 70%) -6% 82%/9% 16% no-repeat,
+      radial-gradient(closest-side, rgba(255,255,255,.18), transparent 70%) 106% 18%/9% 16% no-repeat,
+      radial-gradient(closest-side, rgba(255,255,255,.18), transparent 70%) 106% 50%/9% 16% no-repeat,
+      radial-gradient(closest-side, rgba(255,255,255,.18), transparent 70%) 106% 82%/9% 16% no-repeat;
+  }
+  /* Board size is set in JS to min(areaW, areaH) — mirrors the game's
+     computeLayout (tile = min of width/height bound). Don't let the grid
+     size itself from emoji content. */
+  .board{display:grid;grid-template-columns:repeat(6,1fr);
+    grid-template-rows:repeat(6,1fr);gap:3px;padding:6px;position:relative;z-index:1;
+    width:120px;height:120px}
+  .cell{border-radius:8px;display:grid;place-items:center;min-width:0;min-height:0;overflow:hidden;
+    font-size:var(--cs,18px);
+    box-shadow:inset 0 -3px 0 rgba(0,0,0,.08), 0 1px 0 rgba(0,0,0,.06)}
+  .g-grass{background:#cfe6a3}.g-dirt{background:#e8d3a3}.g-soil{background:#e2b27e}.g-rich{background:#cdaf7e}
+
+  /* size readout badge */
+  .readout{position:absolute;top:8px;right:8px;z-index:5;background:rgba(20,14,6,.78);color:#ffe9b8;
+    font-size:10px;font-weight:800;border-radius:8px;padding:5px 9px;letter-spacing:.04em;
+    font-variant-numeric:tabular-nums;backdrop-filter:blur(2px)}
+  .readout small{display:block;font-size:7.5px;font-weight:700;color:#cdb98a;letter-spacing:.1em;text-transform:uppercase}
+
+  /* annotation callouts */
+  .notes{margin-top:26px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+  .note{background:#fff;border:1px solid var(--edge);border-radius:12px;padding:14px 16px;box-shadow:0 1px 0 rgba(0,0,0,.05)}
+  .note h3{margin:0 0 6px;font-size:13.5px;display:flex;align-items:center;gap:7px}
+  .note .num{width:20px;height:20px;border-radius:6px;background:var(--ember);color:#fff;display:grid;place-items:center;font-size:11px;font-weight:800;flex:0 0 auto}
+  .note p{margin:0;font-size:12.5px;line-height:1.5;color:#5d503a}
+  .metric{display:inline-block;background:#eef6e1;color:#3f6b1c;font-weight:800;border-radius:6px;padding:1px 7px;font-size:12px}
+
+  .foot{margin-top:30px;font-size:12px;color:#8a795a;border-top:1px solid var(--edge);padding-top:14px;line-height:1.6}
+  .foot code{background:#efe6cd;padding:1px 6px;border-radius:5px;font-size:11.5px}
+  .hide{display:none !important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Mobile Landscape — “Maximize the Board” Layout</h1>
+  <p class="sub">
+    The board is a fixed <b>6×6 square</b>, so in landscape it is sized by the <b>shortest</b> available
+    dimension — height. Today a full-width HUD band steals ~15% of that height, and the 44%-wide left
+    column leaves the board height-bound with wasted green margins on either side. The proposal
+    <b>removes the top band and folds the season strip + turns/back into the left rail</b>, handing the
+    board the <b>full viewport height</b>. Flip between the two below.
+  </p>
+
+  <div class="toggle" id="toggle">
+    <button data-mode="current">Current</button>
+    <button data-mode="proposed" class="on">Proposed</button>
+  </div>
+
+  <div class="legend">
+    <span><span class="dot" style="background:#efe4c8;border:1px solid #c9b993"></span>HUD / chrome</span>
+    <span><span class="dot" style="background:#faf3e4;border:1px solid #c9b993"></span>Stockpile + tools rail</span>
+    <span><span class="dot" style="background:#9ccb5f"></span>Playfield (the 6×6 board)</span>
+  </div>
+
+  <div class="stage">
+    <!-- ───────────── CURRENT ───────────── -->
+    <div class="device-col" id="col-current" data-pane>
+      <div class="device-label">Current layout</div>
+      <div class="device"><div class="screen">
+        <!-- top HUD band -->
+        <div class="hud">
+          <div class="iconbtn">←</div>
+          <div class="season" style="flex:1">
+            <div class="seg s-spring">SPRING</div>
+            <div class="seg s-summer">SUMMER</div>
+            <div class="seg s-autumn">AUTUMN</div>
+            <div class="seg s-winter">WINTER</div>
+            <div class="turns"><b>5</b><span>TURNS</span></div>
+          </div>
+        </div>
+        <div class="main">
+          <!-- left column 44% : stockpile over tools -->
+          <div style="flex:0 0 42%;display:flex;flex-direction:column;gap:7px;min-width:0">
+            <div class="card" style="flex:0 0 auto">
+              <div class="card-h"><span>● Stockpile</span><span class="r">5/11 kinds</span></div>
+              <div class="stock">
+                <div class="chip"><span class="e">🌾</span>5</div>
+                <div class="chip"><span class="e">🪵</span>4</div>
+                <div class="chip empty"><span class="e">🪨</span>0</div>
+                <div class="chip empty"><span class="e">🍯</span>0</div>
+                <div class="chip"><span class="e">🍲</span>1</div>
+                <div class="chip empty"><span class="e">🥧</span>0</div>
+                <div class="chip empty"><span class="e">🧅</span>0</div>
+                <div class="chip"><span class="e">🥚</span>2</div>
+              </div>
+            </div>
+            <div class="card" style="flex:1 1 auto;min-height:0;padding:7px">
+              <div class="tools" style="grid-template-columns:repeat(3,1fr)">
+                <div class="tool dim"><span class="b">0</span>🧨</div>
+                <div class="tool"><span class="b">2</span>🪓</div>
+                <div class="tool"><span class="b">1</span>🌱</div>
+                <div class="tool dim"><span class="b">0</span>🪣</div>
+                <div class="tool dim"><span class="b">0</span>🔨</div>
+                <div class="tool dim"><span class="b">0</span>✨</div>
+              </div>
+            </div>
+          </div>
+          <!-- board -->
+          <div class="board-area">
+            <div class="readout"><span id="ro-current">tile —</span><small>board edge</small></div>
+            <div class="board" data-board></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- ───────────── PROPOSED ───────────── -->
+    <div class="device-col" id="col-proposed" data-pane>
+      <div class="device-label">Proposed layout</div>
+      <div class="device"><div class="screen" style="--hud-h:0px">
+        <!-- NO top band — full-height main -->
+        <div class="main" style="padding:7px">
+          <!-- slim left rail ~ 30% : back/turns + compact season + stockpile + tools -->
+          <div style="flex:0 0 30%;max-width:260px;display:flex;flex-direction:column;gap:6px;min-width:0">
+            <!-- header row -->
+            <div style="display:flex;align-items:center;gap:6px;flex:0 0 auto">
+              <div class="iconbtn" style="width:26px;height:26px;font-size:13px">←</div>
+              <div class="season" style="flex:1;height:26px">
+                <div class="seg s-spring"></div>
+                <div class="seg s-summer"></div>
+                <div class="seg s-autumn"></div>
+                <div class="seg s-winter"></div>
+                <div class="turns" style="padding:0 7px"><b>5</b><span>LEFT</span></div>
+              </div>
+            </div>
+            <!-- stockpile -->
+            <div class="card" style="flex:0 0 auto">
+              <div class="card-h"><span>● Stockpile</span><span class="r">5/11</span></div>
+              <div class="stock col2">
+                <div class="chip"><span class="e">🌾</span>5</div>
+                <div class="chip"><span class="e">🪵</span>4</div>
+                <div class="chip"><span class="e">🍲</span>1</div>
+                <div class="chip"><span class="e">🥚</span>2</div>
+                <div class="chip empty"><span class="e">🪨</span>0</div>
+                <div class="chip empty"><span class="e">🍯</span>0</div>
+              </div>
+            </div>
+            <!-- tools -->
+            <div class="card" style="flex:1 1 auto;min-height:0;padding:6px">
+              <div class="card-h" style="border:0;padding:0 0 5px"><span>● Tools</span></div>
+              <div class="tools" style="grid-template-columns:repeat(3,1fr)">
+                <div class="tool dim"><span class="b">0</span>🧨</div>
+                <div class="tool"><span class="b">2</span>🪓</div>
+                <div class="tool"><span class="b">1</span>🌱</div>
+                <div class="tool dim"><span class="b">0</span>🪣</div>
+                <div class="tool dim"><span class="b">0</span>🔨</div>
+                <div class="tool dim"><span class="b">0</span>✨</div>
+              </div>
+            </div>
+          </div>
+          <!-- board : full height -->
+          <div class="board-area">
+            <div class="readout"><span id="ro-proposed">tile —</span><small>board edge · <b style="color:#9be37a">bigger</b></small></div>
+            <div class="board" data-board></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+  </div>
+
+  <!-- annotations -->
+  <div class="notes">
+    <div class="note">
+      <h3><span class="num">1</span>Drop the top HUD band</h3>
+      <p>The full-width season strip + back button move into the left rail. Every pixel of reclaimed
+      top height feeds straight into the height-bound board: <span class="metric" id="m-edge">+— edge</span>,
+      <span class="metric" id="m-area">+— area</span>.</p>
+    </div>
+    <div class="note">
+      <h3><span class="num">2</span>Compact vertical rail</h3>
+      <p>A back ▸ turns ▸ season ▸ stockpile ▸ tools stack at ~30% width (vs 44%). It only needs to be
+      narrow enough that the board stays height-bound — extra width is wasted on a square board anyway.</p>
+    </div>
+    <div class="note">
+      <h3><span class="num">3</span>Stockpile goes 2-up</h3>
+      <p>In the narrower rail the resource chips stack two columns and scroll — same data, smaller footprint,
+      still glanceable next to the board.</p>
+    </div>
+    <div class="note">
+      <h3><span class="num">4</span>Board centered, full-bleed height</h3>
+      <p>The playfield fills the entire screen height. The leftover horizontal slack (those green margins)
+      stays as a tidy framed field rather than dead space under a band.</p>
+    </div>
+  </div>
+
+  <div class="foot">
+    <b>Implementation sketch</b> — this is a CSS-only reshape of the existing
+    <code>BoardLayout</code> template-areas grid (<code>src/ui/puzzleBoard.tsx</code>) plus moving
+    <code>&lt;SeasonIndicator&gt;</code> out of <code>Hud</code> and into the rail. No board/Phaser math
+    changes: <code>computeLayout</code> already sizes tiles to the container it’s handed, so a taller board
+    cell automatically yields bigger tiles. The portrait layout is untouched.
+    <br/>The tile-edge readouts above are measured live from each rendered board, so the size delta is real,
+    not illustrative.
+  </div>
+</div>
+
+<script>
+  // Fixed board pattern echoing the screenshot (chickens / trees / carrots / wheat / bushes)
+  const G = [
+    ["g-grass","🌳"],["g-grass","🌿"],["g-soil","🥕"],["g-dirt","🐔"],["g-grass","🌳"],["g-dirt","🐔"],
+    ["g-dirt","🐔"],["g-grass","🌳"],["g-grass","🌿"],["g-grass","🌳"],["g-dirt","🐔"],["g-dirt","🌾"],
+    ["g-dirt","🐔"],["g-dirt","🌾"],["g-dirt","🌾"],["g-dirt","🌾"],["g-grass","🌳"],["g-soil","🥕"],
+    ["g-dirt","🐔"],["g-dirt","🌾"],["g-soil","🥕"],["g-soil","🥕"],["g-dirt","🌾"],["g-soil","🥕"],
+    ["g-dirt","🌾"],["g-dirt","🐔"],["g-soil","🥕"],["g-dirt","🐔"],["g-dirt","🐔"],["g-grass","🌿"],
+    ["g-grass","🌳"],["g-grass","🌳"],["g-soil","🥕"],["g-dirt","🐔"],["g-dirt","🐔"],["g-soil","🥕"],
+  ];
+  document.querySelectorAll("[data-board]").forEach(b=>{
+    G.forEach(([g,e])=>{
+      const c=document.createElement("div");
+      c.className="cell "+g;c.textContent=e;b.appendChild(c);
+    });
+  });
+
+  // Toggle current/proposed
+  const panes={current:document.getElementById("col-current"),proposed:document.getElementById("col-proposed")};
+  const btns=document.querySelectorAll("#toggle button");
+  function setMode(m){
+    btns.forEach(x=>x.classList.toggle("on",x.dataset.mode===m));
+    // show both side by side on wide screens; on the toggle just emphasize.
+    // (Both panes stay visible; toggle scrolls focus.)
+    panes[m].scrollIntoView({behavior:"smooth",block:"nearest",inline:"center"});
+  }
+  btns.forEach(b=>b.addEventListener("click",()=>setMode(b.dataset.mode)));
+
+  // Size each board to a true square = min(areaWidth, areaHeight), exactly like
+  // the game's computeLayout (tile = min of the width/height bound). This makes
+  // the height the binding constraint in landscape, so the proposed (taller)
+  // board genuinely renders bigger — and the readout is an honest measurement.
+  function measure(){
+    const edge={};
+    document.querySelectorAll("[data-pane]").forEach(pane=>{
+      const area=pane.querySelector(".board-area");
+      const board=area.querySelector(".board");
+      if(!board)return;
+      const r=area.getBoundingClientRect();
+      const square=Math.max(0,Math.min(r.width,r.height));
+      board.style.width=square+"px";
+      board.style.height=square+"px";
+      // cell edge ≈ (square - padding - gaps)/6
+      const cell=(square-12-15)/6;            // 6px*2 pad + 3px*5 gap
+      board.style.setProperty("--cs",Math.max(8,cell*0.62)+"px");
+      const ro=area.querySelector(".readout span");
+      if(ro)ro.textContent="tile ≈ "+Math.round(cell)+"px";
+      edge[pane.id]=cell;
+    });
+    // Honest, live gain: proposed vs current tile edge → edge % and area %.
+    const c=edge["col-current"], p=edge["col-proposed"];
+    if(c>0 && p>0){
+      const e=Math.round((p/c-1)*100);
+      const a=Math.round(((p*p)/(c*c)-1)*100);
+      const me=document.getElementById("m-edge"), ma=document.getElementById("m-area");
+      if(me)me.textContent="+"+e+"% edge";
+      if(ma)ma.textContent="+"+a+"% area";
+    }
+  }
+  window.addEventListener("load",measure);
+  window.addEventListener("resize",()=>{clearTimeout(window.__t);window.__t=setTimeout(measure,120)});
+  setTimeout(measure,60);
+</script>
+</body>
+</html>
