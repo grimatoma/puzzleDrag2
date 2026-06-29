@@ -35,7 +35,7 @@ function TideContent({ fish }: { fish: FishLike | null | undefined }) {
   );
 }
 
-function TideChip({ fish }: { fish: FishLike | null | undefined }) {
+export function TideChip({ fish }: { fish: FishLike | null | undefined }) {
   if (!fish) return null;
   const tide = fish.tide ?? "high";
   const tideTurn = fish.tideTurn ?? 0;

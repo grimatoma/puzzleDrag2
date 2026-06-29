@@ -1696,23 +1696,29 @@ const BOARD_LAYOUT_CSS = `
   padding: 8px;
   box-sizing: border-box;
   grid-template-areas:
+    "railhead"
     "hotbar"
     "panel"
     "board";
   grid-template-columns: minmax(0, 1fr);
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto minmax(0, 1fr);
 }
+.hwv-board-layout > [data-area="railhead"] { grid-area: railhead; min-width: 0; }
 .hwv-board-layout > [data-area="hotbar"] { grid-area: hotbar; min-width: 0; }
 .hwv-board-layout > [data-area="panel"]  { grid-area: panel; min-width: 0; }
 .hwv-board-layout > [data-area="tools"]  { display: none; }
 .hwv-board-layout > [data-area="board"]  { grid-area: board; min-height: 0; min-width: 0; }
 @media (orientation: landscape) and (min-width: 500px) {
   .hwv-board-layout {
+    /* Rail head (leave + season) stacks above the action panel and tools in
+       the left rail; the board claims the full height of the right column —
+       the season strip no longer eats a full-width band off the top. */
     grid-template-areas:
-      "panel board"
-      "tools board";
+      "railhead board"
+      "panel    board"
+      "tools    board";
     grid-template-columns: minmax(360px, 44%) minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr);
+    grid-template-rows: auto auto minmax(0, 1fr);
   }
   .hwv-board-layout > [data-area="hotbar"] { display: none; }
   .hwv-board-layout > [data-area="tools"]  {
@@ -1724,11 +1730,12 @@ const BOARD_LAYOUT_CSS = `
 }
 `;
 
-export function BoardLayout({ hotbar, statusPanel, toolsGrid, board }: { hotbar: React.ReactNode; statusPanel: React.ReactNode; toolsGrid: React.ReactNode; board: React.ReactNode }) {
+export function BoardLayout({ railHead, hotbar, statusPanel, toolsGrid, board }: { railHead: React.ReactNode; hotbar: React.ReactNode; statusPanel: React.ReactNode; toolsGrid: React.ReactNode; board: React.ReactNode }) {
   return (
     <>
       <style>{BOARD_LAYOUT_CSS}</style>
       <div className="hwv-board-layout">
+        <div data-area="railhead">{railHead}</div>
         <div data-area="hotbar">{hotbar}</div>
         <div data-area="panel">{statusPanel}</div>
         <div data-area="tools">{toolsGrid}</div>
