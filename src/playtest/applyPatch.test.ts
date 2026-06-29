@@ -117,3 +117,50 @@ describe("applyPatch — failure + multi-edit semantics", () => {
     expect(r.source).toBe(SRC.replace("value: 800", "value: 400"));
   });
 });
+
+const CARTO_FILE = "src/features/cartography/data.ts";
+const CONST_MARKET = `const MARKET_PRICES = { pearls: { buy: 900, sell: 800 }, flour: { buy: 12, sell: 8 } };`;
+const CARTO = `const TEMPERATE_FARM_TEMPLATE = { baseTurns: 10, foo: 1 };
+export const MAP_NODES = [
+  { id: "home", tiers: [
+    { id: "outpost" },
+    { id: "hamlet", upgradeCost: { resources: { plank: 8, bread: 6 } } },
+  ] },
+  { id: "meadow", tiers: [{ id: "outpost" }] },
+];`;
+
+describe("applyPatch — M5 reach (market, tier costs, session length)", () => {
+  it("routes cartography roots to the cartography file, market to constants", () => {
+    expect(targetFileForPath("MAP_NODES.home.tiers.hamlet.upgradeCost.resources.bread")).toBe(CARTO_FILE);
+    expect(targetFileForPath("TEMPERATE_FARM_TEMPLATE.baseTurns")).toBe(CARTO_FILE);
+    expect(targetFileForPath("MARKET_PRICES.pearls.sell")).toBe(FILE);
+  });
+
+  it("edits a MARKET_PRICES buy/sell value", () => {
+    const r = applyPatchToSource(FILE, CONST_MARKET, [{ path: "MARKET_PRICES.pearls.sell", to: 100 }]);
+    expect(r.applied[0]).toMatchObject({ from: 800, to: 100 });
+    expect(r.source).toBe(CONST_MARKET.replace("sell: 800", "sell: 100"));
+  });
+
+  it("edits a nested MAP_NODES tier cost via id descent AT DEPTH", () => {
+    const r = applyPatchToSource(CARTO_FILE, CARTO, [
+      { path: "MAP_NODES.home.tiers.hamlet.upgradeCost.resources.bread", to: 3 },
+    ]);
+    expect(r.applied[0]).toMatchObject({ from: 6, to: 3 });
+    expect(r.source).toBe(CARTO.replace("bread: 6", "bread: 3"));
+  });
+
+  it("edits a board-template baseTurns (shared session length)", () => {
+    const r = applyPatchToSource(CARTO_FILE, CARTO, [{ path: "TEMPERATE_FARM_TEMPLATE.baseTurns", to: 12 }]);
+    expect(r.source).toBe(CARTO.replace("baseTurns: 10", "baseTurns: 12"));
+  });
+
+  it("fails loud on a missing nested tier id — writes nothing", () => {
+    const r = applyPatchToSource(CARTO_FILE, CARTO, [
+      { path: "MAP_NODES.home.tiers.nope.upgradeCost.resources.bread", to: 3 },
+    ]);
+    expect(r.changed).toBe(false);
+    expect(r.unresolved).toHaveLength(1);
+    expect(r.source).toBe(CARTO);
+  });
+});

@@ -71,6 +71,7 @@ interface RootConfig {
 }
 
 export const CONSTANTS_FILE = "src/constants.ts";
+export const CARTOGRAPHY_FILE = "src/features/cartography/data.ts";
 
 const ROOTS: Record<string, RootConfig> = {
   // `ITEMS.<key>.value` edits land in the ITEMS_DATA literal (ITEMS spreads it).
@@ -84,8 +85,22 @@ const ROOTS: Record<string, RootConfig> = {
   RECIPES: { file: CONSTANTS_FILE, decl: "RECIPES", kind: "object" },
   // `BUILDINGS.<id>.cost.<key>` — array of { id, cost }.
   BUILDINGS: { file: CONSTANTS_FILE, decl: "BUILDINGS", kind: "array", idProp: "id" },
-  // M5-ready: `MARKET_PRICES.<key>.{buy,sell}`.
+  // `MARKET_PRICES.<key>.{buy,sell}`.
   MARKET_PRICES: { file: CONSTANTS_FILE, decl: "MARKET_PRICES", kind: "object" },
+  // M5 — progression knobs in cartography/data.ts. MAP_NODES is an array of
+  // zones, each with a NESTED `tiers` array (also id-keyed), so reaching a tier
+  // cost needs id descent at depth, e.g.
+  //   MAP_NODES.home.tiers.hamlet.upgradeCost.resources.bread
+  //   MAP_NODES.home.tiers.hamlet.entryCost.coins
+  MAP_NODES: { file: CARTOGRAPHY_FILE, decl: "MAP_NODES", kind: "array", idProp: "id" },
+  // Session length lives in shared board templates (boards are cloned from these,
+  // so a baseTurns edit applies to every zone using that template), e.g.
+  //   TEMPERATE_FARM_TEMPLATE.baseTurns
+  TEMPERATE_FARM_TEMPLATE: { file: CARTOGRAPHY_FILE, decl: "TEMPERATE_FARM_TEMPLATE", kind: "object" },
+  ORCHARD_FARM_TEMPLATE: { file: CARTOGRAPHY_FILE, decl: "ORCHARD_FARM_TEMPLATE", kind: "object" },
+  MINE_BOARD_STANDARD: { file: CARTOGRAPHY_FILE, decl: "MINE_BOARD_STANDARD", kind: "object" },
+  MINE_BOARD_EXTENDED: { file: CARTOGRAPHY_FILE, decl: "MINE_BOARD_EXTENDED", kind: "object" },
+  FISH_BOARD_HARBOR: { file: CARTOGRAPHY_FILE, decl: "FISH_BOARD_HARBOR", kind: "object" },
 };
 
 /** The source file a dotted path edits, or null if its root is unknown. */
@@ -181,25 +196,29 @@ function resolvePath(
   const root = decls.get(cfg.decl);
   if (!root) return { ok: false, reason: `declaration ${cfg.decl} not found` };
 
-  let node: ts.Expression = root;
+  const idProp = cfg.idProp ?? "id";
   let members = segs.slice(1);
-
-  if (cfg.kind === "array") {
-    if (!ts.isArrayLiteralExpression(node)) return { ok: false, reason: `${cfg.decl} is not an array literal` };
-    if (!members.length) return { ok: false, reason: `path has no element id` };
-    const el = arrayElementById(node, cfg.idProp!, members[0]);
-    if (!el) return { ok: false, reason: `no ${cfg.decl} element with ${cfg.idProp}="${members[0]}"` };
-    node = el;
-    members = members.slice(1);
-  } else if (cfg.alias && members.length) {
+  // ITEMS spread-alias remap applies to the first (object) member segment.
+  if (cfg.alias && members.length && ts.isObjectLiteralExpression(root)) {
     members = [cfg.alias[members[0]] ?? members[0], ...members.slice(1)];
   }
 
+  // Descend generically: at each segment, an object literal consumes it as a
+  // property name, an array literal consumes it as an `idProp` match. This
+  // handles id-keyed arrays at ANY depth (e.g. MAP_NODES → node → tiers → tier).
+  let node: ts.Expression = root;
   for (const seg of members) {
-    if (!ts.isObjectLiteralExpression(node)) return { ok: false, reason: `"${seg}" is not under an object literal` };
-    const next = objectProp(node, seg);
-    if (next === undefined) return { ok: false, reason: `property "${seg}" not found` };
-    node = next;
+    if (ts.isObjectLiteralExpression(node)) {
+      const next = objectProp(node, seg);
+      if (next === undefined) return { ok: false, reason: `property "${seg}" not found` };
+      node = next;
+    } else if (ts.isArrayLiteralExpression(node)) {
+      const el = arrayElementById(node, idProp, seg);
+      if (!el) return { ok: false, reason: `no array element with ${idProp}="${seg}"` };
+      node = el;
+    } else {
+      return { ok: false, reason: `"${seg}" is not under an object or array literal` };
+    }
   }
 
   if (!ts.isNumericLiteral(node)) return { ok: false, reason: `target is not a numeric literal` };
