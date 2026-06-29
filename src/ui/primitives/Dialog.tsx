@@ -28,9 +28,16 @@ function useDialogBehavior(open: boolean | undefined, onClose: (() => void) | un
     const previouslyFocused = document.activeElement;
     const panel = panelRef.current;
     if (panel) {
-      const focusables = panel.querySelectorAll<HTMLElement>(FOCUSABLE);
-      const first = focusables[0] || panel;
-      first.focus?.();
+      // Move focus INTO the dialog without landing on an interactive control.
+      // Focusing the first focusable (usually the primary button) makes the
+      // browser paint its :focus-visible ring whenever a dialog opens
+      // programmatically — e.g. the daily-reward and Town Hall modals that pop
+      // on login. That ember ring sits 2px outside an ember button and reads as
+      // a doubled / detached border. The panel is tabIndex=-1 + outline-none, so
+      // focusing it traps focus for keyboard/AT users with no visible ring; Tab
+      // then moves to the first control and shows the ring only on genuine
+      // keyboard navigation.
+      panel.focus?.();
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && onClose) {
