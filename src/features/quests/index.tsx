@@ -172,7 +172,7 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
 
   return (
     <div
-      className={`quest-card max-w-sm w-full self-center ${claimable ? "quest-card--ready" : ""} ${claimed ? "quest-card--done" : ""}`}
+      className={`quest-card w-full ${claimable ? "quest-card--ready" : ""} ${claimed ? "quest-card--done" : ""}`}
       style={{ "--q-accent": meta.accent } as CSSProperties}
     >
       {/* Category tag + reward token */}

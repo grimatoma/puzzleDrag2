@@ -6,7 +6,7 @@
  */
 
 import { tileFamilyResource, TILES_WITH_CUSTOM_OUTPUT, getItem, UPGRADE_THRESHOLDS } from "../constants.js";
-import { TILE_TYPES_MAP } from "../features/tileCollection/data.js";
+import { TILE_TYPES, TILE_TYPES_MAP } from "../features/tileCollection/data.js";
 import { upgradeCountForChain } from "../utils.js";
 
 /**
@@ -21,6 +21,31 @@ export function producedResource(tile: { key?: string } | null | undefined): str
   const override = tileEntry?.effects?.producesResource;
   if (override) return override;
   return tileFamilyResource(tile.key) ?? null;
+}
+
+/**
+ * Reverse of {@link producedResource}: given a resource KEY, return the most
+ * canonical board tile that produces it (lowest-tier producer, honouring
+ * per-tile overrides), as `{ id, displayName }`, or null if no tile produces
+ * it. Used by the board action-panel tooltips to show "what tile gets it".
+ * The map is built lazily once and cached.
+ */
+let _resourceToTile: Record<string, { id: string; displayName: string; tier: number }> | null = null;
+export function producingTileForResource(resourceKey: string): { id: string; displayName: string } | null {
+  if (!_resourceToTile) {
+    _resourceToTile = {};
+    for (const t of TILE_TYPES as Array<{ id: string; displayName?: string; tier?: number }>) {
+      const res = producedResource({ key: t.id });
+      if (!res) continue;
+      const tier = t.tier ?? 0;
+      const existing = _resourceToTile[res];
+      if (!existing || tier < existing.tier) {
+        _resourceToTile[res] = { id: t.id, displayName: t.displayName ?? t.id, tier };
+      }
+    }
+  }
+  const hit = _resourceToTile[resourceKey];
+  return hit ? { id: hit.id, displayName: hit.displayName } : null;
 }
 
 interface ChainPathTile {

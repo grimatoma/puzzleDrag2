@@ -58,6 +58,19 @@ describe("appUpdate watcher", () => {
     expect(result.current).toBe(false);
   });
 
+  it("auto-applies the update (posts SKIP_WAITING) as soon as a build is ready, without a manual tap", async () => {
+    const waiting = makeWorker();
+    installServiceWorker(makeRegistration(waiting), true);
+
+    const mod = await import("./appUpdate.js");
+    const { result } = renderHook(() => mod.useAppUpdateReady());
+
+    // updateReady flips true AND the waiting worker is told to skipWaiting,
+    // all without anyone calling applyUpdate() by hand.
+    await waitFor(() => expect(result.current).toBe(true));
+    expect(waiting.postMessage).toHaveBeenCalledWith({ type: "SKIP_WAITING" });
+  });
+
   it("applyUpdate posts SKIP_WAITING to the waiting worker", async () => {
     const waiting = makeWorker();
     installServiceWorker(makeRegistration(waiting), true);
