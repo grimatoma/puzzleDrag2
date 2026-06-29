@@ -211,12 +211,14 @@ export function initialState(overrides?: { saveSeed?: string; tools?: Record<str
         discovered?: Record<string, boolean>;
         researchProgress?: Record<string, number>;
         activeByCategory?: Record<string, string | null>;
+        researchByCategory?: Record<string, string | null>;
         freeMoves?: number;
       };
       return {
         discovered: { ...freshTC.discovered, ...src.discovered },
         researchProgress: { ...freshTC.researchProgress, ...src.researchProgress },
         activeByCategory: { ...freshTC.activeByCategory, ...src.activeByCategory },
+        researchByCategory: { ...freshTC.researchByCategory, ...src.researchByCategory },
         freeMoves: typeof src.freeMoves === "number" ? src.freeMoves : 0,
       };
     })();

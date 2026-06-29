@@ -220,7 +220,9 @@ function statusFor(state: GameState, t: TileTypeDef): string {
   // Not yet discovered
   if (d.method === "research") {
     const p = state.tileCollection?.researchProgress?.[t.id] ?? 0;
-    return `Researching ${displayKey(d.researchOf ?? "")}: ${p} / ${d.researchAmount}`;
+    const focused = state.tileCollection?.researchByCategory?.[t.category] === t.id;
+    const label = focused ? "Researching" : "Paused —";
+    return `${label} ${displayKey(d.researchOf ?? "")}: ${p} / ${d.researchAmount}`;
   }
   if (d.method === "chain") {
     return `Locked — chain ${d.chainLength} ${displayKey(d.chainLengthOf ?? "")} to discover`;
@@ -297,6 +299,8 @@ export interface TileDetailViewModel {
   actionDisabled: boolean;
   discovery: TileTypeDiscovery;
   researchProgress: number;
+  /** True when this tile is the player's current research focus for its category. */
+  researching: boolean;
   effects: Record<string, unknown>;
   abilities: Array<Record<string, unknown>>;
   tier: number;
@@ -312,6 +316,7 @@ export function getTileDetailViewModel(state: GameState, tileId: string): TileDe
   const active = discovered && state.tileCollection?.activeByCategory?.[category] === t.id;
   const d: TileTypeDiscovery = t.discovery ?? {};
   const researchProgress = state.tileCollection?.researchProgress?.[t.id] ?? 0;
+  const researching = state.tileCollection?.researchByCategory?.[category] === t.id;
   let action: string | null = null;
   let actionLabel = "Locked";
   let disabled = true;
@@ -325,7 +330,8 @@ export function getTileDetailViewModel(state: GameState, tileId: string): TileDe
     disabled = (state.coins ?? 0) < (d.coinCost ?? 0);
   } else if (d.method === "research") {
     action = "research";
-    actionLabel = `Research ${researchProgress} / ${d.researchAmount}`;
+    actionLabel = researching ? "Stop researching" : "Research this";
+    disabled = false; // the research toggle is always actionable while locked
   } else if (d.method === "chain") {
     action = "chain";
     actionLabel = `Chain ${d.chainLength} ${displayKey(d.chainLengthOf ?? "")}`;
@@ -353,6 +359,7 @@ export function getTileDetailViewModel(state: GameState, tileId: string): TileDe
     actionDisabled: disabled,
     discovery: d,
     researchProgress,
+    researching,
     effects: t.effects ?? {},
     abilities: t.abilities ?? [],
     tier: t.tier ?? 0,

@@ -352,6 +352,11 @@ export interface SetActiveTileAction {
   payload: { category: string; tileId: string | null };
 }
 
+export interface SetResearchTileAction {
+  type: "SET_RESEARCH_TILE";
+  payload: { category: string; tileId: string | null };
+}
+
 export interface TileDiscoveredAction {
   type: "TILE_DISCOVERED";
   payload: { ids: string[] };
@@ -622,6 +627,7 @@ export type TypedActionType =
   | SellItemAction["type"]
   | SetBiomeAction["type"]
   | SetActiveTileAction["type"]
+  | SetResearchTileAction["type"]
   | TileDiscoveredAction["type"]
   | BuyTileAction["type"]
   | GiveGiftAction["type"]
@@ -715,6 +721,7 @@ export type TypedAction =
   | SellItemAction
   | SetBiomeAction
   | SetActiveTileAction
+  | SetResearchTileAction
   | TileDiscoveredAction
   | BuyTileAction
   | GiveGiftAction

@@ -36,7 +36,10 @@ describe("tile detail view models", () => {
       locked: true,
       action: "research",
       researchProgress: 0,
-      actionDisabled: true,
+      // No research focus selected → the toggle invites the player to start, and is actionable.
+      researching: false,
+      actionLabel: "Research this",
+      actionDisabled: false,
     });
   });
 });

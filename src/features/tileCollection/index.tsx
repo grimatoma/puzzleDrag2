@@ -232,6 +232,17 @@ function TileDetail({ detail, category, state, dispatch }: TileDetailProps) {
     >
       Activate
     </DetailActionButton>
+  ) : detail.action === "research" ? (
+    <DetailActionButton
+      tone={detail.researching ? "moss" : "gold"}
+      onClick={() => {
+        if (!category) return;
+        // Toggle: focus this tile, or clear the category's slot if it is already the focus.
+        dispatch({ type: "SET_RESEARCH_TILE", payload: { category, tileId: detail.researching ? null : detail.id } });
+      }}
+    >
+      {detail.actionLabel}
+    </DetailActionButton>
   ) : (
     <DetailActionButton tone={detail.active ? "moss" : "iron"} disabled>
       {detail.actionLabel}
@@ -249,7 +260,7 @@ function TileDetail({ detail, category, state, dispatch }: TileDetailProps) {
     >
       {d.method === "research" && !detail.discovered && (
         <DetailProgress
-          label={`Researching ${displayKey(d.researchOf ?? "")}`}
+          label={`${detail.researching ? "Researching" : "Paused —"} ${displayKey(d.researchOf ?? "")}`}
           value={detail.researchProgress}
           max={d.researchAmount ?? 0}
         />

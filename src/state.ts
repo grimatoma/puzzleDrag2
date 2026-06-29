@@ -206,6 +206,7 @@ function applyTileCollectionChainEffects(state: GameState, key: string, length: 
   let progress = tcSlice.researchProgress ?? {};
   let discovered = tcSlice.discovered ?? {};
   let activeByCategory = tcSlice.activeByCategory ?? {};
+  let researchByCategory = tcSlice.researchByCategory ?? {};
   let bubble = state.bubble;
 
   const chainDiscovery = discoverTileTypesFromChain(
@@ -227,6 +228,9 @@ function applyTileCollectionChainEffects(state: GameState, key: string, length: 
     if (t.discovery?.method !== "research") continue;
     if (t.discovery.researchOf !== key) continue;
     if (discovered[t.id]) continue;
+    // Research is deliberate: progress only advances for the tile the player has
+    // selected as their focus for this category. Unselected research tiles stay paused.
+    if (researchByCategory[t.category] !== t.id) continue;
     const cur = progress[t.id] ?? 0;
     const next = cur + length;
     const capped = Math.min(next, t.discovery.researchAmount);
@@ -236,6 +240,8 @@ function applyTileCollectionChainEffects(state: GameState, key: string, length: 
       if (activeByCategory[t.category] == null) {
         activeByCategory = { ...activeByCategory, [t.category]: t.id };
       }
+      // Free the category's research slot so the player can pick the next target.
+      researchByCategory = { ...researchByCategory, [t.category]: null };
       bubble = { id: Date.now() + t.id.length, npc: "wren", text: `New tile type: ${t.displayName}`, ms: 2200 };
     }
   }
@@ -252,7 +258,7 @@ function applyTileCollectionChainEffects(state: GameState, key: string, length: 
 
   return {
     ...state,
-    tileCollection: { ...tcSlice, researchProgress: progress, discovered, activeByCategory, freeMoves },
+    tileCollection: { ...tcSlice, researchProgress: progress, discovered, activeByCategory, researchByCategory, freeMoves },
     bubble,
   };
 }
@@ -1526,6 +1532,29 @@ function coreReducer(state: GameState, action: Action): GameState {
         tileCollection: {
           ...state.tileCollection,
           activeByCategory: { ...state.tileCollection.activeByCategory, [category]: tileId },
+        },
+      };
+    }
+
+    case "SET_RESEARCH_TILE": {
+      const { category = "", tileId = null } = action.payload;
+      if (!(CATEGORIES as readonly string[]).includes(category)) return state;
+      const current = state.tileCollection?.researchByCategory?.[category] ?? null;
+      if (current === tileId) return state;                      // already the focus → no-op
+
+      if (tileId !== null) {
+        const t = (TILE_TYPES_MAP as Record<string, { category?: string; discovery?: { method?: string } } | undefined>)[tileId];
+        if (!t) return state;                                    // unknown tile type
+        if (t.category !== category) return state;               // cross-category
+        if (t.discovery?.method !== "research") return state;     // not research-method
+        if (state.tileCollection?.discovered?.[tileId]) return state; // already unlocked
+      }
+
+      return {
+        ...state,
+        tileCollection: {
+          ...state.tileCollection,
+          researchByCategory: { ...state.tileCollection.researchByCategory, [category]: tileId },
         },
       };
     }
