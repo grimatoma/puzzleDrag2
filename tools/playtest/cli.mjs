@@ -59,7 +59,7 @@ globalThis.localStorage = {
 };
 
 function parseArgs(argv) {
-  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", macro: "floor", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, accept: false, apply: false, applyFrom: null, format: false, snapshot: true };
+  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", macro: "floor", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, compare: false, accept: false, apply: false, applyFrom: null, format: false, snapshot: true };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const val = () => argv[++i];
@@ -75,6 +75,7 @@ function parseArgs(argv) {
       case "--no-write": out.write = false; break;
       case "--campaign": out.campaign = true; break;
       case "--progression": out.progression = true; break;
+      case "--compare": out.compare = true; break;
       case "--accept": out.accept = true; break;
       case "--apply": out.apply = true; break;
       case "--apply-from": out.applyFrom = val(); break;
@@ -148,9 +149,14 @@ async function main() {
   let report;
   let campaign;
   let progression;
+  let comparison;
   try {
     const mod = await server.ssrLoadModule("/src/playtest/index.ts");
-    if (args.progression) {
+    if (args.compare) {
+      comparison = mod.runComparison({
+        zoneId: args.zones[0], runs: args.runs, seed: args.seed, rows: args.rows, cols: args.cols,
+      });
+    } else if (args.progression) {
       const spine = mod.buildProgressionSpine();
       // Diff the fresh spine against the committed baseline (the last reviewed
       // state) so a balance pass sees what moved. Baseline lives OUTSIDE the
@@ -178,6 +184,25 @@ async function main() {
     }
   } finally {
     await server.close();
+  }
+
+  // ── Compare mode: same seeds across the floor↔ceiling policy bracket ─────
+  if (comparison) {
+    const { rows } = comparison;
+    console.log(`\npuzzleDrag2 policy bracket — zone ${args.zones[0]}, ${args.runs} run(s), seed ${args.seed}\n`);
+    for (const r of rows) {
+      console.log(`  ${r.label.padEnd(8)} [${r.policy}/${r.macro}] · tier ${r.finalTier} · net/run ${fmt(r.netCoinsPerRunMean)} · bal ${fmt(r.finalBalance)}` +
+        (r.stall ? ` · stall ${r.stall}` : ""));
+    }
+    const tiers = rows.map((r) => r.finalTier);
+    console.log(`\n  progression spread: tier ${Math.min(...tiers)} → ${Math.max(...tiers)} (Δ${Math.max(...tiers) - Math.min(...tiers)})`);
+    if (!args.write) { console.log("\n(--no-write: skipped file output)\n"); return; }
+    const outDir = path.resolve(process.cwd(), args.outDir);
+    await mkdir(outDir, { recursive: true });
+    await writeFile(path.join(outDir, "compare-report.md"), comparison.reportMarkdown + "\n", "utf8");
+    await writeFile(path.join(outDir, "compare.json"), JSON.stringify(comparison, null, 2) + "\n", "utf8");
+    console.log(`\n  wrote compare-report.md, compare.json → ${args.outDir}\n`);
+    return;
   }
 
   // ── Progression mode: the code-derived spine + softlock oracle + diff ────
