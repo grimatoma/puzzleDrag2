@@ -15,7 +15,6 @@ const SAMPLE_PLAYS: Record<string, SamplePlay[]> = {
     { label: "Rake", tint: 0x88ff88, pattern: "random6" },
     { label: "Axe (row)", tint: 0xff9900, pattern: "row" },
     { label: "Bomb (3×3)", tint: 0xff4444, pattern: "bomb3x3" },
-    { label: "Rune Wildcard", tint: 0xffd248, pattern: "all" },
   ],
   popIn: [
     { label: "Seedpack", tint: 0x88ff88, pattern: "random6" },

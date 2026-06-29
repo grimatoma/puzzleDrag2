@@ -137,7 +137,6 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     market: { seed: marketSeed, season: 0, prices: driftPrices(marketSeed, 0), prevPrices: null },
     season: 0,
     runes: 0,
-    runeStash: 0,
     embers: 0,
     coreIngots: 0,
     gems: 0,
@@ -225,6 +224,8 @@ export function initialState(overrides?: { saveSeed?: string; tools?: Record<str
 
     const savedWithoutLegacy: Record<string, unknown> = { ...saved };
     delete savedWithoutLegacy.species;
+    // Drop the removed rune-wildcard stash field so old saves don't carry it.
+    delete savedWithoutLegacy.runeStash;
     const savedHazards = savedWithoutLegacy.hazards as { fire?: unknown; [k: string]: unknown } | undefined;
     if (!FIRE_HAZARD_ENABLED && savedHazards?.fire) {
       savedWithoutLegacy.hazards = { ...savedHazards, fire: null };
@@ -250,12 +251,9 @@ export function initialState(overrides?: { saveSeed?: string; tools?: Record<str
     const itemPower = savedPending ? (getItem(savedPending)?.power as { id?: string } | undefined) : undefined;
     const pendingPower = savedPendingPower ?? itemPower;
     const pendingIsTap = !!(pendingPower?.id && isTapTargetPower(pendingPower.id));
-    if (savedPending && !pendingIsTap && savedPending !== "rune_wildcard") {
+    if (savedPending && !pendingIsTap && getItem(savedPending)) {
       restoredTools = { ...restoredTools, [savedPending]: (Number(restoredTools[savedPending]) || 0) + 1 };
     }
-    const restoredRuneStash = savedPending === "rune_wildcard"
-      ? ((savedWithoutLegacy.runeStash as number | undefined) ?? 0) + 1
-      : (savedWithoutLegacy.runeStash as number | undefined);
 
     return {
       ...fresh,
@@ -277,7 +275,6 @@ export function initialState(overrides?: { saveSeed?: string; tools?: Record<str
       toolPendingPower: null,
       fillBiasTarget: null,
       tools: restoredTools as GameState["tools"],
-      runeStash: restoredRuneStash ?? 0,
       seasonStats: { harvests: 0, upgrades: 0, ordersFilled: 0, coins: 0 }
     };
   }

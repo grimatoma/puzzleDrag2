@@ -4,7 +4,6 @@
  * asserts every entry here has a matching `TypedAction` branch.
  */
 export const ACTION_TYPES = [
-  "ACTIVATE_RUNE_WILDCARD",
   "ADVANCE_SEASON",
   "BOON/PURCHASE",
   "BOSS/CLOSE",

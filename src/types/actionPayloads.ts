@@ -422,10 +422,6 @@ export interface AdvanceSeasonAction {
   type: "ADVANCE_SEASON";
 }
 
-export interface ActivateRuneWildcardAction {
-  type: "ACTIVATE_RUNE_WILDCARD";
-}
-
 export interface FishForceTideFlipAction {
   type: "FISH/FORCE_TIDE_FLIP";
 }
@@ -622,7 +618,6 @@ export type TypedActionType =
   | EndTurnAction["type"]
   | CloseSeasonAction["type"]
   | AdvanceSeasonAction["type"]
-  | ActivateRuneWildcardAction["type"]
   | FishForceTideFlipAction["type"]
   | CancelToolAction["type"]
   | CloseModalAction["type"]
@@ -713,7 +708,6 @@ export type TypedAction =
   | EndTurnAction
   | CloseSeasonAction
   | AdvanceSeasonAction
-  | ActivateRuneWildcardAction
   | FishForceTideFlipAction
   | CancelToolAction
   | CloseModalAction

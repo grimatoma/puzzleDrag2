@@ -3,7 +3,7 @@
  * armed tool. Pairs with the existing "select another tool" path covered by
  * disarm-other-tools.test.js. Charge accounting matches CANCEL_TOOL + the
  * fertilizer self-disarm: tap-target arms had no charge to refund; instant /
- * rune / fertilizer arms get their charge back so the player isn't out a
+ * fertilizer arms get their charge back so the player isn't out a
  * tool just for navigating away.
  */
 import { describe, it, expect, beforeEach } from "vitest";
@@ -15,7 +15,6 @@ function baseState(overrides = {}) {
     ...s,
     view: "board",
     tools: { ...s.tools, bomb: 1, fertilizer: 1, clear: 1, rake: 1 },
-    runeStash: 1,
     ...overrides,
   };
 }
@@ -41,13 +40,6 @@ describe("auto-deselect — SET_VIEW away from board disarms armed tools", () =>
     const s1 = rootReducer(s0, { type: "SET_VIEW", view: "town" });
     expect(s1.fillBiasTarget).toBeFalsy();
     expect(s1.tools.fertilizer).toBe(1);
-  });
-
-  it("rune_wildcard pending refunds to runeStash on leave-board", () => {
-    const s0 = { ...baseState(), toolPending: "rune_wildcard", runeStash: 0 };
-    const s1 = rootReducer(s0, { type: "SET_VIEW", view: "crafting" });
-    expect(s1.toolPending).toBeNull();
-    expect(s1.runeStash).toBe(1);
   });
 
   it("navigating from board to board does NOT disarm (no leave-board transition)", () => {
@@ -152,19 +144,5 @@ describe("auto-deselect — save load drops any armed tool", () => {
     const loaded = initialState();
     expect(loaded.toolPending).toBeNull();
     expect(loaded.tools.clear).toBe(1);
-  });
-
-  it("save with rune_wildcard pending refunds to runeStash", async () => {
-    const { SAVE_SCHEMA_VERSION } = await import("../constants.js");
-    persistSave({
-      version: SAVE_SCHEMA_VERSION,
-      view: "board",
-      tools: {},
-      runeStash: 0,
-      toolPending: "rune_wildcard",
-    });
-    const loaded = initialState();
-    expect(loaded.toolPending).toBeNull();
-    expect(loaded.runeStash).toBe(1);
   });
 });

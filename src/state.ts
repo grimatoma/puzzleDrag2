@@ -104,7 +104,7 @@ const slices = [crafting, quests, achievements, tutorial, settings, boss, cartog
 // Disarm every armed tool in one shot, mirroring the existing CANCEL_TOOL +
 // USE_TOOL(fertilizer self-disarm) sequences so the player is left whole:
 // tap-target arms spent no charge to refund, instant arms get their charge
-// back, rune wildcard returns to the rune stash, and fertilizer refunds its
+// back, and fertilizer refunds its
 // charge. Used whenever the player navigates away from the board (or loads
 // a save) — anything other than directly using the tool deselects it.
 export function disarmAllTools(state: GameState): GameState {
@@ -122,8 +122,6 @@ export function disarmAllTools(state: GameState): GameState {
     const legacyPower = getItem(pending)?.power;
     if (legacyPower?.id && isTapTargetPower(legacyPower.id)) {
       next = { ...next, toolPending: null };
-    } else if (pending === "rune_wildcard") {
-      next = { ...next, toolPending: null, runeStash: (next.runeStash ?? 0) + 1 };
     } else {
       next = {
         ...next,
@@ -659,16 +657,13 @@ function coreReducer(state: GameState, action: Action): GameState {
       // Disarm an armed tool. Tap-target tools (bomb / rake / axe / magic_wand)
       // never consumed a charge on arm, so there is nothing to refund. Tools
       // that briefly arm during their fire effect (clear / basic / rare /
-      // shuffle) and the rune-wildcard arming flow did spend, so refund those.
+      // shuffle) did spend, so refund those.
       const pending = state.toolPending;
       if (!pending) return state;
       const itemEntry = getItem(pending) as { power?: { id?: string } } | undefined;
       const cancelPower = state.toolPendingPower ?? itemEntry?.power;
       if (cancelPower?.id && isTapTargetPower(cancelPower.id)) {
         return { ...state, toolPending: null, toolPendingPower: null };
-      }
-      if (pending === "rune_wildcard") {
-        return { ...state, toolPending: null, runeStash: (state.runeStash ?? 0) + 1 };
       }
       return {
         ...state,
@@ -1432,20 +1427,6 @@ function coreReducer(state: GameState, action: Action): GameState {
         return spawnPearl(afterSetBiome);
       }
       return afterSetBiome;
-    }
-
-    case "ACTIVATE_RUNE_WILDCARD": {
-      if ((state.runeStash ?? 0) < 1) return state;
-      return {
-        ...state,
-        runeStash: state.runeStash - 1,
-        toolPending: "rune_wildcard",
-        toolPendingPower: {
-          id: "tap_clear_type",
-          params: {},
-          tint: 0xffd248,
-        },
-      };
     }
 
     case "FERTILIZER/CONSUMED": {
