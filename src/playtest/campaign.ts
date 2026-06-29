@@ -216,6 +216,7 @@ type SetupState = GameState & { activeZone?: string; mapCurrent?: string };
  */
 function playOneRun(
   state: GameState,
+  zoneId: string,
   rng: () => number,
   pool: readonly string[],
   policy: Policy,
@@ -238,7 +239,7 @@ function playOneRun(
       grid = makeBoard(pool, rng, rows, cols);
       continue;
     }
-    const chain = policy(chains);
+    const chain = policy({ chains, state: s, zoneId, grid, rng, turnsRemaining: s.farmRun.turnsRemaining });
     if (!chain) break;
     s = rootReducer(s, { type: "CHAIN_COLLECTED", payload: buildChainCollectedPayload(chain) });
     grid = applyCollapse(grid, chain.cells, rng, pool);
@@ -305,7 +306,7 @@ export function runCampaign(config: CampaignConfig): CampaignReport {
       for (let i = 1; i <= config.runs; i++) {
         const balBefore = s.coins ?? 0;
         const invBefore = flatZoneInv(s, zoneId);
-        const run = playOneRun(s, rng, FARM_TILE_POOL, policy, rows, cols, maxReshuffle);
+        const run = playOneRun(s, zoneId, rng, FARM_TILE_POOL, policy, rows, cols, maxReshuffle);
         if (!run.entered) { stalledOnEntry = true; break; }
         s = run.state;
 
