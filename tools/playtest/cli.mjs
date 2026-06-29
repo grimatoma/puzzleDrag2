@@ -11,6 +11,13 @@
  *
  * Flags: --zones <csv>  --runs <n>  --seed <n>  --policy <name>
  *        --rows <n>  --cols <n>  --out <dir>  --no-write  --campaign  --progression
+ *        --apply [--apply-from <path>] [--format] [--no-snapshot]
+ *
+ * --apply CLOSES the balance loop: it writes a proposed change-list.json (from a
+ * prior run, default <out>/change-list.json) BACK into src/constants.ts via the
+ * codemod in src/playtest/applyPatch.ts, then regenerates the harness drift-guard
+ * snapshot (the fixed-seed metrics move by design on a balance edit, so the
+ * snapshot diff is the reviewable record). No hand-editing of constants.
  *
  * --campaign switches to the sequential progression sim (src/playtest/campaign.ts):
  * one persistent state, runs carried forward, measuring runs-to-coin-milestone +
@@ -30,7 +37,11 @@
  * shipped) and does the argv + filesystem work.
  */
 import { mkdir, writeFile, readFile } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import path from "node:path";
+
+const execFileP = promisify(execFile);
 // The same plugin vite.config.js / vitest.config.js register — provides the
 // `virtual:seasonal-subjects` module that the texture registry imports.
 import { seasonalSubjects } from "../vite/seasonalSubjects.mjs";
@@ -48,7 +59,7 @@ globalThis.localStorage = {
 };
 
 function parseArgs(argv) {
-  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, accept: false };
+  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, accept: false, apply: false, applyFrom: null, format: false, snapshot: true };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const val = () => argv[++i];
@@ -64,6 +75,10 @@ function parseArgs(argv) {
       case "--campaign": out.campaign = true; break;
       case "--progression": out.progression = true; break;
       case "--accept": out.accept = true; break;
+      case "--apply": out.apply = true; break;
+      case "--apply-from": out.applyFrom = val(); break;
+      case "--format": out.format = true; break;
+      case "--no-snapshot": out.snapshot = false; break;
       default:
         if (a.startsWith("--")) console.warn(`[playtest] ignoring unknown flag: ${a}`);
     }
@@ -86,8 +101,38 @@ function replaceMarkerBlock(html, name, payload) {
   return html.slice(0, a) + `${START}\n${payload}\n${END}` + html.slice(b + END.length);
 }
 
+// ── Apply mode: write a proposed change-list back into constants.ts ──────────
+async function runApply(args) {
+  const { applyChangeList, summarizeApply } = await import("./applyChangeList.mjs");
+  const patchPath = path.resolve(process.cwd(), args.applyFrom ?? path.join(args.outDir, "change-list.json"));
+  console.log(`\npuzzleDrag2 — applying balance patch from ${path.relative(process.cwd(), patchPath)}`);
+  const res = await applyChangeList({ patchPath, write: args.write, format: args.format });
+  summarizeApply(res);
+  if (!res.ok) { process.exitCode = 1; return; }
+
+  // A balance edit moves the fixed-seed harness metrics BY DESIGN; regenerate the
+  // drift-guard snapshot so the loop self-heals and the snapshot diff becomes the
+  // reviewable record of the change. Skip on no-op / --no-write / --no-snapshot.
+  if (args.write && args.snapshot && res.applied.length) {
+    console.log(`\n[apply] regenerating harness drift-guard snapshot…`);
+    try {
+      const { stdout } = await execFileP(
+        "npx", ["vitest", "run", "src/__tests__/playtest-harness.test.ts", "-u"],
+        { cwd: process.cwd(), maxBuffer: 64 * 1024 * 1024 },
+      );
+      console.log(stdout.trim().split("\n").slice(-4).join("\n"));
+      console.log(`[apply] snapshot updated — review src/__tests__/__snapshots__/ alongside the constants diff.`);
+    } catch (e) {
+      console.warn(`[apply] snapshot regen reported issues (review manually):\n${String(e.stdout || e.message || "").slice(-1000)}`);
+    }
+  } else if (res.applied.length) {
+    console.log(`\n[apply] note: harness snapshot NOT regenerated (run \`npm test -- -u src/__tests__/playtest-harness.test.ts\` or drop --no-snapshot).`);
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  if (args.apply) { await runApply(args); return; }
   const { createServer } = await import("vite");
   const server = await createServer({
     configFile: false,
