@@ -3,6 +3,9 @@
  */
 import { QUEST_TEMPLATES } from "./templates.js";
 import { tileFamilyResource } from "../../constants.js";
+import { inventoryAdd } from "../../types/inventory.js";
+import { updateZoneInventory } from "../../state/zoneInventory.js";
+import type { InventoryKey } from "../../types/catalogKeys.js";
 import type { GameState } from "../../types/state.js";
 import type { BoardKind } from "../cartography/data.js";
 
@@ -27,11 +30,19 @@ export interface QuestTemplate {
   targetMax: number;
   coinBase: number;
   coinPerUnit: number;
+  /** Tools granted when this quest is claimed, keyed by tool id → count (e.g. `{ basic: 2, rare: 1 }`). */
+  rewardTools?: Record<string, number>;
+  /** Resource items granted to the active zone inventory on claim, keyed by resource key → count. */
+  rewardItems?: Record<string, number>;
 }
 
 export interface QuestReward {
   coins: number;
   xp: number;
+  /** Tools granted on claim, keyed by tool id → count. */
+  tools?: Record<string, number>;
+  /** Resource items granted on claim (to the active zone inventory), keyed by resource key → count. */
+  items?: Record<string, number>;
 }
 
 export interface Quest {
@@ -114,6 +125,8 @@ export function rollQuests(
       reward: {
         coins: tpl.coinBase + Math.floor(target * tpl.coinPerUnit),
         xp: QUEST_CLAIM_XP,
+        ...(tpl.rewardTools ? { tools: tpl.rewardTools } : {}),
+        ...(tpl.rewardItems ? { items: tpl.rewardItems } : {}),
       },
     });
   }
@@ -161,6 +174,38 @@ export function tickQuest(quest: Quest, event: QuestEvent): Quest {
 /** §17 locked: 20 almanac XP per quest claim (legacy dailies + deterministic quests). */
 export const QUEST_CLAIM_XP = 20;
 
+/**
+ * Pure: apply a quest reward's non-coin bundles (tools + resource items) to state.
+ * Tools are global counters; items land in the active zone's inventory. Returns
+ * `state` unchanged when the reward carries neither. Shared by the deterministic
+ * `claimQuest` and the legacy daily claim path so authored rewards never silently
+ * drop depending on which quest system is showing.
+ */
+export function grantQuestRewardExtras(
+  state: GameState,
+  reward: { tools?: Record<string, number>; items?: Record<string, number> } | null | undefined,
+): GameState {
+  let next = state;
+  if (reward?.tools) {
+    const nextTools = { ...(next.tools as Record<string, number | boolean | undefined>) };
+    for (const [k, v] of Object.entries(reward.tools)) {
+      nextTools[k] = ((nextTools[k] as number | undefined) ?? 0) + v;
+    }
+    next = { ...next, tools: nextTools } as GameState;
+  }
+  if (reward?.items) {
+    const items = reward.items;
+    next = updateZoneInventory(next, (inv) => {
+      let out = inv;
+      for (const [k, v] of Object.entries(items)) {
+        out = inventoryAdd(out, k as InventoryKey, v);
+      }
+      return out;
+    });
+  }
+  return next;
+}
+
 export interface ClaimQuestResult {
   ok: boolean;
   newState: GameState;
@@ -178,15 +223,16 @@ export function claimQuest(state: GameState, questId: string): ClaimQuestResult 
   if (!q || q.claimed || q.progress < q.target) {
     return { ok: false, newState: state, xpGain: 0 };
   }
+  const withCoins: GameState = {
+    ...state,
+    coins: state.coins + q.reward.coins,
+    quests: quests.map((qq) =>
+      qq.id === questId ? { ...qq, claimed: true } : qq
+    ),
+  };
   return {
     ok: true,
     xpGain: q.reward.xp, // 7.2 wires this into almanac
-    newState: {
-      ...state,
-      coins: state.coins + q.reward.coins,
-      quests: quests.map((qq) =>
-        qq.id === questId ? { ...qq, claimed: true } : qq
-      ),
-    },
+    newState: grantQuestRewardExtras(withCoins, q.reward),
   };
 }
