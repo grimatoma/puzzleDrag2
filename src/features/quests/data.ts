@@ -2,6 +2,7 @@
  * Phase 7.1 — Pure quest helpers: rollQuests, tickQuest, claimQuest.
  */
 import { QUEST_TEMPLATES } from "./templates.js";
+import { tileFamilyResource } from "../../constants.js";
 import type { GameState } from "../../types/state.js";
 import type { BoardKind } from "../cartography/data.js";
 
@@ -127,7 +128,16 @@ export function tickQuest(quest: Quest, event: QuestEvent): Quest {
   if (quest.claimed) return quest;
   let inc = 0;
 
-  if (event.type === "collect" && quest.category === "collect" && quest.key === event.key) {
+  // Collect templates store either a tile key ("tile_grass_grass") or a
+  // resource key ("flour"), but the live CHAIN_COLLECTED event always carries
+  // the produced *resource* key (e.g. "hay_bundle"). Match on the raw key for
+  // resource-keyed templates, and on the tile→resource mapping for tile-keyed
+  // ones, so both flavours of template actually tick in real play.
+  if (
+    event.type === "collect" &&
+    quest.category === "collect" &&
+    (quest.key === event.key || tileFamilyResource(quest.key ?? "") === event.key)
+  ) {
     inc = event.amount ?? 1;
   } else if (event.type === "craft" && quest.category === "craft" && quest.item === event.item) {
     inc = event.count ?? 1;

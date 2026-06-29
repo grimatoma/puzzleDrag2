@@ -55,6 +55,51 @@ describe("Fix 4 — deterministic 6-slot quests", () => {
     expect(next.quests[0].progress).toBe(10);
   });
 
+  it("CHAIN_COLLECTED ticks collect quests keyed by tile when event carries the resource key", () => {
+    // Real play: GameScene dispatches CHAIN_COLLECTED with the produced
+    // resource key (tile_grass_grass -> hay_bundle), not the tile key. The
+    // collect template stores the tile key, so the tick must bridge the two.
+    const s = {
+      ...fresh(),
+      quests: [{
+        id: "q1", template: "collect_hay", category: "collect", key: "tile_grass_grass",
+        target: 30, progress: 0, claimed: false, reward: { coins: 60, xp: 20 },
+      }],
+    };
+    const next = rootReducer(s, {
+      type: "CHAIN_COLLECTED",
+      payload: { key: "hay_bundle", gained: 10, upgrades: 0, value: 1, chainLength: 5, noTurn: false },
+    });
+    expect(next.quests[0].progress).toBe(10);
+  });
+
+  it("CLOSE_SEASON keeps completed-but-unclaimed quests claimable after reroll", () => {
+    const s = {
+      ...fresh(),
+      quests: [{
+        id: "done1", template: "collect_hay", category: "collect", key: "tile_grass_grass",
+        target: 10, progress: 10, claimed: false, reward: { coins: 60, xp: 20 },
+      }],
+    };
+    const next = rootReducer(s, { type: "CLOSE_SEASON" });
+    const carried = next.quests.find((q) => q.id === "done1");
+    expect(carried).toBeDefined();
+    expect(carried.claimed).toBe(false);
+    expect(carried.progress).toBe(carried.target);
+  });
+
+  it("CLOSE_SEASON drops already-claimed quests on reroll", () => {
+    const s = {
+      ...fresh(),
+      quests: [{
+        id: "claimed1", template: "collect_hay", category: "collect", key: "tile_grass_grass",
+        target: 10, progress: 10, claimed: true, reward: { coins: 60, xp: 20 },
+      }],
+    };
+    const next = rootReducer(s, { type: "CLOSE_SEASON" });
+    expect(next.quests.some((q) => q.id === "claimed1")).toBe(false);
+  });
+
   it("CLAIM_QUEST marks quest claimed in state.quests", () => {
     const s = {
       ...fresh(),

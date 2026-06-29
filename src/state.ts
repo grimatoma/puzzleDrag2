@@ -1147,11 +1147,21 @@ function coreReducer(state: GameState, action: Action): GameState {
       // board never asks for fish/mine goods before those zones are reachable.
       const accessibleBiomes = accessibleBoardKinds(state.mapVisited ?? ["home"]);
       const rerolledQuests = rollQuests(state.saveSeed ?? "default", sessionCounter, "Spring", accessibleBiomes);
+      // Carry forward quests the player has already completed but not yet
+      // claimed — a finished commission is earned, so its reward must remain
+      // claimable across the season turn rather than silently vanishing.
+      const carriedQuests = (state.quests ?? []).filter(
+        (q) => !q.claimed && q.progress >= q.target,
+      );
+      const mergedQuests = [...carriedQuests, ...rerolledQuests].slice(
+        0,
+        Math.max(rerolledQuests.length, carriedQuests.length),
+      );
       const afterSeasonWithFields = {
         ...afterSeason,
         farm: afterSeasonFarm,
         mine: afterSeasonMine,
-        quests: rerolledQuests,
+        quests: mergedQuests,
       };
       // Story: fire session_ended trigger (was season_entered before the
       // calendar was deleted). Story content keyed on season names should be
