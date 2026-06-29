@@ -1,6 +1,6 @@
 import { SEASONS } from "../constants.js";
 import { XP_PER_LEVEL } from "../features/almanac/data.js";
-import { seasonIndexInSession } from "../features/zones/data.js";
+import { seasonIndexInSession, displayZoneName } from "../features/zones/data.js";
 import LegacyIcon from "./Icon.jsx";
 import Icon from "./primitives/Icon.jsx";
 import Pill from "./primitives/Pill.jsx";
@@ -133,10 +133,14 @@ export function Hud({ state, dispatch, inventorySearchOpen, onInventorySearchTog
     setCoinAnchorEl(coinAnchorRef.current);
     return () => setCoinAnchorEl(null);
   }, []); // setCoinAnchorEl is a stable module fn; ref is set after mount — run once.
-  const settlementName = "Hearthwood Vale";
+  // The settlement name is the player-facing identity of the zone you're in
+  // (custom name if set, else the static zone name). It doubles as the Town
+  // screen's header label so the header reads "Hearthwood Vale" rather than a
+  // generic "Town", and follows you to whichever settlement you're viewing.
+  const settlementName = displayZoneName(state);
   const showTide = state.biomeKey === "fish" && (onBoard || view === "town");
   const VIEW_LABELS: Record<string, string> = {
-    town: "Town",
+    town: settlementName,
     inventory: "Inventory",
     crafting: "Craft",
     cartography: "Map",
