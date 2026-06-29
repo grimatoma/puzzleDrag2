@@ -14,6 +14,8 @@
 // bracket the optimizer (M3) must keep balance acceptable across.
 
 import type { Chain, Grid } from "./board.js";
+import { enumerateChains, applyCollapse } from "./board.js";
+import { mulberry32 } from "./prng.js";
 import type { GameState } from "../types/state.js";
 import { producedResource } from "../game/producedResource.js";
 import { settlementTier, currentTierDef } from "../features/zones/data.js";
@@ -111,9 +113,69 @@ export const needAwareClimb: Policy = (ctx) => {
   return greedyLongest(ctx);
 };
 
+// ── Lookahead search (board-level ceiling) ─────────────────────────────────────
+// A stronger-than-greedy board policy: for each candidate first move, simulate
+// the resulting board and greedily roll it out a few plies, scoring by total
+// board-coins (≈ the reducer's floor(len × tileValue) chain-coin formula). Picks
+// the move with the best continuation — it can prefer a shorter chain now that
+// sets up better chains later. Board-level only: the full reducer-level search
+// (which would surface MACRO exploits) needs the deferred state.ts RNG injection.
+
+/** Heuristic board-coin value of a chain (length × tile value). */
+function chainValue(c: Chain): number {
+  return c.length * c.tileValue;
+}
+
+/** Refill pool for speculative lookahead = the keys currently on the board. */
+function poolFromGrid(grid: Grid): string[] {
+  const keys: string[] = [];
+  for (const row of grid) for (const cell of row) if (cell) keys.push(cell.res.key);
+  return keys.length ? keys : ["tile_grass_grass"];
+}
+
+/** Greedy rollout value of a board over `depth` plies, using a LOCAL rng. */
+function rolloutValue(grid: Grid, pool: readonly string[], rng: () => number, depth: number): number {
+  let g = grid;
+  let total = 0;
+  for (let d = 0; d < depth; d++) {
+    const chains = enumerateChains(g);
+    if (!chains.length) break;
+    let best = chains[0];
+    for (let i = 1; i < chains.length; i++) if (chainValue(chains[i]) > chainValue(best)) best = chains[i];
+    total += chainValue(best);
+    g = applyCollapse(g, best.cells, rng, pool);
+  }
+  return total;
+}
+
+/**
+ * Search: 1-ply branch over every candidate move + a greedy rollout of the
+ * resulting board. Deterministic and side-effect-free — each rollout uses its
+ * OWN fixed-seed rng, so the search never consumes the run's rng stream (the
+ * real board fills still come from the run's seeded clock).
+ */
+export const searchPolicy: Policy = ({ chains, grid }) => {
+  if (!chains.length) return null;
+  const pool = poolFromGrid(grid);
+  const DEPTH = 4;
+  let best = chains[0];
+  let bestScore = -Infinity;
+  for (const c of chains) {
+    const rng = mulberry32(0x9e3779b9); // fixed seed → reproducible, run-rng-safe
+    const after = applyCollapse(grid, c.cells, rng, pool);
+    const score = chainValue(c) + rolloutValue(after, pool, rng, DEPTH - 1);
+    if (score > bestScore) {
+      bestScore = score;
+      best = c;
+    }
+  }
+  return best;
+};
+
 /** Registry of named policies, for CLI `--policy <name>` selection. */
 export const POLICIES: Record<string, Policy> = {
   greedy: greedyLongest,
   value: greedyValue,
   climb: needAwareClimb,
+  search: searchPolicy,
 };

@@ -11,9 +11,10 @@ import { FARM_TILE_POOL } from "../constants.js";
 import { producedResource } from "../game/producedResource.js";
 import { currentTierDef, maxTier } from "../features/zones/data.js";
 import type { GameState } from "../types/state.js";
-import { greedyLongest, greedyValue, needAwareClimb, type PolicyContext } from "./policy.js";
+import { greedyLongest, greedyValue, needAwareClimb, searchPolicy, type PolicyContext } from "./policy.js";
 import { simulateRun } from "./run.js";
-import type { Chain } from "./board.js";
+import { makeBoard, enumerateChains, type Chain } from "./board.js";
+import { mulberry32 } from "./prng.js";
 
 function chain(key: string, length: number, tileValue = 1): Chain {
   const cells = Array.from({ length }, (_, i) => ({ row: 0, col: i }));
@@ -76,9 +77,22 @@ describe("needAwareClimb (ceiling building block)", () => {
   });
 });
 
-describe("widened interface — integration", () => {
+describe("searchPolicy (board-level lookahead)", () => {
+  function boardCtx(seed: number): PolicyContext {
+    const grid = makeBoard(["tile_grass_grass", "tile_grain_wheat", "tile_bird_turkey", "tile_veg_carrot"], mulberry32(seed), 6, 6);
+    return { chains: [], state: createInitialState(), zoneId: "home", grid, rng: () => 0, turnsRemaining: 5 } as PolicyContext;
+  }
+  it("returns a chain from the available set and is deterministic", () => {
+    const ctx = boardCtx(7);
+    ctx.chains = enumerateChains(ctx.grid);
+    if (!ctx.chains.length) return; // unlucky board with no chain — nothing to assert
+    const pick = searchPolicy(ctx);
+    expect(ctx.chains).toContain(pick);
+    expect(searchPolicy(ctx)).toBe(pick); // pure → same pick every call
+  });
+
   it("simulateRun is deterministic and entered under each named policy", () => {
-    for (const policy of [greedyValue, needAwareClimb]) {
+    for (const policy of [greedyValue, needAwareClimb, searchPolicy]) {
       const a = simulateRun({ zoneId: "home", seed: 3, policy });
       const b = simulateRun({ zoneId: "home", seed: 3, policy });
       expect(a).toEqual(b);
