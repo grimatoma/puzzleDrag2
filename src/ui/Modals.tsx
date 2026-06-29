@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { NPCS } from "../constants.js";
 import { beatLines, beatChoices, beatIsContinueOnly, beatScene, interpolateBeatText, bondAmountForBeat } from "../story.js";
@@ -487,7 +487,7 @@ function WinBeat({ beat, lines, sceneBg, onContinue }: { beat: StoryBeat; lines:
  * Renders when state.story.queuedBeat is set. Routes the beat to the right
  * presentation form. Continue-only beats (no prompt) also dismiss via ESC.
  */
-export function StoryModal({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
+export const StoryModal = memo(function StoryModal({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
   const beat = (state.story as { queuedBeat?: StoryBeat } | undefined)?.queuedBeat;
   const [lineStep, setLineStep] = useState(0);
   const [lastBeatId, setLastBeatId] = useState(beat?.id || "");
@@ -602,11 +602,11 @@ export function StoryModal({ state, dispatch }: { state: GameState; dispatch: Di
     </div>,
     document.body
   );
-}
+});
 
 // ─── NpcBubble ────────────────────────────────────────────────────────────────
 
-export function NpcBubble({ bubble, dispatch }: { bubble: Bubble | null | undefined; dispatch: Dispatch }) {
+export const NpcBubble = memo(function NpcBubble({ bubble, dispatch }: { bubble: Bubble | null | undefined; dispatch: Dispatch }) {
   const notifier = useNotifier();
   const lastIdRef = useRef<string | number | null>(null);
   useEffect(() => {
@@ -624,4 +624,4 @@ export function NpcBubble({ bubble, dispatch }: { bubble: Bubble | null | undefi
     return () => clearTimeout(t);
   }, [bubble, dispatch, notifier]);
   return null;
-}
+});
