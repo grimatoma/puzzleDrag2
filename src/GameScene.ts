@@ -425,6 +425,7 @@ export class GameScene extends Phaser.Scene {
         discovered: getRegistry(this.registry, "tileCollectionDiscovered") ?? {},
         researchProgress: {} as Record<string, number>,
         activeByCategory: getRegistry(this.registry, "tileCollectionActive") ?? {},
+        researchByCategory: {} as Record<string, string | null>,
         freeMoves: 0,
       },
     };

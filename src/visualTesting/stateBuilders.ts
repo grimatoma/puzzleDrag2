@@ -85,6 +85,7 @@ function fullTileCollection(overrides = {}) {
   const discovered = { ...tc.discovered };
   const researchProgress = { ...tc.researchProgress };
   const activeByCategory = { ...tc.activeByCategory };
+  const researchByCategory = { ...tc.researchByCategory };
   for (const tile of TILE_TYPES) {
     discovered[tile.id] = true;
     if (activeByCategory[tile.category] == null) activeByCategory[tile.category] = tile.id;
@@ -94,6 +95,7 @@ function fullTileCollection(overrides = {}) {
     discovered,
     researchProgress,
     activeByCategory,
+    researchByCategory,
     freeMoves: 0,
     ...overrides,
   };
@@ -512,6 +514,8 @@ function profileState(profile: string): VisualStateTree {
       const tc = fullTileCollection();
       delete tc.discovered.tile_grass_spiky;
       tc.researchProgress.tile_grass_spiky = 32;
+      // Make this tile the active research focus so the scene shows live research.
+      tc.researchByCategory.grass = "tile_grass_spiky";
       return { ...richState(), tileCollection: tc };
     }
     case "tileFreeMoves": return { ...richState(), tileCollection: fullTileCollection({ freeMoves: 3 }) };

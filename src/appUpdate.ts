@@ -27,6 +27,13 @@ import { useSyncExternalStore } from "react";
 // How often to ask the SW to check for a new deploy while the app stays open.
 const POLL_MS = 60 * 1000;
 
+// "Force reload on any new build" toggle (requested: do this always for now).
+// When true, the watcher does not wait for the player to tap the Refresh banner:
+// the instant a freshly deployed build is installed + waiting, it activates it
+// and reloads onto the new build automatically. Flip to false to restore the
+// opt-in banner behaviour (src/features/appUpdate/index.tsx).
+const AUTO_APPLY_UPDATES = true;
+
 type Listener = () => void;
 
 let updateReady = false;
@@ -49,6 +56,10 @@ function setReady(value: boolean): void {
   if (updateReady === value) return;
   updateReady = value;
   emit();
+  // Force-reload path: as soon as a new build is ready, activate it and reload
+  // onto it without waiting for a tap. applyUpdate() tells the waiting worker to
+  // skipWaiting(); the controllerchange handler then reloads the page once.
+  if (value && AUTO_APPLY_UPDATES) applyUpdate();
 }
 
 // True once a new SW has finished installing and is waiting to activate. We gate
