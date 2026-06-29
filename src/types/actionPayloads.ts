@@ -519,12 +519,6 @@ export interface DevFillStorageAction {
   amount?: number;
 }
 
-export interface DevAddItemAction {
-  type: "DEV/ADD_ITEM";
-  key: string;
-  amount?: number;
-}
-
 export interface DevAddXpAction {
   type: "DEV/ADD_XP";
   amount?: number;
@@ -656,7 +650,6 @@ export type TypedActionType =
   | TutorialSkipAction["type"]
   | DevAddGoldAction["type"]
   | DevFillStorageAction["type"]
-  | DevAddItemAction["type"]
   | DevAddXpAction["type"]
   | DevAddLevelAction["type"]
   | DevAddAlmanacXpAction["type"]
@@ -749,7 +742,6 @@ export type TypedAction =
   | TutorialSkipAction
   | DevAddGoldAction
   | DevFillStorageAction
-  | DevAddItemAction
   | DevAddXpAction
   | DevAddLevelAction
   | DevAddAlmanacXpAction

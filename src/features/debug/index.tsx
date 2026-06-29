@@ -1,5 +1,4 @@
-import { useState, type ReactNode } from "react";
-import { BIOMES } from "../../constants.js";
+import { type ReactNode } from "react";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import { tiersForZone, settlementTier, displayZoneName } from "../zones/data.js";
@@ -43,8 +42,6 @@ const MENU_LINKS = [
 ];
 
 export default function DebugModal({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
-  const [itemBiome, setItemBiome] = useState('farm');
-  const [itemKey, setItemKey] = useState('tile_grass_grass');
   const open = state.modal === 'debug';
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
   const settings = (state.settings ?? {}) as { tutorialDisabled?: boolean };
@@ -54,8 +51,6 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
   };
 
   if (!open) return null;
-
-  const biomeResources = [...(BIOMES[itemBiome]?.tiles ?? []), ...(BIOMES[itemBiome]?.resources ?? [])];
 
   const currentZone = String(state.mapCurrent ?? 'home');
   const zoneTiers = tiersForZone(currentZone);
@@ -118,47 +113,9 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
           {/* Items */}
           <div>
             <div className="hl-section-label !text-[10px] mb-1.5">Items</div>
-            <div className="grid grid-cols-2 gap-1.5 mb-1.5">
+            <div className="grid grid-cols-2 gap-1.5">
               <DebugBtn color="green" onClick={() => dispatch({ type: 'DEV/FILL_STORAGE', amount: 100 })}>📦 +100 Every Item</DebugBtn>
               <DebugBtn color="slate" onClick={() => dispatch({ type: 'DEV/FILL_TOOLS', amount: 5 })}>🔧 +5 Every Tool</DebugBtn>
-            </div>
-            <div
-              className="flex flex-col gap-1.5 py-2 px-2 rounded-lg border-2"
-              style={{ background: '#f4e8d0', borderColor: '#b28b62' }}
-            >
-              <div className="flex gap-1.5">
-                {Object.keys(BIOMES).map((b) => (
-                  <button
-                    key={b}
-                    onClick={() => {
-                      setItemBiome(b);
-                      setItemKey((BIOMES[b].tiles[0] ?? BIOMES[b].resources[0])?.key ?? '');
-                    }}
-                    className="flex-1 py-1 text-[11px] font-bold rounded border-2"
-                    style={
-                      itemBiome === b
-                        ? { background: '#d6612a', borderColor: '#a84010', color: '#fff' }
-                        : { background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }
-                    }
-                  >
-                    {BIOMES[b].name}
-                  </button>
-                ))}
-              </div>
-              <select
-                value={itemKey}
-                onChange={(e) => setItemKey(e.target.value)}
-                className="hl-input !h-auto py-1 !text-[11px]"
-              >
-                {biomeResources.map((r) => (
-                  <option key={r.key} value={r.key}>{r.label} ({r.key})</option>
-                ))}
-              </select>
-              <div className="grid grid-cols-3 gap-1.5">
-                <DebugBtn color="green" onClick={() => dispatch({ type: 'DEV/ADD_ITEM', key: itemKey, amount: 10 })}>+10</DebugBtn>
-                <DebugBtn color="green" onClick={() => dispatch({ type: 'DEV/ADD_ITEM', key: itemKey, amount: 50 })}>+50</DebugBtn>
-                <DebugBtn color="green" onClick={() => dispatch({ type: 'DEV/ADD_ITEM', key: itemKey, amount: 250 })}>+250</DebugBtn>
-              </div>
             </div>
           </div>
 

@@ -1620,18 +1620,6 @@ function coreReducer(state: GameState, action: Action): GameState {
         }
         return { ...state, inventory: { ...state.inventory, [devZone]: devInv } };
       }
-      if (action.type === "DEV/ADD_ITEM") {
-        const key = action.key;
-        if (!key) return state;
-        const devZone = inventoryZone(state);
-        const devInv = zoneInventory(state, devZone);
-        const nextDevInv = inventoryPut(
-          { ...devInv },
-          key,
-          inventoryQty(devInv, key) + (action.amount ?? 50),
-        );
-        return { ...state, inventory: { ...state.inventory, [devZone]: nextDevInv } };
-      }
       if (action.type === "DEV/ADD_XP") {
         const { newState } = applyAlmanacXp(state, action.amount ?? 100);
         return { ...state, almanac: newState.almanac, xp: newState.almanac.xp, level: newState.almanac.level };
