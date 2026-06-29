@@ -43,6 +43,7 @@ import type { Action } from "../types/actionPayloads.js";
 import { withSeededRandom } from "./prng.js";
 import { makeBoard, enumerateChains, applyCollapse, type Grid } from "./board.js";
 import { greedyLongest, POLICIES, type Policy } from "./policy.js";
+import { MACROS, floorMacro, type MacroPolicy } from "./macro.js";
 import { buildChainCollectedPayload } from "./payload.js";
 
 export interface CampaignConfig {
@@ -51,6 +52,8 @@ export interface CampaignConfig {
   runs: number;
   seed: number;
   policy?: string;
+  /** Between-run macro policy: "floor" (greedy tier-up) | "climb" (build+craft+tier). */
+  macro?: string;
   rows?: number;
   cols?: number;
   /** Coin balances to measure runs-to-afford. Default: the founding ladder. */
@@ -113,7 +116,7 @@ export interface CampaignStats {
 }
 
 export interface CampaignMetrics {
-  config: Required<Omit<CampaignConfig, "maxReshuffle">> & { maxReshuffle: number };
+  config: Required<Omit<CampaignConfig, "maxReshuffle" | "macro">> & { maxReshuffle: number };
   zoneId: string;
   runsPlayed: number;
   startCoins: number;
@@ -216,6 +219,7 @@ type SetupState = GameState & { activeZone?: string; mapCurrent?: string };
  */
 function playOneRun(
   state: GameState,
+  zoneId: string,
   rng: () => number,
   pool: readonly string[],
   policy: Policy,
@@ -238,7 +242,7 @@ function playOneRun(
       grid = makeBoard(pool, rng, rows, cols);
       continue;
     }
-    const chain = policy(chains);
+    const chain = policy({ chains, state: s, zoneId, grid, rng, turnsRemaining: s.farmRun.turnsRemaining });
     if (!chain) break;
     s = rootReducer(s, { type: "CHAIN_COLLECTED", payload: buildChainCollectedPayload(chain) });
     grid = applyCollapse(grid, chain.cells, rng, pool);
@@ -248,19 +252,6 @@ function playOneRun(
   const turnsPlayed = s.turnsUsed ?? 0;
   s = rootReducer(s, { type: "CLOSE_SEASON" } as Action);
   return { state: s, entered: true, chainCoins, turnsPlayed };
-}
-
-/** Spend step: tier up the zone as many rungs as the bankroll + inventory allow. */
-function applySpendPolicy(state: GameState, zoneId: string): { state: GameState; tiersGained: number } {
-  let s = state;
-  let gained = 0;
-  while (settlementTier(s, zoneId) < maxTier(zoneId)) {
-    const before = settlementTier(s, zoneId);
-    s = rootReducer(s, { type: "TIER_UP", payload: { zoneId } } as Action);
-    if (settlementTier(s, zoneId) === before) break; // unaffordable → done
-    gained++;
-  }
-  return { state: s, tiersGained: gained };
 }
 
 function flatZoneInv(state: GameState, zoneId: string): Record<string, number> {
@@ -274,6 +265,8 @@ export function runCampaign(config: CampaignConfig): CampaignReport {
   const cols = config.cols ?? 6;
   const policyName = config.policy ?? "greedy";
   const policy = POLICIES[policyName] ?? greedyLongest;
+  const macroName = config.macro ?? "floor";
+  const macro: MacroPolicy = MACROS[macroName] ?? floorMacro;
   const maxReshuffle = config.maxReshuffle ?? 64;
   const coinMilestones = config.coinMilestones ?? foundingCoinLadder(4);
 
@@ -305,7 +298,7 @@ export function runCampaign(config: CampaignConfig): CampaignReport {
       for (let i = 1; i <= config.runs; i++) {
         const balBefore = s.coins ?? 0;
         const invBefore = flatZoneInv(s, zoneId);
-        const run = playOneRun(s, rng, FARM_TILE_POOL, policy, rows, cols, maxReshuffle);
+        const run = playOneRun(s, zoneId, rng, FARM_TILE_POOL, policy, rows, cols, maxReshuffle);
         if (!run.entered) { stalledOnEntry = true; break; }
         s = run.state;
 
@@ -316,8 +309,7 @@ export function runCampaign(config: CampaignConfig): CampaignReport {
           if (delta > 0) resourceTotals[k] = (resourceTotals[k] ?? 0) + delta;
         }
 
-        const spend = applySpendPolicy(s, zoneId);
-        s = spend.state;
+        s = macro(s, zoneId);
 
         const balanceAfter = s.coins ?? 0;
         cumulativeTurns += run.turnsPlayed;
