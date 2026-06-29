@@ -148,33 +148,3 @@ export function spawnBoss(state: GameState, id: string, year: number, rng: () =>
     },
   } as unknown as GameState;
 }
-
-export function tickBossTurn(state: GameState): GameState {
-  if (!state.boss) return state;
-  // The slice carries the richer BossInstance shape (season/year/target/modifierState)
-  // at runtime; BossState in types/state.ts only declares the UI-facing subset.
-  const current = state.boss as unknown as BossInstance;
-  const advanced: BossInstance = { ...current, turnsRemaining: current.turnsRemaining - 1 };
-  const targetMet = advanced.progress >= advanced.target.amount;
-  const expired = advanced.turnsRemaining <= 0;
-  if (!targetMet && !expired) {
-    // Cast the structurally-richer BossInstance into the slot's typed `BossState`.
-    const writeBack = advanced as unknown as GameState["boss"];
-    return { ...state, boss: writeBack };
-  }
-  const def = BOSSES.find((b) => b.id === state.boss?.id);
-  if (!def) return state;
-  const reward = bossReward(def, advanced.progress, advanced.year ?? current.year ?? 1);
-  const flags = {
-    ...((state.story?.flags ?? {}) as Record<string, boolean>),
-    [`${state.boss.id}_active`]: false,
-    ...(reward.defeated ? { [`${state.boss.id}_defeated`]: true } : {}),
-  };
-  return {
-    ...state,
-    boss: null,
-    coins: (state.coins ?? 0) + reward.coins,
-    runes: (state.runes ?? 0) + reward.runes,
-    story: { ...(state.story ?? {}), flags },
-  } as GameState;
-}

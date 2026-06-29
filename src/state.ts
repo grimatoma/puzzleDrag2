@@ -1369,6 +1369,10 @@ function coreReducer(state: GameState, action: Action): GameState {
       return { ...state, inventory: { ...state.inventory, [craftZone]: newInv } };
     }
 
+    // Test-support action: no production dispatcher (runes are granted inline by
+    // the mysterious-ore chain, boss/almanac/daily rewards). Retained as a
+    // deterministic affordance for unit tests that need to seed runes directly
+    // (runes.test.ts, phase-3-economy.test.ts). Health review #11.
     case "GRANT_RUNES": {
       const amt = Math.max(0, (action.payload?.amount ?? 0) | 0);
       return { ...state, runes: (state.runes ?? 0) + amt };
@@ -1563,6 +1567,10 @@ function coreReducer(state: GameState, action: Action): GameState {
       };
     }
 
+    // Test-support action: production tile discovery happens inline in
+    // applyTileCollectionChainEffects (chain-collect path). Retained as a direct
+    // affordance for tests that assert discovery effects (species-5.4.test.ts).
+    // Health review #11.
     case "TILE_DISCOVERED": {
       const ids = action.payload.ids ?? [];
       const known = state.tileCollection?.discovered ?? {};

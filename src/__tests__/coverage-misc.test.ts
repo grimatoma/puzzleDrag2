@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 import type { GameState } from "../types/state.js";
 import type { BossInstance } from "../features/bosses/data.js";
 import { sellPriceFor, SELL_RATE } from "../features/market/pricing.js";
-import { spawnBoss, tickBossTurn, BOSSES, BOSS_WINDOW_TURNS, bossReward } from "../features/bosses/data.js";
+import { spawnBoss, BOSSES, BOSS_WINDOW_TURNS, bossReward } from "../features/bosses/data.js";
 import { getEffectivePool } from "../features/farm/pool.js";
 import { BIOMES } from "../constants.js";
 import { createFreshState } from "../state/init.js";
@@ -88,60 +88,10 @@ describe("bosses/data — spawnBoss", () => {
   });
 });
 
-describe("bosses/data — tickBossTurn", () => {
-  const withBoss = (over: Record<string, unknown> = {}) =>
-    mergeTestState({
-      boss: {
-        id: "frostmaw",
-        season: "winter",
-        year: 1,
-        turnsRemaining: 5,
-        progress: 0,
-        target: { resource: "tile_tree_oak", amount: 30 },
-        modifierState: {},
-      },
-      coins: 0,
-      runes: 0,
-      story: { flags: { frostmaw_active: true } },
-      ...over,
-    });
-
-  it("no boss → unchanged", () => {
-    const s = mergeTestState({ boss: null });
-    expect(tickBossTurn(s)).toBe(s);
-  });
-
-  it("boss with turns remaining decrements", () => {
-    const s = withBoss();
-    const r = tickBossTurn(s);
-    expect(dataBoss(r)!.turnsRemaining).toBe(4);
-  });
-
-  it("boss with target met clears boss + grants reward (defeated)", () => {
-    const base = withBoss();
-    const b0 = dataBoss(base)!;
-    const s = mergeTestState(base, {
-      boss: { ...b0, turnsRemaining: 1, progress: 30 },
-    });
-    const r = tickBossTurn(s);
-    expect(r.boss).toBeNull();
-    expect(r.coins).toBeGreaterThan(0);
-    expect(r.runes).toBe(1);
-    expect(storyFlags(r).frostmaw_defeated).toBe(true);
-  });
-
-  it("boss expired without meeting target clears boss + no defeated flag", () => {
-    const base = withBoss();
-    const b0 = dataBoss(base)!;
-    const s = mergeTestState(base, {
-      boss: { ...b0, turnsRemaining: 1, progress: 5 },
-    });
-    const r = tickBossTurn(s);
-    expect(r.boss).toBeNull();
-    expect(r.coins).toBe(0); // no reward
-    expect(storyFlags(r).frostmaw_defeated).toBeUndefined();
-  });
-});
+// The tickBossTurn() resolution tests were removed with that dead parallel
+// helper (health review #17). The live boss resolution path (features/boss/slice
+// BOSS/RESOLVE + turn progress) is covered by audit-boss / boss-coverage /
+// storm-boss / reducers tests.
 
 describe("bosses/data — bossReward", () => {
   it("returns zero reward when progress < target", () => {
