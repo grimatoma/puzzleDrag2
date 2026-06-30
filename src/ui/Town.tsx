@@ -16,7 +16,7 @@ import Icon from "./Icon.jsx";
 import DesignIcon from "./primitives/Icon.jsx";
 import BuildingIllustration from "./buildings/index.jsx";
 import { RequirementChip } from "./primitives/Chip.jsx";
-import { TOWN_THEMES, TOWN_BIOME_CONFIGS, LOCATION_TOWN_CONFIGS, type TownBiomeConfig } from "./town/config.js";
+import { LOCATION_TOWN_CONFIGS } from "./town/config.js";
 import {
   BrowserDetailLayout,
   BrowserGrid,
@@ -211,10 +211,8 @@ export function TownView({ state, dispatch, active = true, warm = false, onReady
   const mapCurrent = String(state.mapCurrent ?? DEFAULT_ZONE);
   const locConfig = LOCATION_TOWN_CONFIGS[mapCurrent];
   const biomeVariant = locConfig?.biomeVariant ?? (state.biomeKey === 'mine' ? 'mine' : 'farm');
-  const themeKey = locConfig?.themeKey ?? biomeVariant;
-  const theme = TOWN_THEMES[themeKey] || TOWN_THEMES.farm;
-  const townConfig: TownBiomeConfig = TOWN_BIOME_CONFIGS[biomeVariant] ?? TOWN_BIOME_CONFIGS.farm;
-  const locationName = displayZoneName(state, mapCurrent) || townConfig.name;
+  // The settlement name now lives in the HUD header (src/ui/Hud.tsx) rather than
+  // as an on-map overlay, so there is no per-town theme title to resolve here.
   // Extended grass colour for the widescreen margins around the 4:3 map, so the
   // letterboxed area reads as terrain rather than a black box. Mine-family towns
   // get a cooler, greyer ground; farm-family a warmer green.
@@ -356,8 +354,8 @@ export function TownView({ state, dispatch, active = true, warm = false, onReady
         style={{ background: "radial-gradient(120% 120% at 50% 45%, transparent 55%, rgba(0,0,0,0.28) 100%)" }}
       />
 
-      {/* Header — fixed overlay, not part of the pan/zoom world. */}
-      <div className="absolute top-3 left-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:left-3 font-bold text-[20px] landscape:max-[1024px]:text-[15px] z-10" style={{ color: theme.textColor }}>{locationName}</div>
+      {/* Header controls — fixed overlay, not part of the pan/zoom world. The
+          settlement name itself is shown in the HUD header (src/ui/Hud.tsx). */}
       <div className="absolute top-3 right-4 landscape:max-[1024px]:top-2 landscape:max-[1024px]:right-3 flex items-center gap-2 z-10">
         <ZoneEntryCostInfo zoneId={mapCurrent} state={state} />
         {/* Boons shortcut — only visible once the player has faced any keeper. */}
