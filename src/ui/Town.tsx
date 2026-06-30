@@ -541,6 +541,8 @@ export function TownView({ state, dispatch, active = true, warm = false, onReady
 }
 
 function BuildingPreview({ building, size = 56 }: { building: Building; size?: number }) {
+  // Build menu shows each building's own registry icon (`bld_<id>`). The town
+  // map keeps the detailed BuildingIllustration SVGs (rendered elsewhere).
   const iconKey = building.icon ?? `bld_${building.id}`;
   return (
     <div className="grid place-items-center w-full h-full">
