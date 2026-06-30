@@ -251,8 +251,18 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
                 emitBurst({ pageX, pageY, coins: data.coins });
               });
               setBoardRuntimeActive(game, boardActiveRef.current);
-              setLoading(false);
-              onReadyRef.current?.();
+              // Dismiss the BoardSkeleton only once GameScene.create() has
+              // finished its heavy synchronous bake (makeTextures + first
+              // fillBoard), signalled by BOARD_READY. Dismissing here in postBoot
+              // was a frame too early — the skeleton vanished before the bake,
+              // exposing the bare cream canvas through the freeze. The rAF lets
+              // Phaser paint the first board frame before the skeleton is removed.
+              scene.events.on(SCENE_EVENTS.BOARD_READY, () => {
+                requestAnimationFrame(() => {
+                  setLoading(false);
+                  onReadyRef.current?.();
+                });
+              });
             },
           },
         });
@@ -419,9 +429,12 @@ export default function App() {
       void warmMapScene();
     };
     if (w?.requestIdleCallback) {
-      idleHandle = w.requestIdleCallback(run, { timeout: 4000 });
+      // Shorter timeout (was 4000) so a quick tap on Town is less likely to beat
+      // the offscreen pre-warm. Still fires only after the board's first paint,
+      // so it never competes with initial render.
+      idleHandle = w.requestIdleCallback(run, { timeout: 1500 });
     } else {
-      timerHandle = setTimeout(run, 1200);
+      timerHandle = setTimeout(run, 600);
     }
     return () => {
       if (idleHandle !== undefined) w?.cancelIdleCallback?.(idleHandle);

@@ -392,6 +392,11 @@ export class GameScene extends Phaser.Scene {
     onRegistry("hazardFire", () => this._updateHazardAtmosphere());
     onRegistry("hazardRats", () => this._updateHazardAtmosphere());
     this._updateHazardAtmosphere();
+
+    // All heavy synchronous create() work (makeTextures, drawBackground,
+    // fillBoard) is done by here. Signal the React host so it dismisses the
+    // BoardSkeleton now, not in postBoot (which fires a frame before this bake).
+    this.events.emit(SCENE_EVENTS.BOARD_READY);
   }
 
   /**
