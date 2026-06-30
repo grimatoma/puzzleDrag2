@@ -31,6 +31,7 @@ import * as achievements from "./features/achievements/slice.js";
 import * as tutorial from "./features/tutorial/slice.js";
 import * as settings from "./features/settings/slice.js";
 import { setPixelSpriteOverride } from "./textures/seasonal/seasonalArt.js";
+import { setTileArtMode } from "./tileArtMode.js";
 import * as boss from "./features/boss/slice.js";
 import * as cartography from "./features/cartography/slice.js";
 import * as storySlice from "./features/story/slice.js";
@@ -1781,6 +1782,7 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   "STORY/PICK_CHOICE",
   // Settings actions are owned by settings/slice
   "SETTINGS/SET_TAB",
+  "SETTINGS/SET_TILE_ART_MODE",
   "SETTINGS/OPEN_DEBUG",
   "SETTINGS/LEAVE_BOARD",
   "SETTINGS/TOGGLE",
@@ -1860,6 +1862,13 @@ function runActionEffects(state: GameState, action: Action): void {
       if (action.key === "pixelSpriteOverride") {
         void setPixelSpriteOverride(!!state.settings?.pixelSpriteOverride);
       }
+      break;
+    case "SETTINGS/SET_TILE_ART_MODE":
+      // Persist the new mode, then push it outside React: setTileArtMode flips
+      // the pixel-sprite route (preloading PNGs + re-baking) and notifies the
+      // Phaser scene to re-bake stills / resume idle motion.
+      settings.persistSettings((state.settings ?? {}) as Record<string, unknown>);
+      void setTileArtMode(action.mode);
       break;
     case "SETTINGS/RESET_SAVE":
       // Clears every hearth.* key. Runs after persistState above (which would

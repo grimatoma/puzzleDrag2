@@ -8,6 +8,7 @@ import type { ActionType } from "./actions.js";
 import type { ResourceKey, ToolKey } from "./catalogKeys.js";
 import type { Grid, Tile } from "./state.js";
 import type { ToolPower } from "../state/toolPowerRuntime.js";
+import type { TileArtMode } from "../tileArtMode.js";
 
 // ── Shared payload shapes ───────────────────────────────────────────────────
 
@@ -247,6 +248,11 @@ export interface SettingsToggleAction {
 export interface SettingsSetTabAction {
   type: "SETTINGS/SET_TAB";
   tab: string;
+}
+
+export interface SettingsSetTileArtModeAction {
+  type: "SETTINGS/SET_TILE_ART_MODE";
+  mode: TileArtMode;
 }
 
 export interface MarketSellAction {
@@ -591,6 +597,7 @@ export type TypedActionType =
   | StoryPickChoiceAction["type"]
   | SettingsToggleAction["type"]
   | SettingsSetTabAction["type"]
+  | SettingsSetTileArtModeAction["type"]
   | MarketSellAction["type"]
   | BuildDecorationAction["type"]
   | CastleContributeAction["type"]
@@ -682,6 +689,7 @@ export type TypedAction =
   | StoryPickChoiceAction
   | SettingsToggleAction
   | SettingsSetTabAction
+  | SettingsSetTileArtModeAction
   | MarketSellAction
   | BuildDecorationAction
   | CastleContributeAction

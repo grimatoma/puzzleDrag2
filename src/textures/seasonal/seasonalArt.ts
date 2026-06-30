@@ -90,7 +90,14 @@ const SETTINGS_STORAGE_KEY = "hearth.settings";
 function readPixelOverrideFromStorage(): boolean {
   try {
     const raw = typeof localStorage !== "undefined" ? localStorage.getItem(SETTINGS_STORAGE_KEY) : null;
-    if (raw) return !!(JSON.parse(raw) as { pixelSpriteOverride?: boolean }).pixelSpriteOverride;
+    if (raw) {
+      // The 3-way tile-art selector ("static" | "animated" | "pixel") is the
+      // source of truth; the pixel route is on iff it's "pixel". Fall back to
+      // the legacy boolean flag for saves made before the selector existed.
+      const s = JSON.parse(raw) as { tileArtMode?: string; pixelSpriteOverride?: boolean };
+      if (s.tileArtMode != null) return s.tileArtMode === "pixel";
+      return !!s.pixelSpriteOverride;
+    }
   } catch { /* storage unavailable / corrupt */ }
   return false;
 }
