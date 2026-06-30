@@ -75,6 +75,19 @@
   --board-chip-bg:      #fffaf0;
   --board-chip-border:  #a8895a;
 
+  /* ── Dev-doc status pills (balanceManager wiki + the static docs site).
+       Self-contained bg/fg pairs reused 100+× across content/*.html for the
+       "built / half-wired / to-build / proposed" implementation legend.
+       Centralised here so the legend has ONE source of truth. The identical
+       values are mirrored into the static docs THEME
+       (reference/tools/build-docs.mjs) so both render paths stay in lock-step
+       (UX review §F cleanup). ─────────────────────────────────────────────── */
+  --status-built-bg:    #d3f9d8;  --status-built-fg:    #1f7a36;  /* in game now   */
+  --status-partial-bg:  #d0ebff;  --status-partial-fg:  #1d5bb0;  /* half-wired     */
+  --status-todo-bg:     #f3ece0;  --status-todo-fg:     #8a6a1a;  /* to build       */
+  --status-proposed-bg: #ece6da;  --status-proposed-fg: #5a4a36;  /* proposed/note  */
+  --status-removed-bg:  #ffd8d0;  --status-removed-fg:  #a8281a;  /* removed/blocked */
+
   /* ── Season-tinted field gradients (the board card backdrop). Lifted
        so the board is a parchment card with seasonal warmth rather than
        a saturated colour fill — pairs with the biome accent strip. ── */

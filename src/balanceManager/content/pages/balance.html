@@ -1,14 +1,14 @@
 <p style="font-size:15px;color:#5d5544;margin:0 0 0.6em;">The <strong>balance baseline</strong> for Hearthwood Vale, derived from <strong>Puzzle Craft 2</strong> — a closely-related game whose economy is already well-tuned. We <strong>match it closely, then expand</strong>. This page is the source of truth for the numbers; the <strong>Direction</strong> page owns the mechanics. The raw reference lives at <code>docs/references/puzzle-craft-2-wiki.html</code>.</p>
 
 <p>
-  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:2px;">match</span> our entity exists; adopt PC2's value &nbsp;
-  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;margin:2px;">expand</span> we differ / theme it our way &nbsp;
-  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;margin:2px;">missing</span> no equivalent yet (parked or to add)
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);margin:2px;">match</span> our entity exists; adopt PC2's value &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-partial-bg);color:var(--status-partial-fg);margin:2px;">expand</span> we differ / theme it our way &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-proposed-bg);color:var(--status-proposed-fg);margin:2px;">missing</span> no equivalent yet (parked or to add)
 </p>
 
 <p style="font-size:13px;color:#7a6f5c;">Scope for "adopt now": <strong>Town 1 (farm) + Town 2 (mine)</strong> entities. Sea/late-game rows are documented for completeness but flagged parked.</p>
 
-<h2>Implemented economy model <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">live</span></h2>
+<h2>Implemented economy model <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">live</span></h2>
 <p>This section is the <strong>actual tuned economy in code</strong> (not the PC2 reference below). It was derived from an <strong>income-per-run model</strong> and a <strong>moderate run-budget</strong> target. See the <strong>Balance &amp; Journey ledger</strong> (<code>reference/docs/balance/index.html</code>) for the full writeup.</p>
 
 <h3>The income-per-run model</h3>
@@ -19,7 +19,7 @@
   <li><strong>Decoupled income knob:</strong> <code>TILES_PER_RESOURCE</code> (resource yield) is now separate from <code>UPGRADE_THRESHOLDS</code> (board-tile upgrade rate) — tune one without disturbing the other.</li>
 </ul>
 
-<h3>Tier upgrade costs <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">live</span></h3>
+<h3>Tier upgrade costs <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">live</span></h3>
 <p>Each town climbs its own authored ladder. The upgrade cost to reach a rung is <strong>resource-only</strong> (no coins), ported from Puzzle&nbsp;Craft&nbsp;2's town-upgrade ladder. The two tables below are generated <strong>live</strong> from <code>ZONES[*].tiers</code> in <code>cartography/data.ts</code> — rung names, plots, per-rung building unlocks, and costs always match the game and cannot drift:</p>
 <p style="font-weight:700;margin:0.5em 0 0.2em;color:#5d5544;">Town 1 — home · <span data-wiki-fact="zone.home.rungCount"></span> rungs</p>
 <div data-wiki-tier-ladder="home"></div>
@@ -46,18 +46,18 @@
 <table>
   <thead><tr><th>PC2 resource (category)</th><th>Sell</th><th>Buy</th><th>Our resource</th><th>Status</th></tr></thead>
   <tbody>
-    <tr><td>Hay (grass)</td><td>1</td><td>40</td><td>[[resources:hay_bundle]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">match</span></td></tr>
-    <tr><td>Wood (trees)</td><td>5</td><td>40</td><td>[[resources:plank]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">match</span></td></tr>
-    <tr><td>Bread (grain)</td><td>5</td><td>60</td><td>[[resources:bread]] (via [[resources:flour]])</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">expand</span> we split grain→flour→bread</td></tr>
-    <tr><td>Eggs (birds)</td><td>12</td><td>80</td><td>[[resources:eggs]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">match</span></td></tr>
-    <tr><td>Soup (vegetables)</td><td>20</td><td>220</td><td>[[resources:soup]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">match</span></td></tr>
-    <tr><td>Meat / Pie / Milk / Honey / Horseshoe</td><td>21–400</td><td>240–1600</td><td>livestock/fruit families</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">expand</span> Town 3 / parked</td></tr>
-    <tr><td>Dirt</td><td>1</td><td>40</td><td>dirt (board)</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">match</span></td></tr>
-    <tr><td>Stone</td><td>10</td><td>80</td><td>[[resources:block]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">match</span></td></tr>
-    <tr><td>Iron</td><td>11</td><td>100</td><td>[[resources:iron_bar]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">match</span></td></tr>
-    <tr><td>Coal</td><td>40</td><td>260</td><td>[[resources:coke]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">match</span></td></tr>
-    <tr><td>Silver / Diamond / Gold / Ruby</td><td>40–450</td><td>300–2000</td><td>gems / gold</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">expand</span> caves / parked</td></tr>
-    <tr><td>Salt · Water · Fish · Pearl · …</td><td>11–800</td><td>80–4000</td><td>harbor family</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#ece6da;color:#5a4a36;">missing</span> harbor parked</td></tr>
+    <tr><td>Hay (grass)</td><td>1</td><td>40</td><td>[[resources:hay_bundle]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">match</span></td></tr>
+    <tr><td>Wood (trees)</td><td>5</td><td>40</td><td>[[resources:plank]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">match</span></td></tr>
+    <tr><td>Bread (grain)</td><td>5</td><td>60</td><td>[[resources:bread]] (via [[resources:flour]])</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-partial-bg);color:var(--status-partial-fg);">expand</span> we split grain→flour→bread</td></tr>
+    <tr><td>Eggs (birds)</td><td>12</td><td>80</td><td>[[resources:eggs]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">match</span></td></tr>
+    <tr><td>Soup (vegetables)</td><td>20</td><td>220</td><td>[[resources:soup]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">match</span></td></tr>
+    <tr><td>Meat / Pie / Milk / Honey / Horseshoe</td><td>21–400</td><td>240–1600</td><td>livestock/fruit families</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-partial-bg);color:var(--status-partial-fg);">expand</span> Town 3 / parked</td></tr>
+    <tr><td>Dirt</td><td>1</td><td>40</td><td>dirt (board)</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">match</span></td></tr>
+    <tr><td>Stone</td><td>10</td><td>80</td><td>[[resources:block]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">match</span></td></tr>
+    <tr><td>Iron</td><td>11</td><td>100</td><td>[[resources:iron_bar]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">match</span></td></tr>
+    <tr><td>Coal</td><td>40</td><td>260</td><td>[[resources:coke]]</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">match</span></td></tr>
+    <tr><td>Silver / Diamond / Gold / Ruby</td><td>40–450</td><td>300–2000</td><td>gems / gold</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-partial-bg);color:var(--status-partial-fg);">expand</span> caves / parked</td></tr>
+    <tr><td>Salt · Water · Fish · Pearl · …</td><td>11–800</td><td>80–4000</td><td>harbor family</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-proposed-bg);color:var(--status-proposed-fg);">missing</span> harbor parked</td></tr>
   </tbody>
 </table>
 
@@ -66,11 +66,11 @@
 <table>
   <thead><tr><th>PC2 building → effect</th><th>Category</th><th>PC2 cost</th><th>Status</th></tr></thead>
   <tbody>
-    <tr><td>Yard / Hen House → more birds</td><td>birds</td><td>Hay 8, Egg 8, Dirt 2, Stone 8</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#ece6da;color:#5a4a36;">missing</span> add as Coop</td></tr>
-    <tr><td>Vegetable Patch / Garden → vegetables appear</td><td>vegetables</td><td>Bread 20, Soup 6, Meat 1, Dirt 10, Stone 20, Coal 2</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#ece6da;color:#5a4a36;">missing</span> add</td></tr>
-    <tr><td>Windmill / Mill → more grain</td><td>grain</td><td>Wood 4, Bread 8, Dirt 2, Iron 6</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">expand</span> we have [[buildings:mill]]</td></tr>
-    <tr><td>Feeding Trough → herd animals</td><td>herd</td><td>Bread 20, Egg 16, Meat 3, Stone 12, Silver 2</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#ece6da;color:#5a4a36;">missing</span> Town 3</td></tr>
-    <tr><td>Fruit Trees → fruit appears</td><td>fruit</td><td>Wood 15, Dirt 15, Stone 15, Iron 15, Water 5</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#ece6da;color:#5a4a36;">missing</span> parked / Town 3</td></tr>
+    <tr><td>Yard / Hen House → more birds</td><td>birds</td><td>Hay 8, Egg 8, Dirt 2, Stone 8</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-proposed-bg);color:var(--status-proposed-fg);">missing</span> add as Coop</td></tr>
+    <tr><td>Vegetable Patch / Garden → vegetables appear</td><td>vegetables</td><td>Bread 20, Soup 6, Meat 1, Dirt 10, Stone 20, Coal 2</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-proposed-bg);color:var(--status-proposed-fg);">missing</span> add</td></tr>
+    <tr><td>Windmill / Mill → more grain</td><td>grain</td><td>Wood 4, Bread 8, Dirt 2, Iron 6</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-partial-bg);color:var(--status-partial-fg);">expand</span> we have [[buildings:mill]]</td></tr>
+    <tr><td>Feeding Trough → herd animals</td><td>herd</td><td>Bread 20, Egg 16, Meat 3, Stone 12, Silver 2</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-proposed-bg);color:var(--status-proposed-fg);">missing</span> Town 3</td></tr>
+    <tr><td>Fruit Trees → fruit appears</td><td>fruit</td><td>Wood 15, Dirt 15, Stone 15, Iron 15, Water 5</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-proposed-bg);color:var(--status-proposed-fg);">missing</span> parked / Town 3</td></tr>
   </tbody>
 </table>
 
@@ -98,10 +98,10 @@
 </table>
 
 <h2>Workers</h2>
-<p>Every PC2 worker is a <strong>threshold reducer</strong> ("1 less grain to make bread", "1 less iron to make an iron bar"). This maps directly to our <code>threshold_reduce</code> / <code>threshold_reduce_category</code> ability, and the worker chain confirms the category upgrade ladders (grass→hay, grain→bread→veg→fruit→flower; stone→block, iron→bar→silver→gold). Adopt the "−1 per worker" magnitude. <span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">match</span></p>
+<p>Every PC2 worker is a <strong>threshold reducer</strong> ("1 less grain to make bread", "1 less iron to make an iron bar"). This maps directly to our <code>threshold_reduce</code> / <code>threshold_reduce_category</code> ability, and the worker chain confirms the category upgrade ladders (grass→hay, grain→bread→veg→fruit→flower; stone→block, iron→bar→silver→gold). Adopt the "−1 per worker" magnitude. <span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">match</span></p>
 
 <h2>Tools</h2>
-<p>PC2 tools are "collect all of type X" / "convert type" consumables priced 20–100 coins (farm) with a per-tool Max and XP. Our tool roster mirrors many ([[tools:rake]] = Rake/collect grass, [[tools:axe]] = Axe/collect trees, [[tools:bomb]] ≈ Explosives, [[tools:drill]] for ore). Adopt PC2 buy-cost + Max as the baseline. <span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:#d0ebff;color:#1d5bb0;">expand</span></p>
+<p>PC2 tools are "collect all of type X" / "convert type" consumables priced 20–100 coins (farm) with a per-tool Max and XP. Our tool roster mirrors many ([[tools:rake]] = Rake/collect grass, [[tools:axe]] = Axe/collect trees, [[tools:bomb]] ≈ Explosives, [[tools:drill]] for ore). Adopt PC2 buy-cost + Max as the baseline. <span style="display:inline-block;font-size:11px;font-weight:700;padding:1px 7px;border-radius:999px;background:var(--status-partial-bg);color:var(--status-partial-fg);">expand</span></p>
 
 <h2>Chest / level-up drop table</h2>
 <p>For the locked reward-wheel / daily system, PC2's drop distribution is a clean default:</p>

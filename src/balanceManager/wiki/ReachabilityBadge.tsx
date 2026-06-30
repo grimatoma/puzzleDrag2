@@ -11,13 +11,11 @@
 
 import React from "react";
 import type { Reachability } from "../../game/reachability.js";
-import { UI_COLORS } from "../../ui/primitives/palette.js";
+import { STATUS_TONES } from "../../ui/primitives/statusTones.js";
 
-const TONE_STYLES = {
-  success: { background: "rgba(90,158,75,0.12)", color: UI_COLORS.greenDeep, border: "rgba(90,158,75,0.42)" },
-  info: { background: "rgba(126,122,166,0.14)", color: "#5a4f8a", border: "rgba(126,122,166,0.42)" },
-  danger: { background: "rgba(194,59,34,0.10)", color: UI_COLORS.redDeep, border: "rgba(194,59,34,0.42)" },
-} as const;
+// Tones sourced from the shared STATUS_TONES map so this badge stays in
+// lock-step with StatusBadge (its sibling) and StatusChip.
+const TONE_STYLES = STATUS_TONES;
 
 const META: Record<Reachability, { label: string; tier: string; tone: keyof typeof TONE_STYLES; description: string }> = {
   reachable: {
