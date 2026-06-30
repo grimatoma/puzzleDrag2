@@ -733,6 +733,13 @@
     0%   { background-position: 150% 0; }
     100% { background-position: -50% 0; }
   }
+  /* The shimmer ::after spans the whole card and paints above in-flow content.
+     Lift the claim button out of its path so it always reads as a solid,
+     enabled affordance instead of fading as the wave passes through it. */
+  .quest-card--ready button {
+    position: relative;
+    z-index: 1;
+  }
   /* Claimed: settle back, fade the spine. */
   .quest-card--done { opacity: 0.7; }
   .quest-card--done::before { opacity: 0.45; }
