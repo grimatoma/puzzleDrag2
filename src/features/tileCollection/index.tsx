@@ -323,7 +323,7 @@ function HazardCard({ hazard }: HazardCardProps) {
       {/* Clear instruction */}
       {hazard.clearInstruction && (
         <div className="text-[9px] text-center text-on-panel-faint italic leading-snug mt-auto">
-          <span className="text-[#8a4a26] not-italic font-semibold">Clear: </span>
+          <span className="text-[color:var(--on-panel-label)] not-italic font-semibold">Clear: </span>
           {hazard.clearInstruction}
         </div>
       )}
@@ -504,7 +504,7 @@ export default function TileCollectionPanel({ state, dispatch }: TileCollectionP
 
       {/* Free moves chip */}
       {(s.tileCollection?.freeMoves ?? 0) > 0 && subCategory !== "hazards" && (
-        <div className="flex-shrink-0 mx-3 mb-3 px-3 py-2 rounded-xl bg-[#dfeecd] border-2 border-[#6a9a3a] text-center">
+        <div className="flex-shrink-0 mx-3 mb-3 px-3 py-2 rounded-xl bg-[color:var(--path-coexist-bg)] border-2 border-[color:var(--path-coexist-edge)] text-center">
           <span className="text-[#2f5a14] font-bold">
             +{s.tileCollection?.freeMoves} free move{s.tileCollection?.freeMoves !== 1 ? "s" : ""}
           </span>

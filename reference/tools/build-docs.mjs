@@ -274,6 +274,13 @@ const THEME = `:root {
   --accent: #e0913a;
   --accent-2: #8bab5a;
   --shadow: 0 12px 30px rgba(0,0,0,.45);
+  /* Status-pill legend — mirrors src/tokens.css so inline status pills in the
+     content HTML resolve identically here and in the dev-panel wiki. */
+  --status-built-bg: #d3f9d8;  --status-built-fg: #1f7a36;
+  --status-partial-bg: #d0ebff;  --status-partial-fg: #1d5bb0;
+  --status-todo-bg: #f3ece0;  --status-todo-fg: #8a6a1a;
+  --status-proposed-bg: #ece6da;  --status-proposed-fg: #5a4a36;
+  --status-removed-bg: #ffd8d0;  --status-removed-fg: #a8281a;
 }
 * { box-sizing: border-box; }
 body {

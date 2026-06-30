@@ -5,7 +5,7 @@
 
 <p style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 0.4em;">
   <span style="display:inline-block;font-size:12px;font-weight:800;letter-spacing:0.06em;padding:4px 12px;border-radius:8px;background:linear-gradient(135deg,#ffe8cc,#ffd8b0);color:#8a3c0a;border:1.5px solid #d99a52;">FIRST-PASS DESIGN — DRAFT</span>
-  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;">PLANNED</span>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-proposed-bg);color:var(--status-proposed-fg);">PLANNED</span>
   <span style="font-size:12px;color:#867a66;">Design doc, dated 2026-06-04. Deliberately open to changing the roster, specializations, boards, and teaching of any town. Like everything under the wiki, this is allowed to drift from code — trust code where they disagree.</span>
 </p>
 
@@ -16,11 +16,11 @@
 <h2>Status legend</h2>
 <p>This page is a design doc, so most of it is forward-looking. Chips mirror the wiki's shared status system; almost everything here is <strong>PLANNED</strong> (a design this doc introduces) or reuses data that exists today.</p>
 <p>
-  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:2px;">WIRED</span> implemented &amp; runs in normal play &nbsp;
-  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d0ebff;color:#1d5bb0;margin:2px;">PARTIAL</span> partly wired / only some paths &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);margin:2px;">WIRED</span> implemented &amp; runs in normal play &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-partial-bg);color:var(--status-partial-fg);margin:2px;">PARTIAL</span> partly wired / only some paths &nbsp;
   <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffe8cc;color:#a04c14;margin:2px;">STUB</span> present but inert &nbsp;
-  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ffd8d0;color:#a8281a;margin:2px;">DOC-ONLY</span> in the design doc, not in code &nbsp;
-  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#ece6da;color:#5a4a36;margin:2px;">PLANNED</span> a change this doc introduces
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-removed-bg);color:var(--status-removed-fg);margin:2px;">DOC-ONLY</span> in the design doc, not in code &nbsp;
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-proposed-bg);color:var(--status-proposed-fg);margin:2px;">PLANNED</span> a change this doc introduces
 </p>
 
 <h2>The problem today</h2>
@@ -131,8 +131,8 @@
 <p style="font-size:12px;color:#867a66;">Real ids grounding the roster — buildings: hearth, mill, bakery, granary, larder, kitchen, workshop, forge, powder_store, barn, silo, housing, harbor_dock, fishmonger, smokehouse, lighthouse, apiary, sawmill, stable, observatory, chapel, brewery, inn, apothecary, watchtower, caravan_post · farm tiles: grass, grain, trees/oak, birds, veg, fruit, herd/horse, flowers · mine tiles: stone, coal, iron_ore, copper_ore, gem, gold, special_dirt · fish tiles: sardine, mackerel, clam, oyster, kelp, giant_pearl · NPCs: [[npcs:wren|wren]], [[npcs:mira|mira]], [[npcs:tomas|tomas]], [[npcs:bram|bram]], [[npcs:liss|liss]] · workers: a production-line hand per category (peasant, farmer, poultryman, vegetable_picker, fruit_harvester, bee_keeper, lumberjack, herdsman, dairywoman, wrangler, miner, iron_miner, coal_miner, gem_cutter, gold_miner, digger, fisherman), the bread baker, promotion chains (steward, greengrocer, perfumer, rancher, drover, equerry, smelter, assayer), and coin/rune hands (tax_collector, florist, rune_seeker) · keepers: [[keepers:deer_spirit|farm Deer-Spirit]], [[keepers:stone_knocker|mine Stone-Knocker]], [[keepers:tidesinger|harbor Tidesinger]] · tokens: heirloomSeed, pactIron, tidesingerPearl.</p>
 
 <p style="font-size:13px;color:#5d5544;"><strong>How to read a support-list:</strong>
-  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:1px;">Available @ founding</span>
-  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:1px;">Event-locked</span>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:1px;">Available @ founding</span>
+  <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:1px;">Event-locked</span>
   <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:1px;">Never supported</span>
   — these three chips recur on every zone card below.</p>
 
@@ -153,17 +153,17 @@
   <p style="margin:0.2em 0;"><strong>Puzzle features.</strong> Tutorial-safe — no hazards in the home tutorial. The <strong>rats</strong> hazard is a Town&nbsp;3 lesson (see <strong>Direction</strong>), not a home one.</p>
   <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
   <p style="margin:0;">
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:granary|granary]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:mill|mill]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:kitchen|kitchen]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:granary|granary]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:mill|mill]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:kitchen|kitchen]]</span>
     &nbsp;
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:bakery|bakery]] · first bread order</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:inn|inn]] · first NPC</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:housing|housing]] · first worker</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:silo|silo]] · preserve board</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic: religion</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]] · founding 2nd zone</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:bakery|bakery]] · first bread order</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:inn|inn]] · first NPC</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:housing|housing]] · first worker</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:silo|silo]] · preserve board</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic: religion</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]] · founding 2nd zone</span>
     &nbsp;
     <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: mine / fish buildings</span>
   </p>
@@ -187,17 +187,17 @@
   <p style="margin:0.2em 0;"><strong>Hazards.</strong> <strong>wolves</strong> (hunt bird tiles) — meadow is where you learn wolf management.</p>
   <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
   <p style="margin:0;">
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:granary|granary]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:larder|larder]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:housing|housing]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:stable|stable]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:granary|granary]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:larder|larder]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:housing|housing]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:stable|stable]]</span>
     &nbsp;
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:apiary|apiary]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:brewery|brewery]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:inn|inn]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:apiary|apiary]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:brewery|brewery]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:inn|inn]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
     &nbsp;
     <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: mine / fish buildings</span>
   </p>
@@ -212,16 +212,16 @@
   <p style="margin:0.2em 0;"><strong>Hazards.</strong> blight/fungus + fire.</p>
   <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
   <p style="margin:0;">
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:mill|mill]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:larder|larder]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:apiary|apiary]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:mill|mill]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:larder|larder]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:apiary|apiary]]</span>
     &nbsp;
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:bakery|bakery]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:brewery|brewery]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:sawmill|sawmill]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:bakery|bakery]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:brewery|brewery]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:sawmill|sawmill]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
     &nbsp;
     <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: mine / fish buildings</span>
   </p>
@@ -239,18 +239,18 @@
   <p style="margin:0.2em 0;"><strong>Hazards.</strong> cave_in, gas_vent, mole (intro tier).</p>
   <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
   <p style="margin:0;">
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:kitchen|kitchen]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:workshop|workshop]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:kitchen|kitchen]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:workshop|workshop]]</span>
     &nbsp;
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:forge|forge]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:barn|barn]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:powder_store|powder_store]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:observatory|observatory]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:apothecary|apothecary]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:watchtower|watchtower]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:forge|forge]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:barn|barn]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:powder_store|powder_store]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:observatory|observatory]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:apothecary|apothecary]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:watchtower|watchtower]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
     &nbsp;
     <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: farm-pure ([[buildings:mill|mill]]/[[buildings:granary|granary]]) &amp; fish buildings</span>
   </p>
@@ -273,16 +273,16 @@
   <p style="margin:0.2em 0;"><strong>Hazards.</strong> + <strong>lava</strong> (spreads each turn) on top of quarry's set.</p>
   <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
   <p style="margin:0;">
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:workshop|workshop]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:forge|forge]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:workshop|workshop]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:forge|forge]]</span>
     &nbsp;
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:observatory|observatory]] · gem threshold</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:barn|barn]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:powder_store|powder_store]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:apothecary|apothecary]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:observatory|observatory]] · gem threshold</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:barn|barn]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:powder_store|powder_store]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:apothecary|apothecary]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
     &nbsp;
     <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: farm-pure ([[buildings:mill|mill]]/[[buildings:granary|granary]]) &amp; fish buildings</span>
   </p>
@@ -293,7 +293,7 @@
 <div style="border:2px dashed #a04c14;border-radius:14px;background:linear-gradient(160deg,#f6ebda,#ead9be);padding:14px 18px;margin:0 0 14px;box-shadow:0 2px 10px rgba(43,34,24,0.10);">
   <h3 style="margin-top:0;">Forge board <span style="font-size:12px;font-weight:600;color:#867a66;">· progressive — replaces the standalone Black Forge zone</span></h3>
   <p style="margin:0.2em 0;">
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:2px;">RESOLVED</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);margin:2px;">RESOLVED</span>
     The [[zones:forge|Black Forge]] is <strong>no longer a standalone node</strong>. It becomes a progressive, hazard-free smithing board that opens inside a mine zone (quarry or caves) once the [[buildings:forge|forge]] building is raised — so "multiple boards per zone" carries the region's mastery content.</p>
   <p style="margin:0.2em 0;"><strong>Specialization.</strong> Master smithing — [[resources:iron_bar|iron_bar]] + [[resources:coke|coke]] → steel/tools, runes. <strong>Idle-produces:</strong> finished tools / steel / runes (top tier) into the host zone's cache.</p>
   <p style="margin:0.2em 0;"><strong>Puzzle features.</strong> No hazards (mastery board); long, high-value chains.</p>
@@ -312,15 +312,15 @@
   <p style="margin:0.2em 0;"><strong>Hazards.</strong> storm, shark, jellyfish.</p>
   <p style="margin:0.4em 0 0.2em;"><strong>Supported buildings</strong></p>
   <p style="margin:0;">
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:harbor_dock|harbor_dock]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d3f9d8;color:#1f7a36;border:1px solid #9bd6ab;margin:2px;">[[buildings:fishmonger|fishmonger]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:hearth|hearth]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:harbor_dock|harbor_dock]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-built-bg);color:var(--status-built-fg);border:1px solid #9bd6ab;margin:2px;">[[buildings:fishmonger|fishmonger]]</span>
     &nbsp;
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:smokehouse|smokehouse]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:lighthouse|lighthouse]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:watchtower|watchtower]]</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
-    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#d0ebff;color:#1d5bb0;border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:smokehouse|smokehouse]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:lighthouse|lighthouse]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:watchtower|watchtower]]</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:chapel|chapel]] · civic</span>
+    <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:var(--status-partial-bg);color:var(--status-partial-fg);border:1px solid #9cc6ed;margin:2px;">[[buildings:caravan_post|caravan_post]]</span>
     &nbsp;
     <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:7px;background:#eee7db;color:#7a6a52;border:1px solid #cdbf9e;margin:2px;">never: deep-mine buildings</span>
   </p>
@@ -346,15 +346,15 @@
 </table>
 
 <h2>Resolved decisions (this pass)</h2>
-<p>All three forks were resolved with the designer. Each is marked <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;">RESOLVED</span>.</p>
+<p>All three forks were resolved with the designer. Each is marked <span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);">RESOLVED</span>.</p>
 <table>
   <thead><tr><th>#</th><th>Decision</th><th>Outcome</th></tr></thead>
   <tbody>
-    <tr><td>1</td><td>Farm re-spec</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:1px;">ADOPTED</span> [[zones:home|home]] grain/bread hub · [[zones:meadow|meadow]] livestock/pasture · [[zones:orchard|orchard]] fruit/luxury. Each teaches a different chain + hazard and idles a different good.</td></tr>
-    <tr><td>2</td><td>Black Forge</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:1px;">FOLDED</span> becomes a progressive Forge (smithing) board in the mine region, not a standalone node. Roster of board-zones drops to <strong>6</strong>: home, meadow, orchard, quarry, caves, harbor.</td></tr>
-    <tr><td>3</td><td>home as permanent hub</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:1px;">ADOPTED</span> Kingdom Stockpile + caravan terminus; civic unlocks land here first.</td></tr>
-    <tr><td>4</td><td>fairground as episodic pull-back engine</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:1px;">ADOPTED</span> seasonal demands for old-zone goods.</td></tr>
-    <tr><td>5</td><td>Idle hand-off</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:#d3f9d8;color:#1f7a36;margin:1px;">CARAVAN DELIVERY</span> local caches ferried to the hub by a caravan network built on [[buildings:caravan_post|caravan_post]]; optional routing/upgrade; runs itself by default.</td></tr>
+    <tr><td>1</td><td>Farm re-spec</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);margin:1px;">ADOPTED</span> [[zones:home|home]] grain/bread hub · [[zones:meadow|meadow]] livestock/pasture · [[zones:orchard|orchard]] fruit/luxury. Each teaches a different chain + hazard and idles a different good.</td></tr>
+    <tr><td>2</td><td>Black Forge</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);margin:1px;">FOLDED</span> becomes a progressive Forge (smithing) board in the mine region, not a standalone node. Roster of board-zones drops to <strong>6</strong>: home, meadow, orchard, quarry, caves, harbor.</td></tr>
+    <tr><td>3</td><td>home as permanent hub</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);margin:1px;">ADOPTED</span> Kingdom Stockpile + caravan terminus; civic unlocks land here first.</td></tr>
+    <tr><td>4</td><td>fairground as episodic pull-back engine</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);margin:1px;">ADOPTED</span> seasonal demands for old-zone goods.</td></tr>
+    <tr><td>5</td><td>Idle hand-off</td><td><span style="display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;background:var(--status-built-bg);color:var(--status-built-fg);margin:1px;">CARAVAN DELIVERY</span> local caches ferried to the hub by a caravan network built on [[buildings:caravan_post|caravan_post]]; optional routing/upgrade; runs itself by default.</td></tr>
   </tbody>
 </table>
 

@@ -84,7 +84,7 @@ export default function BiomeEntryModal({ biomeKey, state, dispatch, onClose }: 
             <div className="flex items-center justify-between mb-1.5">
               <span className="hl-section-label">Pack provisions</span>
               {available.length > 0 && (
-                <button onClick={packAll} className="text-caption font-bold text-[#5a7a20] hover:text-[#3a5a10] underline">Pack all</button>
+                <button onClick={packAll} className="text-caption font-bold text-[color:var(--moss)] hover:text-[#3a5a10] underline">Pack all</button>
               )}
             </div>
             {available.length === 0 ? (

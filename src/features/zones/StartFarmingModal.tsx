@@ -103,8 +103,8 @@ function TileSlot({ category, selected, locked, activeTileId, variantCount, onTo
   // edit, so it shouldn't read as tappable.
   const interactive = !locked || variantCount > 1;
   const baseStyle = {
-    background: selected ? "#fffaf1" : "#dbcfb6",
-    color: "#2b2218",
+    background: selected ? "var(--board-chip-bg)" : "#dbcfb6",
+    color: "var(--ink)",
     border: selected ? "3px solid #91bf24" : "3px solid #8c7656",
     boxShadow: selected ? "0 2px 8px rgba(145,191,36,.25)" : "none",
     opacity: locked ? 0.85 : 1,
@@ -143,7 +143,7 @@ function TileSlot({ category, selected, locked, activeTileId, variantCount, onTo
         <button
           type="button"
           onClick={(e) => { e.stopPropagation(); onChoose(); }}
-          className="absolute top-1 right-1 bg-[#744d2e] text-[#fffaf1] rounded-md text-[10px] font-bold px-1.5 py-0.5 hover:bg-[#8a6040]"
+          className="absolute top-1 right-1 bg-[#744d2e] text-[color:var(--board-chip-bg)] rounded-md text-[10px] font-bold px-1.5 py-0.5 hover:bg-[color:var(--ink-mid)]"
           title="Change tile"
         >
           ✎
@@ -223,7 +223,7 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }: TileChoose
         aria-modal="true"
         aria-label={`Choose ${label} tile`}
         tabIndex={-1}
-        className="bg-[#f4ecd8] border-[4px] border-[#b28b62] rounded-[16px] px-4 py-3 max-w-[420px] w-[92vw] max-h-[80vh] overflow-y-auto shadow-2xl outline-none"
+        className="bg-[color:var(--bg-warm)] border-[4px] border-[color:var(--iron)] rounded-[16px] px-4 py-3 max-w-[420px] w-[92vw] max-h-[80vh] overflow-y-auto shadow-2xl outline-none"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-2">
@@ -258,8 +258,8 @@ function TileChooserPopup({ zoneCategory, state, dispatch, onClose }: TileChoose
                   aria-label={`${tile.displayName}${isActive ? " (active)" : ""}`}
                   className="flex items-start gap-2 rounded-xl px-2 py-2 text-left transition-colors"
                   style={{
-                    background: isActive ? "#fffaf1" : "#dbcfb6",
-                    color: "#2b2218",
+                    background: isActive ? "var(--board-chip-bg)" : "#dbcfb6",
+                    color: "var(--ink)",
                     border: isActive ? "3px solid #91bf24" : "3px solid #8c7656",
                   }}
                 >

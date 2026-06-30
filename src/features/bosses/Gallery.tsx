@@ -5,7 +5,7 @@ import type { GameState } from "../../types/state.js";
 
 const SEASON_ACCENT: Record<string, string> = {
   spring: "#5daa35",
-  summer: "#e3a92f",
+  summer: "var(--season-summer)",
   autumn: "#d9792d",
   winter: "#3a82c4",
 };
@@ -27,13 +27,13 @@ export default function BossGallery({ state }: BossGalleryProps) {
           const portraitKey = `boss_${boss.id}`;
           const defeated = flags[`${boss.id}_defeated`];
           const active = flags[`${boss.id}_active`];
-          const accent = SEASON_ACCENT[boss.season] || "#a8431a";
+          const accent = SEASON_ACCENT[boss.season] || "var(--flame-frame)";
           return (
             <div
               key={boss.id}
               className="hl-card !flex-row gap-3"
               style={{
-                borderColor: active ? "#ff7a00" : accent,
+                borderColor: active ? "var(--flame)" : accent,
                 opacity: defeated ? 0.85 : 1,
                 boxShadow: active ? "0 0 14px rgba(255,122,0,0.4)" : "none",
               }}
@@ -76,7 +76,7 @@ export default function BossGallery({ state }: BossGalleryProps) {
                     </RewardChip>
                   )}
                   {active && (
-                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[#ff7a00] text-white animate-pulse">
+                    <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-[color:var(--flame)] text-white animate-pulse">
                       Active
                     </span>
                   )}
@@ -86,7 +86,7 @@ export default function BossGallery({ state }: BossGalleryProps) {
                 </div>
                 <div className="mt-2 flex flex-wrap gap-2">
                   <CostChip
-                    style={{ background: "rgba(214,97,42,0.16)", color: "#8a4a26", borderColor: "rgba(214,97,42,0.45)" }}
+                    style={{ background: "rgba(214,97,42,0.16)", color: "var(--on-panel-label)", borderColor: "rgba(214,97,42,0.45)" }}
                   >
                     Tribute: {boss.target.amount} {boss.target.resource}
                   </CostChip>

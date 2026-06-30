@@ -85,12 +85,12 @@ function TrophyCard({ achievement, current, trophyState }: TrophyCardProps) {
 
   let borderCls = "";
   if (claimed)        { borderCls = "!border-[#91bf24]"; }
-  else if (unlocked)  { borderCls = "!border-[#c5a87a]"; }
+  else if (unlocked)  { borderCls = "!border-[color:var(--iron-soft)]"; }
 
   // Earned trophies glow with a warm parchment-gold fill so they read as
   // "won" at a glance; locked ones stay flat.
   const earnedStyle = claimed
-    ? { background: "linear-gradient(180deg, #fbf6e2 0%, #f1e7c6 100%)", boxShadow: "0 0 0 1px rgba(145,191,36,0.35), var(--card-shadow)" }
+    ? { background: "linear-gradient(180deg, var(--hud-bg) 0%, var(--panel-bottom) 100%)", boxShadow: "0 0 0 1px rgba(145,191,36,0.35), var(--card-shadow)" }
     : undefined;
 
   return (
@@ -113,7 +113,7 @@ function TrophyCard({ achievement, current, trophyState }: TrophyCardProps) {
               className="h-full rounded-full transition-[width] duration-500"
               style={{
                 width: `${pct}%`,
-                backgroundColor: claimed ? "#91bf24" : unlocked ? "#f7c254" : "#c8923a",
+                backgroundColor: claimed ? "#91bf24" : unlocked ? "#f7c254" : "var(--btn-gold-top)",
               }}
             />
           </div>
@@ -156,7 +156,7 @@ interface ResourceChipProps {
 
 function ResourceChip({ resource, count }: ResourceChipProps) {
   const discovered = count > 0;
-  const bg = discovered ? hexColor(resource.look.color) : "#d8c4a0";
+  const bg = discovered ? hexColor(resource.look.color) : "var(--on-dark-dim)";
   const textColor = discovered ? "#fff" : "#7a5e3f";
 
   return (
@@ -166,7 +166,7 @@ function ResourceChip({ resource, count }: ResourceChipProps) {
         width: 52,
         height: 62,
         backgroundColor: bg,
-        borderColor: discovered ? "rgba(255,255,255,0.3)" : "#b28b62",
+        borderColor: discovered ? "rgba(255,255,255,0.3)" : "var(--iron)",
         opacity: discovered ? 1 : 0.7,
       }}
     >

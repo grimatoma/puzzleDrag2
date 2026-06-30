@@ -24,8 +24,8 @@ export default function AppUpdateBanner() {
       style={{
         bottom: "calc(env(safe-area-inset-bottom) + 78px)",
         maxWidth: "min(420px, calc(100vw - 24px))",
-        background: "#f4e8d0",
-        borderColor: "#b28b62",
+        background: "var(--cream)",
+        borderColor: "var(--iron)",
         color: "#5a3a20",
       }}
     >
@@ -38,7 +38,7 @@ export default function AppUpdateBanner() {
       <button
         onClick={applyUpdate}
         className="ml-auto py-1.5 px-3 text-[13px] font-bold rounded-xl border-2 whitespace-nowrap"
-        style={{ background: "#d6612a", borderColor: "#a84010", color: "#fff" }}
+        style={{ background: "#d6612a", borderColor: "var(--flame-cta-bot)", color: "#fff" }}
       >
         Refresh
       </button>

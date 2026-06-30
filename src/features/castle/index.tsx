@@ -12,7 +12,7 @@ function ProgressBar({ value, max }: { value: number; max: number }) {
   return (
     <div className="h-2 rounded-full bg-[#2b2218]/25 overflow-hidden border border-[#b28b62]/50">
       <div
-        className="h-full bg-gradient-to-r from-[#c8923a] to-[#f0c068]"
+        className="h-full bg-gradient-to-r from-[color:var(--btn-gold-top)] to-[color:var(--gold-soft)]"
         style={{ width: `${pct}%` }}
       />
     </div>

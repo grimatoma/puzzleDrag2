@@ -55,6 +55,64 @@ const CONCEPT_LABELS: Record<string, string> = Object.fromEntries(
   CONCEPTS.map((c) => [c.id, c.label]),
 );
 
+// Per-concept sidebar icons. Previously every link rendered `ui_star`, so the
+// whole tree read as one undifferentiated list; giving each concept a distinct
+// glyph (the colored `ui_*` set) lets the eye find a section at a glance.
+// Chosen so that siblings *within the same WIKI_SECTIONS group* never collide
+// (e.g. Progression: boons♥ / dailyRewards★ / achievements🏆); mild reuse
+// across unrelated sections is fine. Unlisted ids fall back to `ui_star`.
+const CONCEPT_ICONS: Record<string, string> = {
+  // Systems
+  systems: "ui_settings",
+  seasons: "ui_star",
+  workers: "ui_farmer",
+  tools: "ui_build",
+  toolPowers: "ui_build",
+  buildings: "ui_home",
+  zones: "ui_map",
+  settlementBiomes: "ui_pin",
+  keepers: "ui_people",
+  bosses: "ui_trophy",
+  // Board
+  tiles: "ui_puzzle",
+  categories: "ui_puzzle",
+  tileDiscoveryMethods: "ui_pin",
+  boardKinds: "ui_scale",
+  hazards: "ui_warning",
+  // Economy
+  resources: "ui_inventory",
+  recipes: "ui_clipboard",
+  // World
+  npcs: "ui_people",
+  abilities: "ui_portal",
+  // Progression
+  boons: "ui_heart",
+  dailyRewards: "ui_star",
+  achievements: "ui_trophy",
+  // Screens (developer-only)
+  views: "ui_clipboard",
+  modals: "ui_pin",
+};
+const conceptIcon = (id: string): string => CONCEPT_ICONS[id] ?? "ui_star";
+
+// Narrative / design pages are keyed by slug rather than concept id. A document
+// glyph is the sensible default; a few slugs get a more telling icon.
+const PAGE_ICONS: Record<string, string> = {
+  overview: "ui_map",
+  progression: "ui_scale",
+  story: "ui_star",
+  zones: "ui_map",
+  future: "ui_star",
+  design_overview: "ui_clipboard",
+  design_progression: "ui_scale",
+  design_atlas: "ui_map",
+  design_economy: "ui_inventory",
+  design_systems: "ui_settings",
+  design_meta: "ui_star",
+  design_status: "ui_clipboard",
+};
+const pageIcon = (slug: string): string => PAGE_ICONS[slug] ?? "ui_clipboard";
+
 // Valid hash tabs: every concept id, the narrative-page namespace `page`, and
 // each developer utility id. The router only honours these.
 const VALID_TABS: string[] = [
@@ -211,7 +269,7 @@ function SidebarConceptSections({
                     title={effectiveCollapsed ? label : undefined}
                     aria-label={label}
                   >
-                    <Icon iconKey="ui_star" size={16} title="" />
+                    <Icon iconKey={conceptIcon(cid)} size={16} title="" />
                     {!effectiveCollapsed && <span className="flex-1">{label}</span>}
                   </button>
                 </div>
@@ -228,7 +286,7 @@ function SidebarConceptSections({
                           className={`wiki-nav-link${childActive ? " wiki-nav-link--active" : ""}`}
                           aria-label={childLabel}
                         >
-                          <Icon iconKey="ui_star" size={13} title="" />
+                          <Icon iconKey={conceptIcon(childId)} size={13} title="" />
                           <span className="flex-1">{childLabel}</span>
                         </button>
                       );
@@ -631,7 +689,7 @@ export default function WikiShell() {
                     title={effectiveCollapsed ? p.label : undefined}
                     aria-label={p.label}
                   >
-                    <Icon iconKey="ui_star" size={16} title="" />
+                    <Icon iconKey={pageIcon(p.slug)} size={16} title="" />
                     {!effectiveCollapsed && <span className="flex-1">{p.label}</span>}
                   </button>
                 );
@@ -657,7 +715,7 @@ export default function WikiShell() {
                     title={effectiveCollapsed ? p.label : undefined}
                     aria-label={p.label}
                   >
-                    <Icon iconKey="ui_star" size={16} title="" />
+                    <Icon iconKey={pageIcon(p.slug)} size={16} title="" />
                     {!effectiveCollapsed && <span className="flex-1">{p.label}</span>}
                   </button>
                 );

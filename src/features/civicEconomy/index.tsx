@@ -57,17 +57,17 @@ export default function TownHallModal({ state, dispatch }: { state: GameState; d
           Your settlements pay tithes and provisions on a schedule. Collect what's owed.
         </p>
 
-        <div className="mt-3 rounded-xl border-2 border-[#b28b62] bg-[#f4e8d0] p-3">
+        <div className="mt-3 rounded-xl border-2 border-[color:var(--iron)] bg-[color:var(--cream)] p-3">
           <div className="hl-section-label">Tax (all settlements)</div>
           <div className="text-[15px] font-bold" style={{ color: "#5a3a20" }} data-testid="civic-tax">
             +{tax} coins
           </div>
         </div>
 
-        <div className="mt-2 rounded-xl border-2 border-[#b28b62] bg-[#f4e8d0] p-3">
+        <div className="mt-2 rounded-xl border-2 border-[color:var(--iron)] bg-[color:var(--cream)] p-3">
           <div className="hl-section-label">Provisions (most-progressed town)</div>
           {rosterEntries.length === 0 ? (
-            <div className="text-[12px] italic" style={{ color: "#7a5a38" }} data-testid="civic-provisions-empty">
+            <div className="text-[12px] italic" style={{ color: "var(--ink-soft)" }} data-testid="civic-provisions-empty">
               Build a workshop, mill, or forge in your strongest town to earn free tools.
             </div>
           ) : (
@@ -77,18 +77,18 @@ export default function TownHallModal({ state, dispatch }: { state: GameState; d
               ))}
             </ul>
           )}
-          <div className="mt-1 text-[11px] italic" style={{ color: "#7a5a38" }}>
+          <div className="mt-1 text-[11px] italic" style={{ color: "var(--ink-soft)" }}>
             Provisions arrive as a care-package crate on your next board — match it to claim.
           </div>
         </div>
 
         {hasPending ? (
-          <p className="mt-2 text-[12px] font-bold" style={{ color: "#a8431a" }} data-testid="civic-pending">
+          <p className="mt-2 text-[12px] font-bold" style={{ color: "var(--flame-frame)" }} data-testid="civic-pending">
             📦 A care package is waiting on your board!
           </p>
         ) : null}
 
-        <p className="mt-2 text-[11px] italic" style={{ color: "#7a5a38" }}>
+        <p className="mt-2 text-[11px] italic" style={{ color: "var(--ink-soft)" }}>
           Strongest town: {homeZone}
         </p>
       </ParchmentDialog.Body>
