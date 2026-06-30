@@ -1,6 +1,7 @@
 import { STORAGE_KEYS } from "../../constants.js";
 import type { Action, GameState } from "../../types/state.js";
 import type { GameSettings } from "../../types/gameStateFields.js";
+import { DEFAULT_TILE_ART_MODE, resolveTileArtMode } from "../../tileArtMode.js";
 const STORAGE_KEY = STORAGE_KEYS.settings;
 
 function loadSettings(): Record<string, unknown> | null {
@@ -44,10 +45,20 @@ const DEFAULT_SETTINGS = {
   hapticsOn: true,
   tutorialDisabled: false,
   pixelSpriteOverride: false,
+  tileArtMode: DEFAULT_TILE_ART_MODE,
 };
 
+/** Merge persisted settings over the defaults, then derive the tile-art mode so
+ *  pre-selector saves (which only stored the boolean `pixelSpriteOverride`)
+ *  migrate to the 3-way mode, and the legacy flag stays mirrored to it. */
+function initialSettings(): GameSettings {
+  const merged = { ...DEFAULT_SETTINGS, ...(loadSettings() || {}) } as GameSettings;
+  const tileArtMode = resolveTileArtMode(merged);
+  return { ...merged, tileArtMode, pixelSpriteOverride: tileArtMode === "pixel" };
+}
+
 export const initial = {
-  settings: { ...DEFAULT_SETTINGS, ...(loadSettings() || {}) },
+  settings: initialSettings(),
   settingsTab: 'main',
 };
 
@@ -60,6 +71,19 @@ export function reduce(state: GameState, action: Action): GameState {
       const settings: GameSettings = {
         ...state.settings,
         [key]: !state.settings[key],
+      };
+      return { ...state, settings };
+    }
+
+    case "SETTINGS/SET_TILE_ART_MODE": {
+      const mode = action.mode;
+      if (state.settings?.tileArtMode === mode) return state;
+      // Keep the legacy boolean mirrored so any remaining reader (and the
+      // module-load storage read) agrees with the selected mode.
+      const settings: GameSettings = {
+        ...state.settings,
+        tileArtMode: mode,
+        pixelSpriteOverride: mode === "pixel",
       };
       return { ...state, settings };
     }

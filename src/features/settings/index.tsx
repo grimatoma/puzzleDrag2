@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, type ReactNode } from "react";
 import { ParchmentDialog } from "../../ui/primitives/Dialog.jsx";
 import { FeaturePanel } from "../_shared/uiTypes.js";
 import type { GameState, Dispatch } from "../../types/state.js";
+import type { GameSettings } from "../../types/gameStateFields.js";
+import { DEFAULT_TILE_ART_MODE, type TileArtMode } from "../../tileArtMode.js";
 import { useAppUpdateReady, applyUpdate, checkForUpdate } from "../../appUpdate.js";
 
 export const modalKey = "menu";
@@ -210,11 +212,53 @@ const AUDIO_ROWS = [
   { key: 'sfxOn',     label: 'Sound Effects' },
   { key: 'hapticsOn', label: 'Haptics' },
 ];
-const GRAPHICS_ROWS = [
-  { key: 'pixelSpriteOverride', label: 'Pixel Sprite Tiles' },
+
+// The three tile-art looks for the board, in the order players cycle through
+// them. `static`/`animated` share the hand-drawn vector art (motion off vs on);
+// `pixel` swaps in the baked PixelLab sprites.
+const TILE_ART_OPTIONS: { mode: TileArtMode; label: string; desc: string }[] = [
+  { mode: 'static',   label: 'Static',    desc: 'Hand-drawn tiles, no motion' },
+  { mode: 'animated', label: 'Animated',  desc: 'Hand-drawn tiles that move' },
+  { mode: 'pixel',    label: 'Pixel Art', desc: 'Baked pixel sprites' },
 ];
 
-interface SettingsTabProps { settings?: Record<string, boolean>; dispatch: Dispatch }
+// Three-way picker for the board's tile art. Replaces the old on/off pixel
+// toggle so players can also pin the vector art to its non-animated stills.
+function TileArtSelector({ value, dispatch }: { value: TileArtMode; dispatch: Dispatch }) {
+  return (
+    <div className="flex flex-col gap-2">
+      {TILE_ART_OPTIONS.map(({ mode, label, desc }) => {
+        const active = value === mode;
+        return (
+          <button
+            key={mode}
+            type="button"
+            onClick={() => dispatch({ type: 'SETTINGS/SET_TILE_ART_MODE', mode })}
+            aria-pressed={active}
+            className="flex items-center justify-between py-2 px-3 rounded-xl border-2 text-left transition-colors"
+            style={{
+              background: active ? '#d6612a' : 'var(--cream)',
+              borderColor: active ? 'var(--flame-cta-bot)' : 'var(--iron)',
+            }}
+          >
+            <span className="flex flex-col">
+              <span className="text-[13px] font-bold" style={{ color: active ? '#fff' : 'var(--ink)' }}>{label}</span>
+              <span className="text-[11px]" style={{ color: active ? '#ffe6d4' : 'var(--ink-soft)' }}>{desc}</span>
+            </span>
+            <span
+              className="flex-shrink-0 w-5 h-5 rounded-full border-2 flex items-center justify-center"
+              style={{ borderColor: active ? '#fff' : 'var(--iron)', background: active ? '#fff' : 'transparent' }}
+            >
+              {active && <span className="w-2 h-2 rounded-full" style={{ background: '#d6612a' }} />}
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+interface SettingsTabProps { settings?: GameSettings; dispatch: Dispatch }
 function SettingsTab({ settings = {}, dispatch }: SettingsTabProps) {
   function handleToggle(key: string) {
     dispatch({ type: 'SETTINGS/TOGGLE', key });
@@ -250,21 +294,13 @@ function SettingsTab({ settings = {}, dispatch }: SettingsTabProps) {
       <div className="hl-section-label text-center">
         Graphics
       </div>
-      <div className="flex flex-col gap-2">
-        {GRAPHICS_ROWS.map(({ key, label }) => (
-          <div
-            key={key}
-            className="flex items-center justify-between py-2 px-3 rounded-xl border-2"
-            style={{ background: 'var(--cream)', borderColor: 'var(--iron)' }}
-          >
-            <span className="text-[13px] font-bold" style={{ color: 'var(--ink)' }}>{label}</span>
-            <Toggle
-              on={!!settings[key]}
-              onToggle={() => handleToggle(key)}
-            />
-          </div>
-        ))}
+      <div className="text-[11px] font-bold uppercase tracking-wide px-1" style={{ color: 'var(--ink-soft)' }}>
+        Tile Art
       </div>
+      <TileArtSelector
+        value={settings.tileArtMode ?? DEFAULT_TILE_ART_MODE}
+        dispatch={dispatch}
+      />
     </div>
   );
 }
@@ -300,14 +336,14 @@ interface SettingsModalProps {
 }
 
 export default function SettingsModal({ state, dispatch }: SettingsModalProps) {
-  const s = state as GameState & { modal?: string | null; settingsTab?: string; settings?: Record<string, boolean> };
+  const s = state as GameState & { modal?: string | null; settingsTab?: string; settings?: GameSettings };
   const open = s.modal === 'menu' || s.modal === 'leaveBoard';
   const close = () => dispatch({ type: 'CLOSE_MODAL' });
   if (!open) return null;
   const leavingBoard = s.modal === 'leaveBoard';
 
   const tab = s.settingsTab || 'main';
-  const settings: Record<string, boolean> = s.settings || {};
+  const settings: GameSettings = s.settings || {};
 
   return (
     <ParchmentDialog open={open} onClose={close} size="lg" ariaLabel="Menu" backdropClassName="z-[70]">

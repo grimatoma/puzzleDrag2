@@ -19,6 +19,7 @@ import { rounded, makeTextures, regenerateTextures, paintTileCanvas, currentSeas
 import { hasSeasonalTileAnim, seasonalTileHasTransitions, seasonalVectorAdvance } from "./textures/seasonal/seasonalTiles.js";
 import { preloadSeasonalArt, seasonalBakedActive, seasonalAdvance, seasonalIdleFrameCount, seasonalMaxIdleFrames, seasonalGestureFrameCount, seasonalMaxGestureFrames, bakedActiveKeys, onPixelSpriteOverrideChange } from "./textures/seasonal/seasonalArt.js";
 import { idleAnimTime } from "./textures/idleAnimTiming.js";
+import { tileArtMotionEnabled, onTileArtModeChange } from "./tileArtMode.js";
 import type { SeasonName } from "./textures/seasonal/types.js";
 import { isConceptTileIconsEnabled } from "./featureFlags.js";
 import {
@@ -150,6 +151,8 @@ export class GameScene extends Phaser.Scene {
   _bankSeason: Map<string, number> = new Map();
   /** Teardown for the pixel-sprite-override subscription (set in create()). */
   _unsubPixelOverride: (() => void) | null = null;
+  /** Teardown for the tile-art-mode (static/animated/pixel) subscription. */
+  _unsubTileArtMode: (() => void) | null = null;
 
   // Misc scene objects
   sparkEmitter!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -198,6 +201,14 @@ export class GameScene extends Phaser.Scene {
       if (!this.scene.isActive()) return;
       regenerateTextures(this);
       this._rebakeBakedTiles();
+    });
+    // Tile-art mode (Settings → Graphics: static / animated / pixel). The pixel
+    // dimension is handled by the override subscription above; this fires for
+    // every mode change and re-bakes so a switch to "static" snaps the seasonal
+    // tiles to their current-season stills and a switch back to "animated"
+    // resumes the idle loop (the per-frame loop reads _motionEnabled() live).
+    this._unsubTileArtMode = onTileArtModeChange(() => {
+      if (this.scene.isActive()) this.refreshSeasonTint();
     });
     this.layoutDims();
     this.drawBackground();
@@ -307,6 +318,8 @@ export class GameScene extends Phaser.Scene {
       this.scale.off("resize", onResize);
       this._unsubPixelOverride?.();
       this._unsubPixelOverride = null;
+      this._unsubTileArtMode?.();
+      this._unsubTileArtMode = null;
     });
 
     // Apply state.grid → Phaser when Redux pushes a change back (hazard engines may mutate)
@@ -2130,9 +2143,11 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Whether per-frame motion should play. Honors prefers-reduced-motion; the
+  /** Whether per-frame motion should play. Off for the "static" tile-art mode
+   *  (the user picked the non-animated look) and for prefers-reduced-motion; the
    *  correct seasonal STATIC art is still baked when motion is off. */
   private _motionEnabled(): boolean {
+    if (!tileArtMotionEnabled()) return false;
     if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
       try {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;

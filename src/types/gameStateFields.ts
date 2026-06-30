@@ -8,6 +8,7 @@ import type { RunSummary } from "../features/runSummary/slice.js";
 import type { BossState } from "../features/boss/slice.js";
 import type { Quest } from "../features/quests/data.js";
 import type { Toast } from "../features/toasts/data.js";
+import type { TileArtMode } from "../tileArtMode.js";
 
 /** Legacy 3-slot daily quest rows (spread at root from quests slice `initial`). */
 export interface QuestDailyLegacy {
@@ -27,10 +28,16 @@ export interface GameSettings {
   /** Feature flag: when true the onboarding tutorial never auto-starts.
    *  Lives in settings so it survives DEV/RESET_GAME (which preserves settings). */
   tutorialDisabled?: boolean;
-  /** When true, every tile renders its baked pixel sprite instead of the hand-drawn
-   *  vector art (overrides the all-vector showcase set). */
+  /** @deprecated Superseded by {@link GameSettings.tileArtMode}. Kept in sync
+   *  (true ⇔ tileArtMode === "pixel") so older readers and saves still work.
+   *  When true, every tile renders its baked pixel sprite instead of the
+   *  hand-drawn vector art (overrides the all-vector showcase set). */
   pixelSpriteOverride?: boolean;
-  [key: string]: boolean | undefined;
+  /** How the board renders tile art: "static" (vector stills, no idle motion),
+   *  "animated" (vector art with idle motion — the default), or "pixel" (the
+   *  baked PixelLab pixel sprites). */
+  tileArtMode?: TileArtMode;
+  [key: string]: boolean | string | undefined;
 }
 
 export interface TutorialState {
