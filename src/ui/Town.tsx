@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import type { CSSProperties } from "react";
 import { BUILDINGS, getItem } from "../constants.js";
 import { isBuildingReachable } from "../game/reachability.js";
 import { useTooltip, Tooltip } from "./Tooltip.jsx";
@@ -62,6 +63,30 @@ const CRAFTING_STATIONS = new Set(["bakery", "forge", "larder"]);
 // zone they haven't founded yet, show a top-center banner that opens the
 // shared BiomePicker. Also surfaces the "complete one settlement first"
 // progression gate (the reducer enforces it; this just explains why).
+// Shared look for the two map "signpost" CTAs (Found settlement / Tier up).
+// Blocked => an opaque carved-wood sign with the goal in readable cream, so it
+// reads as an in-world signpost rather than a translucent debug box; ready =>
+// the CTA's own accent gradient. One helper replaces the two divergent inline
+// colour systems these banners used to duplicate (UX review §D, 2026-06).
+const SIGN_SHADOW = "0 4px 14px rgba(30,18,8,.5)";
+function signStyle(blocked: boolean, readyBg: string, readyBorder: string): CSSProperties {
+  return blocked
+    ? {
+        background: "linear-gradient(to bottom, #6b4d2c, #4a3318)",
+        color: "#f6e8c8",
+        border: "2px solid #2f2012",
+        boxShadow: SIGN_SHADOW,
+        opacity: 1,
+      }
+    : {
+        background: readyBg,
+        color: "white",
+        border: `2px solid ${readyBorder}`,
+        boxShadow: SIGN_SHADOW,
+        opacity: 1,
+      };
+}
+
 function FoundSettlementBanner({ state, dispatch }: { state: GameState; dispatch: Dispatch }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const zoneId = String(state.mapCurrent ?? "");
@@ -100,13 +125,7 @@ function FoundSettlementBanner({ state, dispatch }: { state: GameState; dispatch
           disabled={blocked}
           onClick={() => !blocked && setPickerOpen(true)}
           className="pointer-events-auto rounded-lg px-4 py-2 font-bold text-[13px] transition-colors disabled:cursor-not-allowed"
-          style={{
-            background: blocked ? "#7a6a4a" : "linear-gradient(to bottom, #c8923a, #a06a1a)",
-            color: "white",
-            border: blocked ? "2px solid #5a4a30" : "2px solid #7a4f10",
-            opacity: blocked ? 0.85 : 1,
-            boxShadow: blocked ? "none" : "0 3px 10px rgba(0,0,0,.45)",
-          }}
+          style={signStyle(blocked, "linear-gradient(to bottom, #d99a2e, #a8701a)", "#6b4309")}
           title={blocked ? blockedReason : `Found ${name}`}
         >
           🏗 Found this settlement · {costLabel}
@@ -171,13 +190,7 @@ function TierUpgradeBanner({ state, dispatch }: { state: GameState; dispatch: Di
         disabled={blocked}
         onClick={() => !blocked && dispatch({ type: "TIER_UP", payload: { zoneId } })}
         className="pointer-events-auto rounded-lg px-4 py-2 font-bold text-[13px] transition-colors disabled:cursor-not-allowed"
-        style={{
-          background: blocked ? "#7a6a4a" : "linear-gradient(to bottom, #5aa84a, #3f7a34)",
-          color: "white",
-          border: blocked ? "2px solid #5a4a30" : "2px solid #2c5a22",
-          opacity: blocked ? 0.85 : 1,
-          boxShadow: blocked ? "none" : "0 3px 10px rgba(0,0,0,.45)",
-        }}
+        style={signStyle(blocked, "linear-gradient(to bottom, #5aa84a, #3f7a34)", "#2c5a22")}
         title={blocked ? `Keep gathering to grow into a ${next.name}` : `Grow into a ${next.name}`}
       >
         ⬆ Upgrade to {next.name}  ·  {costLabel || "free"}
@@ -389,13 +402,18 @@ export function TownView({ state, dispatch, active = true, warm = false, onReady
               setBuildPickerOpen(true);
             }
           }}
-          className="absolute z-30 rounded-full font-bold shadow-lg border-[3px] border-white"
+          className="absolute z-30 rounded-full font-bold"
           style={{
             right: "1.5rem",
             bottom: "10%",
             padding: "0.65rem 1.1rem",
-            background: pendingBuilding ? "#c8523a" : "#9bdb6a",
-            color: pendingBuilding ? "#fff" : "#1a2a10",
+            // Primary town action: a confident solid green (was washed #9bdb6a),
+            // cancel switches to danger red. Shares the pill shape + shadow with
+            // the board-entry CTAs so they read as one action language (§D).
+            background: pendingBuilding ? "var(--danger)" : "linear-gradient(to bottom, #6db83f, #4f8c2a)",
+            color: "#fff",
+            border: pendingBuilding ? "2px solid #7a241c" : "2px solid #2f5a1c",
+            boxShadow: "0 4px 14px rgba(30,18,8,.45)",
             fontSize: "clamp(11px,1.2vw,14px)",
           }}
           aria-label={pendingBuilding ? "Cancel placement" : "Build"}
@@ -417,6 +435,11 @@ export function TownView({ state, dispatch, active = true, warm = false, onReady
           {townPlan.boards.map((b: { kind: string }) => {
             const label = BOARD_ENTRY_LABEL[b.kind] ?? b.kind;
             const locked = isBiomeLocked(state, b.kind);
+            // The pill border carries the board's BIOME accent, matching the
+            // ring drawn around that board (farm=green, mine=blue, fish=teal),
+            // so a pill visibly belongs to the field it opens (§C/§D).
+            const biomeAccent =
+              b.kind === "mine" ? "var(--biome-mine)" : b.kind === "fish" ? "var(--biome-fish)" : "var(--biome-farm)";
             return (
               <button
                 key={b.kind}
@@ -425,11 +448,13 @@ export function TownView({ state, dispatch, active = true, warm = false, onReady
                 onClick={() => { if (!locked) setEntryBiome(b.kind); }}
                 aria-label={locked ? `${label} (locked)` : `Enter ${label}`}
                 title={locked ? (canEnterBiome(state, b.kind).reason ?? "Locked") : undefined}
-                className="rounded-full font-bold shadow-lg border-[3px] border-white disabled:opacity-60 disabled:cursor-not-allowed"
+                className="rounded-full font-bold disabled:opacity-60 disabled:cursor-not-allowed"
                 style={{
                   padding: "0.65rem 1.1rem",
-                  background: locked ? "#cdbfa6" : "#f4e4c1",
-                  color: "#2b2218",
+                  background: locked ? "#cdbfa6" : "#fbf4e2",
+                  color: locked ? "#6b5e44" : "var(--ink)",
+                  border: `2px solid ${locked ? "var(--iron-deep)" : biomeAccent}`,
+                  boxShadow: "0 4px 14px rgba(30,18,8,.4)",
                   fontSize: "clamp(11px,1.2vw,14px)",
                 }}
               >

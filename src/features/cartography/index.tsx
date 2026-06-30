@@ -444,11 +444,9 @@ function EmptyPanel() {
       <div className="text-micro mt-1" style={{ color: "#5a3a20" }}>
         Tap a hearth, a sister-hold, or a quiet mark for its name and what waits there.
       </div>
-      <div className="mt-2 grid grid-cols-3 gap-1.5 w-full" style={{ fontSize: 10 }}>
-        <Legenda dot="#bb3b2f" stroke="#2a1a0a" label="Lit hearth" />
-        <Legenda dot="#f5e09a" stroke="#f5e09a" label="Walkable road" glow />
-        <Legenda dot="#8a6a50" stroke="#8a6a50" label="Untraveled" muted />
-      </div>
+      {/* The map's full key lives in the always-on <LegendBar/> at the bottom of
+          the screen; the redundant mini-legend that used to sit here was removed
+          (UX review §6 — two stacked legends). */}
     </div>
   );
 }

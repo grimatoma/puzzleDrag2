@@ -1,4 +1,9 @@
 import "./src/index.css";
+// Bundle the display face so in-world titles actually render in it. The
+// --font-display stack previously led with Cinzel / IM Fell, neither of which
+// is bundled, so titles silently fell back to system serif (UX review §E).
+import "@fontsource/fraunces/700.css";
+import "@fontsource/fraunces/800.css";
 import React from "react";
 import { createRoot } from "react-dom/client";
 import PuzzleCraftStylePhaserPrototype from "./prototype";

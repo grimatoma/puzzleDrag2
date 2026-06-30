@@ -124,10 +124,16 @@ function convertAttributes(
 // Heading style helpers
 // ---------------------------------------------------------------------------
 
+// Authored-prose headings. The prior scale (18/15/13) put h2/h3 *below* the
+// ~16px body text, inverting the hierarchy so narrative pages didn't chunk.
+// Restored to a real descending scale above body, in the Fraunces display face
+// used by the generated pages, so authored and generated headings match
+// (UX review §F).
+const HEADING_FONT = '"Fraunces", ui-serif, Georgia, "Times New Roman", serif';
 const HEADING_STYLES: Record<string, React.CSSProperties> = {
-  h1: { fontSize: 18, fontWeight: 700, color: COLORS.ink, margin: "0.5em 0 0.25em" },
-  h2: { fontSize: 15, fontWeight: 700, color: COLORS.ink, margin: "0.5em 0 0.25em" },
-  h3: { fontSize: 13, fontWeight: 700, color: COLORS.ink, margin: "0.4em 0 0.2em" },
+  h1: { fontFamily: HEADING_FONT, fontSize: 26, fontWeight: 800, color: COLORS.ink, margin: "0.7em 0 0.3em", lineHeight: 1.15 },
+  h2: { fontFamily: HEADING_FONT, fontSize: 20, fontWeight: 700, color: COLORS.ink, margin: "1em 0 0.3em", lineHeight: 1.2 },
+  h3: { fontFamily: HEADING_FONT, fontSize: 16.5, fontWeight: 700, color: COLORS.ink, margin: "0.8em 0 0.2em", lineHeight: 1.25 },
 };
 
 // ---------------------------------------------------------------------------

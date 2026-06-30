@@ -608,7 +608,7 @@ export default function App() {
 
       <div
         data-testid="app-shell"
-        className="hl-app-shell relative w-full max-w-[1280px] aspect-[5/4] max-h-[100dvh] max-[1024px]:aspect-auto max-[1024px]:max-h-none max-[1024px]:w-full max-[1024px]:h-full max-[1024px]:max-w-none bg-[#f4ecd6] rounded-2xl max-[1024px]:rounded-none overflow-hidden shadow-2xl border border-[#c9b993] flex flex-col"
+        className="hl-app-shell relative w-full max-w-[1280px] aspect-[5/4] max-h-[100dvh] max-[1024px]:aspect-auto max-[1024px]:max-h-none max-[1024px]:w-full max-[1024px]:h-full max-[1024px]:max-w-none bg-[color:var(--bg-frame)] rounded-2xl max-[1024px]:rounded-none overflow-hidden shadow-2xl border border-[color:var(--iron)] flex flex-col"
         style={{ zIndex: 1 }}
       >
         {/* HUD bar — hidden on the board so the puzzle claims the full
@@ -682,7 +682,7 @@ export default function App() {
                 />
               }
               board={
-                <BoardFrame seasonIdx={seasonIdx} armed={armedTapTarget}>
+                <BoardFrame seasonIdx={seasonIdx} armed={armedTapTarget} biomeKey={state.biomeKey}>
                   <PhaserMount
                     dispatch={dispatch}
                     biomeKey={state.biomeKey}

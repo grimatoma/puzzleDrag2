@@ -8,71 +8,95 @@
  */
 
 :root {
-  /* ── Surfaces ─────────────────────────────────────────────────────── */
-  --parchment:        #f6efe0;
+  /* ── Surfaces — a real ladder. page (sunk) < parchment < panel < card
+       (raised). Each plane is a clearly different luminance so panels lift
+       off the page and cards lift off panels, instead of all melting into
+       one parchment plane (UX review §A, 2026-06). ──────────────────── */
+  --parchment:        #f6efe0;   /* mid surface (the everyday background) */
   --parchment-dim:    #e9dfc6;
   --parchment-faint:  rgba(240, 230, 207, 0.35);
   --parchment-muted:  rgba(240, 230, 207, 0.55);
   --parchment-soft:   #fbf7eb;
-  --paper:            #f9f2dd;
+  --paper:            #fffdf6;   /* raised card paper (was #f9f2dd)       */
   --paper-soft:       #f6efe0;
 
-  /* ── Iron / structure (border family — was a dark brown frame; now
-       a soft cream border that lifts into the parchment family) ─────── */
-  --iron:             #c9b993;
-  --iron-soft:        #d8c9a4;
-  --iron-deep:        #a89272;
-  --iron-edge:        rgba(201, 185, 147, 0.45);
+  /* ── Iron / structure (border family). Lifted too far in the prior pass
+       (#c9b993 = 1.69:1 on parchment — invisible). Restored to a border
+       that actually reads: #a8895a ≈ 3.2:1, still warm, not a dark frame
+       (UX review §A). ─────────────────────────────────────────────── */
+  --iron:             #a8895a;
+  --iron-soft:        #c2ab7e;
+  --iron-deep:        #8c6f44;
+  --iron-edge:        rgba(168, 137, 90, 0.55);
 
   /* ── Ink / text ───────────────────────────────────────────────────── */
   --ink:              #2b2218;
-  --ink-soft:         #7a5e3f;
-  --ink-mid:          #7a5e3f;
-  --ink-light:        #c9b993;
-  --panel-edge:       #c9b993;
+  --ink-soft:         #7a5e3f;   /* secondary text (5.2:1)                */
+  --ink-mid:          #80623e;   /* tertiary text — now distinct from -soft (4.9:1) */
+  --ink-light:        #8c7349;   /* faint text — decoupled from the border (4.4:1) */
+  --panel-edge:       #a8895a;
   --cream:            #f8e7c6;
   --cream-soft:       #f7e2b6;
 
-  /* ── Accents (single saturation, hue varies) ─────────────────────── */
-  --ember:            #d6612a;
+  /* ── Accents. Deepened so they read as text on light chrome and as
+       white-on-fill buttons, and saturated so they feel like a system,
+       not exceptions (UX review §B). The "loud" budget lives here and in
+       the season accents below. ─────────────────────────────────────── */
+  --ember:            #cf5520;   /* primary action / level (4.2:1 text)   */
   --ember-soft:       #ff8b25;
   --ember-hot:        #c96442;
-  --gold:             #e2b24a;
+  --gold:             #e2b24a;   /* reward / coin — used as a FILL        */
   --gold-soft:        #f0c965;
   --gold-bright:      #ffd248;
   --gold-warm:        #ffd34c;
-  --moss:             #6f8a3a;
+  --gold-ink:         #8a5a12;   /* gold as TEXT on light (5:1)           */
+  --moss:             #5a7d2a;   /* deepened (4.7:1)                      */
   --moss-soft:        #a8c44a;
   --indigo:           #38406b;
   --rose:             #9c3a4a;
   --slate:            #5a5e62;
-  --danger:           #b13a2a;
+  --danger:           #b1322a;
+  --arcane:           #5b3f86;   /* portal / keeper accent (8:1)          */
 
-  /* ── Biome accents (badge / strip, not full backgrounds) ─────────── */
-  --biome-farm:       #7fa848;
-  --biome-mine:       #6a7d92;
-  --biome-fish:       #4a8aa8;
+  /* ── Biome accents (board frame, zone badge, board-entry pill). These
+       were defined but DEAD (zero consumers); wired in Phase 1. Each is a
+       saturated, legible domain hue (UX review §B). ──────────────────── */
+  --biome-farm:       #4f7a2a;
+  --biome-mine:       #3f5d80;
+  --biome-fish:       #2f7e96;
 
-  /* ── Board surfaces (parchment-tinted; was saturated season fills) ─ */
-  --board-tools-top:    #fbf7eb;
+  /* ── Board surfaces (parchment-tinted). Borders restored to the
+       readable iron value (UX review §A). ───────────────────────────── */
+  --board-tools-top:    #fffdf6;
   --board-tools-bot:    #f0e3c4;
-  --board-tools-border: #c9b993;
-  --board-panel-border: #c9b993;     /* was #3a2412 */
-  --board-panel-track:  rgba(122, 94, 63, 0.18);
-  --board-chip-bg:      #fff7e6;     /* was #fff5dc */
-  --board-chip-border:  #c9b993;
+  --board-tools-border: #a8895a;
+  --board-panel-border: #a8895a;
+  --board-panel-track:  rgba(122, 94, 63, 0.22);
+  --board-chip-bg:      #fffaf0;
+  --board-chip-border:  #a8895a;
 
   /* ── Season-tinted field gradients (the board card backdrop). Lifted
        so the board is a parchment card with seasonal warmth rather than
        a saturated colour fill — pairs with the biome accent strip. ── */
-  --field-spring-top: #dbe6b5;
-  --field-spring-bot: #b8cf8a;
-  --field-summer-top: #ecdfb0;
-  --field-summer-bot: #c7b87a;
-  --field-fall-top:   #e8c890;
-  --field-fall-bot:   #c8a45a;
-  --field-winter-top: #dde4ea;
-  --field-winter-bot: #b6c2cc;
+  /* Saturated so the four seasons are unmistakable at a glance —
+     green / gold / orange / cool-blue — while staying light enough that
+     tiles read on top (UX review §C, "loud" budget). */
+  --field-spring-top: #d4ec97;
+  --field-spring-bot: #9fc758;
+  --field-summer-top: #f0d877;
+  --field-summer-bot: #cda93c;
+  --field-fall-top:   #f0b85e;
+  --field-fall-bot:   #c87a30;
+  --field-winter-top: #cfdcec;
+  --field-winter-bot: #9fb6cc;
+
+  /* ── Per-season accent — the SAME hue is used in three places at once
+       (board frame, HUD season strip, season chip) so the current season
+       is something the player feels, not reads (UX review §C). ──────── */
+  --season-spring:    #5a9e2e;
+  --season-summer:    #e0a52a;
+  --season-fall:      #cf6a1f;
+  --season-winter:    #3f6f9e;
 
   /* ── HUD depth — distinguish from page bg with one shade + shadow ── */
   --hud-bg:           #faf3df;
@@ -80,18 +104,20 @@
                       0 1px 0 var(--iron),
                       0 4px 12px rgba(60, 40, 20, 0.06);
 
-  /* ── Card shadow — subtle lift for rows / tiles on light chrome ──── */
-  --card-shadow:      0 1px 0 rgba(201, 185, 147, 0.55),
-                      0 2px 6px rgba(60, 40, 20, 0.05);
-  --card-shadow-strong: 0 2px 0 rgba(168, 146, 114, 0.45),
-                        0 4px 12px rgba(60, 40, 20, 0.08);
+  /* ── Card shadow — lift for rows / tiles on light chrome. Deepened to
+       pair with the readable border (UX review §A). ─────────────────── */
+  --card-shadow:      0 1px 0 rgba(168, 137, 90, 0.55),
+                      0 2px 6px rgba(60, 40, 20, 0.07);
+  --card-shadow-strong: 0 2px 0 rgba(140, 111, 68, 0.5),
+                        0 5px 14px rgba(60, 40, 20, 0.11);
 
-  /* ── Backgrounds (lifted parchment family; legacy "dark" names kept
-       so existing consumers keep resolving — values are now light) ── */
-  --bg-darkest:       #e9dfc6;
-  --bg-darker:        #e9dfc6;
-  --bg-dark:          #f4ecd6;
-  --bg-frame:         #f4ecd6;
+  /* ── Backgrounds — page is the SUNK plane (below panels/cards) so
+       surfaces lift off it. (Legacy "dark" names kept; values are light
+       but now genuinely the lowest plane in the ladder — UX review §A.) ── */
+  --bg-darkest:       #e4d8bb;
+  --bg-darker:        #e7dcc0;
+  --bg-dark:          #efe6cf;
+  --bg-frame:         #efe6cf;
   --bg-warm:          #f9f2dd;
 
   /* ── Spacing scale (pairs with Tailwind 4px base) ────────────────── */
@@ -158,7 +184,10 @@
        host page has loaded them; the fallback to ui-serif/Georgia
        still feels distinct from the body system-ui sans, so the
        upgrade lands even without a webfont. */
-  --font-display:     "Cinzel", "IM Fell English", "Fraunces", ui-serif, Georgia, "Times New Roman", serif;
+  /* Fraunces leads — it is the one face actually bundled (main.tsx /
+     balanceEntry.tsx). Cinzel / IM Fell are kept as graceful fallbacks if a
+     host page happens to provide them (UX review §E). */
+  --font-display:     "Fraunces", "Cinzel", "IM Fell English", ui-serif, Georgia, "Times New Roman", serif;
 
   /* ════════════════════════════════════════════════════════════════════
    * SEMANTIC UI CHROME — single source of truth for the panel/card system.
@@ -172,32 +201,35 @@
    * callers never repeat the mismatch.
    * ════════════════════════════════════════════════════════════════════ */
 
-  /* ── Light feature panel (full-screen views) ─────────────────────── */
-  --panel-top:           #fbf7eb;   /* parchment lifted, gradient start */
-  --panel-bottom:        #f4ecd6;   /* gradient end                    */
-  --panel-border:        #c9b993;   /* soft border (was iron frame)    */
-  --panel-toolbar:       rgba(201, 185, 147, 0.18);  /* search/filter strip */
-  --panel-divider:       rgba(201, 185, 147, 0.45);
+  /* ── Light feature panel (full-screen views). Mid-raised plane: sits
+       above the page, below cards. Border now reads at ~3.5:1 (§A). ──── */
+  --panel-top:           #faf4e4;   /* gradient start                  */
+  --panel-bottom:        #f1e7cd;   /* gradient end                    */
+  --panel-border:        #a8895a;   /* readable border (was 1.69:1)    */
+  --panel-toolbar:       rgba(168, 137, 90, 0.16);  /* search/filter strip */
+  --panel-divider:       rgba(168, 137, 90, 0.5);
 
   /* Arcane variant (Portal) — light panel, violet frame + accents. */
   --panel-arcane-top:    #ddd0ea;
   --panel-arcane-bottom: #c4b2dc;
-  --panel-arcane-border: #8a6aa8;
+  --panel-arcane-border: #6e4f9a;
 
-  /* ── Inset wells (sub-sections sunk into a panel) ────────────────── */
-  --well-bg:             rgba(122, 94, 63, 0.10);
-  --well-border:         rgba(122, 94, 63, 0.22);
+  /* ── Inset wells (sub-sections sunk into a panel) — a real recessed
+       plane, not a 10% tint (§A). ───────────────────────────────────── */
+  --well-bg:             #e7dcc0;
+  --well-border:         rgba(140, 111, 68, 0.4);
 
-  /* ── Light cards (rows / tiles inside panels & dialogs) ──────────── */
-  --card-bg:             #fbf7eb;
-  --card-bg-hover:       #fff7e6;
-  --card-border:         #c9b993;
-  --card-border-strong:  #a89272;
+  /* ── Light cards (rows / tiles inside panels & dialogs) — the raised,
+       top plane: clearly lighter than panels so cards lift (§A). ─────── */
+  --card-bg:             #fffdf6;
+  --card-bg-hover:       #fff8ea;
+  --card-border:         #a8895a;
+  --card-border-strong:  #8c6f44;
 
   /* ── Text on LIGHT chrome (panels, cards, dialogs) ───────────────── */
   --on-panel:            #2b2218;   /* primary  (alias of --ink)      */
-  --on-panel-dim:        #7a5e3f;   /* secondary                      */
-  --on-panel-faint:      #c9b993;   /* tertiary / border tone         */
+  --on-panel-dim:        #7a5e3f;   /* secondary (5.2:1)              */
+  --on-panel-faint:      #8c7349;   /* tertiary — decoupled from border (4.4:1) */
   --on-panel-label:      #8a4a26;   /* section labels — warm accent   */
 
   /* ── Text on DARK chrome (HUD, dark dialogs, board) ──────────────── */
