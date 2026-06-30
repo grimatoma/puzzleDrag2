@@ -158,11 +158,11 @@
   sell, lineBase ↔ thresholds, uiMeta ↔ boss targets) would convert a whole class of silent drift into
   CI failures.</p>
 
-  <div class="box amber"><b>Scope of this document.</b> Originally a <b>report only</b>. A first remediation pass
-  (<b>“wave one”</b>) has since landed the safe, no-gameplay-change subset — see the box below. Each remaining
-  finding still carries its own evidence and a recommended fix so any subset can be actioned later. Where a fix
-  needs a design call (the blackberry product; whether crafted-good prices should rise ~10×), both options are
-  presented rather than chosen.</div>
+  <div class="box amber"><b>Scope of this document.</b> Originally a <b>report only</b>. Two remediation passes have
+  since landed: <b>“wave one”</b> (the safe, no-gameplay-change subset) and <b>“wave two”</b> (everything else) — see
+  the boxes below. <b>Every finding is now resolved.</b> The two design calls were decided by the maintainer:
+  the blackberry tile honestly produces <code>pie</code> and jam became a real crafted good (#1), and the
+  10%-of-value crafted-sell rule was kept as intended (#2). Each finding still carries its original evidence below.</div>
 
   <div class="box tip"><b>Wave one — applied (safe, no gameplay change).</b> The following were fixed in code,
   verified by <code>typecheck</code> / <code>lint</code> / <code>action-types:check</code> / full <code>vitest</code>
