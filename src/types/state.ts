@@ -247,6 +247,12 @@ export interface GameState {
   lastChainSnapshot: Record<string, unknown> | null;
   magicFertilizerCharges: number;
   built: Record<string, Record<string, unknown>>;
+  /**
+   * Buildings made buildable by a quest/almanac reward (`unlockBuilding`), beyond
+   * what zone/cartography tiers unlock. Unioned into `globallyUnlockedBuildings`.
+   * Optional/additive — absent on older saves, read with `?? []`.
+   */
+  questUnlockedBuildings?: string[];
   zoneNames: Record<string, string>;
   settlements: Record<string, { founded: boolean; tier?: number; [k: string]: unknown }>;
   influence: number;
