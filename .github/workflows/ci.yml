@@ -199,7 +199,7 @@ jobs:
   visual-rebaseline:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_goldens }}
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 120
     permissions:
       contents: write
     steps:
@@ -211,24 +211,37 @@ jobs:
       - run: npm ci
       - name: Install Playwright chromium (+ system deps)
         run: npx playwright install --with-deps chromium
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+      # Each suite is committed + pushed immediately after it regenerates, so a
+      # timeout (or failure) in the slower mobile suite never discards the
+      # already-finished desktop goldens. Each commit no-ops cleanly when the
+      # render is already byte-identical to the committed goldens.
       - run: npm run test:visual:update # desktop-smoke goldens → tests/visual/__goldens__/
+      - name: Commit desktop goldens
+        run: |
+          git add tests/visual/__goldens__/
+          if git diff --cached --quiet; then
+            echo "Desktop goldens already up to date — nothing to commit."
+          else
+            git commit -m "test(visual): re-baseline desktop goldens on CI runner"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
       - run: npm run test:visual:mobile:update # iphone-portrait visual.spec goldens (e.g. build picker)
+      - name: Commit mobile goldens
+        run: |
+          git add tests/visual/__goldens__/
+          if git diff --cached --quiet; then
+            echo "Mobile goldens already up to date — nothing to commit."
+          else
+            git commit -m "test(visual): re-baseline mobile goldens on CI runner"
+            git push origin HEAD:${GITHUB_REF_NAME}
+          fi
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: regenerated-goldens
           path: tests/visual/__goldens__/
           retention-days: 7
-      # Commit the freshly-baselined PNGs back to the dispatched branch so the
-      # author doesn't have to download + unzip the artifact by hand. No-ops
-      # cleanly when the render is already byte-identical to the committed goldens.
-      - name: Commit regenerated goldens
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add tests/visual/__goldens__/
-          if git diff --cached --quiet; then
-            echo "Goldens already up to date — nothing to commit."
-          else
-            git commit -m "test(visual): re-baseline desktop + mobile goldens on CI runner"
-            git push origin HEAD:${GITHUB_REF_NAME}
-          fi
