@@ -514,7 +514,7 @@ export function TownView({ state, dispatch, active = true, warm = false, onReady
               eyebrow={`Plot ${(purchaseBuilding._plot ?? 0) + 1}`}
               title={purchaseBuilding.name}
               description={purchaseBuilding.desc}
-              icon={<BuildingPreview building={purchaseBuilding} />}
+              icon={<BuildingPreview building={purchaseBuilding} size={68} />}
               actions={
                 <>
                   <DetailActionButton
@@ -542,10 +542,11 @@ export function TownView({ state, dispatch, active = true, warm = false, onReady
   );
 }
 
-function BuildingPreview({ building }: { building: Building }) {
+function BuildingPreview({ building, size = 56 }: { building: Building; size?: number }) {
+  const iconKey = building.icon ?? `bld_${building.id}`;
   return (
-    <div className="relative w-full h-full overflow-hidden rounded-md bg-[var(--well-bg)]">
-      <BuildingIllustration id={building.id} isBuilt={true} />
+    <div className="grid place-items-center w-full h-full">
+      <Icon iconKey={iconKey} size={size} />
     </div>
   );
 }
@@ -663,7 +664,7 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
       onClick={onClose}
     >
       <div
-        className="hl-panel !relative !inset-auto rounded-xl"
+        className="hl-panel hl-build-picker !relative !inset-auto rounded-xl"
         style={{ width: "min(880px, 94vw)", height: "min(620px, 86vh)", boxShadow: "0 8px 40px rgba(0,0,0,.7)" }}
         onClick={(e) => e.stopPropagation()}
       >
@@ -681,7 +682,7 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
                     key={b.id}
                     selected={selected?.b.id === b.id}
                     muted={!!reason}
-                    icon={<BuildingPreview building={b} />}
+                    icon={<BuildingPreview building={b} size={58} />}
                     title={b.name}
                     subtitle={isBuilt ? "Built" : reason || "Ready to place"}
                     onClick={() => setSelectedId(b.id)}
@@ -697,7 +698,7 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
                 title={selected?.b.name}
                 description={selected?.b.desc}
                 status={selected?.reason || "Ready to place"}
-                icon={selected ? <BuildingPreview building={selected.b} /> : null}
+                icon={selected ? <BuildingPreview building={selected.b} size={104} /> : null}
                 actions={
                   <>
                     <DetailActionButton
