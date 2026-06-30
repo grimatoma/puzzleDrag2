@@ -47,43 +47,46 @@ test('Bakery: crafting bread debits flour+egg and credits inventory.bread', asyn
   expect((s.craftedTotals?.bread ?? 0) + (s.craftedTotals?.rec_bread ?? 0)).toBe(1);
 });
 
-test('Workshop: crafting water_pump credits state.tools, NOT inventory (PR #274 routing)', async ({ page }) => {
-  // rec_water_pump (tier 2) inputs are { plank: 1, block: 1 }.
+// Tool recipes (item.kind === "tool") route the crafted output to state.tools
+// rather than inventory — the routing shipped in PR #274. We exercise it with
+// REACHABLE workshop tools (rake / fruit_picker). The old water_pump/explosives
+// recipes are SCOPED_OUT (deferred, see src/game/scopedOut.ts), so the crafting
+// UI deliberately hides them — they can't drive this test.
+test('Workshop: crafting rake credits state.tools, NOT inventory (PR #274 routing)', async ({ page }) => {
+  // rec_rake inputs are { plank: 1 }; rake is a kind:"tool" recipe.
   await gotoFresh(page, {
     coins: 500,
     built: { workshop: true },
-    inventory: { home: { plank: 2, block: 2 } },
-    settlements: { home: { founded: true, tier: 2 } }, // tier-2 recipes unlock at home Village (tier 2)
+    inventory: { plank: 2 },
   });
   await openCraftingTab(page, 'workshop');
 
-  await selectRecipe(page, 'Water Pump');
+  await selectRecipe(page, 'Rake');
   await detailCraftButton(page).click();
 
-  await waitForState(page, (s) => (s.tools?.water_pump ?? 0) >= 1);
+  await waitForState(page, (s) => (s.tools?.rake ?? 0) >= 1);
   const s = await getReactState(page);
-  // Routing assertion: NOT in inventory under the recipe key.
-  expect(inv(s).water_pump ?? 0).toBe(0);
+  // Routing assertion: credited to tools, NOT inventory under the recipe key.
+  expect(inv(s).rake ?? 0).toBe(0);
   expect(inv(s).plank).toBe(1);
-  expect(inv(s).block).toBe(1);
 });
 
-test('Workshop: crafting explosives also routes to state.tools', async ({ page }) => {
-  // rec_explosives (tier 2) inputs are { hay_bundle: 1, dirt: 1 }.
+test('Workshop: crafting fruit_picker also routes to state.tools', async ({ page }) => {
+  // rec_fruit_picker inputs are { plank: 2 }; fruit_picker is a kind:"tool" recipe.
   await gotoFresh(page, {
     coins: 500,
     built: { workshop: true },
-    inventory: { home: { hay_bundle: 2, dirt: 2 } },
-    settlements: { home: { founded: true, tier: 2 } }, // tier-2 recipes unlock at home Village (tier 2)
+    inventory: { plank: 3 },
   });
   await openCraftingTab(page, 'workshop');
 
-  await selectRecipe(page, 'Explosives');
+  await selectRecipe(page, 'Fruit Picker');
   await detailCraftButton(page).click();
 
-  await waitForState(page, (s) => (s.tools?.explosives ?? 0) >= 1);
+  await waitForState(page, (s) => (s.tools?.fruit_picker ?? 0) >= 1);
   const s = await getReactState(page);
-  expect(inv(s).explosives ?? 0).toBe(0);
+  expect(inv(s).fruit_picker ?? 0).toBe(0);
+  expect(inv(s).plank).toBe(1);
 });
 
 test('CRAFT button is disabled when inputs are missing', async ({ page }) => {
