@@ -28,6 +28,7 @@ interface InventoryEntry {
   kind: "resource" | "item" | "tool";
   tags: string[];
   label: string;
+  desc: string | undefined;
   count: number;
   buyPrice: number;
   sellPrice: number;
@@ -35,6 +36,10 @@ interface InventoryEntry {
   orderTotal: number | undefined;
 }
 
+/** Short player-facing blurb, falling back to the longer Dev Panel copy. */
+function descFor(def: { desc?: string; description?: string } | undefined): string | undefined {
+  return def?.desc ?? def?.description;
+}
 
 type SortMode = "alpha" | "recent" | "count" | string;
 
@@ -227,7 +232,7 @@ const InventoryBrowserItem = memo(function InventoryBrowserItem({ itemKey, label
 });
 
 function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse }: { entry: InventoryEntry; marketBuilt: boolean; dispatch: Dispatch; onCollapse: () => void }) {
-  const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
+  const { key, label, desc, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
   const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
   const sell = () => {
@@ -262,6 +267,7 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse }:
         </span>
       </button>
       <div className="hl-browser-item__details">
+        {desc && <p className="hl-text-dim leading-normal m-0">{desc}</p>}
         {showActions && (
           <div className="flex flex-wrap gap-2">
             <Button tone="moss" size="sm" disabled={!canSell} onClick={sell}>
@@ -297,7 +303,7 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse }:
 
 function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: InventoryEntry | null; marketBuilt: boolean; dispatch: Dispatch }) {
   if (!entry) return <DetailPane empty="Select a resource to inspect it." />;
-  const { key, label, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
+  const { key, label, desc, count, sellPrice, buyPrice, kind, orderStatus, orderTotal, tags = [] } = entry;
   const canBuy = kind === "resource" && marketBuilt && buyPrice > 0;
   const canSell = marketBuilt && sellPrice > 0 && count > 0;
   const sell = () => {
@@ -313,6 +319,7 @@ function InventoryDetail({ entry, marketBuilt, dispatch }: { entry: InventoryEnt
       eyebrow={kind === "tool" ? "Tool" : kind === "item" ? "Item" : "Resource"}
       title={label}
       status={`${count.toLocaleString()} in storage`}
+      description={desc}
       icon={<Icon iconKey={key} size={72} title={label} />}
       headerActions={
         <div className="flex flex-col gap-1.5">
@@ -568,6 +575,7 @@ export function InventoryGrid({
       kind: "resource",
       tags: [...tagsForItemKey(key), ...sourceTagsForItem(key, { recipesByOutput })],
       label: labelFor(key, r?.label),
+      desc: descFor(r),
       count: inventory[key] || 0,
       buyPrice: p.buy ?? 0,
       sellPrice: p.sell ?? 0,
@@ -582,6 +590,7 @@ export function InventoryGrid({
       kind: "item",
       tags: [...tagsForItemKey(key), ...sourceTagsForItem(key, { recipesByOutput })],
       label: labelFor(key, item?.label),
+      desc: descFor(item),
       count: inventory[key] || 0,
       buyPrice: 0,
       // Unified with the resource sell path so the shown price matches what
@@ -598,6 +607,7 @@ export function InventoryGrid({
       kind: "tool",
       tags: [...tagsForItemKey(key), ...sourceTagsForItem(key, { recipesByOutput })],
       label: labelFor(key, item?.label),
+      desc: descFor(item),
       count: toolCountByKey[key] || 0,
       buyPrice: 0,
       sellPrice: 0,
