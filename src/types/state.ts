@@ -17,6 +17,7 @@ import type {
   Quest,
   QuestDailyLegacy,
   RunSummary,
+  Toast,
   TutorialState,
 } from "./gameStateFields.js";
 import type { ZoneInventoryMap, ZoneResourceProgressMap } from "./inventory.js";
@@ -35,6 +36,7 @@ export type {
   QuestDailyLegacy,
   RunSummary,
   SliceRootFields,
+  Toast,
   TutorialState,
 } from "./gameStateFields.js";
 
@@ -229,6 +231,8 @@ export interface GameState {
   resourceProgress: ZoneResourceProgressMap;
   orders: Order[];
   quests: Quest[];
+  /** Transient global toast notifications (not persisted; see VOLATILE). */
+  toasts: Toast[];
   tools: Tools;
   /** The currently-armed tool key (e.g. "axe", "bomb"), or null. */
   toolPending: string | null;

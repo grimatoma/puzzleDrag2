@@ -134,6 +134,41 @@ export function rollQuests(
 }
 
 /**
+ * Human-readable quest title. Prefers the template's authored label (with the
+ * `{n}` placeholder filled by the target), falling back to the category name.
+ * Shared by the toast notifications and any caller that needs a one-liner.
+ */
+export function questTitle(quest: Pick<Quest, "template" | "category" | "target">): string {
+  const tpl = QUEST_TEMPLATES.find((t) => t.id === quest.template);
+  if (tpl?.label) return tpl.label.replace("{n}", String(quest.target));
+  return `${quest.category} commission`;
+}
+
+/**
+ * A quest is "done" once progress reaches its target. The deterministic system
+ * has no explicit `done` flag (unlike legacy dailies), so this is the canonical
+ * completion test.
+ */
+export function isQuestComplete(quest: Pick<Quest, "progress" | "target">): boolean {
+  return quest.progress >= quest.target;
+}
+
+/**
+ * Count of quests that are finished but whose reward has not been claimed —
+ * drives the Quests-tab notification badge. Reads the live deterministic
+ * `state.quests`, falling back to legacy `dailies` only when no deterministic
+ * quests exist (matching the quest screen's display logic).
+ */
+export function claimableQuestCount(state: GameState): number {
+  const quests = (state.quests ?? []) as Quest[];
+  if (quests.length > 0) {
+    return quests.filter((q) => !q.claimed && isQuestComplete(q)).length;
+  }
+  const dailies = ((state as { dailies?: Array<{ claimed?: boolean; done?: boolean; progress: number; target: number }> }).dailies) ?? [];
+  return dailies.filter((d) => !d.claimed && (d.done ?? d.progress >= d.target)).length;
+}
+
+/**
  * Pure: returns a new quest with updated progress for the given event.
  * No mutation.
  */

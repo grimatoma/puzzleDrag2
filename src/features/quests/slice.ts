@@ -1,7 +1,9 @@
 import { QUEST_TEMPLATES } from "./templates.js";
-import { QUEST_CLAIM_XP, claimQuest, grantQuestRewardExtras, tickQuest } from "./data.js";
+import { QUEST_CLAIM_XP, claimQuest, grantQuestRewardExtras, isQuestComplete, questTitle, tickQuest } from "./data.js";
 import type { Quest, QuestEvent, QuestTemplate } from "./data.js";
 import { awardXp, claimAlmanacTier } from "../almanac/data.js";
+import { appendToasts, nextToastId } from "../toasts/data.js";
+import type { Toast } from "../toasts/data.js";
 import { inventoryQty } from "../../types/inventory.js";
 import { zoneInventory } from "../../state/zoneInventory.js";
 import type { Action, GameState, QuestDailyLegacy } from "../../types/state.js";
@@ -63,6 +65,44 @@ function progressQuests(dailies: QuestDailyLegacy[], key: string, amount: number
     const next = Math.min(q.target, q.progress + amount);
     return { ...q, progress: next, done: next >= q.target };
   });
+}
+
+/**
+ * Build a "quest complete!" toast for every deterministic quest that crossed
+ * from in-progress to done between `prev` and `next`. Matches quests by id so a
+ * quest only ever toasts on the transition, never again on later ticks. Already
+ * claimed quests are skipped.
+ */
+function completionToasts(prev: Quest[], next: Quest[]): Toast[] {
+  const wasDone = new Map(prev.map((q) => [q.id, isQuestComplete(q)]));
+  const out: Toast[] = [];
+  for (const q of next) {
+    if (q.claimed || !isQuestComplete(q)) continue;
+    if (wasDone.get(q.id)) continue; // already finished before this action
+    out.push({
+      id: nextToastId(),
+      title: "Quest complete!",
+      message: questTitle(q),
+      icon: "quest_book",
+      tone: "gold",
+    });
+  }
+  return out;
+}
+
+/**
+ * Tick the deterministic `state.quests` with one or more events, then enqueue a
+ * completion toast for any quest that just finished. Returns the next quest list
+ * plus the (possibly unchanged) toast queue so callers can spread both at once.
+ */
+function tickQuestsWithToasts(
+  state: GameState,
+  events: QuestEvent[],
+): { quests: Quest[]; toasts: Toast[] } {
+  const prev = (state.quests ?? []) as Quest[];
+  const nextQuests = prev.map((q) => events.reduce((acc, ev) => tickQuest(acc, ev), q));
+  const toasts = appendToasts(state.toasts, completionToasts(prev, nextQuests));
+  return { quests: nextQuests, toasts };
 }
 
 export function reduce(state: GameState, action: Action): GameState {
@@ -143,12 +183,8 @@ export function reduce(state: GameState, action: Action): GameState {
       // New deterministic quests: tick with collect + chain events
       const collectEvent: QuestEvent = { type: "collect", key: chainKey, amount: gained };
       const chainEvent: QuestEvent = { type: "chain", length: chainLength };
-      const newQuests = (state.quests ?? []).map((q) => {
-        let ticked = tickQuest(q, collectEvent);
-        ticked = tickQuest(ticked, chainEvent);
-        return ticked;
-      });
-      return { ...state, dailies, quests: newQuests };
+      const { quests: newQuests, toasts } = tickQuestsWithToasts(state, [collectEvent, chainEvent]);
+      return { ...state, dailies, quests: newQuests, toasts };
     }
     case "TURN_IN_ORDER": {
       const orderId = action.id;
@@ -158,9 +194,8 @@ export function reduce(state: GameState, action: Action): GameState {
       // Legacy dailies
       const dailies = progressQuests(state.dailies || [], "deliver", 1);
       // New deterministic quests
-      const orderEvent: QuestEvent = { type: "order" };
-      const newQuests = ((state.quests || []) as Quest[]).map((q) => tickQuest(q, orderEvent));
-      return { ...state, dailies, quests: newQuests };
+      const { quests: newQuests, toasts } = tickQuestsWithToasts(state, [{ type: "order" }]);
+      return { ...state, dailies, quests: newQuests, toasts };
     }
     case "BUILD": {
       const dailies = progressQuests(state.dailies || [], "build", 1);
@@ -171,8 +206,8 @@ export function reduce(state: GameState, action: Action): GameState {
       const dailies = progressQuests(state.dailies || [], "craft", 1);
       // New deterministic quests
       const craftEvent: QuestEvent = { type: "craft", item: craftKey, count: 1 };
-      const newQuests = ((state.quests || []) as Quest[]).map((q) => tickQuest(q, craftEvent));
-      return { ...state, dailies, quests: newQuests };
+      const { quests: newQuests, toasts } = tickQuestsWithToasts(state, [craftEvent]);
+      return { ...state, dailies, quests: newQuests, toasts };
     }
     case "CLOSE_SEASON": {
       // Legacy dailies re-roll (CLOSE_SEASON in quests/slice — note: state.quests

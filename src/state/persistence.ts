@@ -4,7 +4,7 @@ import { migrateSave } from "./saveMigrations.js";
 import type { GameState } from "../types/state.js";
 
 const SAVE_KEY = STORAGE_KEYS.save;
-const VOLATILE = new Set(["modal", "bubble", "view", "viewParams", "pendingView", "craftingTab"]);
+const VOLATILE = new Set(["modal", "bubble", "view", "viewParams", "pendingView", "craftingTab", "toasts"]);
 
 /**
  * Loose record returned from JSON parse. Callers should narrow as needed —
