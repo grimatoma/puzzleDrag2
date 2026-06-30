@@ -250,6 +250,13 @@ export class TownScene extends Phaser.Scene {
 
     // Freeze ambient motion to a deterministic frame under the visual harness.
     this.freezeAmbientForVisualTest();
+
+    // Signal that a real (plan-carrying) create() has finished all its
+    // synchronous baking/building. The early `if (!this.plan) return` above
+    // means reaching here guarantees the heavy bake ran, so the React host can
+    // safely dismiss its loading overlay now (not at Phaser-constructor time,
+    // which is a frame too early and leaves the bare green canvas visible).
+    this.events.emit("town.ready");
   }
 
   // ── Texture baking ──────────────────────────────────────────────────────────

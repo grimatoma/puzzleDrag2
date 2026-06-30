@@ -68,6 +68,12 @@ export default function TownPhaserCanvas({
   // Flips true once the Phaser game has booted. Lets the pause/resume effect
   // re-run after an async (and possibly hidden, pre-warm) boot completes.
   const [booted, setBooted] = useState(false);
+  // Flips true once a real (plan-carrying) create() has finished its bake
+  // (the "town.ready" event). The pause/resume effect uses this so a hidden
+  // pre-warm scene is allowed to run its ONE offscreen bake before being slept
+  // — otherwise setBooted's pause/sleep can race ahead of the first loop step
+  // and the warm bake never happens, defeating the whole pre-warm.
+  const [hasBaked, setHasBaked] = useState(false);
   // onReady must fire exactly once (the boot effect runs once); read it through
   // a ref and latch so a later prop change can't re-trigger it.
   const onReadyRef = useRef(onReady);
@@ -224,13 +230,36 @@ export default function TownPhaserCanvas({
                 scene.events.on("town.clickboard", (kind: string) => {
                   onClickBoardRef.current(kind);
                 });
+
+                // Dismiss the loading overlay only once a real (plan-carrying)
+                // create() has finished its heavy synchronous bake — see
+                // TownScene's "town.ready" emit. Dismissing at Phaser-constructor
+                // time (the old behaviour) was a frame too early, leaving the bare
+                // green canvas visible through the 1–2 s bake. Bound once here;
+                // scene.shutdown() keeps listeners, so it survives every restart.
+                // The rAF lets Phaser paint the town frame before React removes
+                // the overlay (err one imperceptible frame late, never early).
+                scene.events.on("town.ready", () => {
+                  // Mark that the offscreen bake completed so the pause/resume
+                  // effect may now sleep a still-hidden (pre-warmed) scene.
+                  setHasBaked(true);
+                  requestAnimationFrame(() => {
+                    if (!cancelled) {
+                      setLoading(false);
+                      fireReady();
+                    }
+                  });
+                });
               }
             },
           },
         });
 
         gameRef.current = game as GameWithObserver;
-        if (!cancelled) setLoading(false);
+        // NOTE: loading overlay is NOT dismissed here — that happens on the
+        // "town.ready" event bound above, once the heavy create() bake has
+        // actually finished. Dismissing at constructor return showed the bare
+        // green canvas through the bake.
         // Signal the pause/resume effect to (re)evaluate now that the game
         // exists. Matters for a background pre-warm: the engine booted while
         // hidden (active false), and the pause/resume effect already ran at
@@ -238,7 +267,6 @@ export default function TownPhaserCanvas({
         // rendering offscreen. Re-running it now pauses the hidden scene; the
         // same effect wakes it on first show.
         if (!cancelled) setBooted(true);
-        fireReady();
       } catch (err) {
         console.error("Failed to boot Phaser TownScene:", err);
         fireReady();
@@ -265,6 +293,12 @@ export default function TownPhaserCanvas({
     // before swapping it out, so returning to it — or restarting the same zone
     // for a tier upgrade — restores the player's pan/zoom.
     if (scene.zoneId) saveCamera(scene.zoneId);
+    // A tier upgrade / zone change re-runs the heavy create() bake (a new tier
+    // means a new ground cache key), which would otherwise flash the bare green
+    // canvas on the visible town. Re-raise the overlay; the "town.ready" listener
+    // clears it once the new bake finishes. Overlay JSX is gated `loading &&
+    // active`, so this is a no-op visually for off-screen restarts.
+    setLoading(true);
     scene.scene.restart({
       plan,
       zoneId,
@@ -292,11 +326,15 @@ export default function TownPhaserCanvas({
       }
       game.loop.wake?.();
       scene?.scene.resume();
-    } else {
+    } else if (hasBaked) {
+      // Hidden AND already baked: safe to pause/sleep (no wasted offscreen work).
       scene?.scene.pause();
       game.loop.sleep?.();
     }
-  }, [active, booted]);
+    // Hidden but NOT yet baked (a background pre-warm in flight): deliberately
+    // leave the loop running so the scene can complete its one offscreen bake.
+    // setHasBaked(true) on "town.ready" re-runs this effect to sleep it then.
+  }, [active, booted, hasBaked]);
 
   // Unmount-only teardown: this is the single place the game is destroyed.
   useEffect(() => {

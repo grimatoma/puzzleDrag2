@@ -24,6 +24,10 @@ export const SCENE_EVENTS = Object.freeze({
   TOOL_FIRED: "tool-fired",
   REWARD_BURST: "reward-burst",
   CARE_PACKAGE_OPENED: "care-package-opened",
+  // Fired once GameScene.create() has finished its synchronous texture bake +
+  // first board fill, so the React host can dismiss the BoardSkeleton only after
+  // the heavy work (not in postBoot, which runs a frame too early).
+  BOARD_READY: "board-ready",
 });
 
 type Brand<T, Name extends string> = T & { readonly __brand: Name };
