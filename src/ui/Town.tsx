@@ -15,9 +15,10 @@ import TownPhaserCanvas from "./TownPhaserCanvas.jsx";
 import Icon from "./Icon.jsx";
 import DesignIcon from "./primitives/Icon.jsx";
 import BuildingIllustration from "./buildings/index.jsx";
-import { RequirementChip } from "./primitives/Chip.jsx";
+import { RequirementChip, RewardChip } from "./primitives/Chip.jsx";
 import { LOCATION_TOWN_CONFIGS } from "./town/config.js";
 import {
+  abilitySummaryRows,
   BrowserDetailLayout,
   BrowserGrid,
   BrowserItemButton,
@@ -642,6 +643,22 @@ function BuildCostSummary({ building, state }: { building: Building; state: Game
   );
 }
 
+/** Plain-English pills spelling out what a building does, shown under its flavor text. */
+function BuildingAbilityPills({ building }: { building: Building }) {
+  const effects = abilitySummaryRows(building.abilities);
+  if (!effects.length) return null;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="text-caption font-bold uppercase tracking-wide text-on-panel-dim">Ability</div>
+      <div className="flex flex-wrap gap-1.5">
+        {effects.map((effect) => (
+          <RewardChip key={effect}>{effect}</RewardChip>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 interface BuildPickerProps {
   buildings: Building[];
   state: GameState;
@@ -714,6 +731,7 @@ function BuildPicker({ buildings, state, locationBuilt, freePlots, plotCount, on
                   </>
                 }
               >
+                {selected && <BuildingAbilityPills building={selected.b} />}
                 {selected && <CostGrid entries={buildingCostEntries(selected.b, state)} title="Build cost" />}
               </DetailPane>
             }
