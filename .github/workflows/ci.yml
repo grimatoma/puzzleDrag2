@@ -29,7 +29,7 @@ on:
   workflow_dispatch:
     inputs:
       update_goldens:
-        description: "Regenerate desktop visual goldens on the CI runner"
+        description: "Regenerate visual goldens (desktop + mobile) on the CI runner"
         type: boolean
         default: false
 
@@ -199,7 +199,7 @@ jobs:
   visual-rebaseline:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_goldens }}
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45
     permissions:
       contents: write
     steps:
@@ -211,7 +211,8 @@ jobs:
       - run: npm ci
       - name: Install Playwright chromium (+ system deps)
         run: npx playwright install --with-deps chromium
-      - run: npm run test:visual:update # writes new PNGs into tests/visual/__goldens__/
+      - run: npm run test:visual:update # desktop-smoke goldens → tests/visual/__goldens__/
+      - run: npm run test:visual:mobile:update # iphone-portrait visual.spec goldens (e.g. build picker)
       - uses: actions/upload-artifact@v4
         with:
           name: regenerated-goldens
@@ -228,6 +229,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "Goldens already up to date — nothing to commit."
           else
-            git commit -m "test(visual): re-baseline desktop goldens on CI runner"
+            git commit -m "test(visual): re-baseline desktop + mobile goldens on CI runner"
             git push origin HEAD:${GITHUB_REF_NAME}
           fi
