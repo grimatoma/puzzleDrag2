@@ -123,8 +123,11 @@ export const FeatureModals = React.memo(function FeatureModals({ state, dispatch
 
   return (
     <>
-      {alwaysFeatures.map(f => {
-        const k = f.modalKey || f.viewKey;
+      {alwaysFeatures.map((f, i) => {
+        // Some always-mounted features (e.g. toasts) have neither a modalKey
+        // nor a viewKey; fall back to a stable per-index key so React doesn't
+        // warn about a missing list key (the feature order is deterministic).
+        const k = f.modalKey || f.viewKey || `always-${i}`;
         return (
           <FeatureErrorBoundary key={k} featureKey={k}>
             <f.Component state={state} dispatch={dispatch} />

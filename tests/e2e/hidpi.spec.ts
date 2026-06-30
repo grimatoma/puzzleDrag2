@@ -4,7 +4,7 @@ import { clearSave, dispatchAction } from './helpers';
 test.beforeEach(async ({ page }) => { await clearSave(page); });
 
 test('canvas backing store renders at devicePixelRatio× CSS size', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.waitForSelector('canvas', { state: 'attached' });
   // Default view is "town" which wraps the board in an invisible container;
   // switch to board so the canvas has real layout dimensions to inspect.
@@ -35,7 +35,7 @@ test('canvas backing store renders at devicePixelRatio× CSS size', async ({ pag
 });
 
 test('pointer hit testing maps CSS coords through dpr to world space', async ({ page }) => {
-  await page.goto('/');
+  await page.goto('./');
   await page.waitForSelector('canvas', { state: 'attached' });
   await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
   await page.waitForTimeout(200);
