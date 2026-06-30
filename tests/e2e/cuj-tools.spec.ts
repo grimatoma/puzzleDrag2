@@ -53,16 +53,21 @@ test.describe('CUJ: tools + hotbar journeys', () => {
   });
 
   test('zero-count tap-target tool is inspectable but cannot be armed', async ({ page }) => {
-    await gotoFresh(page, { tools: { magic_wand: 0 } });
+    // Use `rake`: a REACHABLE tap-target tool (clear_component), so it stays
+    // listed in the tool modal even at count 0 (visiblePuzzleTools keeps a tool
+    // when it is reachable OR owned). magic_wand is a rune-gated portal tool that
+    // is unreachable until late-game, so at count 0 it is hidden entirely — it
+    // can't drive an "inspectable while unowned" assertion.
+    await gotoFresh(page, { tools: { rake: 0 } });
     await dispatchAction(page, { type: 'SET_VIEW', view: 'board' });
 
     await page.getByTestId('puzzle-hotbar-open').click();
-    await page.locator('[data-testid="puzzle-tool-modal"] [data-tool-key="magic_wand"]').first().click();
+    await page.locator('[data-testid="puzzle-tool-modal"] [data-tool-key="rake"]').first().click();
     const arm = page.getByRole('button', { name: /arm tool/i });
     await expect(arm).toBeDisabled();
 
     const before = await getReactState(page);
-    await page.locator('[data-testid="puzzle-tool-modal"] [data-tool-key="magic_wand"]').first().click();
+    await page.locator('[data-testid="puzzle-tool-modal"] [data-tool-key="rake"]').first().click();
     const after = await getReactState(page);
     expect(after.toolPending ?? null).toBe(before.toolPending ?? null);
   });
