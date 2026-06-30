@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Quest Reward UI — Design Proposal</title>
+<style>
+  /* ── Theme tokens lifted from src/tokens.css so mockups read true to the game ── */
+  :root {
+    --ember: #d6612a;
+    --ember-soft: #ff8b25;
+    --gold-soft: #f0c965;
+    --card-bg: #fbf7eb;
+    --card-bg-2: #f3e8cf;
+    --card-border: #c9b993;
+    --card-border-strong: #a89272;
+    --on-panel: #2b2218;
+    --on-panel-dim: #7a5e3f;
+    --on-panel-label: #8a4a26;
+    --arcane: #8a6aa8;
+    --arcane-deep: #3a2150;
+    --card-shadow: 0 1px 2px rgba(60,40,20,.18), 0 3px 8px -3px rgba(60,40,20,.22);
+    --card-shadow-strong: 0 2px 4px rgba(60,40,20,.22), 0 8px 18px -6px rgba(60,40,20,.3);
+
+    --c-coin: #b9881f;
+    --c-xp: #6f8a3a;
+    --c-tool: #38406b;
+    --c-item: #6f5a3a;
+    --c-rune: #6a3aa0;
+    --c-bld: #a8722a;
+    --c-tile: #2f7d56;
+
+    --page-bg: #efe6d4;
+    --doc-max: 1080px;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--on-panel);
+    background: radial-gradient(1200px 600px at 50% -200px, #fff7e6 0%, transparent 70%), var(--page-bg);
+    line-height: 1.55;
+  }
+  .wrap { max-width: var(--doc-max); margin: 0 auto; padding: 0 24px 120px; }
+
+  header.masthead {
+    text-align: center; padding: 56px 24px 34px;
+    border-bottom: 2px solid var(--card-border); margin-bottom: 40px;
+    background: linear-gradient(180deg, rgba(255,255,255,.5), transparent);
+  }
+  .kicker { text-transform: uppercase; letter-spacing: .22em; font-size: 11px; font-weight: 800; color: var(--on-panel-label); }
+  h1 { font-size: 38px; margin: 8px 0 6px; letter-spacing: -.01em; }
+  .masthead p { color: var(--on-panel-dim); max-width: 660px; margin: 6px auto 0; font-size: 15px; }
+  .meta-row { margin-top: 16px; font-size: 12px; color: var(--on-panel-dim); }
+  .meta-row code { background: #fff; border: 1px solid var(--card-border); border-radius: 5px; padding: 1px 6px; }
+
+  h2 { font-size: 24px; margin: 56px 0 6px; padding-top: 10px; border-top: 1px dashed var(--card-border-strong); }
+  h2 .num { color: var(--ember); font-variant-numeric: tabular-nums; margin-right: 10px; }
+  h3 { font-size: 17px; margin: 28px 0 8px; }
+  p { margin: 10px 0; }
+  a { color: #b4521c; }
+  code { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .92em; }
+  p code, li code, td code { background: #fff4dd; border: 1px solid #e8d9b0; border-radius: 4px; padding: .5px 5px; }
+
+  nav.toc { background: #fff; border: 2px solid var(--card-border); border-radius: 14px; padding: 16px 20px; margin: 0 0 8px; box-shadow: var(--card-shadow); columns: 2; column-gap: 32px; }
+  nav.toc a { display: block; text-decoration: none; color: var(--on-panel); font-size: 14px; padding: 3px 0; break-inside: avoid; }
+  nav.toc a:hover { color: var(--ember); }
+  nav.toc .n { color: var(--ember); font-weight: 800; margin-right: 8px; font-variant-numeric: tabular-nums; }
+
+  .callout { border-left: 4px solid var(--ember); background: #fff6ea; padding: 12px 16px; border-radius: 0 10px 10px 0; margin: 18px 0; }
+  .callout.bug { border-left-color: #c0392b; background: #fdeeea; }
+  .callout.win { border-left-color: var(--c-xp); background: #f1f6e7; }
+  .callout.note { border-left-color: var(--arcane); background: #f3eefa; }
+  .callout strong { color: var(--on-panel-label); }
+  .callout.bug strong { color: #a93020; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; background: #fff; border-radius: 10px; overflow: hidden; box-shadow: var(--card-shadow); }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid #ece0c4; vertical-align: top; }
+  th { background: #f7eed6; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--on-panel-label); }
+  tr:last-child td { border-bottom: 0; }
+  .hl-row td { background: #fffaf0; }
+
+  pre { background: #2b2218; color: #f3e8cf; border-radius: 10px; padding: 14px 16px; overflow-x: auto; font-size: 12.5px; line-height: 1.5; margin: 14px 0; box-shadow: var(--card-shadow); }
+  pre .c { color: #b69b6f; }
+  pre .k { color: #ff9d57; }
+  pre .s { color: #c9e08a; }
+  pre .num { color: #9fd0ff; }
+
+  /* ════════════════ GAME-FAITHFUL MOCKUP PRIMITIVES ════════════════ */
+  .qcard {
+    position: relative; display: flex; flex-direction: column; gap: 7px; border-radius: 9px; overflow: hidden;
+    padding: 9px 11px 9px 16px;
+    background: linear-gradient(180deg, var(--card-bg) 0%, var(--card-bg-2) 100%);
+    border: 2px solid var(--card-border); box-shadow: var(--card-shadow); width: 100%;
+  }
+  .qcard::before { content:""; position:absolute; left:0; top:0; bottom:0; width:5px; background: var(--accent, var(--ember)); }
+  .qcard.ready { border-color: var(--accent, var(--ember)); box-shadow: 0 0 0 1px var(--accent), 0 0 18px -5px var(--accent), var(--card-shadow); }
+  .qrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .qtag { display: inline-flex; align-items: center; gap: 4px; border-radius: 999px; padding: 1px 8px 1px 7px; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .05em; color: #fff; background: var(--accent, var(--ember)); box-shadow: inset 0 1px 0 rgba(255,255,255,.25); white-space: nowrap; }
+  .qtitle { font-weight: 800; font-size: 13.5px; color: var(--on-panel); line-height: 1.2; }
+  .qflavor { font-style: italic; font-size: 10.5px; color: var(--on-panel-dim); line-height: 1.3; }
+  .qprog { display:flex; align-items:center; gap:8px; }
+  .qbar { flex:1; height: 7px; border-radius: 999px; background: #e7d8b6; overflow: hidden; box-shadow: inset 0 1px 2px rgba(0,0,0,.12); }
+  .qbar > i { display:block; height:100%; border-radius:999px; background: var(--accent, var(--ember)); }
+  .qcount { font-size: 11px; font-weight: 800; color: #6a4b31; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .qbtn { border:0; border-radius: 8px; padding: 4px 12px; font-size: 11px; font-weight: 800; cursor: default; background: linear-gradient(180deg,#8fb14e,#6f8a3a); color:#fff; box-shadow: var(--card-shadow); }
+  .qstatus { display:inline-flex; align-items:center; gap:4px; font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; color: var(--accent, var(--ember)); }
+
+  /* OLD token (before/after) */
+  .reward-old { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:2px 9px; font-size:11px; font-weight:800; color:#8a4a26; background: linear-gradient(180deg,#fff6df,#f3e1b2); border:1px solid var(--gold-soft); box-shadow: inset 0 1px 0 rgba(255,255,255,.7); font-variant-numeric: tabular-nums; white-space:nowrap; }
+  .reward-old .xp { color:#6f8a3a; }
+
+  /* Headline chip (top-right) */
+  .rchip { display:inline-flex; align-items:center; gap:5px; border-radius:999px; padding:3px 11px 3px 5px; font-size:11.5px; font-weight:800; line-height:1; white-space:nowrap; background: linear-gradient(180deg,#fffdf6,#f5ecd6); border:1px solid #e3d2a4; box-shadow: inset 0 1px 0 rgba(255,255,255,.7); color: var(--on-panel); }
+  .rchip .ic { width:18px; height:18px; border-radius:6px; display:grid; place-items:center; font-size:11px; flex:0 0 auto; box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); }
+  .rchip.coin .ic { background: radial-gradient(circle at 35% 30%, #ffe48a, #c8951f); }
+  .rchip.bld  { background: linear-gradient(180deg,#fff2cf,#f7dd9b); border-color:#e6b94f; color:#7a4a12; }
+  .rchip.bld  .ic { background: linear-gradient(160deg,#e8a93a,#a8722a); }
+  .rchip.tile { background: linear-gradient(180deg,#dff3e6,#bfe6cf); border-color:#7fc49b; color:#1f5b3c; }
+  .rchip.tile .ic { background: linear-gradient(160deg,#4fb37e,#2f7d56); }
+
+  /* ── NEW: expanded manifest list (Direction B, chosen) ── */
+  .manifest { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:4px; }
+  .manifest .head { font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.08em; color:var(--on-panel-label); margin:2px 0 1px 2px; }
+  .mrow { display:flex; align-items:center; gap:9px; padding:5px 8px; border-radius:8px; background:#fdf7e7; border:1px solid #eaddbc; }
+  .mrow .mic { width:26px; height:26px; border-radius:7px; display:grid; place-items:center; font-size:14px; flex:0 0 auto; box-shadow: inset 0 0 0 1px rgba(255,255,255,.3); }
+  .mrow .mname { flex:1; min-width:0; font-size:12.5px; font-weight:700; color:var(--on-panel); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .mrow .mname small { display:block; font-weight:700; font-size:9px; letter-spacing:.05em; text-transform:uppercase; color:var(--on-panel-dim); margin-top:1px; }
+  .mqty { font-size:11px; font-weight:800; color:var(--on-panel-dim); font-variant-numeric:tabular-nums; background:#efe2c4; border:1px solid #ddc99a; border-radius:999px; padding:1px 7px; flex:0 0 auto; }
+  .mval { font-size:12.5px; font-weight:800; color:var(--c-coin); font-variant-numeric:tabular-nums; flex:0 0 auto; }
+  .mval.xp { color:var(--c-xp); }
+  .mval.rune { color:var(--c-rune); }
+  .utag { font-size:8.5px; font-weight:800; letter-spacing:.06em; text-transform:uppercase; padding:2px 7px; border-radius:999px; flex:0 0 auto; }
+  /* per-kind disc colours */
+  .mic.coin { background: radial-gradient(circle at 35% 30%, #ffe48a, #c8951f); }
+  .mic.xp   { background: radial-gradient(circle at 35% 30%, #b9e07a, #5f7d2e); }
+  .mic.rune { background: radial-gradient(circle at 35% 30%, #d9b6ff, #6a3aa0); }
+  .mic.tool { background: linear-gradient(160deg,#6b73b0,#2b3158); }
+  .mic.item { background: linear-gradient(160deg,#b89a65,#6f5630); }
+  .mic.bld  { background: linear-gradient(160deg,#e8a93a,#a8722a); }
+  .mic.tile { background: linear-gradient(160deg,#4fb37e,#2f7d56); }
+  /* unlock rows get a tinted, framed treatment so they read as the prize */
+  .mrow.unlock-bld  { background: linear-gradient(180deg,#fff5d8,#fbe9b6); border-color:#e6b94f; }
+  .mrow.unlock-bld  .utag { background:#a8722a; color:#fff; }
+  .mrow.unlock-tile { background: linear-gradient(180deg,#e2f5ea,#cdeed9); border-color:#7fc49b; }
+  .mrow.unlock-tile .utag { background:#2f7d56; color:#fff; }
+  .mrow.unlock-bld .mname, .mrow.unlock-tile .mname { font-weight:800; }
+
+  /* device frames */
+  .ff-grid { display:grid; gap:24px; margin:20px 0; }
+  @media (min-width: 760px){ .ff-grid.cols-2 { grid-template-columns: 1fr 1fr; } }
+  .device { background:#fff; border:2px solid var(--card-border); border-radius:16px; padding:14px; box-shadow: var(--card-shadow); }
+  .device .screen { background: var(--page-bg); border-radius:10px; padding:12px; }
+  .device .cap { font-size:12px; font-weight:800; color:var(--on-panel-label); text-transform:uppercase; letter-spacing:.06em; margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+  .device .cap .dot { width:8px; height:8px; border-radius:50%; background:var(--ember); }
+  .phone .screen { max-width: 300px; margin:0 auto; }
+
+  /* worked-example layout: card + its JSON side by side */
+  .ex { display:grid; gap:18px; margin:18px 0 8px; }
+  @media (min-width: 820px){ .ex { grid-template-columns: 320px 1fr; align-items:start; } }
+  .ex .card-wrap { background: var(--page-bg); border-radius:12px; padding:14px; }
+  .ex pre { margin:0; }
+  .ex .why { font-size:13px; color:var(--on-panel-dim); margin:10px 0 0; }
+
+  .concepts { display:grid; gap:20px; margin:18px 0; }
+  @media (min-width: 760px){ .concepts.cols-2 { grid-template-columns: 1fr 1fr; } }
+  .concept { background:#fff; border:2px solid var(--card-border); border-radius:14px; padding:16px; box-shadow: var(--card-shadow); }
+  .concept h3 { margin:0 0 6px; font-size:16px; }
+  .pros { font-size:12.5px; margin:10px 0 0; padding-left:0; list-style:none; }
+  .pros li { padding-left:18px; position:relative; margin:4px 0; }
+  .pros li.p::before { content:"▲"; color:var(--c-xp); position:absolute; left:0; font-size:10px; top:3px; }
+  .pros li.m::before { content:"▼"; color:#c0392b; position:absolute; left:0; font-size:10px; top:3px; }
+
+  .badge { display:inline-block; font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.05em; padding:2px 8px; border-radius:999px; }
+  .badge.rec { background:#e7f3d4; color:#4f6b1f; border:1px solid #b9d488; }
+  .badge.new { background:#fde6cf; color:#9a5a16; border:1px solid #e8b96a; }
+  .badge.exists { background:#e4eefa; color:#2f5d92; border:1px solid #a9c8ea; }
+
+  footer { text-align:center; color:var(--on-panel-dim); font-size:12px; margin-top:60px; padding-top:20px; border-top:1px dashed var(--card-border-strong); }
+  .small { font-size:12px; color:var(--on-panel-dim); }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="kicker">puzzleDrag2 · UI Design Proposal</div>
+  <h1>The Quest Reward Display</h1>
+  <p>Quest rewards used to be just coins and ✦ XP. They are now a small <strong>bundle</strong> — tools, resources, runes, and (newly) a <strong>building or tile unlock</strong>. The current card silently drops everything past coins+XP. This doc settles on a design: a <strong>headline chip + an expanded reward list</strong>, capped at five, with worked example quests in real game content.</p>
+  <div class="meta-row">Scope: <code>src/features/quests/</code> · <code>src/features/almanac/</code> · reward grants in <code>src/state.ts</code>. Decision recorded June 2026.</div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc">
+  <a href="#problem"><span class="n">1</span>The problem (live bug)</a>
+  <a href="#taxonomy"><span class="n">2</span>Reward taxonomy (+ unlocks)</a>
+  <a href="#design"><span class="n">3</span>The chosen design</a>
+  <a href="#examples"><span class="n">4</span>Worked example quests</a>
+  <a href="#considered"><span class="n">5</span>Directions considered</a>
+  <a href="#formfactors"><span class="n">6</span>Form-factor adaptations</a>
+  <a href="#claim"><span class="n">7</span>The claim moment</a>
+  <a href="#implementation"><span class="n">8</span>Implementation sketch</a>
+  <a href="#open"><span class="n">9</span>Open questions</a>
+</nav>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<h2 id="problem"><span class="num">1</span>The problem</h2>
+<p>Today the daily quest card renders its reward as one gold token with two text glyphs — coins (<code>◉</code>) and almanac XP (<code>✦</code>):</p>
+<pre><span class="c">// src/features/quests/index.tsx — QuestCard, ~line 186</span>
+&lt;span className=<span class="s">"quest-reward"</span> title=<span class="s">"Reward"</span>&gt;
+  &lt;span&gt;+{coins}◉&lt;/span&gt;
+  {xp &gt; 0 &amp;&amp; &lt;span className=<span class="s">"quest-reward-xp"</span>&gt;+{xp}✦&lt;/span&gt;}
+&lt;/span&gt;</pre>
+<p>But a <code>QuestReward</code> can already carry <code>tools</code> and <code>items</code>, the almanac track adds <code>runes</code> and <code>structural</code> perks, and we now want <strong>unlock-a-building</strong> and <strong>unlock-a-tile</strong> rewards too. <code>grantQuestRewardExtras()</code> hands the existing extras out on claim — they're just never drawn.</p>
+<div class="callout bug">
+  <strong>This is a live bug, not just a polish gap.</strong> A daily quest authored with <code>rewardItems:&nbsp;{ plank: 5 }</code> grants 5 planks on claim, yet its card shows only the coin/✦ chip. The two <code>[TEST]</code> templates in <code>templates.ts</code> already exercise this — they're invisible in the UI right now. The almanac is the only place extras surface, via <code>rewardLabel()</code>, as an icon-less text string like <code>+1000◉ · +5 Seedpack · +3 Lockbox · 1 rune</code>.</p>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<h2 id="taxonomy"><span class="num">2</span>Reward taxonomy</h2>
+<p>The design must hold every kind below, in any combination, <strong>up to a hard cap of five rewards per quest</strong>. The two unlock kinds are the reason we moved to a roomy list — an unlock deserves a name, not a bare icon.</p>
+<table>
+  <thead><tr><th>Kind</th><th>Shape</th><th>Card.</th><th>Prominence</th><th>Status in code</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Coins</strong></td><td><code>coins: number</code></td><td>0–1</td><td>Baseline</td><td>Wired</td></tr>
+    <tr><td><strong>Almanac XP</strong></td><td><code>xp</code> / <code>almanacXp</code></td><td>0–1</td><td>Baseline</td><td>Wired</td></tr>
+    <tr><td><strong>Tools</strong></td><td><code>tools: Record&lt;id,n&gt;</code> — Scythe·Seedpack·Lockbox·Reshuffle Horn</td><td>0–4</td><td>Notable</td><td>Granted, not shown</td></tr>
+    <tr><td><strong>Items / resources</strong></td><td><code>items: Record&lt;key,n&gt;</code> — Plank, Iron Bar…</td><td>0–N</td><td>Notable</td><td>Granted, not shown</td></tr>
+    <tr><td><strong>Runes</strong></td><td><code>runes: number</code></td><td>0–1</td><td>Headline</td><td>Almanac only</td></tr>
+    <tr><td><strong>Structural perks</strong></td><td><code>structural: string</code> (4 named, permanent)</td><td>0–1</td><td>Headline</td><td>Almanac only</td></tr>
+    <tr class="hl-row"><td><strong>Unlock: tile</strong> <span class="badge exists">exists</span></td><td><code>unlockTile: string</code> → tile key</td><td>0–1</td><td><strong>Headline</strong></td><td>Wired in <code>LOGIN_TICK</code> (daily-30 only); marks tile <em>discovered</em>. Quest-wiring net-new.</td></tr>
+    <tr class="hl-row"><td><strong>Unlock: building</strong> <span class="badge new">net-new</span></td><td><code>unlockBuilding: string</code> → building id</td><td>0–1</td><td><strong>Headline</strong></td><td>No reward applier today; building gating lives in zone/cartography tiers. Needs new plumbing (§8).</td></tr>
+  </tbody>
+</table>
+<p>Rewards are <strong>not flat</strong>: baseline rewards (coins/XP) appear on nearly every quest and stay quiet; a rune, a perk, or an unlock is the reason a player cares and must lead. A single text string flattens that hierarchy — which is what makes the almanac string read like a receipt.</p>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<h2 id="design"><span class="num">3</span>The chosen design</h2>
+<p><strong>Headline chip + expanded reward list.</strong> Because a bundle is small (≤5), we don't need to cram chips into the header. Instead:</p>
+<ul>
+  <li><strong>One headline chip</strong> sits top-right where the old token was — the single most valuable reward (an unlock if present, else a rune, else coins). It pops in its kind's premium palette.</li>
+  <li><strong>An expanded list</strong> sits under the progress bar: one row per reward, <strong>icon + name + an optional badge</strong>. The badge is a <code>×N</code> quantity for counted goods (only when N&gt;1), or the plain value for currencies. Unlock rows wear a framed, tinted treatment and an <code>UNLOCKS</code> / <code>NEW TILE</code> tag.</li>
+</ul>
+
+<div class="ex" style="grid-template-columns:1fr;max-width:360px;margin-inline:auto;">
+  <div class="card-wrap">
+    <div class="qcard ready" style="--accent:var(--c-bld);">
+      <div class="qrow">
+        <span class="qtag">⬢ Order</span>
+        <span class="rchip bld"><span class="ic">🏚</span>Mill</span>
+      </div>
+      <div><div class="qtitle">Raise the Mill</div><div class="qflavor">Grind the first sacks — the village wants bread.</div></div>
+      <div class="qprog"><div class="qbar"><i style="width:100%"></i></div><span class="qcount">12/12</span></div>
+      <ul class="manifest">
+        <li class="head">Rewards</li>
+        <li class="mrow unlock-bld"><span class="mic bld">🏚</span><span class="mname">Mill</span><span class="utag">Unlocks</span></li>
+        <li class="mrow"><span class="mic coin">🪙</span><span class="mname">Coins</span><span class="mval">+250</span></li>
+        <li class="mrow"><span class="mic xp">✦</span><span class="mname">Almanac XP</span><span class="mval xp">+3</span></li>
+        <li class="mrow"><span class="mic tool">🌱</span><span class="mname">Seedpack</span><span class="mqty">×2</span></li>
+      </ul>
+      <div class="qrow"><span class="qstatus">✦ Ready to claim</span><span class="qbtn">Claim</span></div>
+    </div>
+  </div>
+</div>
+<p class="small" style="text-align:center;">Anatomy: headline chip (<em>Mill</em>) up top; the list spells out the full haul. The unlock row is framed and tagged so the prize is unmistakable. Icon glyphs are stand-ins for live <code>&lt;IconCanvas&gt;</code> renders.</p>
+
+<h3>Row grammar</h3>
+<table>
+  <thead><tr><th>Reward class</th><th>Row = icon + name +</th><th>Example</th></tr></thead>
+  <tbody>
+    <tr><td>Currency (coins, XP, runes)</td><td>signed value, right-aligned</td><td>🪙 Coins · <strong>+250</strong></td></tr>
+    <tr><td>Counted goods (tools, items)</td><td><code>×N</code> badge <em>only if N&gt;1</em></td><td>🪵 Plank · <code>×5</code> &nbsp; / &nbsp; ⚔ Scythe <em>(no badge)</em></td></tr>
+    <tr><td>Unlock (building, tile)</td><td>an <code>UNLOCKS</code>/<code>NEW TILE</code> tag, no quantity, framed row</td><td>🏚 Mill · <span class="utag" style="background:#a8722a;color:#fff;">Unlocks</span></td></tr>
+  </tbody>
+</table>
+
+<div class="callout win">
+  <strong>The five-reward cap is a design rule, not just a UI fallback.</strong> Authoring guidance: a quest grants at most five rewards, at most one headline (unlock/rune/perk). The list never scrolls, never collapses, never needs a <code>+N</code> popover. If a bundle ever exceeds five, that's a content bug to fix at authoring time, not a layout to design around.
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<h2 id="examples"><span class="num">4</span>Worked example quests</h2>
+<p>Three quests in real game content — building ids from <code>BUILDINGS</code> (<code>constants.ts:803</code>), tile keys from the ITEMS map, tool labels as the player sees them (<code>basic</code>→Seedpack, <code>rare</code>→Lockbox, <code>shuffle</code>→Reshuffle Horn, <code>clear</code>→Scythe). The reward objects are written as they'd appear once the unlock kinds are wired (§8).</p>
+
+<!-- Example 1: building unlock -->
+<h3>① “Raise the Mill” — a building unlock <span class="badge new">uses unlockBuilding</span></h3>
+<div class="ex">
+  <div class="card-wrap">
+    <div class="qcard ready" style="--accent:var(--c-bld);">
+      <div class="qrow"><span class="qtag">⬢ Order</span><span class="rchip bld"><span class="ic">🏚</span>Mill</span></div>
+      <div><div class="qtitle">Raise the Mill</div><div class="qflavor">Grind the first sacks — the village wants bread.</div></div>
+      <div class="qprog"><div class="qbar"><i style="width:100%"></i></div><span class="qcount">12/12</span></div>
+      <ul class="manifest">
+        <li class="head">Rewards</li>
+        <li class="mrow unlock-bld"><span class="mic bld">🏚</span><span class="mname">Mill</span><span class="utag">Unlocks</span></li>
+        <li class="mrow"><span class="mic coin">🪙</span><span class="mname">Coins</span><span class="mval">+250</span></li>
+        <li class="mrow"><span class="mic xp">✦</span><span class="mname">Almanac XP</span><span class="mval xp">+3</span></li>
+        <li class="mrow"><span class="mic tool">🌱</span><span class="mname">Seedpack</span><span class="mqty">×2</span></li>
+      </ul>
+      <div class="qrow"><span class="qstatus">✦ Ready to claim</span><span class="qbtn">Claim</span></div>
+    </div>
+  </div>
+  <div>
+<pre><span class="c">// templates.ts — milestone "build-out" quest</span>
+{
+  id: <span class="s">"raise_the_mill"</span>,
+  label: <span class="s">"Raise the Mill"</span>,
+  category: <span class="s">"order"</span>, biome: <span class="s">"farm"</span>,
+  flavor: <span class="s">"Grind the first sacks — the village wants bread."</span>,
+  <span class="c">// deliver 12 flour to the order</span>
+  goal: { kind: <span class="s">"deliver"</span>, item: <span class="s">"flour"</span>, target: 12 },
+  reward: {
+    coins: 250,
+    xp: 3,
+    tools: { basic: 2 },          <span class="c">// Seedpack ×2</span>
+    unlockBuilding: <span class="s">"mill"</span>,  <span class="c">// ← headline</span>
+  },
+}</pre>
+    <p class="why"><strong>Why it works:</strong> the Mill is the payoff, so it's both the headline chip and the framed top row. The coins/XP/Seedpack are quiet support. Four rows, one headline — comfortably under the cap.</p>
+  </div>
+</div>
+
+<!-- Example 2: tile unlock -->
+<h3>② “Bones in the Back Forty” — a tile unlock <span class="badge exists">extends unlockTile</span></h3>
+<div class="ex">
+  <div class="card-wrap">
+    <div class="qcard ready" style="--accent:var(--c-tile);">
+      <div class="qrow"><span class="qtag">◈ Chain</span><span class="rchip tile"><span class="ic">🦖</span>New tile</span></div>
+      <div><div class="qtitle">Bones in the Back Forty</div><div class="qflavor">Something old stirs beneath the pasture…</div></div>
+      <div class="qprog"><div class="qbar"><i style="width:100%"></i></div><span class="qcount">6/6</span></div>
+      <ul class="manifest">
+        <li class="head">Rewards</li>
+        <li class="mrow unlock-tile"><span class="mic tile">🦖</span><span class="mname">Triceratops<small>board tile</small></span><span class="utag">New tile</span></li>
+        <li class="mrow"><span class="mic coin">🪙</span><span class="mname">Coins</span><span class="mval">+500</span></li>
+        <li class="mrow"><span class="mic rune">◈</span><span class="mname">Rune</span><span class="mval rune">+1</span></li>
+        <li class="mrow"><span class="mic tool">🔒</span><span class="mname">Lockbox</span></li>
+      </ul>
+      <div class="qrow"><span class="qstatus">✦ Ready to claim</span><span class="qbtn">Claim</span></div>
+    </div>
+  </div>
+  <div>
+<pre><span class="c">// templates.ts — discovery quest; unlockTile already exists in code</span>
+{
+  id: <span class="s">"bones_back_forty"</span>,
+  label: <span class="s">"Bones in the Back Forty"</span>,
+  category: <span class="s">"chain"</span>, biome: <span class="s">"farm"</span>,
+  flavor: <span class="s">"Something old stirs beneath the pasture…"</span>,
+  goal: { kind: <span class="s">"chain"</span>, item: <span class="s">"tile_bird_chicken"</span>, target: 6 },
+  reward: {
+    coins: 500,
+    runes: 1,
+    tools: { rare: 1 },                          <span class="c">// Lockbox ×1 → no badge</span>
+    unlockTile: <span class="s">"tile_cattle_triceratops"</span>,  <span class="c">// ← headline (same tile the day-30 streak grants)</span>
+  },
+}</pre>
+    <p class="why"><strong>Why it works:</strong> reuses the <em>existing</em> <code>unlockTile</code> reward — the triceratops is real game content (today only reachable from the 30-day streak). The single Lockbox shows the “no badge when N=1” rule. Note <code>unlockTile</code> currently only marks the tile <em>discovered</em>; see §8 for whether a quest should also make it spawnable.</p>
+  </div>
+</div>
+
+<!-- Example 3: the 5-reward extreme, no unlock -->
+<h3>③ “The Quartermaster’s Tally” — the five-reward extreme</h3>
+<div class="ex">
+  <div class="card-wrap">
+    <div class="qcard ready" style="--accent:#a8722a;">
+      <div class="qrow"><span class="qtag">⬢ Order</span><span class="rchip coin"><span class="ic">🪙</span>+180</span></div>
+      <div><div class="qtitle">The Quartermaster's Tally</div><div class="qflavor">Everything on the manifest, by sundown.</div></div>
+      <div class="qprog"><div class="qbar"><i style="width:100%"></i></div><span class="qcount">20/20</span></div>
+      <ul class="manifest">
+        <li class="head">Rewards</li>
+        <li class="mrow"><span class="mic coin">🪙</span><span class="mname">Coins</span><span class="mval">+180</span></li>
+        <li class="mrow"><span class="mic xp">✦</span><span class="mname">Almanac XP</span><span class="mval xp">+2</span></li>
+        <li class="mrow"><span class="mic item">🪵</span><span class="mname">Plank</span><span class="mqty">×5</span></li>
+        <li class="mrow"><span class="mic item">⛓</span><span class="mname">Iron Bar</span><span class="mqty">×3</span></li>
+        <li class="mrow"><span class="mic tool">📯</span><span class="mname">Reshuffle Horn</span></li>
+      </ul>
+      <div class="qrow"><span class="qstatus">✦ Ready to claim</span><span class="qbtn">Claim</span></div>
+    </div>
+  </div>
+  <div>
+<pre><span class="c">// templates.ts — a "full manifest" order, no unlock; hits the cap</span>
+{
+  id: <span class="s">"quartermasters_tally"</span>,
+  label: <span class="s">"The Quartermaster's Tally"</span>,
+  category: <span class="s">"order"</span>, biome: <span class="s">"mine"</span>,
+  flavor: <span class="s">"Everything on the manifest, by sundown."</span>,
+  goal: { kind: <span class="s">"deliver"</span>, item: <span class="s">"iron_bar"</span>, target: 20 },
+  reward: {
+    coins: 180,
+    xp: 2,
+    items: { plank: 5, iron_bar: 3 },  <span class="c">// counted → ×5, ×3 badges</span>
+    tools: { shuffle: 1 },             <span class="c">// Reshuffle Horn ×1 → no badge</span>
+  },
+}</pre>
+    <p class="why"><strong>Why it works:</strong> five rows, no headline reward, so coins lead the chip. This is the densest a card should ever get — the list stays a clean five-row block with no overflow. If a sixth reward shows up, fix the content, not the layout.</p>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<h2 id="considered"><span class="num">5</span>Directions considered</h2>
+<p>Two alternatives were on the table before settling on the list. Both lose to it specifically <em>because</em> bundles are small and one reward is often a named unlock.</p>
+<div class="concepts cols-2">
+  <div class="concept">
+    <h3>A · Horizontal icon-chip cluster</h3>
+    <p class="small">A wrapping row of icon+count chips where the token sat.</p>
+    <ul class="pros">
+      <li class="p">Most compact; smallest change.</li>
+      <li class="m">No room for a reward <em>name</em> — an unlocked building reads as a bare icon, which is exactly the case we most want to spell out.</li>
+      <li class="m">Wrapping/overflow logic is wasted effort when the cap is five.</li>
+    </ul>
+  </div>
+  <div class="concept">
+    <h3>C · Compact summary + popover</h3>
+    <p class="small">Coins + a <code>+N</code> pill; tap to expand.</p>
+    <ul class="pros">
+      <li class="p">Tiniest footprint.</li>
+      <li class="m">Hides the prize behind a tap — buries the unlock, the whole reason the quest is exciting.</li>
+      <li class="m">Extra interaction for a bundle small enough to just show.</li>
+    </ul>
+  </div>
+</div>
+<p>The list keeps A's "show everything" and C's calm footprint, and adds the one thing both lack: <strong>room to name a reward</strong>. With a five-item cap there's no penalty for spelling each one out.</p>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<h2 id="formfactors"><span class="num">6</span>Form-factor adaptations</h2>
+<p>The same <code>&lt;RewardBundle&gt;</code> renders the list everywhere; only the <em>density</em> flexes with container width. The list itself barely needs to change — that's a benefit of capping at five.</p>
+<table>
+  <thead><tr><th>Form factor</th><th>Headline chip</th><th>List rows</th><th>Names</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Phone portrait</strong> (≤420px) — primary</td><td>Icon + 1-word label</td><td>Full list; 26px icons; names ellipsis if long</td><td>Always (that's the point)</td></tr>
+    <tr><td><strong>Tablet / desktop</strong> (≥720px)</td><td>Icon + full label</td><td>Full list, more horizontal breathing room; could go 2-up if ever needed</td><td>Always + room for the <code>board tile</code> sublabels</td></tr>
+    <tr><td><strong>Embedded panel</strong> (Townsfolk hub)</td><td>Icon + headline only</td><td>List collapses to a one-line summary; tap the card opens the full quest</td><td>Headline named; rest summarized</td></tr>
+  </tbody>
+</table>
+<div class="ff-grid cols-2">
+  <div class="device phone">
+    <div class="cap"><span class="dot"></span>Phone portrait — full list, the default</div>
+    <div class="screen">
+      <div class="qcard ready" style="--accent:var(--c-bld);">
+        <div class="qrow"><span class="qtag">⬢ Order</span><span class="rchip bld"><span class="ic">🏚</span>Mill</span></div>
+        <div><div class="qtitle">Raise the Mill</div></div>
+        <div class="qprog"><div class="qbar"><i style="width:100%"></i></div><span class="qcount">12/12</span></div>
+        <ul class="manifest">
+          <li class="mrow unlock-bld"><span class="mic bld">🏚</span><span class="mname">Mill</span><span class="utag">Unlocks</span></li>
+          <li class="mrow"><span class="mic coin">🪙</span><span class="mname">Coins</span><span class="mval">+250</span></li>
+          <li class="mrow"><span class="mic tool">🌱</span><span class="mname">Seedpack</span><span class="mqty">×2</span></li>
+        </ul>
+        <div class="qrow"><span class="qstatus">✦ Ready</span><span class="qbtn">Claim</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="device">
+    <div class="cap"><span class="dot"></span>Embedded QuestsPanel — collapsed summary</div>
+    <div class="screen" style="max-width:420px;">
+      <div style="display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--card-border);border-radius:8px;padding:8px 10px;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:12px;font-weight:800;">Raise the Mill</div>
+          <div class="qbar" style="margin-top:5px;"><i style="width:100%;background:var(--c-bld);"></i></div>
+        </div>
+        <span class="rchip bld" style="flex:0 0 auto;"><span class="ic">🏚</span>Mill <span style="opacity:.6;font-weight:700;">+3</span></span>
+      </div>
+      <p class="small">Tightest budget: headline chip names the prize (<em>Mill</em>), <code>+3</code> stands in for the rest; tapping the card opens the full list.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<h2 id="claim"><span class="num">7</span>The claim moment</h2>
+<p>There's already a floating reward-chip layer (<code>src/ui/RewardChipsLayer.tsx</code> + <code>rewardEvents.ts</code>) that pops “+N coins” on claim. Extend it so claiming a bundle <strong>fans out one chip per reward row</strong>, each flying to its destination — coins to the coin counter, tools to the tools tray, items to inventory. The <strong>unlock lands last and biggest</strong>: the building/tile chip flies to the town/almanac tab with a brief hold, so the headline reward is the climax of the animation, not buried in a stack of coins.</p>
+<div class="callout note"><strong>Sequencing:</strong> stagger ~60ms apart in taxonomy order — coins, XP, tools, items — then the headline (rune/perk/unlock) last. For an unlock, follow with a one-time toast: <em>“Mill unlocked — build it in town.”</em></div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<h2 id="implementation"><span class="num">8</span>Implementation sketch</h2>
+<p>The <em>rendering</em> is cheap and presentational. The <em>grants</em> for the two unlock kinds are the real work — and they differ sharply in cost.</p>
+
+<h3>Rendering — one component, one resolver</h3>
+<pre><span class="c">// src/features/quests/RewardBundle.tsx (new) — replaces the inline token AND rewardLabel()</span>
+<span class="k">export</span> function RewardBundle({ reward, mode }: { reward: DisplayReward; mode: <span class="s">"full"</span> | <span class="s">"summary"</span> }) {
+  const rows = <span class="k">toRewardRows</span>(reward);        <span class="c">// flatten → ordered Row[] (coins,xp,tools,items,runes,structural,unlock*)</span>
+  const headline = <span class="k">pickHeadline</span>(rows);       <span class="c">// unlock &gt; structural &gt; rune &gt; coins</span>
+  <span class="c">// "full": headline chip + &lt;ul class="manifest"&gt; of rows. "summary": headline chip + "+N".</span>
+}</pre>
+<ul>
+  <li><strong>Icon resolution</strong> — extend <code>dailyRewardIconKey()</code> (<code>concepts.ts:306</code>) into <code>rewardRowIcon(kind,key)</code>: coin→<code>tile_coin_golden</code>, tool→bare id (or <code>player_&lt;id&gt;</code>), item→its key, rune→<code>rune_stone</code>, <strong>building→<code>bld_&lt;id&gt;</code></strong>, <strong>tile→the tile key itself</strong>. All keys already exist in the registry.</li>
+  <li><strong>Names</strong> — buildings from <code>BUILDINGS[].name</code>; tiles/items/tools from the ITEMS <code>label</code> field. No new strings to author.</li>
+  <li><strong>Swap-in sites:</strong> daily token (<code>index.tsx:186</code>); delete <code>rewardLabel()</code> and use the list at the almanac rows (<code>index.tsx:246/263</code>); the <code>QuestsPanel</code> rows (<code>mode="summary"</code>).</li>
+  <li><strong>Styling:</strong> add <code>.quest-manifest</code> + <code>.qm-row</code> (and <code>.qm-row--unlock-*</code>) to <code>components.css</code> beside the existing quest classes; colours all come from <code>tokens.css</code>.</li>
+</ul>
+
+<h3>Grants — the actual net-new work</h3>
+<table>
+  <thead><tr><th>Reward</th><th>What exists</th><th>Net-new</th></tr></thead>
+  <tbody>
+    <tr><td><code>unlockTile</code> <span class="badge exists">exists</span></td><td>Applied in <code>LOGIN_TICK</code> (<code>state.ts:1489</code>) → <code>tileCollection.discovered[key]=true</code>. Used only by <code>DAILY_REWARDS</code> day 30.</td><td>Add <code>unlockTile</code> to <code>QuestReward</code> + apply it in <code>grantQuestRewardExtras()</code>. <strong>Decision:</strong> does a quest unlock just mark <em>discovered</em> (cheap, consistent with today) or also make the tile <em>spawnable</em> on the board? The latter touches zone spawn pools — bigger, and a balance question.</td></tr>
+    <tr><td><code>unlockBuilding</code> <span class="badge new">net-new</span></td><td>A DATA-only <code>Effect{kind:"unlockBuilding"}</code> in progression types — <em>no applier</em>. Building availability is gated by <code>globallyUnlockedBuildings()</code> (zone/cartography tier rosters), not by any reward.</td><td>Needs a real applier. Cleanest: a new <code>state.questUnlockedBuildings: string[]</code> that <code>globallyUnlockedBuildings()</code> unions in, plus a save migration. This is the one piece that deserves its own small spec before coding.</td></tr>
+  </tbody>
+</table>
+<div class="callout"><strong>Sequencing recommendation:</strong> ship the rendering + the already-wired kinds first (fixes the live bug for tools/items immediately, costs ~one component). Land <code>unlockTile</code>-on-quest next (small). Treat <code>unlockBuilding</code> as a follow-up with its own gating/migration design — don't block the reward UI on it.</div>
+<p class="small">Rendering changes are presentational → covered by a component test + a visual-golden refresh (<code>npm run test:visual</code>) on the quest screen. The grant changes need reducer tests + a persistence migration test.</p>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<h2 id="open"><span class="num">9</span>Open questions</h2>
+<ul>
+  <li><strong>Does a tile-unlock quest make the tile spawnable, or only discovered?</strong> Affects whether Example ② actually changes the board or just the almanac. (Recommend: discovered-only for v1, matching the daily-streak behaviour.)</li>
+  <li><strong>Where does an unlocked building live in state?</strong> A dedicated <code>questUnlockedBuildings</code> set vs. forcing it into the cartography roster. Needs the small spec noted above.</li>
+  <li><strong>Headline tie-break</strong> when a bundle has two headline-class rewards (e.g. a rune <em>and</em> a perk): proposed order <code>unlock &gt; structural &gt; rune &gt; coins</code> — one constant.</li>
+  <li><strong>Cap enforcement.</strong> Should a guard test fail CI if any template/almanac tier authors &gt;5 rewards, to keep the "no overflow" promise true?</li>
+  <li><strong>Resource icon coverage.</strong> Every <code>items</code> key needs a registry icon or a generic-crate fallback; audit the keys reachable from templates.</li>
+</ul>
+
+<footer>
+  puzzleDrag2 · Quest Reward UI proposal · code is truth — every claim anchored to <code>src/features/quests/</code>, <code>src/features/almanac/</code>, <code>src/constants.ts</code>, <code>src/state.ts</code>.<br/>
+  Mockup icon glyphs are CSS/emoji stand-ins for live <code>&lt;IconCanvas&gt;</code> renders.
+</footer>
+
+</div>
+</body>
+</html>

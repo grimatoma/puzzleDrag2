@@ -145,9 +145,13 @@ function visualOrders() {
 
 function visualQuests() {
   return [
-    { id: "quest-incomplete", category: "collect", label: "Harvest 30 hay", progress: 12, target: 30, reward: { coins: 50, almanacXp: 10 }, claimed: false },
-    { id: "quest-claimable", category: "order", label: "Deliver 1 order", progress: 1, target: 1, reward: { coins: 75, almanacXp: 20 }, claimed: false },
-    { id: "quest-claimed", category: "chain", label: "Chain 5 resources", progress: 5, target: 5, reward: { coins: 40, almanacXp: 10 }, claimed: true },
+    // Multi-reward bundle with a building unlock as the headline — exercises the
+    // expanded reward manifest (icon + name + ×N) and the framed unlock row.
+    { id: "quest-incomplete", category: "collect", label: "Harvest 30 hay", progress: 12, target: 30, reward: { coins: 50, almanacXp: 10, tools: { basic: 2 }, unlockBuilding: "mill" }, claimed: false },
+    // Tile unlock + rune headline alongside coins/XP and a single tool (no ×N badge).
+    { id: "quest-claimable", category: "order", label: "Deliver 1 order", progress: 1, target: 1, reward: { coins: 75, almanacXp: 20, runes: 1, tools: { rare: 1 }, unlockTile: "tile_cattle_triceratops" }, claimed: false },
+    // The five-reward extreme, no unlock — coins lead the headline chip.
+    { id: "quest-claimed", category: "chain", label: "Chain 5 resources", progress: 5, target: 5, reward: { coins: 40, almanacXp: 10, items: { plank: 5, iron_bar: 3 } }, claimed: true },
   ];
 }
 

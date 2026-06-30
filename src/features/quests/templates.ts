@@ -9,11 +9,15 @@
  * Tomas, Bram the smith, Sister Liss, Wren the carpenter) so the daily
  * tasks read like requests from neighbours rather than chores.
  *
- * ITEM REWARDS (optional): besides coins, a template may grant tools and/or
- * resource items when the quest is claimed. Add either field to any template:
- *   rewardTools: { basic: 2, rare: 1 }   // global tool counts (one or many)
- *   rewardItems: { plank: 5 }            // resources, into the active zone's inventory
- * Both default to nothing; coins are always granted from coinBase/coinPerUnit.
+ * REWARDS (optional): besides coins, a template may grant any of the following
+ * when the quest is claimed. All are optional and default to nothing; coins are
+ * always granted from coinBase/coinPerUnit. Keep a quest to AT MOST FIVE total
+ * rewards (incl. coins + XP) so the card's reward manifest never overflows.
+ *   rewardTools: { basic: 2, rare: 1 }            // global tool counts
+ *   rewardItems: { plank: 5 }                      // resources → active zone inventory
+ *   rewardRunes: 1                                 // rune balance
+ *   rewardUnlockTile: "tile_cattle_triceratops"    // marks a board tile discovered
+ *   rewardUnlockBuilding: "mill"                    // makes a building buildable (cost still paid)
  */
 export const QUEST_TEMPLATES = [
   // ── collect-resource ────────────────────────────────────────────────────────
@@ -32,15 +36,21 @@ export const QUEST_TEMPLATES = [
   { id: "collect_flour", category: "collect", key: "flour", label: "Collect {n} flour",
     flavor: "The hearth bakes nothing from empty sacks. Grind some flour.",
     targetMin: 4,  targetMax: 10, coinBase: 50, coinPerUnit: 4 },
-  // ── TEST quests — easy targets, item rewards (remove before release) ───────────
-  { id: "test_tool_reward", category: "collect", key: "tile_grass_grass", label: "[TEST] Collect {n} grass for a tool",
-    flavor: "Test quest: rewards tools on claim.",
-    targetMin: 1, targetMax: 1, coinBase: 10, coinPerUnit: 1,
-    rewardTools: { basic: 2, rare: 1 } },
-  { id: "test_item_reward", category: "collect", key: "tile_grass_grass", label: "[TEST] Collect {n} grass for planks",
-    flavor: "Test quest: rewards resource items on claim.",
-    targetMin: 1, targetMax: 1, coinBase: 10, coinPerUnit: 1,
-    rewardItems: { plank: 5 } },
+  // ── Milestone / build-out commissions (rich reward bundles) ───────────────────
+  // These showcase the full reward range: a building unlock, a tile unlock, and a
+  // five-reward "full manifest" order. Each stays within the five-reward cap.
+  { id: "raise_the_mill", category: "order", label: "Raise the Mill",
+    flavor: "Grind the first sacks — the village wants bread.",
+    targetMin: 3, targetMax: 5, coinBase: 250, coinPerUnit: 0,
+    rewardTools: { basic: 2 }, rewardUnlockBuilding: "mill" },
+  { id: "bones_back_forty", category: "chain", minLength: 8, label: "Bones in the Back Forty",
+    flavor: "Something old stirs beneath the pasture…",
+    targetMin: 2, targetMax: 3, coinBase: 500, coinPerUnit: 0,
+    rewardRunes: 1, rewardTools: { rare: 1 }, rewardUnlockTile: "tile_cattle_triceratops" },
+  { id: "quartermasters_tally", category: "order", biome: "mine", label: "The Quartermaster's Tally",
+    flavor: "Everything on the manifest, by sundown.",
+    targetMin: 4, targetMax: 6, coinBase: 180, coinPerUnit: 0,
+    rewardItems: { plank: 5, iron_bar: 3 }, rewardTools: { shuffle: 1 } },
   // ── craft-item ──────────────────────────────────────────────────────────────
   { id: "craft_bread",   category: "craft",   item: "bread",   label: "Bake {n} bread",
     flavor: "A village runs on its bread. Mira will trade dearly for warm loaves.",

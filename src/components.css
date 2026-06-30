@@ -767,6 +767,90 @@
   }
   .quest-reward .quest-reward-xp { color: #6f8a3a; }
 
+  /* ── Reward headline chip variants + the expanded manifest list ─────────── */
+  /* The headline chip pair (prize chip, optional coin chip) sits where the old
+     single token did. Building/tile/rune/perk carry a premium palette. */
+  .quest-reward-chips { @apply inline-flex items-center gap-1.5 flex-shrink-0; }
+  .quest-reward .quest-reward-glyph {
+    @apply inline-grid place-items-center rounded;
+    width: 16px; height: 16px; font-size: 11px; line-height: 1;
+    background: rgba(138, 74, 38, 0.12);
+  }
+  .quest-reward--coin-sm { padding: 2px 8px; }
+  .quest-reward--bld {
+    color: #7a4a12;
+    background: linear-gradient(180deg, #fff2cf 0%, #f7dd9b 100%);
+    border-color: #e6b94f;
+  }
+  .quest-reward--bld .quest-reward-glyph { background: rgba(168, 114, 42, 0.18); }
+  .quest-reward--tile {
+    color: #1f5b3c;
+    background: linear-gradient(180deg, #dff3e6 0%, #bfe6cf 100%);
+    border-color: #7fc49b;
+  }
+  .quest-reward--tile .quest-reward-glyph { background: rgba(47, 125, 86, 0.16); }
+  .quest-reward--rune,
+  .quest-reward--perk {
+    color: #4a2c72;
+    background: linear-gradient(180deg, #efe2fb 0%, #ddc7f3 100%);
+    border-color: #c4a6e8;
+  }
+  .quest-reward--rune .quest-reward-glyph,
+  .quest-reward--perk .quest-reward-glyph { background: rgba(106, 58, 160, 0.16); }
+
+  /* The manifest: one row per reward (icon + name + optional ×N / value). */
+  .quest-manifest { @apply list-none m-0 p-0 flex flex-col gap-1; }
+  .qm-row {
+    @apply flex items-center gap-2 rounded-md;
+    padding: 4px 8px;
+    background: #fdf7e7;
+    border: 1px solid #eaddbc;
+  }
+  .qm-ic { @apply grid place-items-center flex-shrink-0; width: 26px; height: 26px; }
+  .qm-glyph {
+    @apply inline-grid place-items-center rounded-md;
+    width: 26px; height: 26px; font-size: 15px; line-height: 1;
+    background: rgba(138, 74, 38, 0.1);
+  }
+  .qm-name {
+    @apply flex-1 min-w-0 font-bold truncate;
+    font-size: 12px;
+    color: var(--on-panel);
+  }
+  .qm-qty {
+    @apply flex-shrink-0 font-bold rounded-pill tabular-nums;
+    font-size: 11px; padding: 1px 7px;
+    color: var(--on-panel-dim);
+    background: #efe2c4;
+    border: 1px solid #ddc99a;
+  }
+  .qm-val { @apply flex-shrink-0 font-bold tabular-nums; font-size: 12px; color: #b9881f; }
+  .qm-val--xp { color: #6f8a3a; }
+  .qm-val--rune { color: #6a3aa0; }
+  .qm-tag {
+    @apply flex-shrink-0 font-bold uppercase rounded-pill;
+    font-size: 8.5px; letter-spacing: 0.05em; padding: 2px 7px;
+    color: #fff; background: var(--on-panel-label);
+  }
+  /* Unlock rows: framed + tinted so the prize reads as the prize. */
+  .qm-row--unlock-bld {
+    background: linear-gradient(180deg, #fff5d8 0%, #fbe9b6 100%);
+    border-color: #e6b94f;
+  }
+  .qm-row--unlock-bld .qm-name { font-weight: 800; }
+  .qm-row--unlock-bld .qm-tag { background: #a8722a; }
+  .qm-row--unlock-tile {
+    background: linear-gradient(180deg, #e2f5ea 0%, #cdeed9 100%);
+    border-color: #7fc49b;
+  }
+  .qm-row--unlock-tile .qm-name { font-weight: 800; }
+  .qm-row--unlock-tile .qm-tag { background: #2f7d56; }
+  .qm-row--perk {
+    background: linear-gradient(180deg, #efe2fb 0%, #ddc7f3 100%);
+    border-color: #c4a6e8;
+  }
+  .qm-row--perk .qm-tag { background: #6a3aa0; }
+
   .quest-card-title {
     @apply font-bold leading-tight;
     font-size: 13px;

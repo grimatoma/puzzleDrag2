@@ -535,6 +535,11 @@ export function globallyUnlockedBuildings(state: GameState | null | undefined): 
       if (!seen.has(b)) { seen.add(b); out.push(b); }
     }
   }
+  // Reward-granted unlocks (quest/almanac `unlockBuilding`) widen the roster too;
+  // they're already validated against the building catalog at grant time.
+  for (const b of state?.questUnlockedBuildings ?? []) {
+    if (!seen.has(b)) { seen.add(b); out.push(b as BuildingId); }
+  }
   return out;
 }
 

@@ -5,6 +5,7 @@ import { QUEST_TEMPLATES } from "./templates.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import ActionCard, { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
+import { RewardHeadlineChip, RewardManifest } from "./RewardBundle.jsx";
 import type { Dispatch, GameState } from "../../types/state.js";
 import type { Quest } from "./data.js";
 
@@ -14,7 +15,10 @@ interface DisplayReward {
   almanacXp?: number;
   tools?: Record<string, number>;
   items?: Record<string, number>;
+  runes?: number;
   structural?: string;
+  unlockTile?: string;
+  unlockBuilding?: string;
   tool?: string;
   amt?: number;
   [k: string]: unknown;
@@ -101,35 +105,6 @@ function SparkGlyph({ size = 11 }) {
   );
 }
 
-function rewardLabel(reward: DisplayReward | null | undefined): string {
-  if (!reward) return "?";
-  const parts: string[] = [];
-  if (reward.coins) parts.push(`+${reward.coins}◉`);
-  if (reward.tools) {
-    for (const [k, v] of Object.entries(reward.tools)) {
-      parts.push(`+${v} ${k}`);
-    }
-  }
-  if (reward.items) {
-    for (const [k, v] of Object.entries(reward.items)) {
-      parts.push(`+${v} ${k}`);
-    }
-  }
-  if (reward.structural) {
-    const structuralLabels: Record<string, string> = {
-      startingExtraScythe: "Extra Scythe (permanent)",
-      extraBlueprintSlot: "Extra Blueprint Slot",
-      extraTurn: "Extra Turn token",
-      goldSeal: "Golden Seal",
-    };
-    parts.push(structuralLabels[reward.structural] ?? reward.structural);
-  }
-  if (reward.tool) {
-    parts.push(`+${reward.amt ?? 1} ${reward.tool}`);
-  }
-  return parts.length > 0 ? parts.join(" · ") : "?";
-}
-
 export const viewKey = "quests";
 
 function questLabel(q: DisplayQuest): string {
@@ -163,10 +138,6 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
   const claimed = !!q.claimed;
   const meta = categoryMeta(q);
   const catKey = meta.icon;
-  const coins = q.reward.coins ?? 0;
-  // Legacy dailies carry `almanacXp`; deterministic quests carry `xp`. Both map
-  // to the almanac ✦ track, so show whichever is present.
-  const xp = q.reward.almanacXp ?? (q.reward as { xp?: number }).xp ?? 0;
   const flavor = questFlavor(q);
   const remaining = Math.max(0, q.target - q.progress);
 
@@ -183,10 +154,7 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
           )}
           {meta.label}
         </span>
-        <span className="quest-reward" title="Reward">
-          <span>+{coins}◉</span>
-          {xp > 0 && <span className="quest-reward-xp">+{xp}✦</span>}
-        </span>
+        <RewardHeadlineChip reward={q.reward} />
       </div>
 
       {/* Title + flavor line */}
@@ -202,6 +170,9 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
           {q.progress}/{q.target}
         </span>
       </div>
+
+      {/* Reward manifest — every reward this quest grants */}
+      <RewardManifest reward={q.reward} />
 
       {/* Status + claim */}
       <div className="flex items-center justify-between gap-2">
@@ -243,7 +214,6 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }: 
   const unlocked = almanacXp >= cost;
   const claimable = unlocked && !claimed;
 
-  const rewardStr = rewardLabel(tierDef.reward);
   const icon = tier >= 8 ? "🔺" : tier >= 5 ? "△" : "◈";
 
   return (
@@ -260,10 +230,10 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }: 
           <ActionCard.Title className="text-[11px]">
             Tier {tier}{tierDef.name ? ` — ${tierDef.name}` : ""}
           </ActionCard.Title>
-          <div className="text-[10px] font-bold text-[#a8722a]">{rewardStr}</div>
         </div>
         <div className="text-[9px] text-[#7a5e3f]/70 flex-shrink-0">{cost}✦</div>
       </div>
+      <RewardManifest reward={tierDef.reward} />
       {tierDef.description && (
         <div className="text-[9px] text-[#7a5e3f]/80 italic leading-snug">
           {tierDef.description}

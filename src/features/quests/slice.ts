@@ -44,6 +44,9 @@ function rollFresh(): QuestDailyLegacy[] {
         coins: tpl.coinBase,
         ...(tpl.rewardTools ? { tools: tpl.rewardTools } : {}),
         ...(tpl.rewardItems ? { items: tpl.rewardItems } : {}),
+        ...(tpl.rewardRunes ? { runes: tpl.rewardRunes } : {}),
+        ...(tpl.rewardUnlockTile ? { unlockTile: tpl.rewardUnlockTile } : {}),
+        ...(tpl.rewardUnlockBuilding ? { unlockBuilding: tpl.rewardUnlockBuilding } : {}),
       },
       key,
     });
