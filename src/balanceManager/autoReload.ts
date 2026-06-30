@@ -38,7 +38,19 @@ async function fetchLatestScriptSrc(): Promise<string> {
   return m ? m[1] : text; // fall back to full HTML if pattern misses
 }
 
+// Query param appended by applyAutoReload() to bypass the browser's HTML cache.
+// Stripped on startup so the URL stays clean after the reload lands.
+const RELOAD_PARAM = "_reload";
+
 export function startAutoReload(): () => void {
+  // If we just reloaded via the banner, strip the cache-busting param from
+  // the URL so it doesn't persist in the address bar or history entry.
+  const startUrl = new URL(window.location.href);
+  if (startUrl.searchParams.has(RELOAD_PARAM)) {
+    startUrl.searchParams.delete(RELOAD_PARAM);
+    history.replaceState(null, "", startUrl.toString());
+  }
+
   const initial = currentScriptSrc();
   let destroyed = false;
 
@@ -67,7 +79,13 @@ export function startAutoReload(): () => void {
 }
 
 export function applyAutoReload(): void {
-  window.location.reload();
+  // Navigate with a unique cache-busting query param rather than calling
+  // reload(), which can serve a browser-cached /b/index.html and land the
+  // user on the old build. The param is stripped by startAutoReload() on
+  // the next page load so the URL stays clean.
+  const url = new URL(window.location.href);
+  url.searchParams.set(RELOAD_PARAM, String(Date.now()));
+  window.location.replace(url.toString());
 }
 
 export function useAutoReloadReady(): boolean {
