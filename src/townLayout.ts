@@ -14,6 +14,7 @@
 // plus roads / water / trees / fields / fences for the top-down renderer.
 
 import { mulberry32 } from "./rng.js";
+import type { GroundSpec, GroundRoad, GroundMaterial } from "./ui/town/proceduralGround.js";
 
 const W = 1280, H = 960;
 
@@ -78,6 +79,12 @@ export interface TownPlan {
   paths: TownPlanPath[];
   lotDecor: TownPlanLotDecor[];
   streetTrees: TownPlanStreetTree[];
+  /**
+   * Hand-rolled SDF ground spec derived from this plan's geometry. When present,
+   * TownScene bakes it into a resolution-scalable texture and draws it instead of
+   * the legacy Tuxemon raster tileset (see `deriveGroundSpec` + TownScene.create).
+   */
+  groundSpec?: GroundSpec;
 }
 
 // ── Geometry helpers ────────────────────────────────────────────────────────
@@ -114,6 +121,74 @@ function polyBbox(poly: Pt[]) {
   for (const p of poly) { x0 = Math.min(x0, p.x); y0 = Math.min(y0, p.y); x1 = Math.max(x1, p.x); y1 = Math.max(y1, p.y); }
   return { x0, y0, x1, y1 };
 }
+/**
+ * Derive an SDF ground spec from a laid-out plan's geometry so procedurally-
+ * planned zones (e.g. Greenmeadow, the in-scope Town 2) render the same smooth,
+ * resolution-independent ground as the hand-authored home zone — instead of the
+ * legacy Tuxemon raster tileset. TownScene prefers `groundSpec` over the tile
+ * fallback. Roads, the river, the paved square, the farm parcel and the river
+ * crossings all map straight onto distance-feathered SDF primitives.
+ *
+ * Lagoon zones (a fish "shore" water POLYGON) keep the tile path for now — the
+ * SDF model has no arbitrary-polygon water primitive — so this returns undefined
+ * for them, leaving their rendering untouched.
+ */
+function deriveGroundSpec(
+  zoneId: string,
+  cacheKey: string,
+  roads: TownPlanRoad[],
+  water: TownPlanWater[],
+  plaza: { cx: number; cy: number; rx: number; ry: number },
+  fields: TownPlanField[],
+  bridges: TownPlanBridge[],
+): GroundSpec | undefined {
+  if (water.some((w) => w.kind === "shore" && w.polygon)) return undefined;
+
+  // Each street → one distance-feathered lane; main avenues read a touch firmer.
+  const sdfRoads: GroundRoad[] = roads.map((rd) => {
+    const a = rd.points[0], b = rd.points[rd.points.length - 1];
+    const material: GroundMaterial = rd.kind === "main" ? "packed_dirt" : "dirt";
+    return { x1: a.x, y1: a.y, x2: b.x, y2: b.y, half: rd.width / 2, material };
+  });
+
+  const riverWater = water.find((w) => w.kind === "river" && w.path && w.path.length >= 2);
+  const river = riverWater
+    ? { pts: riverWater.path!.map((p) => [p.x, p.y] as const), half: (riverWater.width ?? 42) / 2, bank: 20 }
+    : null;
+
+  // Paved town square over the road grid (mirrors the tile path's painted plaza).
+  const cobble = plaza.rx > 0 && plaza.ry > 0
+    ? [{ cx: plaza.cx, cy: plaza.cy, rx: plaza.rx, ry: plaza.ry, material: "cobble" as GroundMaterial }]
+    : [];
+
+  // Farm soil — the spec carries one parcel; use the primary (board-locked) field.
+  const f0 = fields[0];
+  const field = f0 ? { cx: f0.cx, cy: f0.cy, w: f0.w, h: f0.h } : null;
+
+  // A wooden deck wherever a road crosses the river (span the water + both shores).
+  const riverHalf = river?.half ?? 21;
+  const bank = river?.bank ?? 20;
+  const sdfBridges = river
+    ? bridges.map((br) => ({ cx: br.x, cy: br.y, len: riverHalf * 2 + bank * 2 + 12, wid: br.width * 1.2, angle: br.angle }))
+    : [];
+
+  return {
+    key: cacheKey,
+    width: W,
+    height: H,
+    // Stable per-zone noise seed, drawn from an INDEPENDENT generator so the main
+    // layout RNG's consumption order (trees/fences/props) is untouched.
+    seed: Math.floor(seededRng(`ground:${zoneId}`)() * 0xffffffff) >>> 0,
+    river,
+    pond: null,
+    roads: sdfRoads,
+    cobble,
+    field,
+    bridges: sdfBridges,
+    dock: null,
+  };
+}
+
 export function buildTownPlan(
   { zoneId = "home", plotCount = 12, boardKinds = [] }: {
     zoneId?: string;
@@ -771,5 +846,14 @@ export function buildTownPlan(
     paths: snappedPaths,
     lotDecor: snappedLotDecor,
     streetTrees: snappedStreetTrees,
+    groundSpec: deriveGroundSpec(
+      zoneId,
+      `proc-${zoneId}-${n}-${kinds.join("")}`,
+      snappedRoads,
+      snappedWater,
+      snappedPlaza,
+      snappedFields,
+      snappedBridges,
+    ),
   };
 }
