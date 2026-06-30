@@ -7,6 +7,7 @@
 import type { RunSummary } from "../features/runSummary/slice.js";
 import type { BossState } from "../features/boss/slice.js";
 import type { Quest } from "../features/quests/data.js";
+import type { Toast } from "../features/toasts/data.js";
 
 /** Legacy 3-slot daily quest rows (spread at root from quests slice `initial`). */
 export interface QuestDailyLegacy {
@@ -71,6 +72,8 @@ export interface SliceRootFields {
   almanacTier: number;
   almanacClaimed: number[];
   quests: Quest[];
+  /** Transient global toast notifications (not persisted; see VOLATILE). */
+  toasts: Toast[];
   trophies: Record<string, unknown>;
   collected: Record<string, number>;
   totalHarvested: number;
@@ -87,4 +90,4 @@ export interface SliceRootFields {
   year?: number;
 }
 
-export type { RunSummary, BossState, Quest };
+export type { RunSummary, BossState, Quest, Toast };

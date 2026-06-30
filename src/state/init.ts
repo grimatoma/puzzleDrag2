@@ -82,6 +82,8 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     // Fresh game: only the home village (a farm board) is reachable, so the
     // quest board must not commission fish/mine catches the player can't get.
     quests: rollQuests(saveSeed, 1, "spring", ["farm"]),
+    // Transient global toast queue (quest completions, etc.) — never persisted.
+    toasts: [],
     tools: {
       clear: 2 + extraScytheBonus, basic: 1, rare: 1, shuffle: 0, bomb: 0,
       startingExtraScythe: !!overrides?.tools?.startingExtraScythe,

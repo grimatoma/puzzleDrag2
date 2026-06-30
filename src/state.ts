@@ -52,6 +52,7 @@ import { defaultWorkersSlice } from "./features/workers/data.js";
 import * as boons from "./features/boons/slice.js";
 import * as runSummary from "./features/runSummary/slice.js";
 import * as civicEconomy from "./features/civicEconomy/slice.js";
+import * as toasts from "./features/toasts/slice.js";
 import { boonEffectMult } from "./features/boons/data.js";
 import { ZONES, zoneHasBoard, settlementFoundingCost, isSettlementFounded, displayZoneName, grantEarnedHearthTokens, isOldCapitalUnlocked, isExpeditionFood, expeditionTurnsFromSupply, settlementTypeForZone, resolveBiomeChoice, completedSettlementCount, DEFAULT_ZONE, turnBudgetForZone, settlementHazards, settlementTier, maxTier, currentTierDef, zoneTierGateReason, HOUSE_BUILDING_ID, HOUSE_VILLAGER_GRANT, houseCapForZone, houseCountAt, FOUNDING_PAYMENT_ZONE } from "./features/zones/data.js";
 import { ResourceKey } from "./types/catalogKeys.js";
@@ -97,7 +98,7 @@ function familyResourceForCategory(category: string): string | null {
 // never brick boot. See src/state/applyStoryOverrides.ts.
 setStoryOverrides((BALANCE_OVERRIDES.story as StoryOverrides | undefined) ?? null);
 
-const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons, runSummary, civicEconomy];
+const slices = [crafting, quests, achievements, tutorial, settings, boss, cartography, storySlice, decorations, portal, market, castle, fish, zones, workers, boons, runSummary, civicEconomy, toasts];
 
 // Tools that arm-then-fire from a board tap. USE_TOOL only sets toolPending;
 // the charge is spent in TOOL_FIRED once the tap actually resolves. Keep in
@@ -1802,6 +1803,8 @@ const SLICE_PRIMARY_ACTIONS = new Set([
   // Town Hall economy — owned by civicEconomy/slice
   "CIVIC/CLAIM",
   "CIVIC/OPEN_CARE_PACKAGE",
+  // Global toast dismiss — owned by toasts/slice
+  "TOASTS/DISMISS",
 ]);
 
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE

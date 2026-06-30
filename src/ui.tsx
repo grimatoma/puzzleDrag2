@@ -2,6 +2,7 @@ import React from "react";
 import TabBar, { Tab } from "./ui/primitives/TabBar.jsx";
 import { inventoryQty } from "./types/inventory.js";
 import { zoneInventory } from "./state/zoneInventory.js";
+import { claimableQuestCount } from "./features/quests/data.js";
 import type { Dispatch, GameState } from "./types/state.js";
 
 interface FeatureErrorBoundaryProps {
@@ -57,6 +58,9 @@ export const BottomNav = React.memo(function BottomNav({ view, dispatch, state }
   const inventory = zoneInventory(state ?? { inventory: {}, farmRun: null, activeZone: "home", mapCurrent: "home" } as import("./types/state.js").GameState);
   const ordersReady = orders.filter((o) => inventoryQty(inventory, o.key) >= o.need).length;
   const ordersBadge = ordersReady > 0 ? { count: ordersReady, tone: "moss" } : undefined;
+  // Light the Quests tab when a finished commission is waiting to be claimed.
+  const questsReady = claimableQuestCount(state ?? ({} as GameState));
+  const questsBadge = questsReady > 0 ? { count: questsReady, tone: "gold" } : undefined;
   return (
     <TabBar
       current={view}
@@ -67,7 +71,7 @@ export const BottomNav = React.memo(function BottomNav({ view, dispatch, state }
       <Tab itemKey="crafting" iconKey="ui_build" label="Craft" />
       <Tab itemKey="cartography" iconKey="ui_map" label="Map" />
       <Tab itemKey="townsfolk" iconKey="ui_people" label="Townsfolk" />
-      <Tab itemKey="quests" iconKey="quest_book" label="Quests" />
+      <Tab itemKey="quests" iconKey="quest_book" label="Quests" badge={questsBadge} />
     </TabBar>
   );
 });

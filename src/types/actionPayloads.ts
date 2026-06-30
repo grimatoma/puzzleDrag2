@@ -441,6 +441,11 @@ export interface DismissBubbleAction {
   id: number;
 }
 
+export interface ToastsDismissAction {
+  type: "TOASTS/DISMISS";
+  id: string;
+}
+
 export interface MigrateApplyCapsAction {
   type: "MIGRATE/APPLY_CAPS";
 }
@@ -622,6 +627,7 @@ export type TypedActionType =
   | CancelToolAction["type"]
   | CloseModalAction["type"]
   | DismissBubbleAction["type"]
+  | ToastsDismissAction["type"]
   | MigrateApplyCapsAction["type"]
   | RunSummaryOpenAction["type"]
   | RunSummaryCloseAction["type"]
@@ -712,6 +718,7 @@ export type TypedAction =
   | CancelToolAction
   | CloseModalAction
   | DismissBubbleAction
+  | ToastsDismissAction
   | MigrateApplyCapsAction
   | RunSummaryOpenAction
   | RunSummaryCloseAction
