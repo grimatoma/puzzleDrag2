@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>puzzleDrag2 — UX &amp; Color Review</title>
+<style>
+  :root{
+    /* This doc practices what it preaches: a real contrast ladder. */
+    --page:#efe6cf; --panel:#faf4e4; --card:#fffdf6; --well:#e7dcc0;
+    --border:#b59a6a; --border-strong:#94774b;
+    --ink:#2b2218; --ink-2:#5c4a33; --ink-3:#8a7350;
+    --ember:#cf5520; --gold:#b9851f; --farm:#4f7a2a; --mine:#3f5d80; --fish:#2f7e96;
+    --danger:#b1322a; --arcane:#5b3f86;
+    --ok:#2f7d3a; --warn:#b8801c; --fail:#b1322a;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--page);color:var(--ink);
+    font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;}
+  .wrap{max-width:980px;margin:0 auto;padding:0 24px 120px;}
+  header.hero{max-width:980px;margin:32px auto 8px;padding:36px 40px;
+    background:linear-gradient(135deg,#fffdf6,#f3ead2);
+    border:2px solid var(--border);border-radius:18px;
+    box-shadow:0 2px 0 var(--border),0 10px 30px rgba(60,40,20,.10);position:relative;overflow:hidden}
+  header.hero::after{content:"";position:absolute;right:-40px;top:-60px;width:280px;height:280px;
+    background:radial-gradient(circle,rgba(207,85,32,.10),transparent 70%);border-radius:50%}
+  .eyebrow{font:600 12px/1 system-ui;letter-spacing:.16em;text-transform:uppercase;color:var(--ember);margin:0 0 14px}
+  h1{font-family:var(--serif);font-size:clamp(30px,5vw,46px);line-height:1.05;margin:0 0 10px;color:var(--ink)}
+  .sub{color:var(--ink-2);font-size:15px;max-width:62ch;margin:0}
+  h2{font-family:var(--serif);font-size:27px;margin:54px 0 8px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+  h3{font-size:18px;margin:30px 0 8px;color:var(--ink)}
+  h2 .n{color:var(--ember);font-size:.7em;vertical-align:.12em;margin-right:.5em}
+  p{margin:12px 0;color:var(--ink)}
+  a{color:var(--ember)}
+  strong{color:var(--ink)}
+  code{font-family:var(--mono);font-size:.85em;background:var(--well);border:1px solid var(--border);
+    border-radius:5px;padding:1px 5px;color:#4a3a22}
+  .lead{font-size:18px;color:var(--ink)}
+  .callout{background:var(--card);border:1.5px solid var(--border);border-left:5px solid var(--ember);
+    border-radius:12px;padding:18px 22px;margin:22px 0;box-shadow:0 2px 8px rgba(60,40,20,.06)}
+  .callout.tldr{border-left-color:var(--ember)}
+  .callout.q{border-left-color:var(--arcane)}
+  table{border-collapse:collapse;width:100%;margin:18px 0;font-size:14.5px;
+    background:var(--card);border:1.5px solid var(--border);border-radius:12px;overflow:hidden}
+  th,td{padding:10px 13px;text-align:left;border-bottom:1px solid #e6d9bd;vertical-align:middle}
+  th{background:#f1e7cd;font:700 12px/1.2 system-ui;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+  tr:last-child td{border-bottom:none}
+  tr:nth-child(even) td{background:#fbf6e9}
+  td.num{text-align:right;font-family:var(--mono);font-weight:700}
+  .chip{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+  .sw{width:18px;height:18px;border-radius:5px;border:1px solid rgba(0,0,0,.25);flex:none;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
+  .sw.lg{width:46px;height:24px;border-radius:6px}
+  .pass{color:var(--ok);font-weight:700} .warn{color:var(--warn);font-weight:700} .fail{color:var(--fail);font-weight:700}
+  .demo{display:inline-block;padding:2px 9px;border-radius:6px}
+  .palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin:18px 0}
+  .pcard{background:var(--card);border:1.5px solid var(--border);border-radius:12px;overflow:hidden}
+  .pcard .bar{height:54px} .pcard .meta{padding:8px 11px;font-size:12.5px;color:var(--ink-2)}
+  .pcard .meta b{display:block;color:var(--ink);font-size:13.5px}
+  .pcard .meta code{font-size:11px;background:none;border:none;padding:0;color:var(--ink-3)}
+  figure{margin:22px 0;background:var(--card);border:1.5px solid var(--border);border-radius:14px;
+    padding:12px;box-shadow:0 3px 12px rgba(60,40,20,.08)}
+  figure img{width:100%;display:block;border-radius:8px;border:1px solid #e0d2b4}
+  figcaption{font-size:13px;color:var(--ink-2);padding:10px 6px 2px;font-style:italic}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  ul,ol{padding-left:22px} li{margin:6px 0}
+  .phase{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:16px 20px;margin:14px 0;
+    border-left:5px solid var(--farm)}
+  .phase h3{margin:0 0 4px} .phase .tag{font:700 11px/1 system-ui;letter-spacing:.08em;text-transform:uppercase;
+    color:#fff;background:var(--farm);padding:4px 8px;border-radius:5px;display:inline-block;margin-bottom:8px}
+  .phase.p0{border-left-color:var(--ember)} .phase.p0 .tag{background:var(--ember)}
+  .toc{columns:2;column-gap:30px;font-size:14.5px;background:var(--panel);border:1.5px solid var(--border);
+    border-radius:12px;padding:16px 22px;margin:24px 0}
+  @media(max-width:600px){.toc{columns:1}}
+  .toc a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+  .toc a:hover{color:var(--ember)}
+  footer{margin-top:60px;padding-top:18px;border-top:2px solid var(--border);color:var(--ink-3);font-size:13px}
+</style>
+</head>
+<body>
+<header class="hero">
+  <p class="eyebrow">Design review · 2026-06-30</p>
+  <h1>puzzleDrag2 — UX&nbsp;&amp;&nbsp;Color Review</h1>
+  <p class="sub">Read from the live code in <code>src/</code> (not the <code>reference/</code> docs),
+  with the running game and wiki screenshotted across every major screen and WCAG contrast measured on
+  the actual token values. The verdict, a revised palette, and a phased plan.</p>
+</header>
+
+<div class="wrap">
+
+<nav class="toc">
+  <a href="#tldr">▸ TL;DR</a>
+  <a href="#ladder">1 · No contrast ladder</a>
+  <a href="#accents">2 · Two-color accent system</a>
+  <a href="#season">3 · Season &amp; world under-signaled</a>
+  <a href="#type">4 · Typography</a>
+  <a href="#wiki">5 · The Wiki</a>
+  <a href="#friction">6 · Smaller friction</a>
+  <a href="#direction">Proposed direction</a>
+  <a href="#plan">Plan of work</a>
+  <a href="#questions">Questions for you</a>
+</nav>
+
+<div class="callout tldr" id="tldr">
+<p class="lead" style="margin-top:0"><strong>Your instinct is right, and it's specific.</strong></p>
+<p>The game is <em>not</em> hard to read — primary ink on parchment is a healthy <strong>13.6:1</strong>.
+The problem is that <strong>every signal <em>other</em> than body text is too soft to do its job</strong>:
+borders, dividers, card edges, tertiary labels, the "current season" cue, and most accent colors all sit
+at or below <strong>1.7:1</strong>, so the UI collapses into one flat parchment plane. There is no contrast
+<em>ladder</em> and effectively only <strong>two</strong> live accent colors (ember, gold). Several accent
+tokens are defined but <strong>dead</strong>.</p>
+<p style="margin-bottom:0">The fix is <strong>not</strong> to go dark or loud. Keep the warm-parchment
+identity — it's cohesive and differentiates you. Rebuild three things: a real <strong>contrast ladder</strong>,
+a real <strong>accent system</strong> (and wire the dead tokens), and <strong>season &amp; world legibility</strong>.</p>
+</div>
+
+<h2 id="ladder"><span class="n">01</span>There is no contrast ladder</h2>
+<p><code>src/tokens.css</code> was deliberately "lifted" out of an older dark-brown frame into an
+all-parchment palette — the comments say so (<em>"was a dark brown frame; now a soft cream border,"</em>
+<em>"was saturated season fills"</em>). That lift went one shade too far: the surfaces and the things meant
+to separate them now sit on top of each other.</p>
+
+<table>
+<thead><tr><th>Role</th><th>Value</th><th>On</th><th class="num">Contrast</th><th>WCAG</th></tr></thead>
+<tbody>
+<tr><td>Panel / card <strong>border</strong>, divider <code>--iron</code></td>
+  <td><span class="chip"><span class="sw" style="background:#c9b993"></span>#c9b993</span></td>
+  <td><span class="chip"><span class="sw" style="background:#f6efe0"></span>#f6efe0</span></td>
+  <td class="num">1.69</td><td class="fail">✗ FAIL</td></tr>
+<tr><td><strong>Tertiary text</strong> <code>--on-panel-faint</code> — <em>same hex as the border</em></td>
+  <td><span class="chip"><span class="sw" style="background:#c9b993"></span>#c9b993</span></td>
+  <td><span class="chip"><span class="sw" style="background:#f6efe0"></span>#f6efe0</span></td>
+  <td class="num">1.69</td><td class="fail">✗ invisible</td></tr>
+<tr><td><strong>Gold</strong> as text <code>--gold</code></td>
+  <td><span class="chip"><span class="sw" style="background:#e2b24a"></span>#e2b24a</span></td>
+  <td><span class="chip"><span class="sw" style="background:#f6efe0"></span>#f6efe0</span></td>
+  <td class="num">1.71</td><td class="fail">✗ (ok as fill)</td></tr>
+<tr><td><strong>Ember</strong> accent <code>--ember</code></td>
+  <td><span class="chip"><span class="sw" style="background:#d6612a"></span>#d6612a</span></td>
+  <td><span class="chip"><span class="sw" style="background:#f6efe0"></span>#f6efe0</span></td>
+  <td class="num">3.27</td><td class="warn">⚠ large/UI only</td></tr>
+<tr><td><strong>Moss</strong> accent <code>--moss</code></td>
+  <td><span class="chip"><span class="sw" style="background:#6f8a3a"></span>#6f8a3a</span></td>
+  <td><span class="chip"><span class="sw" style="background:#f6efe0"></span>#f6efe0</span></td>
+  <td class="num">3.41</td><td class="warn">⚠ large/UI only</td></tr>
+<tr><td>Section label <code>--on-panel-label</code></td>
+  <td><span class="chip"><span class="sw" style="background:#8a4a26"></span>#8a4a26</span></td>
+  <td><span class="chip"><span class="sw" style="background:#f6efe0"></span>#f6efe0</span></td>
+  <td class="num">5.94</td><td class="pass">✓</td></tr>
+<tr><td>Secondary text <code>--ink-soft</code></td>
+  <td><span class="chip"><span class="sw" style="background:#7a5e3f"></span>#7a5e3f</span></td>
+  <td><span class="chip"><span class="sw" style="background:#f6efe0"></span>#f6efe0</span></td>
+  <td class="num">5.24</td><td class="pass">✓</td></tr>
+<tr><td><strong>Primary text</strong> <code>--ink</code></td>
+  <td><span class="chip"><span class="sw" style="background:#2b2218"></span>#2b2218</span></td>
+  <td><span class="chip"><span class="sw" style="background:#f6efe0"></span>#f6efe0</span></td>
+  <td class="num">13.64</td><td class="pass">✓</td></tr>
+</tbody>
+</table>
+
+<p>In practice (see the Inventory below): <strong>cards have no edges</strong> (every row bordered at 1.7:1),
+<strong>"tertiary" text is literally the border color</strong> so it's unreadable, the
+<strong>three "surfaces" are nearly one surface</strong>, and the <strong>active filter chip barely
+registers</strong>. This is the whole "too soft" feeling, quantified — a <em>separation</em> problem, not a
+legibility one.</p>
+
+<figure>
+  <img src="shots/inventory.png" alt="Inventory screen">
+  <figcaption>Inventory — borders at 1.7:1 mean the rows read as one undifferentiated column; the
+  All/Resources/Tools/Items active state is one shade off. The only color is the resource art itself.</figcaption>
+</figure>
+
+<h2 id="accents"><span class="n">02</span>The accent system is two colors wide — and some of it is dead</h2>
+<p><code>tokens.css</code> defines a respectable set, but in the running game only <strong>ember</strong> and
+<strong>gold</strong> read as alive. <code>--moss</code>, <code>--indigo</code>, <code>--rose</code>,
+<code>--slate</code> are desaturated and appear as exceptions, not a system. And the biome accents are
+<strong>defined but never used</strong>:</p>
+<table>
+<thead><tr><th>Token</th><th>Value</th><th>Consumers in <code>src/</code></th></tr></thead>
+<tbody>
+<tr><td><code>--biome-farm</code></td><td><span class="chip"><span class="sw" style="background:#7fa848"></span>#7fa848</span></td><td class="fail">0 — DEAD</td></tr>
+<tr><td><code>--biome-mine</code></td><td><span class="chip"><span class="sw" style="background:#6a7d92"></span>#6a7d92</span></td><td class="fail">0 — DEAD</td></tr>
+<tr><td><code>--biome-fish</code></td><td><span class="chip"><span class="sw" style="background:#4a8aa8"></span>#4a8aa8</span></td><td class="fail">0 — DEAD</td></tr>
+</tbody>
+</table>
+<p>The board's biome color comes from <code>season.look.fill</code> instead. So a whole intended "each
+domain has a color" system is wired to nothing. The only screens that feel colorful are the ones where the
+color comes from the <em>art</em> — never the chrome:</p>
+
+<div class="grid2">
+  <figure>
+    <img src="shots/town.png" alt="Town screen">
+    <figcaption>Town — the Phaser map is alive, but the chrome over it (the translucent "Upgrade to Hamlet"
+    sign, the two washed action pills) looks like debug overlay, not designed world UI.</figcaption>
+  </figure>
+  <figure>
+    <img src="shots/start-farming.png" alt="Start Farming modal">
+    <figcaption>Start-Farming — the most confident color in the game: green editable outlines, red dashed
+    danger cards, green CTA. It proves the point — the color is from the tile art &amp; semantic outlines,
+    not the parchment chrome. (Note "Vegeta…" truncates.)</figcaption>
+  </figure>
+</div>
+
+<h2 id="season"><span class="n">03</span>Season &amp; world state are under-signaled</h2>
+<p>The current <strong>season</strong> is core game state, and it's whispered. The four field gradients are
+washed pastels — summer and winter are especially close — and the HUD season strip is drawn at <strong>~33%
+alpha</strong> (<code>Hud.tsx:157</code>), effectively invisible.</p>
+<div class="palette">
+  <div class="pcard"><div class="bar" style="background:linear-gradient(#dbe6b5,#b8cf8a)"></div><div class="meta"><b>Spring</b><code>#dbe6b5 → #b8cf8a</code></div></div>
+  <div class="pcard"><div class="bar" style="background:linear-gradient(#ecdfb0,#c7b87a)"></div><div class="meta"><b>Summer</b><code>#ecdfb0 → #c7b87a</code></div></div>
+  <div class="pcard"><div class="bar" style="background:linear-gradient(#e8c890,#c8a45a)"></div><div class="meta"><b>Autumn</b><code>#e8c890 → #c8a45a</code></div></div>
+  <div class="pcard"><div class="bar" style="background:linear-gradient(#dde4ea,#b6c2cc)"></div><div class="meta"><b>Winter</b><code>#dde4ea → #b6c2cc</code></div></div>
+</div>
+<p>Combined with the dead biome tokens, the two things a player should always feel — <em>what season is it,
+what kind of place is this</em> — are the weakest cues on screen. The town overlays compound it: the
+<code>FoundSettlement</code>/<code>TierUpgrade</code> banners are hand-rolled in <code>Town.tsx</code> with
+inline colors in <em>two different</em> color systems rather than going through the <code>Banner</code> primitive.</p>
+
+<h2 id="type"><span class="n">04</span>Typography</h2>
+<ul>
+<li><code>--font-display</code> (Cinzel / Fraunces) is defined and applied to ~5 title classes — <strong>but
+the webfonts aren't bundled in the game</strong> (only the wiki self-hosts them). So the "hand-set" titles
+fall back to Georgia/system serif; the intended character is lost.</li>
+<li>Most in-world text doesn't reach for it anyway (the Town location name is plain <code>font-bold</code>).</li>
+<li><code>--ink-soft</code> and <code>--ink-mid</code> are the <em>same</em> value (<code>#7a5e3f</code>), so
+there's no tonal hierarchy within "not-primary" text.</li>
+</ul>
+
+<h2 id="wiki"><span class="n">05</span>The Wiki — good bones, drifted skin</h2>
+<p>The Wiki is genuinely well-built and <strong>should not be rebuilt</strong>: Fraunces hero, ember title,
+category cards with per-group colored borders, semantic chip-tags (green = Crafts, violet = Unlocks,
+gold = Bonus), ember data-bars, S/M/L density toggles, ⌘K search. It's the most confident visual design in
+the project.</p>
+<figure>
+  <img src="shots/wiki-overview.png" alt="Wiki overview">
+  <figcaption>Wiki Overview — strong hero and per-category color coding. But it's on an older, darker skin
+  than the game (border <code>#b28b62</code> vs the game's <code>#c9b993</code>).</figcaption>
+</figure>
+<p>Its real defects:</p>
+<ul>
+<li><strong>Palette drift.</strong> The wiki copies its vars from <code>palette.ts</code> (not
+<code>var()</code>-referenced), so it's stuck on the older darker skin. The two products look like different
+versions of the same app.</li>
+<li><strong>Inverted heading hierarchy</strong> (highest-impact wiki issue): <code>HtmlBody.tsx</code> styles
+authored <code>&lt;h1/h2/h3&gt;</code> inline at <strong>18/15/13px</strong> — so an h2 (15px) and h3 (13px)
+are <em>smaller</em> than the ~16px body around them. Narrative pages don't chunk.</li>
+<li><strong>Off-palette hardcoded hex</strong> in authored content — raw <span class="chip"><span class="sw" style="background:#1d5bb0"></span>#1d5bb0</span> blue (61×),
+<span class="chip"><span class="sw" style="background:#1f7a36"></span>#1f7a36</span> green (57×) — none from the parchment palette, un-themable centrally.</li>
+<li>Every sidebar nav row uses the same <code>ui_star</code> icon — categories aren't scannable.</li>
+<li>No callout component, no <code>&lt;pre&gt;</code> code-block styling.</li>
+</ul>
+
+<h2 id="friction"><span class="n">06</span>Smaller friction (cleanup pass)</h2>
+<ul>
+<li><strong>~290 inline hex literals</strong> in <code>features/*.tsx</code> bypass tokens (cartography 60,
+settings 23, StartFarmingModal 17); <code>Town.tsx</code> hardcodes every banner/button/pill color;
+disabled states use ad-hoc greys per screen.</li>
+<li><strong>Two icon systems</strong> (LegacyIcon + DesignIcon) imported side-by-side in the same files.</li>
+<li><code>townsfolk</code> re-renders its own BottomNav (nav is normally shell-owned) — divergence risk.</li>
+<li>Legacy "dark" bg tokens now resolve to <em>light</em> (<code>--bg-darkest:#e9dfc6</code>) — names lie.</li>
+<li>Two redundant legends stacked at the bottom of the Map screen; <code>z-[10000]</code> magic numbers in Town.</li>
+</ul>
+
+<h2 id="direction">Proposed direction — keep parchment, rebuild the ladder</h2>
+<p>Apply the frontend-design principle: <strong>structure is information, and contrast is the cheapest
+structural tool.</strong> We don't add decoration — we make the existing structure read. Spend the boldness
+in two places (a punchy <strong>action/reward</strong> moment and a legible <strong>season</strong> cue) and
+keep everything else quiet but <em>separated</em>.</p>
+
+<h3>A · A real surface &amp; border ladder</h3>
+<table>
+<thead><tr><th>Token</th><th>Now</th><th>Proposed</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>page bg</td><td><span class="chip"><span class="sw" style="background:#f4ecd6"></span>#f4ecd6</span></td><td><span class="chip"><span class="sw" style="background:#efe6cf"></span>#efe6cf</span></td><td>drop the page so panels lift</td></tr>
+<tr><td>card</td><td><span class="chip"><span class="sw" style="background:#fbf7eb"></span>#fbf7eb</span></td><td><span class="chip"><span class="sw" style="background:#fffdf6"></span>#fffdf6</span></td><td>raise cards above panels</td></tr>
+<tr><td>well (sunk)</td><td><em>10% tint</em></td><td><span class="chip"><span class="sw" style="background:#e7dcc0"></span>#e7dcc0</span></td><td>a real recessed plane</td></tr>
+<tr><td><strong>border</strong> <code>--iron</code></td><td><span class="chip"><span class="sw" style="background:#c9b993"></span>#c9b993</span> <span class="fail">1.69</span></td><td><span class="chip"><span class="sw" style="background:#b59a6a"></span>#b59a6a</span> <span class="pass">≈3.1</span></td><td>edges finally read</td></tr>
+<tr><td>tertiary text <code>--on-panel-faint</code></td><td><span class="chip"><span class="sw" style="background:#c9b993"></span>#c9b993</span> <span class="fail">1.69</span></td><td><span class="chip"><span class="sw" style="background:#9a8259"></span>#9a8259</span> <span class="pass">≈3.0</span></td><td>stop reusing the border hex for text</td></tr>
+</tbody>
+</table>
+<p style="color:var(--ink-2);font-size:14px"><em>Starting points — tune against the visual goldens. Rule: any
+edge/divider ≥3:1, any text ≥4.5:1, tertiary text decoupled from the border color.</em></p>
+
+<h3>B · A semantic accent system — and wire the dead tokens</h3>
+<div class="palette">
+  <div class="pcard"><div class="bar" style="background:#cf5520"></div><div class="meta"><b>Action / level</b><code>--ember #cf5520</code></div></div>
+  <div class="pcard"><div class="bar" style="background:#e2b24a"></div><div class="meta"><b>Reward / coin</b><code>--gold #e2b24a (fill)</code></div></div>
+  <div class="pcard"><div class="bar" style="background:#4f7a2a"></div><div class="meta"><b>Farm</b><code>--biome-farm #4f7a2a</code></div></div>
+  <div class="pcard"><div class="bar" style="background:#3f5d80"></div><div class="meta"><b>Mine</b><code>--biome-mine #3f5d80</code></div></div>
+  <div class="pcard"><div class="bar" style="background:#2f7e96"></div><div class="meta"><b>Fish</b><code>--biome-fish #2f7e96</code></div></div>
+  <div class="pcard"><div class="bar" style="background:#b1322a"></div><div class="meta"><b>Danger</b><code>--danger #b1322a</code></div></div>
+  <div class="pcard"><div class="bar" style="background:#5b3f86"></div><div class="meta"><b>Arcane</b><code>--arcane #5b3f86</code></div></div>
+</div>
+<p>One saturated, ≥3:1 hue per domain, used consistently for <em>state</em> (board frame, badges, chips, the
+matching town zone) — not decoration. Promote ember + gold to "action / reward."</p>
+
+<h3>C · Make season unmistakable</h3>
+<p>Saturate the four field gradients so the seasons are distinct at a glance, define a per-season accent, and
+use the <em>same</em> hue in three places at once — board frame, HUD strip (raise 33%→~70% alpha), season
+chip. One color, three placements = a season you <em>feel</em>.</p>
+
+<h3>D · Redesign the world-overlays (highest visible win)</h3>
+<p>Turn the "Upgrade to…" sign into a solid designed wooden-sign / banner primitive (opaque, ≥4.5:1 text).
+Unify the action pills into one primitive with a shared shape; route the Found/Tier banners through the
+shared <code>Banner</code> primitive.</p>
+
+<h3>E · Typography &nbsp;·&nbsp; F · Wiki alignment</h3>
+<p><strong>Type:</strong> bundle the display font in the game (add <code>@fontsource/fraunces</code> to the
+main entry, as the wiki already does); apply it to in-world titles; split <code>--ink-soft</code> /
+<code>--ink-mid</code> into two real values.
+<strong>Wiki:</strong> re-reference its vars to the game tokens (kill the drift); fix the authored heading
+scale (h1≥24, h2≥19, h3≥16, all above body); per-category sidebar icons; callout component; replace
+off-palette inline hex with tokens.</p>
+
+<h2 id="plan">Plan of work — phased, low-risk first</h2>
+<p>Each phase ends with <code>npm run test:visual</code> and a written justification of the goldens diff
+(per the repo's pre-PR rule).</p>
+
+<div class="phase p0">
+  <span class="tag">Phase 0 · do this first</span>
+  <h3>Foundation — token rewrite only</h3>
+  <p>Rewrite the <code>tokens.css</code> contrast ladder (§A) + accent values (§B). <strong>No structural
+  code changes — just the variables.</strong> This alone resolves most of the "too soft" feeling because
+  borders, dividers, cards, and tertiary text all start reading. <strong>~80% of the perceived fix for ~5%
+  of the effort.</strong> Capture fresh goldens as the new baseline first.</p>
+</div>
+<div class="phase"><span class="tag">Phase 1</span><h3>Wire accents &amp; season</h3>
+  <p>Connect the now-live <code>--biome-*</code> tokens to board frame + zone badges; add per-season accents;
+  saturate field gradients; raise the HUD season strip (§C). Pure additive theming.</p></div>
+<div class="phase"><span class="tag">Phase 2</span><h3>World-overlays</h3>
+  <p>Redesign the Town sign + action pills; route banners through the <code>Banner</code> primitive (§D).
+  The most <em>visible</em> improvement.</p></div>
+<div class="phase"><span class="tag">Phase 3</span><h3>Typography</h3>
+  <p>Bundle the display font; apply to in-world titles; split the secondary/tertiary ink tokens (§E).</p></div>
+<div class="phase"><span class="tag">Phase 4</span><h3>Wiki alignment &amp; polish</h3>
+  <p>Re-reference wiki vars to game tokens; fix the authored heading scale; sidebar icons; callouts;
+  off-palette hex (§F).</p></div>
+<div class="phase"><span class="tag">Phase 5 · optional</span><h3>Cleanup</h3>
+  <p>Migrate the ~290 inline hex literals to tokens; unify the two icon systems; fix the duplicate Map legend
+  and townsfolk nav; rename the lying "dark" bg tokens.</p></div>
+
+<div class="callout q" id="questions">
+<h3 style="margin-top:0">Open questions for you</h3>
+<ol style="margin-bottom:0">
+<li><strong>Identity:</strong> stay warm-parchment (my recommendation), or is this the moment to consider a
+bolder direction? (The <code>art-direction-eval</code> skill exists for exactly that.)</li>
+<li><strong>Boldness budget:</strong> comfortable letting season + reward be the two "loud" moments while
+everything else stays quiet? Or do you want a flatter, more uniform feel?</li>
+<li><strong>Scope:</strong> start with the Phase-0 token rewrite and review it live before I proceed, or plan
+the whole sequence as PRs up front?</li>
+</ol>
+</div>
+
+<footer>
+  puzzleDrag2 UX &amp; color review · evaluated from <code>src/</code> per CLAUDE.md · screenshots in
+  <code>./shots/</code> · companion Markdown in <code>./README.md</code>
+</footer>
+
+</div>
+</body>
+</html>

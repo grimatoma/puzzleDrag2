@@ -1785,10 +1785,13 @@ export function BoardLayout({ railHead, hotbar, statusPanel, toolsGrid, board }:
 
 // ─── Board frame ─────────────────────────────────────────────────────────
 
-export function BoardFrame({ children, seasonIdx, armed = false }: { children?: React.ReactNode; seasonIdx: number; armed?: boolean }) {
-  // Single rounded card — the dark brown chrome frames the tiles directly,
-  // no field-tint padding wrapper around it. The cell containing the frame
-  // gets a thin drop shadow for depth.
+export function BoardFrame({ children, seasonIdx, armed = false, biomeKey }: { children?: React.ReactNode; seasonIdx: number; armed?: boolean; biomeKey?: string }) {
+  // Single rounded card — the season gradient fills it, and a thin inset
+  // ring carries the BIOME accent (farm / mine / fish), so the board reads as
+  // both a season and a domain at a glance. The biome tokens were previously
+  // defined but unused (UX review §B/§C). The cell gets a drop shadow for depth.
+  const biomeAccent =
+    biomeKey === "mine" ? "var(--biome-mine)" : biomeKey === "fish" ? "var(--biome-fish)" : "var(--biome-farm)";
   return (
     <div
       data-tour="board"
@@ -1796,7 +1799,7 @@ export function BoardFrame({ children, seasonIdx, armed = false }: { children?: 
       style={{
         background: fieldGradientFor(seasonIdx),
         borderRadius: 14,
-        boxShadow: "0 4px 0 rgba(0,0,0,0.25)",
+        boxShadow: `0 4px 0 rgba(0,0,0,0.25), inset 0 0 0 3px ${biomeAccent}`,
       }}
     >
       {children}

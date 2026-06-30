@@ -14,18 +14,21 @@
  * custom properties seeded here. No new colour scheme; no purple-on-white.
  */
 
-/* ── CSS custom properties (seeded from UI_COLORS palette) ─────────────────── */
+/* ── CSS custom properties — kept in lock-step with the GAME tokens
+   (src/tokens.css) so the wiki and the game read as one product. The wiki
+   had drifted onto an older, darker skin (border #b28b62 = 2.64:1); these
+   now match the game's readable palette (UX review §F, 2026-06). ────────── */
 .wiki-root {
-  --wiki-parchment:     #f4ecd8;
-  --wiki-parchment-deep:#e8dcc4;
-  --wiki-border:        #b28b62;
-  --wiki-border-deep:   #8b6845;
+  --wiki-parchment:     #f6efe0;   /* == game --parchment            */
+  --wiki-parchment-deep:#e9dfc6;
+  --wiki-border:        #a8895a;   /* == game --iron (was 2.64:1)    */
+  --wiki-border-deep:   #8c6f44;   /* == game --iron-deep            */
   --wiki-ink:           #2b2218;
   --wiki-ink-light:     #5a3a20;
-  --wiki-ink-subtle:    #7a5a38;
-  --wiki-ember:         #d6612a;
+  --wiki-ink-subtle:    #80623e;   /* == game --ink-mid              */
+  --wiki-ember:         #cf5520;   /* == game --ember                */
   --wiki-ember-deep:    #a84010;
-  --wiki-canvas:        #f0e8d4;
+  --wiki-canvas:        #f2ead4;
   --wiki-canvas-rule:   #ddd0b4;
 
   /* "Not yet reachable" cards — a neutral grey wash that overrides the warm
@@ -829,7 +832,7 @@
   font-family: inherit;
   font-size: 12px;
   font-weight: 600;
-  color: var(--wiki-slate, #5a5e66);
+  color: var(--wiki-ember);   /* was off-palette cool slate #5a5e66 — now matches the warm link system (§F) */
   text-decoration: underline;
   text-underline-offset: 2px;
 }
@@ -2392,4 +2395,44 @@
   height: 14px;
   border-radius: 4px;
   border: 1.5px solid;
+}
+
+/* ── Callouts & code blocks (UX review §F) ─────────────────────────────────
+   Authored prose previously faked emphasis with inline-coloured spans and
+   left <pre> bare. These give note/tip/warning a real component and style
+   fenced code. Authors add: <div class="wiki-callout [tip|warn]">…</div>. */
+.wiki-root .wiki-callout {
+  background: var(--wiki-parchment);
+  border: 1.5px solid var(--wiki-border);
+  border-left: 5px solid var(--wiki-ember);
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 16px 0;
+  font-size: 15px;
+  line-height: 1.55;
+  box-shadow: 0 2px 6px rgba(60, 40, 20, 0.06);
+}
+.wiki-root .wiki-callout > :first-child { margin-top: 0; }
+.wiki-root .wiki-callout > :last-child { margin-bottom: 0; }
+.wiki-root .wiki-callout.tip  { border-left-color: #2f7d3a; }
+.wiki-root .wiki-callout.warn { border-left-color: var(--wiki-danger, #b1322a); }
+
+.wiki-root pre {
+  background: #2b2218;
+  color: #f4e6c5;
+  border: 1px solid var(--wiki-border-deep);
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin: 16px 0;
+  overflow-x: auto;
+  font-family: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.wiki-root pre code {
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
 }

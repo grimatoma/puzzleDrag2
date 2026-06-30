@@ -150,14 +150,24 @@ export const Hud = memo(function Hud({ state, dispatch, inventorySearchOpen, onI
   };
   const viewLabel = !onBoard ? (VIEW_LABELS[view] ?? null) : null;
 
-  const seasonAccent = onBoard
-    ? `#${(season.look.fill ?? 0xe2b24a).toString(16).padStart(6, "0")}`
-    : "var(--ember)";
+  // The HUD's bottom edge carries the current season as a solid, saturated
+  // strip — the same per-season hue used on the board frame and season chip,
+  // so the season is something you feel at a glance (UX review §C). Off the
+  // board it falls back to the ember "action" accent. (The previous code
+  // appended `55` alpha to the value, which silently produced invalid CSS for
+  // the off-board `var(--ember)` case and a near-invisible 33% strip on board.)
+  const SEASON_ACCENTS = [
+    "var(--season-spring)",
+    "var(--season-summer)",
+    "var(--season-fall)",
+    "var(--season-winter)",
+  ];
+  const accentStrip = onBoard ? (SEASON_ACCENTS[seasonIdx] ?? "var(--ember)") : "var(--ember)";
   return (
     <div
       className="flex items-center gap-2 px-3 py-2 bg-hud-bg border-b border-iron text-ink relative"
       data-testid="hud"
-      style={{ boxShadow: `var(--hud-shadow), inset 0 -3px 0 ${seasonAccent}55` }}
+      style={{ boxShadow: `var(--hud-shadow), inset 0 -4px 0 ${accentStrip}` }}
     >
       <div className="flex items-center gap-2 flex-shrink-0">
         <button
@@ -168,7 +178,10 @@ export const Hud = memo(function Hud({ state, dispatch, inventorySearchOpen, onI
           title={onBoard ? `Leave board · ${settlementName}` : settlementName}
         >{onBoard ? "←" : "≡"}</button>
         {viewLabel && (
-          <span className="text-body font-semibold text-ink leading-none flex-shrink-0">{viewLabel}</span>
+          <span
+            className="text-large font-bold text-ink leading-none flex-shrink-0"
+            style={{ fontFamily: "var(--font-display)" }}
+          >{viewLabel}</span>
         )}
         {view === "inventory" && onInventorySearchToggle && (
           <button

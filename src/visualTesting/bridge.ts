@@ -409,6 +409,21 @@ export function installVisualTestingBridge({ getState, dispatch }: {
 
   (async () => {
     if (scenarioId) await api.loadScenario(scenarioId);
+    // Wait for the bundled display webfont (Fraunces) before signalling ready,
+    // so golden captures never race a FOUT swap from the fallback serif — that
+    // nondeterminism would make every text-bearing snapshot flaky. We force the
+    // weights to load (in case nothing on screen has requested them yet) and
+    // then await fonts.ready. Guarded for environments without the fonts API.
+    try {
+      const f = document.fonts;
+      if (f) {
+        await Promise.all([
+          f.load("700 16px Fraunces").catch(() => {}),
+          f.load("800 16px Fraunces").catch(() => {}),
+        ]);
+        await f.ready.catch(() => {});
+      }
+    } catch { /* fonts API unavailable — proceed */ }
     readyResolve?.(true);
   })().catch((error) => {
     readyResolve?.(false);
