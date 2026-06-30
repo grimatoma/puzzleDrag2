@@ -97,6 +97,8 @@ export interface Building {
   w: number;
   h: number;
   look: { color: string };
+  /** Icon-registry key (e.g. "bld_bakery") shown in the build menu. Defaults to `bld_${id}`. */
+  icon?: string;
   built?: boolean;
   biome?: string;
   requires?: string;

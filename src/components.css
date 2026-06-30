@@ -274,6 +274,15 @@
     background: var(--well-bg);
     border: 1px solid var(--well-border);
   }
+  /* Build menu shows the building's own icon larger than a stock list row. */
+  .hl-build-picker .hl-browser-item__icon {
+    width: 64px;
+    height: 64px;
+  }
+  .hl-build-picker .hl-detail-pane__icon {
+    width: 116px;
+    height: 116px;
+  }
   .hl-browser-item__main {
     @apply flex-1 min-w-0 flex flex-col gap-0.5;
   }

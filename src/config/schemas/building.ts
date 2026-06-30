@@ -13,6 +13,7 @@ export const buildingDefinitionSchema = z
     w: z.number().describe("Plot width in layout units"),
     h: z.number().describe("Plot height in layout units"),
     look: z.object({ color: z.string().describe("Accent color used for the building illustration") }).describe("Building visual appearance"),
+    icon: z.string().optional().describe("Icon-registry key (e.g. \"bld_bakery\") shown in the build menu; defaults to `bld_${id}`"),
     built: z.boolean().optional().describe("True if the building starts pre-constructed (e.g. the Hearth)"),
     biome: z.string().optional().describe("Biome id that must be active at the zone for this building to appear"),
     requires: z.string().optional().describe("Building id that must already be constructed before this one unlocks"),
