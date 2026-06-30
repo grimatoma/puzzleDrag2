@@ -130,7 +130,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }: KeeperEncounter
             : <span className="text-[26px] leading-none">{keeper.look?.icon}</span>}
           <div>
             <div className="font-bold text-[17px] text-[#744d2e] leading-tight">{keeper.name}</div>
-            <div className="text-micro italic text-[#8a6a45]">{keeper.title} · at {node.name}</div>
+            <div className="text-micro italic text-[color:var(--ink-light)]">{keeper.title} · at {node.name}</div>
           </div>
         </div>
         {!chosen ? (
@@ -169,7 +169,7 @@ function KeeperEncounterModal({ node, type, dispatch, onClose }: KeeperEncounter
           </>
         ) : (
           <>
-            <div className={`text-micro font-bold uppercase tracking-wide mb-1 ${chosen === "coexist" ? "text-[#3a7a1a]" : "text-[#6a5a3a]"}`}>
+            <div className={`text-micro font-bold uppercase tracking-wide mb-1 ${chosen === "coexist" ? "text-[color:var(--path-owned-edge)]" : "text-[#6a5a3a]"}`}>
               {chosen === "coexist" ? "🤝 You chose to coexist" : "⚔ Keeper trial started"}
             </div>
             <div className="flex flex-col gap-1.5 text-caption text-ink leading-snug mb-3">
@@ -257,9 +257,9 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
           className="rounded-lg px-2 py-1.5 text-center text-micro font-bold"
           style={{
             ...cardStyle,
-            background: done ? "#a8d4a0" : "#cbe0b8",
-            border: "1.5px solid #6a9a3a",
-            color: "#1f3a10",
+            background: done ? "var(--path-owned-chip-bg)" : "var(--path-owned-bg)",
+            border: "1.5px solid var(--path-coexist-edge)",
+            color: "var(--path-coexist-ink)",
           }}
         >
           ✓ Settled{b ? ` · ${b.look?.icon ?? ""} ${b.name}` : ""}{done ? " · Complete" : ""}
@@ -269,8 +269,8 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
             className="rounded-lg px-2 py-1 text-center text-[10px] font-bold"
             style={{
               ...cardStyle,
-              background: path === "coexist" ? "#dfeecd" : "#e4ddd0",
-              border: "1.5px solid #9a8a6a",
+              background: path === "coexist" ? "var(--path-coexist-bg)" : "var(--path-driveout-bg)",
+              border: "1.5px solid var(--path-driveout-edge)",
               color: "var(--ink)",
             }}
           >
@@ -317,9 +317,9 @@ function FoundSettlementBlock({ node, visitedSet, state, dispatch }: FoundSettle
         className="rounded-lg px-2 py-1.5 text-center text-micro font-bold"
         style={{
           ...cardStyle,
-          background: !blocked ? "linear-gradient(to bottom, #c8923a, #a06a1a)" : "#cbb98c",
-          border: !blocked ? "2px solid #7a4f10" : "2px solid #a08850",
-          color: !blocked ? "white" : "#7c5a3a",
+          background: !blocked ? "linear-gradient(to bottom, var(--btn-gold-top), var(--btn-gold-bot))" : "#cbb98c",
+          border: !blocked ? "2px solid var(--btn-gold-edge)" : "2px solid var(--iron)",
+          color: !blocked ? "white" : "var(--ink-soft)",
           cursor: !blocked ? "pointer" : "not-allowed",
           width: "100%",
         }}
@@ -368,7 +368,7 @@ function ActionButton({ status, isCurrent, canFastTravel, canUnlock, lockReason,
         onClick={onTravel}
         style={{
           ...base,
-          background: "linear-gradient(to bottom, #5a8acc, #3a6aa8)",
+          background: "linear-gradient(to bottom, #5a8acc, var(--season-winter))",
           border: "2px solid #2a4a78",
           color: "white",
           cursor: "pointer",
@@ -539,8 +539,8 @@ function NodePanel({ node, current, visited, discovered, dispatch, state }: Node
           className="relative px-3 py-2 mt-0.5 rounded-lg"
           style={{
             background: "rgba(245,231,192,0.55)",
-            border: "1.5px solid #b28b62",
-            borderLeft: "4px solid #b28b62",
+            border: "1.5px solid var(--iron)",
+            borderLeft: "4px solid var(--iron)",
           }}
         >
           <blockquote className="text-caption italic leading-snug">
@@ -616,8 +616,8 @@ function HearthTokensStrip({ state }: { state: GameState }) {
             className="flex items-center gap-1 px-1.5 py-0.5 rounded-full"
             style={{
               background: lit ? "rgba(232,201,138,0.95)" : "rgba(58,39,21,0.45)",
-              border: lit ? "1.5px solid #b28b62" : "1.5px solid #6a4b31",
-              color: lit ? "#2b2218" : "#cbb892",
+              border: lit ? "1.5px solid var(--iron)" : "1.5px solid #6a4b31",
+              color: lit ? "var(--ink)" : "#cbb892",
             }}
           >
             <span

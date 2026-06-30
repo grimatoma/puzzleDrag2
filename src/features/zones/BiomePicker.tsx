@@ -42,7 +42,7 @@ export default function BiomePicker({ node, type, cost, dispatch, onClose }: Bio
               <div className="flex items-center gap-2">
                 <span className="text-[22px] leading-none">{b.look?.icon}</span>
                 <span className="font-bold text-[14px] text-on-panel flex-1">{b.name}</span>
-                <RewardChip className="text-[#1f3a10] bg-[#cbe0b8] border-[#6a9a3a]">+ {b.bonus}</RewardChip>
+                <RewardChip className="text-[color:var(--path-owned-ink)] bg-[color:var(--path-owned-bg)] border-[color:var(--path-coexist-edge)]">+ {b.bonus}</RewardChip>
               </div>
               <div className="flex flex-wrap gap-1 mt-1">
                 {b.hazards.map((h: string) => (

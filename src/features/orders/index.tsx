@@ -68,7 +68,7 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
               className="!p-3 relative overflow-hidden transition-transform hover:-translate-y-0.5"
               style={{
                 background: done ? "#cfe4a3" : isCrafted ? "#e8d8f7" : "#f7ead8",
-                borderColor: done ? "#91bf24" : isCrafted ? "#9a7ab8" : "#c5a87a",
+                borderColor: done ? "#91bf24" : isCrafted ? "#9a7ab8" : "var(--iron-soft)",
               }}
             >
               {/* NPC-coloured spine ties the order to who's asking. */}
@@ -81,12 +81,12 @@ export default function OrdersScreen({ state, dispatch }: OrdersScreenProps) {
                   {npc.name[0]}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-bold text-[#a8431a] text-[13px] leading-tight truncate">{npc.name}{isCrafted && <span className="ml-1 text-[10px] text-[#7a5ab0] font-bold">🔨 craft</span>}</div>
+                  <div className="font-bold text-[color:var(--flame-frame)] text-[13px] leading-tight truncate">{npc.name}{isCrafted && <span className="ml-1 text-[10px] text-[#7a5ab0] font-bold">🔨 craft</span>}</div>
                   <div className="text-[#6a4b31] text-[11px] leading-snug italic">{String(o.line ?? "")}</div>
                 </div>
                 <div className="flex flex-col items-end gap-0.5">
-                  <div className="text-[#c8923a] text-[12px] font-bold whitespace-nowrap">+{modifiedReward}◉</div>
-                  <div className="text-[10px] font-bold whitespace-nowrap flex items-center gap-1" style={{ color: bandName === "Sour" ? "#bb3b2f" : bandName === "Beloved" ? "#d4a017" : bandName === "Liked" ? "#4f6b3a" : "#7a6248" }}>
+                  <div className="text-[color:var(--btn-gold-top)] text-[12px] font-bold whitespace-nowrap">+{modifiedReward}◉</div>
+                  <div className="text-[10px] font-bold whitespace-nowrap flex items-center gap-1" style={{ color: bandName === "Sour" ? "#bb3b2f" : bandName === "Beloved" ? "#d4a017" : bandName === "Liked" ? "#4f6b3a" : "var(--ink-mid)" }}>
                     <Icon iconKey={`bond_rank_${Math.min(8, Math.max(1, Math.floor(bond)))}`} size={14} />
                     {bond >= 8 && <Icon iconKey="bond_8_arc" size={14} />}
                     ×{modifier.toFixed(2)} · {bandName}

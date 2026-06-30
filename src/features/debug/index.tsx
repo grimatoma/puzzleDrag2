@@ -13,7 +13,7 @@ function DebugBtn({ children, onClick, color = 'slate' }: { children: ReactNode;
     blue:   { background: '#3a5a8a', borderColor: '#1a2e5a' },
     purple: { background: '#5a3a8a', borderColor: '#2e1a5a' },
     red:    { background: '#a84a1a', borderColor: '#7a3210' },
-    slate:  { background: '#5a5e66', borderColor: '#2a2e36' },
+    slate:  { background: 'var(--slate)', borderColor: '#2a2e36' },
     teal:   { background: '#2a7a7a', borderColor: '#0f4a4a' },
     rose:   { background: '#a83a5a', borderColor: '#702030' },
   };
@@ -73,7 +73,7 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
           {/* Live counters */}
           <div
             className="grid grid-cols-3 gap-1.5 py-2 px-2 rounded-lg border-2 text-[11px]"
-            style={{ background: '#f4e8d0', borderColor: '#b28b62', color: '#2b2218' }}
+            style={{ background: 'var(--cream)', borderColor: 'var(--iron)', color: 'var(--ink)' }}
           >
             <div>🪙 {state?.coins ?? 0}</div>
             <div>⭐ Lv {state?.level ?? 1}</div>
@@ -145,9 +145,9 @@ export default function DebugModal({ state, dispatch }: { state: GameState; disp
             ) : (
               <div
                 className="flex flex-col gap-1.5 py-2 px-2 rounded-lg border-2"
-                style={{ background: '#f4e8d0', borderColor: '#b28b62' }}
+                style={{ background: 'var(--cream)', borderColor: 'var(--iron)' }}
               >
-                <div className="text-[11px] font-bold" style={{ color: '#2b2218' }}>
+                <div className="text-[11px] font-bold" style={{ color: 'var(--ink)' }}>
                   {displayZoneName(state, currentZone)} — force upgrade level
                 </div>
                 <select

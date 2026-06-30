@@ -139,7 +139,7 @@ export default function ZoneInfoModal({ zoneId, state, onClose, highlightSeason 
                   {Object.entries(farmBoard!.upgradeMap).map(([src, tgt]) => (
                     <li
                       key={src}
-                      className="flex items-center justify-between gap-2 text-[12px] bg-[#fffaf1] border border-[#8c7656]/35 rounded-lg px-2 py-1"
+                      className="flex items-center justify-between gap-2 text-[12px] bg-[color:var(--board-chip-bg)] border border-[#8c7656]/35 rounded-lg px-2 py-1"
                     >
                       <span className="font-semibold text-on-panel">{ZONE_CATEGORY_LABELS[src] ?? src}</span>
                       <span className="text-on-panel-faint">→</span>

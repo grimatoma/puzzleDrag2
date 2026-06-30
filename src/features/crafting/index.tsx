@@ -75,7 +75,7 @@ const STATION_META: Record<string, StationMeta> = {
   bakery:   { label: "Bakery",   iconKey: "station_bakery",   bg: "#c08458", title: "Mira's Bakery",  flavor: "Where flour and patience become warm bread." },
   forge:    { label: "Forge",    iconKey: "station_forge",    bg: "#8898a4", title: "Bram's Forge",   flavor: "Iron, fire, and the steady ring of the hammer." },
   larder:   { label: "Larder",   iconKey: "station_larder",   bg: "#7a9658", title: "The Larder",     flavor: "Preserves and provisions, put by for the lean months." },
-  workshop: { label: "Workshop", iconKey: "station_workshop", bg: "#a08c5e", title: "Wren's Workshop", flavor: "Planks, nails, and a carpenter's steady hands." },
+  workshop: { label: "Workshop", iconKey: "station_workshop", bg: "var(--iron)", title: "Wren's Workshop", flavor: "Planks, nails, and a carpenter's steady hands." },
 };
 
 function StationHeader({ meta, pill }: { meta: StationMeta; pill?: string | null }) {

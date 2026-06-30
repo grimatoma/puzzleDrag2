@@ -34,7 +34,7 @@ export default function ZoneEntryCostInfo({ zoneId, state, highlightSeason, clas
         <button
           type="button"
           onClick={() => setOpen(true)}
-          className="w-8 h-8 rounded-full bg-white/85 border-2 border-white/60 grid place-items-center text-[#2b2218] font-bold text-[15px] leading-none hover:bg-white transition-colors shadow-sm"
+          className="w-8 h-8 rounded-full bg-white/85 border-2 border-white/60 grid place-items-center text-[color:var(--ink)] font-bold text-[15px] leading-none hover:bg-white transition-colors shadow-sm"
           aria-label="Zone spawn rates and modifiers"
           title="Zone info — spawn rates & modifiers"
         >

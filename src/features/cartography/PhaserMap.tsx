@@ -282,7 +282,7 @@ export default function PhaserMap({
       style={{ touchAction: "none" }}
     >
       {loading && (
-        <div className="absolute inset-0 grid place-items-center text-[#f8e7c6] text-[12px] italic opacity-70">
+        <div className="absolute inset-0 grid place-items-center text-[color:var(--cream)] text-[12px] italic opacity-70">
           unfurling the map…
         </div>
       )}

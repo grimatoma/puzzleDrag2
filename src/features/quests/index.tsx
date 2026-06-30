@@ -62,8 +62,8 @@ const CATEGORY_META: Record<string, CategoryMeta> = {
   collect: { label: "Gather",  accent: "#6f8a3a", icon: "quest_collect", flavor: "The vale's stores run low — gather what the land gives." },
   craft:   { label: "Craft",   accent: "#d6612a", icon: "quest_craft",   flavor: "Idle hands, cold hearth. Set the workshops humming." },
   order:   { label: "Deliver", accent: "#a8722a", icon: "quest_order",   flavor: "Carts wait at the gate. Fill the orders before dusk." },
-  tool:    { label: "Toil",    accent: "#38406b", icon: "quest_tool",    flavor: "The right tool, well used, is worth ten hands." },
-  chain:   { label: "Combo",   accent: "#9c3a4a", icon: "quest_chain",   flavor: "Link your harvest together for a richer haul." },
+  tool:    { label: "Toil",    accent: "var(--indigo)", icon: "quest_tool",    flavor: "The right tool, well used, is worth ten hands." },
+  chain:   { label: "Combo",   accent: "var(--rose)", icon: "quest_chain",   flavor: "Link your harvest together for a richer haul." },
 };
 const CATEGORY_DEFAULT: CategoryMeta = {
   label: "Task", accent: "var(--ember)", icon: "quest_book",
@@ -251,7 +251,7 @@ function AlmanacTierCard({ idx, tierDef, almanacXp, almanacClaimed, dispatch }: 
       className="gap-1 w-full"
       style={{
         background: claimed ? "rgba(197,168,122,0.4)" : claimable ? "var(--card-bg)" : "rgba(212,181,133,0.4)",
-        borderColor: claimed ? "#c5a87a" : claimable ? "var(--ember)" : "rgba(178,139,98,0.6)",
+        borderColor: claimed ? "var(--iron-soft)" : claimable ? "var(--ember)" : "rgba(178,139,98,0.6)",
       }}
     >
       <div className="flex items-center gap-2">

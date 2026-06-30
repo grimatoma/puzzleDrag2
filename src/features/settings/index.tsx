@@ -36,8 +36,8 @@ function ActionBtn({ children, onClick, variant = 'default', className = '', dis
   const styles: Record<string, { background: string; borderColor: string; color: string }> = {
     primary:  { background: '#5a9e4b', borderColor: '#3e7236', color: '#fff' },
     danger:   { background: '#c23b22', borderColor: '#8f2a18', color: '#fff' },
-    default:  { background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' },
-    ember:    { background: '#d6612a', borderColor: '#a84010', color: '#fff' },
+    default:  { background: 'var(--well-bg)', borderColor: 'var(--iron)', color: '#5a3a20' },
+    ember:    { background: '#d6612a', borderColor: 'var(--flame-cta-bot)', color: '#fff' },
   };
   const s = styles[variant] || styles.default;
   return (
@@ -146,8 +146,8 @@ function MainTab({ dispatch }: { dispatch: Dispatch }) {
   return (
     <div className="flex flex-col items-center gap-3 pt-1">
       <div className="text-center">
-        <div className="text-[24px] font-bold" style={{ color: '#a8431a' }}>🔥 Hearthlands</div>
-        <div className="text-[12px] italic" style={{ color: '#7a5a38' }}>A puzzle of seasons and stews.</div>
+        <div className="text-[24px] font-bold" style={{ color: 'var(--flame-frame)' }}>🔥 Hearthlands</div>
+        <div className="text-[12px] italic" style={{ color: 'var(--ink-soft)' }}>A puzzle of seasons and stews.</div>
       </div>
 
       <div className="w-full flex flex-col gap-2 max-w-[320px]">
@@ -186,7 +186,7 @@ function MainTab({ dispatch }: { dispatch: Dispatch }) {
           target="_blank"
           rel="noopener"
           className="w-full py-2 px-4 text-[13px] font-bold rounded-xl border-2 flex items-center justify-center no-underline"
-          style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+          style={{ background: 'var(--well-bg)', borderColor: 'var(--iron)', color: '#5a3a20' }}
         >
           📖 Game Wiki
         </a>
@@ -196,7 +196,7 @@ function MainTab({ dispatch }: { dispatch: Dispatch }) {
           target="_blank"
           rel="noopener"
           className="w-full py-2 px-4 text-[13px] font-bold rounded-xl border-2 flex items-center justify-center no-underline"
-          style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+          style={{ background: 'var(--well-bg)', borderColor: 'var(--iron)', color: '#5a3a20' }}
         >
           📄 Docs
         </a>
@@ -225,7 +225,7 @@ function SettingsTab({ settings = {}, dispatch }: SettingsTabProps) {
       <button
         onClick={() => dispatch({ type: 'SETTINGS/SET_TAB', tab: 'main' })}
         className="self-start text-[12px] font-bold px-3 py-1 rounded-lg border-2"
-        style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+        style={{ background: 'var(--well-bg)', borderColor: 'var(--iron)', color: '#5a3a20' }}
       >
         ← Back
       </button>
@@ -237,9 +237,9 @@ function SettingsTab({ settings = {}, dispatch }: SettingsTabProps) {
           <div
             key={key}
             className="flex items-center justify-between py-2 px-3 rounded-xl border-2"
-            style={{ background: '#f4e8d0', borderColor: '#b28b62' }}
+            style={{ background: 'var(--cream)', borderColor: 'var(--iron)' }}
           >
-            <span className="text-[13px] font-bold" style={{ color: '#2b2218' }}>{label}</span>
+            <span className="text-[13px] font-bold" style={{ color: 'var(--ink)' }}>{label}</span>
             <Toggle
               on={!!settings[key]}
               onToggle={() => handleToggle(key)}
@@ -255,9 +255,9 @@ function SettingsTab({ settings = {}, dispatch }: SettingsTabProps) {
           <div
             key={key}
             className="flex items-center justify-between py-2 px-3 rounded-xl border-2"
-            style={{ background: '#f4e8d0', borderColor: '#b28b62' }}
+            style={{ background: 'var(--cream)', borderColor: 'var(--iron)' }}
           >
-            <span className="text-[13px] font-bold" style={{ color: '#2b2218' }}>{label}</span>
+            <span className="text-[13px] font-bold" style={{ color: 'var(--ink)' }}>{label}</span>
             <Toggle
               on={!!settings[key]}
               onToggle={() => handleToggle(key)}
@@ -276,17 +276,17 @@ function AboutTab({ dispatch }: { dispatch: Dispatch }) {
       <button
         onClick={() => dispatch({ type: 'SETTINGS/SET_TAB', tab: 'main' })}
         className="self-start text-[12px] font-bold px-3 py-1 rounded-lg border-2"
-        style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+        style={{ background: 'var(--well-bg)', borderColor: 'var(--iron)', color: '#5a3a20' }}
       >
         ← Back
       </button>
       <div className="text-[48px] leading-none select-none" aria-hidden="true">🔥</div>
-      <div className="text-[16px] font-bold" style={{ color: '#2b2218' }}>Hearthlands · v0.1.0</div>
-      <div className="text-[11px] italic" style={{ color: '#7a5a38' }}>Hearthwood Vale</div>
+      <div className="text-[16px] font-bold" style={{ color: 'var(--ink)' }}>Hearthlands · v0.1.0</div>
+      <div className="text-[11px] italic" style={{ color: 'var(--ink-soft)' }}>Hearthwood Vale</div>
       <p className="text-[12px] max-w-[280px]" style={{ color: '#5a3a20' }}>
         Inspired by Puzzle Craft 2. Original IP. Designed in Claude Design, built in Claude Code.
       </p>
-      <p className="text-[12px] italic" style={{ color: '#7a5a38' }}>
+      <p className="text-[12px] italic" style={{ color: 'var(--ink-soft)' }}>
         Made with care for cozy chains and slow seasons.
       </p>
     </div>
@@ -323,7 +323,7 @@ export default function SettingsModal({ state, dispatch }: SettingsModalProps) {
         {leavingBoard ? (
           <div
             className="w-full flex flex-col gap-3 py-3 px-3 rounded-xl"
-            style={{ background: '#f4e8d0' }}
+            style={{ background: 'var(--cream)' }}
           >
             <span className="text-[13px] font-bold text-center" style={{ color: '#5a3a20' }}>
               Leave the board? Your current run will not be saved.
@@ -339,7 +339,7 @@ export default function SettingsModal({ state, dispatch }: SettingsModalProps) {
               <button
                 onClick={close}
                 className="flex-1 py-2 text-[12px] font-bold rounded-lg border-2"
-                style={{ background: '#e8dcc4', borderColor: '#b28b62', color: '#5a3a20' }}
+                style={{ background: 'var(--well-bg)', borderColor: 'var(--iron)', color: '#5a3a20' }}
               >
                 Stay
               </button>
