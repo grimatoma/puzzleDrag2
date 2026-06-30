@@ -35,6 +35,17 @@ describe("DailyStreakModal", () => {
     expect(dispatch).toHaveBeenCalledWith({ type: "CLOSE_MODAL" });
   });
 
+  // The modal auto-opens on login (LOGIN_TICK), so focus moves programmatically.
+  // If focus landed on the Collect button, the browser's :focus-visible heuristic
+  // paints an ember ring on the (ember) primary button — the doubled-border bug.
+  // Focus must land on the dialog container instead.
+  it("moves focus to the dialog container, not the Collect button", () => {
+    render(<DailyStreakModal state={modalState()} dispatch={vi.fn()} />);
+    const dialog = screen.getByRole("dialog");
+    expect(document.activeElement).toBe(dialog);
+    expect(document.activeElement).not.toBe(screen.getByText("Collect").closest("button"));
+  });
+
   it("renders nothing when the active modal is not daily_streak", () => {
     const state = { modal: "festivals" } as unknown as GameState;
     const { container } = render(<DailyStreakModal state={state} dispatch={vi.fn()} />);

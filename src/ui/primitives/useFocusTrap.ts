@@ -13,9 +13,12 @@ export default function useFocusTrap(
     const previouslyFocused = document.activeElement as HTMLElement | null;
     const panel = ref.current;
     if (panel) {
-      const focusables = panel.querySelectorAll<HTMLElement>(FOCUSABLE);
-      const first = focusables[0] || panel;
-      (first as HTMLElement).focus?.();
+      // Focus the dialog container itself rather than the first focusable
+      // child. Focusing a control (typically the primary button) triggers its
+      // :focus-visible ring whenever the dialog opens programmatically, which
+      // reads as a doubled ember border on ember buttons. The panel is
+      // tabIndex=-1 + outline-none, so this traps focus without a visible ring.
+      panel.focus?.();
     }
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape" && onClose) {
