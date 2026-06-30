@@ -43,9 +43,12 @@ import { ICONS as G_FIXED_ICONS } from "./categories/fixed-icons.js";
 // to the Dev-Panel-only concept batches).
 import { ICONS as G_COZY_DECOR } from "./categories/cozyDecor.js";
 import { ICONS as G_NATURE } from "./categories/nature.js";
-// NOTE: 20 decorative "concept" category batches (gems, weather, dishes, reef,
+// In-game build menu: each building's `bld_<id>` icon is shown by Town.tsx's
+// BuildingPreview, so the buildings batch is registered in-game (NOT Dev-Panel-only).
+import { ICONS as G_BUILDINGS } from "./categories/buildings.js";
+// NOTE: 19 decorative "concept" category batches (gems, weather, dishes, reef,
 // critters, arcane, celestial, ores, pets, treasure, drinks, furniture,
-// instruments, festive, crops, workshopTools, weapons, spells, buildings,
+// instruments, festive, crops, workshopTools, weapons, spells,
 // archivedIcons) used to be imported and spread here. They are Dev-Panel-only
 // (never referenced by any in-game catalog) and now live in
 // `./conceptIconBatches.ts`, imported only by the Dev Panel Icons tab, so their
@@ -142,6 +145,8 @@ const REGISTRY_DRAFT: IconRegistryDictionary = {
   // In-game town props (consumed by ui/town/tiles/manifest.ts).
   ...G_COZY_DECOR,
   ...G_NATURE,
+  // In-game build menu previews (Town.tsx BuildingPreview → `bld_<id>`).
+  ...G_BUILDINGS,
   // The remaining decorative "concept" batches + archived legacy draws that used to
   // be spread here are now Dev-Panel-only — see `./conceptIconBatches.ts` and
   // the import note above. The game registry holds only icons reachable from
