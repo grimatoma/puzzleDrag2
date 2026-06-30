@@ -107,6 +107,17 @@
       "Compare UI and canvas output to the golden image."
     ]
   },
+  "desktop/quests.png": {
+    "scenarioId": "quests",
+    "routeHash": "#/quests",
+    "view": null,
+    "actions": [],
+    "expectation": "Scenario quests renders correctly at #/quests.",
+    "checklist": [
+      "Open #/quests.",
+      "Compare UI and canvas output to the golden image."
+    ]
+  },
   "desktop/shell-menu-main.png": {
     "scenarioId": "shell-menu-main",
     "routeHash": "#/town",

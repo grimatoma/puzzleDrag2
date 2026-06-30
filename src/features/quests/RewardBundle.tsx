@@ -18,6 +18,7 @@
  * draw (e.g. almanac XP), we fall back to a styled glyph. This replaces the old
  * coins-only token AND the icon-less `rewardLabel()` text serializer.
  */
+import type { CSSProperties } from "react";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import { BUILDINGS, ITEMS } from "../../constants.js";
 
@@ -64,6 +65,22 @@ const STRUCTURAL_LABELS: Record<string, string> = {
   goldSeal: "Golden Seal",
 };
 
+/** Turn a camelCase / snake_case id into spaced, capitalised words
+ * ("extraTurn" → "Extra Turn") so an unmapped key still reads as English. */
+function prettifyKey(key: string): string {
+  const spaced = key
+    .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+    .replace(/[_-]+/g, " ")
+    .trim();
+  return spaced ? spaced.charAt(0).toUpperCase() + spaced.slice(1) : key;
+}
+
+/** Player-facing label for a structural perk: the authored map first, then a
+ * prettified fallback so a brand-new perk id never leaks raw camelCase. */
+function structuralLabel(key: string): string {
+  return STRUCTURAL_LABELS[key] ?? prettifyKey(key);
+}
+
 function catalogLabel(key: string): string {
   const entry = (ITEMS as Record<string, { label?: string }>)[key];
   return entry?.label ?? key;
@@ -109,7 +126,7 @@ export function rewardRows(reward: RewardLike | null | undefined): RewardRow[] {
       kind: "structural",
       iconKey: "",
       glyph: "⬡",
-      name: STRUCTURAL_LABELS[reward.structural] ?? reward.structural,
+      name: structuralLabel(reward.structural),
       tag: "Perk",
       headline: true,
       rowClass: "qm-row--perk",
@@ -153,6 +170,25 @@ export function pickHeadline(rows: RewardRow[]): RewardRow | null {
     if (found) return found;
   }
   return rows[0] ?? null;
+}
+
+/**
+ * Manifest ordering: the headline rewards (the building/tile unlock, rune, or
+ * perk) float to the top in prominence order, then the baseline coins / XP /
+ * goods follow in stable taxonomy order. This is what makes the prize *read* as
+ * the prize instead of sitting last under the coins. Uses the per-row `headline`
+ * flag from {@link rewardRows} and the shared {@link HEADLINE_ORDER}.
+ */
+export function manifestRows(reward: RewardLike | null | undefined): RewardRow[] {
+  const rows = rewardRows(reward);
+  // Headline rows rank by their HEADLINE_ORDER priority (building first);
+  // baseline rows all share the lowest rank and keep their taxonomy order.
+  const rank = (r: RewardRow): number =>
+    r.headline ? HEADLINE_ORDER.indexOf(r.kind) : HEADLINE_ORDER.length;
+  return rows
+    .map((row, i) => ({ row, i }))
+    .sort((a, b) => rank(a.row) - rank(b.row) || a.i - b.i)
+    .map((x) => x.row);
 }
 
 /** Render a row's icon: the registry draw when available, else a styled glyph. */
@@ -209,12 +245,43 @@ export function RewardHeadlineChip({ reward }: { reward: RewardLike | null | und
 }
 
 /**
+ * A one-shot claim celebration: a radial gold flash plus every reward icon
+ * bursting upward and fading out. Purely decorative and stateless (no timers of
+ * its own) — the caller mounts it transiently over the quest card and unmounts
+ * it when the animation window elapses. Honours `prefers-reduced-motion` via CSS.
+ */
+export function ClaimBurst({ reward }: { reward: RewardLike | null | undefined }) {
+  const rows = manifestRows(reward);
+  const n = Math.max(rows.length, 1);
+  return (
+    <div className="quest-claim-burst" aria-hidden="true">
+      <span className="qcb-flash" />
+      {rows.map((row, i) => {
+        // Deterministic spread from the index (no Math.random): fan the icons
+        // out across the card and stagger their launch for a popcorn feel.
+        const t = n === 1 ? 0.5 : i / (n - 1);
+        const dx = (t - 0.5) * 132;
+        return (
+          <span
+            key={i}
+            className={`qcb-particle qcb-particle--${row.kind}`}
+            style={{ "--qcb-dx": `${dx}px`, animationDelay: `${i * 55}ms` } as CSSProperties}
+          >
+            <RewardIcon row={row} size={22} cls="qcb-glyph" />
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
  * The full reward manifest — one row per reward (icon + name + optional ×N or
  * value). Unlock rows are framed and tagged. Capped at five rewards by authoring
  * convention, so this never scrolls or collapses.
  */
 export function RewardManifest({ reward }: { reward: RewardLike | null | undefined }) {
-  const rows = rewardRows(reward);
+  const rows = manifestRows(reward);
   if (rows.length === 0) return null;
   return (
     <ul className="quest-manifest">

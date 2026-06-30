@@ -239,6 +239,7 @@ export const VISUAL_DESKTOP_SMOKE_SCENARIO_IDS = [
   "crafting-bakery",
   "tiles-farm-grass",
   "map-current-home",
+  "quests",
   "story-choices",
   "tutorial-corner",
 ];
