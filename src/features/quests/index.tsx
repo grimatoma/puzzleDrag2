@@ -5,7 +5,7 @@ import { QUEST_TEMPLATES } from "./templates.js";
 import FeaturePanel from "../../ui/primitives/FeaturePanel.jsx";
 import IconCanvas, { hasIcon } from "../../ui/IconCanvas.jsx";
 import ActionCard, { ProgressBar } from "../../ui/primitives/ActionCard.jsx";
-import { RewardHeadlineChip, RewardManifest } from "./RewardBundle.jsx";
+import { ClaimBurst, RewardHeadlineChip, RewardManifest } from "./RewardBundle.jsx";
 import type { Dispatch, GameState } from "../../types/state.js";
 import type { Quest } from "./data.js";
 
@@ -141,11 +141,24 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
   const flavor = questFlavor(q);
   const remaining = Math.max(0, q.target - q.progress);
 
+  // One-shot claim celebration. `bursting` mounts the <ClaimBurst> overlay and
+  // adds a quick card pop; it clears itself after the animation window so the
+  // card settles into its claimed state. Default false ⇒ no effect on the
+  // static render (and thus none on visual goldens).
+  const [bursting, setBursting] = useState(false);
+  const handleClaim = () => {
+    if (!claimable) return;
+    setBursting(true);
+    dispatch({ type: "QUESTS/CLAIM_QUEST", id: q.id });
+    window.setTimeout(() => setBursting(false), 900);
+  };
+
   return (
     <div
-      className={`quest-card w-full ${claimable ? "quest-card--ready" : ""} ${claimed ? "quest-card--done" : ""}`}
+      className={`quest-card w-full ${claimable ? "quest-card--ready" : ""} ${claimed ? "quest-card--done" : ""} ${bursting ? "quest-card--claimed-fx" : ""}`}
       style={{ "--q-accent": meta.accent } as CSSProperties}
     >
+      {bursting && <ClaimBurst reward={q.reward} />}
       {/* Category tag + reward token */}
       <div className="flex items-center justify-between gap-2">
         <span className="quest-tag">
@@ -187,7 +200,7 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
         )}
         <button
           disabled={!claimable}
-          onClick={() => claimable && dispatch({ type: "QUESTS/CLAIM_QUEST", id: q.id })}
+          onClick={handleClaim}
           className={`hl-btn hl-btn--sm ${claimable ? "hl-btn--go animate-pulse" : ""}`}
         >
           {claimed

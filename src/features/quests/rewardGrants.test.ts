@@ -5,7 +5,7 @@
  * for buildings, surface via globallyUnlockedBuildings.
  */
 import { describe, it, expect } from "vitest";
-import { grantQuestRewardExtras } from "./data.js";
+import { grantQuestRewardExtras, questUnlockToasts } from "./data.js";
 import { globallyUnlockedBuildings } from "../zones/data.js";
 import { createInitialState } from "../../state.js";
 import type { GameState } from "../../types/state.js";
@@ -59,5 +59,34 @@ describe("grantQuestRewardExtras — richer reward kinds", () => {
     expect(globallyUnlockedBuildings(s0)).not.toContain("forge");
     const s1 = grantQuestRewardExtras(s0, { unlockBuilding: "forge" });
     expect(globallyUnlockedBuildings(s1)).toContain("forge");
+  });
+});
+
+describe("questUnlockToasts — claim-time celebration", () => {
+  it("emits a toast only for a newly unlocked building", () => {
+    const s0 = fresh();
+    const s1 = grantQuestRewardExtras(s0, { unlockBuilding: "mill" });
+    const toasts = questUnlockToasts(s0, s1);
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0]).toMatchObject({ title: "Building unlocked!", icon: "bld_mill", tone: "moss" });
+    expect(toasts[0].message).toContain("Mill");
+  });
+
+  it("emits a toast for a newly discovered tile", () => {
+    const s0 = fresh();
+    const s1 = grantQuestRewardExtras(s0, { unlockTile: "tile_cattle_triceratops" });
+    const toasts = questUnlockToasts(s0, s1);
+    expect(toasts).toHaveLength(1);
+    expect(toasts[0]).toMatchObject({ title: "New tile discovered!", icon: "tile_cattle_triceratops", tone: "gold" });
+  });
+
+  it("stays silent on a re-claim (no new unlock) and for coin-only rewards", () => {
+    const s0 = fresh();
+    const s1 = grantQuestRewardExtras(s0, { unlockBuilding: "mill" });
+    // Re-granting the same building produces no diff → no toast.
+    const s2 = grantQuestRewardExtras(s1, { unlockBuilding: "mill" });
+    expect(questUnlockToasts(s1, s2)).toEqual([]);
+    // A reward with no unlocks never toasts.
+    expect(questUnlockToasts(s0, grantQuestRewardExtras(s0, { coins: 100 }))).toEqual([]);
   });
 });

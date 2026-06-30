@@ -7,11 +7,59 @@ import { inventoryAdd } from "../../types/inventory.js";
 import { updateZoneInventory } from "../../state/zoneInventory.js";
 import { defaultTileCollectionSlice } from "../../state/helpers.js";
 import { TILE_TYPES_MAP } from "../tileCollection/data.js";
+import { nextToastId } from "../toasts/data.js";
+import type { Toast } from "../toasts/data.js";
 import type { InventoryKey } from "../../types/catalogKeys.js";
 import type { GameState } from "../../types/state.js";
 import type { BoardKind } from "../cartography/data.js";
 
 const BUILDING_IDS = new Set((BUILDINGS as ReadonlyArray<{ id: string }>).map((b) => b.id));
+
+function buildingLabel(id: string): string {
+  return (BUILDINGS as ReadonlyArray<{ id: string; name?: string }>).find((b) => b.id === id)?.name ?? id;
+}
+
+function tileLabel(id: string): string {
+  return (TILE_TYPES_MAP as Record<string, { displayName?: string } | undefined>)[id]?.displayName ?? id;
+}
+
+/**
+ * Build celebration toasts for any *new* unlock a claim produced, by diffing the
+ * pre- and post-grant state. Diffing (rather than reading the reward directly)
+ * means a toast only ever fires for a genuine unlock: an invalid building id, an
+ * already-discovered tile, or a re-claim all produce no diff and so no toast.
+ * Shared by the deterministic and legacy claim paths.
+ */
+export function questUnlockToasts(before: GameState, after: GameState): Toast[] {
+  const out: Toast[] = [];
+
+  const beforeBld = new Set(before.questUnlockedBuildings ?? []);
+  for (const id of after.questUnlockedBuildings ?? []) {
+    if (beforeBld.has(id)) continue;
+    out.push({
+      id: nextToastId(),
+      title: "Building unlocked!",
+      message: `${buildingLabel(id)} — build it anywhere`,
+      icon: `bld_${id}`,
+      tone: "moss",
+    });
+  }
+
+  const beforeTiles = before.tileCollection?.discovered ?? {};
+  const afterTiles = after.tileCollection?.discovered ?? {};
+  for (const id of Object.keys(afterTiles)) {
+    if (!afterTiles[id] || beforeTiles[id]) continue;
+    out.push({
+      id: nextToastId(),
+      title: "New tile discovered!",
+      message: tileLabel(id),
+      icon: id,
+      tone: "gold",
+    });
+  }
+
+  return out;
+}
 
 export interface QuestTemplate {
   id: string;

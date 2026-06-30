@@ -1,5 +1,5 @@
 import { QUEST_TEMPLATES } from "./templates.js";
-import { QUEST_CLAIM_XP, claimQuest, grantQuestRewardExtras, isQuestComplete, questTitle, tickQuest } from "./data.js";
+import { QUEST_CLAIM_XP, claimQuest, grantQuestRewardExtras, isQuestComplete, questTitle, questUnlockToasts, tickQuest } from "./data.js";
 import type { Quest, QuestEvent, QuestTemplate } from "./data.js";
 import { awardXp, claimAlmanacTier } from "../almanac/data.js";
 import { appendToasts, nextToastId } from "../toasts/data.js";
@@ -124,7 +124,9 @@ export function reduce(state: GameState, action: Action): GameState {
         if (!result.ok) return state;
         // Award almanac XP: §17 locked: 20 XP per quest claim
         const { newState: afterXp } = awardXp(result.newState, result.xpGain);
-        return afterXp;
+        const unlocks = questUnlockToasts(state, afterXp);
+        if (unlocks.length === 0) return afterXp;
+        return { ...afterXp, toasts: appendToasts(afterXp.toasts, unlocks) };
       }
 
       // Legacy system: look in state.dailies (3-slot)
@@ -141,10 +143,19 @@ export function reduce(state: GameState, action: Action): GameState {
       };
       const afterExtras = grantQuestRewardExtras(
         afterCoins,
-        q.reward as { tools?: Record<string, number>; items?: Record<string, number> },
+        q.reward as {
+          tools?: Record<string, number>;
+          items?: Record<string, number>;
+          runes?: number;
+          structural?: string;
+          unlockTile?: string;
+          unlockBuilding?: string;
+        },
       );
       const { newState: afterXp } = awardXp(afterExtras, QUEST_CLAIM_XP);
-      return afterXp;
+      const unlocks = questUnlockToasts(state, afterXp);
+      if (unlocks.length === 0) return afterXp;
+      return { ...afterXp, toasts: appendToasts(afterXp.toasts, unlocks) };
     }
     case "QUESTS/CLAIM_ALMANAC": {
       const { tier } = action;
