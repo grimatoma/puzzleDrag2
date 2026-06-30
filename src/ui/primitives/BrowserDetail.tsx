@@ -2,8 +2,9 @@ import AutoFitText from "./AutoFitText.jsx";
 import Button from "./Button.jsx";
 import { CostChip, RequirementChip } from "./Chip.jsx";
 import ProgressTrack from "./ProgressTrack.jsx";
-import { getItem } from "../../constants.js";
+import { getItem, RECIPES } from "../../constants.js";
 import { iconLabel } from "../../textures/iconRegistry.js";
+import { producedResource } from "../../game/producedResource.js";
 
 function cx(...parts: Array<string | false | null | undefined>) {
   return parts.filter(Boolean).join(" ");
@@ -212,43 +213,86 @@ function abilityLabel(key: unknown): string {
   if (!k) return "";
   return iconLabel(k) || getItem(k)?.label || humanizeKey(k);
 }
+const plural = (n: unknown): string => (Number(n) === 1 ? "" : "s");
+function categoryLabel(key: unknown): string {
+  const k = String(key ?? "").trim();
+  if (!k) return "category";
+  return humanizeKey(k.replace(/^(mine|farm|fish|forest)_/, ""));
+}
+function recipeOutputLabel(key: unknown): string {
+  const k = String(key ?? "").trim();
+  const item = k ? RECIPES[k]?.item : undefined;
+  return (item && (getItem(item)?.label ?? item)) || abilityLabel(k) || "recipe";
+}
 
-export function AbilitySummary({ abilities, effects, empty = "No special bonus." }: { abilities?: AbilitySpec[] | unknown; effects?: AbilityEffects; empty?: React.ReactNode }) {
+/**
+ * Convert a host's attached `abilities` (and any rolled-up passive `effects`)
+ * into short, plain-English clauses describing what it does. Shared by the
+ * tile cards (list form) and the build menu (pill form) so the wording for an
+ * ability id is written once. Covers every ability id attached to buildings.
+ */
+export function abilitySummaryRows(abilities?: AbilitySpec[] | unknown, effects?: AbilityEffects): string[] {
   const rows: string[] = [];
   if (Array.isArray(abilities)) {
     for (const ab of abilities as AbilitySpec[]) {
       const p = (ab?.params ?? {}) as Record<string, unknown>;
+      const amt = p.amount ?? 1;
       switch (ab?.id) {
         case "free_moves":
-          rows.push(`${p.count ?? 1} free move${(p.count ?? 1) === 1 ? "" : "s"}`);
+          rows.push(`${p.count ?? 1} free move${plural(p.count ?? 1)}`);
           break;
         case "pool_weight":
         case "pool_weight_legacy":
-          rows.push(`Boosts ${abilityLabel(p.target) || "spawn"} by ${p.amount ?? 1}`);
+          rows.push(`Boosts ${abilityLabel(p.target) || "spawn"} by ${amt}`);
           break;
         case "threshold_reduce":
-          rows.push(`Reduces ${abilityLabel(p.target) || "a chain"} by ${p.amount ?? 1}`);
+          rows.push(`Reduces ${abilityLabel(p.target) || "a chain"} by ${amt}`);
           break;
         case "threshold_reduce_category":
-          rows.push(`Reduces ${p.category ? humanizeKey(String(p.category)) : "category"} chains by ${p.amount ?? 1}`);
+          rows.push(`${categoryLabel(p.category)} chains upgrade ${amt} step${plural(amt)} sooner`);
           break;
         case "recipe_input_reduce":
-          rows.push(`Reduces ${abilityLabel(p.recipe) || "recipe"} ${abilityLabel(p.input) || "input"} by ${p.amount ?? 1}`);
+          rows.push(`${recipeOutputLabel(p.recipe)} needs ${amt} less ${abilityLabel(p.input) || "input"}`);
           break;
+        case "bonus_yield": {
+          const yielded = producedResource({ key: String(p.target ?? "") });
+          const yieldedLabel = yielded ? (getItem(yielded)?.label ?? yielded) : "yield";
+          rows.push(`+${amt} ${yieldedLabel} from ${abilityLabel(p.target) || "matching"} chains`);
+          break;
+        }
         case "season_bonus":
-          rows.push(`Season bonus: ${p.amount ?? 0} ${abilityLabel(p.resource) || "coins"}`);
+          rows.push(`+${p.amount ?? 0} ${abilityLabel(p.resource) || "coins"} each season`);
+          break;
+        case "grant_tool":
+          rows.push(`+${amt} ${abilityLabel(p.tool) || "tool"} each season`);
+          break;
+        case "worker_pool_step":
+          rows.push(`+${amt} villager${plural(amt)} to the hiring pool each season`);
+          break;
+        case "turn_budget_bonus":
+          rows.push(`+${amt} puzzle turn${plural(amt)} per session`);
+          break;
+        case "inventory_cap_bonus":
+          rows.push(`+${amt} inventory capacity`);
+          break;
+        case "preserve_board":
+          rows.push(`Preserves the ${humanizeKey(String(p.biome ?? ""))} board between sessions`);
           break;
         default:
           if (ab?.id) rows.push(ab.id.replaceAll("_", " "));
       }
     }
   }
-  if (effects?.freeMoves) rows.push(`${effects.freeMoves} free move${effects.freeMoves === 1 ? "" : "s"}`);
+  if (effects?.freeMoves) rows.push(`${effects.freeMoves} free move${plural(effects.freeMoves)}`);
   if (effects?.coinBonusFlat) rows.push(`+${effects.coinBonusFlat} coins`);
   if (effects?.coinBonusPerTile) rows.push(`+${effects.coinBonusPerTile} coins per tile`);
   if (effects?.freeMovesIfChain?.minChain) rows.push(`Free move on ${effects.freeMovesIfChain.minChain}+ chain`);
 
-  const unique = [...new Set(rows)].filter(Boolean);
+  return [...new Set(rows)].filter(Boolean);
+}
+
+export function AbilitySummary({ abilities, effects, empty = "No special bonus." }: { abilities?: AbilitySpec[] | unknown; effects?: AbilityEffects; empty?: React.ReactNode }) {
+  const unique = abilitySummaryRows(abilities, effects);
   if (unique.length === 0) return empty == null ? null : <div className="hl-text-faint italic">{empty}</div>;
   return (
     <ul className="hl-ability-list">
