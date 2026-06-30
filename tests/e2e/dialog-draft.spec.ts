@@ -41,7 +41,7 @@ test('balance draft dialog is consumed by the game runtime', async ({ page }) =>
     }));
   });
 
-  await page.goto('/');
+  await page.goto('./');
   await waitForBoot(page);
   await dispatchAction(page, { type: 'BUILD', building: { id: 'e2e_marker', name: 'E2E Marker', cost: {} } });
 

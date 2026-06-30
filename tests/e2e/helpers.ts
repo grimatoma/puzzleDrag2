@@ -116,7 +116,9 @@ export async function seedQuietSave(page: Page, overrides: QuietSaveOverrides = 
 /** Wipe save + seed quiet flags + navigate + wait. Single call for most specs. */
 export async function gotoFresh(page: Page, overrides: QuietSaveOverrides = {}): Promise<void> {
   await seedQuietSave(page, overrides);
-  await page.goto("/");
+  // Base-relative so we hit the dev server's base (`/puzzleDrag2/`) directly;
+  // an absolute "/" 302-redirects to the base and adds seconds to cold loads.
+  await page.goto("./");
   await waitForBoot(page);
 }
 
