@@ -69,6 +69,9 @@ Note (13): the ~10× `SELL_ITEM` vs `SELL_RESOURCE` fork is **fixed** (`effectiv
 |---|---|---|---|
 | 09 | [CI Gate for e2e + Visual Smoke](09-ci-e2e-visual-gate.md) | S–M | — |
 | 10 | [Self-Describing Slices (kill the footgun)](10-self-describing-slices.md) | M | — |
+| 24 | [Test Suite & Testing-Infra Health Review](24-test-suite-and-infra-review.html) | review | — |
+
+Note (24): a findings-and-proposals **audit** (not an implementation brief) of all 369 vitest files + the e2e/visual/coverage/CI gates. Verdict: the suite is green and **mostly valid**, but three whole layers (e2e, visual, UI/canvas coverage) run without gating, two drift-guards (`flag-reads-drift`, `actionTypes`) have rotted into always-pass no-ops, and the `phase-*` suite is partly copy-not-moved duplication. Tier-1 fixes overlap briefs 09 (gate wiring) and 10 (the slice footgun the drifted `actionTypes` test fails to guard).
 
 Note (09): infra **landed** (PR #1229) — the `e2e`/`visual-smoke`/`visual-rebaseline` jobs — but both land **non-blocking** because the never-gated e2e suite has **bit-rotted** (~32 pass / 31 fail — stale fixtures/selectors, NOT a regression). De-rot + re-baseline goldens on CI before flipping to gating — full inventory in [09 findings](09-ci-e2e-gate-findings.md). Note (10): `ALWAYS_RUN_SLICES` is wrapped by a *stateful* guard that must not be flattened; `CARTO/TRAVEL` is dual-owned.
 
