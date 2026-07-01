@@ -366,15 +366,20 @@ function byDateDesc(a, b) {
 // own, so every section reads at a glance.
 const SECTION_META = {
   ".": { label: "Overview", blurb: "Top-level design, audit & proposal docs", order: 0, glyph: "🗺️", accent: "#e0913a" },
+  "game-design-review": { label: "Game Design Review", blurb: "Full design pass across every view, screenshotted from the live game", order: 0.5, glyph: "🎮", accent: "#e0913a" },
   projects: { label: "Project Briefs", blurb: "Ranked roadmap + self-contained implementation briefs", order: 1, glyph: "🧭", accent: "#e0913a" },
+  "health-review": { label: "Health Review", blurb: "Codebase health audit — test suite & infra", order: 1.2, glyph: "🧪", accent: "#9fb0bd" },
   superpowers: { label: "Plans & Specs", blurb: "In-flight implementation plans & design specs (shipped ones graduate to the Archive)", order: 1.5, glyph: "📝", accent: "#9fb0bd" },
+  "quest-reward-ui": { label: "Quest Reward UI", blurb: "Design proposal for the quest reward display", order: 1.6, glyph: "🎁", accent: "#e0913a" },
   "seasonal-tile-system": { label: "Seasonal Tile System", blurb: "Live seasonal-tile pipeline & prompts", order: 2, glyph: "🍂", accent: "#c8743a" },
+  "seasonal-tile-eval": { label: "Seasonal Tile Eval", blurb: "Farm tile animation re-evaluation, uniqueness-first", order: 2.2, glyph: "🍁", accent: "#c8743a" },
   "seasonal-vector-tiles": { label: "Seasonal Vector Tiles", blurb: "All-vector animated seasonal tiles — preview & spec", order: 2.5, glyph: "🍃", accent: "#8bab5a" },
   "town-layout": { label: "Town Layout", blurb: "Settlement growth mockups", order: 3, glyph: "🏘️", accent: "#8bab5a" },
   "town-camera": { label: "Town Camera", blurb: "Map camera-view decision board + live demo", order: 4, glyph: "🎥", accent: "#8bab5a" },
   "town-orientation": { label: "Town Orientation", blurb: "Map perspective / camera-look studies", order: 4.5, glyph: "🧭", accent: "#8bab5a" },
   zones: { label: "Zone Atlas", blurb: "Unique growing-settlement zones & build-outs", order: 5, glyph: "🌍", accent: "#6fae8f" },
   "puzzle-prototypes": { label: "Puzzle Prototypes", blurb: "Playable browser prototypes of the drag-chain core", order: 6, glyph: "🧩", accent: "#9b8fd0" },
+  "ux-color-review": { label: "UX & Color Review", blurb: "UX and color-direction review of the live game", order: 6.5, glyph: "🎨", accent: "#d98a8a" },
   "art-style-board": { label: "Art Style Board", blurb: "Candidate art directions, pitched & proven", order: 7, glyph: "🎨", accent: "#d98a8a" },
   "art-style-board-r2": { label: "Art Style Board · R2", blurb: "Round-2 drill into the chosen storybook look", order: 8, glyph: "🎨", accent: "#d98a8a" },
   "hd2d-village": { label: "HD-2D Village", blurb: "React-Three-Fiber HD-2D look test", order: 9, glyph: "🌄", accent: "#7fa8d8" },
@@ -657,9 +662,20 @@ ${inner}
   const inCollectionSrc = new Set();
   for (const c of collectionEntries) for (const e of c.group) inCollectionSrc.add(e.src);
   const collectionHubSrc = new Set(collectionEntries.map((c) => c.hub.src));
+  // A hub's own creation date (usually its README, written long ago) would bury
+  // a collection that just gained a fresh member (e.g. a new project brief) at
+  // the bottom of the timeline. For this view only, stamp the hub with the
+  // newest timestamp found among its group so freshly added content surfaces.
+  const hubForByDate = new Map(
+    collectionEntries.map((c) => {
+      const newest = [...c.group].sort(byDateDesc)[0];
+      return [c.hub.src, { ...c.hub, ts: newest.ts, date: newest.date }];
+    }),
+  );
   const activeByDate = entries
     .filter((e) => !archivedSrc.has(e.src))
     .filter((e) => !inCollectionSrc.has(e.src) || collectionHubSrc.has(e.src))
+    .map((e) => hubForByDate.get(e.src) || e)
     .sort(byDateDesc);
   const archivedByDate = [...archived].sort(byDateDesc);
   const byDateSection = (heading, blurb, items) =>
