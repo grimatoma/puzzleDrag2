@@ -1,0 +1,678 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Board — Proposals & Mockups · puzzleDrag2 Design Review</title>
+<link rel="stylesheet" href="./assets/mockup.css">
+</head>
+<body>
+<header class="top">
+  <span class="brand">puzzleDrag2 · <span class="em">Proposals</span></span>
+  <span class="crumb"><a href="./index.html">All proposals</a> › <strong>01 · The Board</strong></span>
+  <span class="meta">before → after · grounded in <code>src/</code></span>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <a class="home" href="./index.html">← All proposals</a>
+  <div class="sep">Surfaces</div>
+  <a href="./board.html" class="active"><span class="k">01</span>The Board</a>
+  <a href="./town.html"><span class="k">02</span>The Town</a>
+  <a href="./map.html"><span class="k">03</span>World Map</a>
+  <a href="./screens.html"><span class="k">04</span>Screens & panels</a>
+  <a href="./story.html"><span class="k">05</span>Story & moments</a>
+  <a href="./shell.html"><span class="k">06</span>Shell & onboarding</a>
+  <a href="./crosscutting.html"><span class="k">07</span>Cross-cutting</a>
+  <a href="./additional-findings.html"><span class="k">08</span>Additional findings</a>
+  <div class="sep">On this page</div>
+  <a href="#b1">B1 · Tile treatment</a>
+  <a href="#b2">B2 · Mobile real-estate</a>
+  <a href="#b3">B3 · Desktop composition</a>
+  <a href="#b4">B4 · Season strip</a>
+  <a href="#b5">B5 · Stockpile & tools</a>
+  <a href="#b6">B6 · Feedback ladder</a>
+  <a href="#b7">B7 · New findings</a>
+</nav>
+
+<main>
+  <p class="eyebrow">Proposals · Core surface 01</p>
+  <h1>The Board — fully-defined proposals</h1>
+  <p class="lead">The 6×6 drag-to-chain board is the game's best interaction; the work is in how it is
+  <em>framed</em>. Each proposal below pairs a picture of the game <span class="chip" style="background:var(--now);color:#fff;border:0">as it is now</span>
+  with a rendered mock-up of <span class="chip" style="background:var(--next);color:#fff;border:0">what to build</span>, an
+  options table where a call is yours to make, and a concrete <code>file:line</code> implementation spec.</p>
+
+  <div class="callout tldr"><p style="margin:0"><strong>Board through-line.</strong> Four framing fixes carry
+  most of the value: (B1) retire the candy-square tile backdrops so the seasonal art and the parchment identity
+  read; (B2/B3) give the board its real-estate back on both viewports; (B4) make the season strip legible; and
+  (B6) close the feedback gaps (silent failed chains, blind tap-tools, an invisible active boss, and
+  reduced-motion leaks). None is a rebuild.</p></div>
+
+  <!-- ============================================================= B1 -->
+  <article class="prop" id="b1">
+    <div class="phd">
+      <span class="pid">B1</span><span class="sev S1">S1</span><span class="eff">Effort M</span>
+      <span class="chip good">Top priority #4</span>
+    </div>
+    <div class="ptitle">Retire the saturated per-category "candy squares" — let the illustration + season read</div>
+    <p class="why">Every board tile is baked onto a fully-saturated per-category color square (grass = green,
+    grain = yellow, veg = orange, fruit = red…). It's a primary-colored match-3 grid dropped into a muted
+    storybook frame — two games touching edge to edge — and the loud squares override any seasonal read.
+    <span class="mut">Backdrops baked in <code>src/textures/categories/*</code>; frame is parchment-cream
+    (<code>GameScene.ts:700</code>).</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">saturated category squares</span></div>
+        <figure>
+          <div class="gm" style="padding:6px">
+            <div class="gm-wrap">
+              <div class="gm-board" style="--n:6;background:linear-gradient(180deg,#f7efdc,#efe2c2);border:2px solid var(--g-iron)">
+                <div class="gm-tile candy-grass"><span class="em">🌿</span></div>
+                <div class="gm-tile candy-grain"><span class="em">🌾</span></div>
+                <div class="gm-tile candy-veg"><span class="em">🥕</span></div>
+                <div class="gm-tile candy-fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile candy-grass"><span class="em">🌿</span></div>
+                <div class="gm-tile candy-tree"><span class="em">🌳</span></div>
+                <div class="gm-tile candy-fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile candy-veg"><span class="em">🥕</span></div>
+                <div class="gm-tile candy-grain"><span class="em">🌾</span></div>
+                <div class="gm-tile candy-flower"><span class="em">🌸</span></div>
+                <div class="gm-tile candy-grass"><span class="em">🌿</span></div>
+                <div class="gm-tile candy-fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile candy-grain"><span class="em">🌾</span></div>
+                <div class="gm-tile candy-grass"><span class="em">🌿</span></div>
+                <div class="gm-tile candy-veg"><span class="em">🥕</span></div>
+                <div class="gm-tile candy-tree"><span class="em">🌳</span></div>
+                <div class="gm-tile candy-fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile candy-flower"><span class="em">🌸</span></div>
+                <div class="gm-tile candy-veg"><span class="em">🥕</span></div>
+                <div class="gm-tile candy-grain"><span class="em">🌾</span></div>
+                <div class="gm-tile candy-grass"><span class="em">🌿</span></div>
+                <div class="gm-tile candy-fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile candy-tree"><span class="em">🌳</span></div>
+                <div class="gm-tile candy-veg"><span class="em">🥕</span></div>
+                <div class="gm-tile candy-grain"><span class="em">🌾</span></div>
+                <div class="gm-tile candy-grass"><span class="em">🌿</span></div>
+                <div class="gm-tile candy-flower"><span class="em">🌸</span></div>
+                <div class="gm-tile candy-fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile candy-veg"><span class="em">🥕</span></div>
+                <div class="gm-tile candy-grass"><span class="em">🌿</span></div>
+                <div class="gm-tile candy-tree"><span class="em">🌳</span></div>
+                <div class="gm-tile candy-grain"><span class="em">🌾</span></div>
+                <div class="gm-tile candy-fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile candy-veg"><span class="em">🥕</span></div>
+                <div class="gm-tile candy-flower"><span class="em">🌸</span></div>
+                <div class="gm-tile candy-grass"><span class="em">🌿</span></div>
+              </div>
+              <span class="gm-flag bad" style="top:6px;right:6px">color duplicates the silhouette; season invisible</span>
+            </div>
+          </div>
+          <figcaption>Color is doing the same job the crop silhouette already does — so the boldness is noise,
+          not information, and it drowns the season. (Real render on the desktop shot below.)</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED — Option A</span><span class="lead-in">kraft base + faint tint + hairline</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:6px">
+            <div class="gm-wrap">
+              <div class="gm-board" style="--n:6;background:linear-gradient(180deg,var(--g-field-spring-top),var(--g-field-spring-bot));border:2px solid var(--g-iron);padding:9px">
+                <div class="gm-tile kraft grass"><span class="em">🌿</span></div>
+                <div class="gm-tile kraft grain"><span class="em">🌾</span></div>
+                <div class="gm-tile kraft veg"><span class="em">🥕</span></div>
+                <div class="gm-tile kraft fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌿</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌳</span></div>
+                <div class="gm-tile kraft fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile kraft veg"><span class="em">🥕</span></div>
+                <div class="gm-tile kraft grain"><span class="em">🌾</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌸</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌿</span></div>
+                <div class="gm-tile kraft fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile kraft grain"><span class="em">🌾</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌿</span></div>
+                <div class="gm-tile kraft veg"><span class="em">🥕</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌳</span></div>
+                <div class="gm-tile kraft fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌸</span></div>
+                <div class="gm-tile kraft veg"><span class="em">🥕</span></div>
+                <div class="gm-tile kraft grain"><span class="em">🌾</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌿</span></div>
+                <div class="gm-tile kraft fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌳</span></div>
+                <div class="gm-tile kraft veg"><span class="em">🥕</span></div>
+                <div class="gm-tile kraft grain"><span class="em">🌾</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌿</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌸</span></div>
+                <div class="gm-tile kraft fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile kraft veg"><span class="em">🥕</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌿</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌳</span></div>
+                <div class="gm-tile kraft grain"><span class="em">🌾</span></div>
+                <div class="gm-tile kraft fruit"><span class="em">🍎</span></div>
+                <div class="gm-tile kraft veg"><span class="em">🥕</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌸</span></div>
+                <div class="gm-tile kraft grass"><span class="em">🌿</span></div>
+              </div>
+              <span class="gm-flag good" style="top:6px;right:6px">spring field breathes through; tiles read as one set</span>
+            </div>
+          </div>
+          <figcaption>One parchment/kraft base for every tile; category encoded as a subtle inner hairline
+          (±8–12% hue lean). The seasonal field gradient behind the grid now does real work — this is the
+          <em>same board in spring</em>. Swap the gradient token to show summer/autumn/winter.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — pick the tint intensity</span>
+    <div class="opts three">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Kraft + hairline</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">One shared kraft backdrop; category = a thin colored inner ring only. <b>Pro:</b>
+        maximal season legibility, cleanest brand fit. <b>Con:</b> relies most on the silhouette for category
+        ID — validate the winter/mine set (see B6 silhouette note) first.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Desaturated tint</span></div>
+        <div class="tradeoff">Keep a per-category wash but pull saturation −40% and lightness +15% toward
+        parchment. <b>Pro:</b> lowest-risk, preserves the current at-a-glance color cue. <b>Con:</b> still a
+        color grid; season read only partly returns.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">C · Full seasonal wash</span></div>
+        <div class="tradeoff">No per-category color at all; the whole board takes the season field gradient and
+        a vignette. <b>Pro:</b> strongest seasonal identity. <b>Con:</b> category rests entirely on the art;
+        needs the silhouette pass done first, so sequence it after A ships.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Add a shared <code>drawTileBackdrop(ctx, category, season)</code> helper and call it from every
+          <span class="filechip">src/textures/categories/*.ts</span> draw instead of the per-file saturated
+          fill; drive the base from <code>--parchment</code>-family values and the hairline from the existing
+          biome/category accent.</li>
+        <li>Let the seasonal field gradient behind the grid actually show — the board bed already reads
+          <code>--field-*</code> tokens (<span class="filechip">src/tokens.css:97</span>); today the tiles
+          cover it. Neutral tiles expose it for free.</li>
+        <li>Add a golden-image test over the 6-biome × 4-season matrix from
+          <span class="filechip">src/visualTesting/matrix.ts</span> so the season read is regression-gated.</li>
+      </ul>
+    </div>
+    <p class="small mut" style="margin-top:8px">See the current state as a real screenshot in <a href="#b3">B3</a>
+    (the desktop board) and the <a href="../index.html#crosscut">Cross-cutting → Visual cohesion</a> lens.</p>
+  </article>
+
+  <!-- ============================================================= B2 -->
+  <article class="prop" id="b2">
+    <div class="phd">
+      <span class="pid">B2</span><span class="sev S1">S1</span><span class="eff">Effort M</span>
+      <span class="chip good">Top priority #3</span>
+    </div>
+    <div class="ptitle">Mobile: collapse the chrome stack so the 6×6 grid dominates above the fold</div>
+    <p class="why">On a 390-wide phone the board begins ~45% down the screen: railhead → tools → a fixed
+    <strong>148px</strong> stockpile → then the grid. The signature interaction is squeezed into the lower
+    ~55%. <span class="mut">Fixed panel height at <code>puzzleBoard.tsx ~768</code>; idle stockpile at
+    <code>IdleView ~233</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">board pushed below the fold</span></div>
+        <figure>
+          <div class="device phone"><div class="screen">
+            <div class="gm-hud"><span class="burger">☰</span><span class="gm-pill title">Hearthwood Vale</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span><span class="gm-pill ember">Lv 4</span></div>
+            <div class="gm-bg" style="padding:7px;gap:6px">
+              <div class="gm-panel" style="padding:6px;display:flex;gap:5px;justify-content:center">
+                <div class="gm-tile candy-veg" style="width:30px;border-radius:7px">🪓</div>
+                <div class="gm-tile candy-grain" style="width:30px;border-radius:7px">💣</div>
+                <div class="gm-tile" style="width:30px;border-radius:7px;background:#d9ccae;opacity:.5">⛏️</div>
+                <div class="gm-tile" style="width:30px;border-radius:7px;background:#d9ccae;opacity:.5">🌾</div>
+                <div class="gm-tile" style="width:30px;border-radius:7px;background:#d9ccae;border:1px dashed var(--g-iron)"></div>
+              </div>
+              <div class="gm-panel gm-wrap" style="padding:8px;height:120px">
+                <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">STOCKPILE · 1/3 KINDS</div>
+                <div style="display:flex;gap:6px;margin-top:6px">
+                  <div class="gm-row" style="margin:0;flex:1;padding:5px 7px">🌾 <b>4</b></div>
+                  <div class="gm-row" style="margin:0;flex:1;padding:5px 7px;opacity:.5">🥕 0</div>
+                  <div class="gm-row" style="margin:0;flex:1;padding:5px 7px;opacity:.5">🍎 0</div>
+                </div>
+                <span class="gm-flag bad" style="bottom:6px;left:8px">148px fixed — mostly empty</span>
+              </div>
+              <div class="gm-board" style="--n:6;background:linear-gradient(180deg,#f7efdc,#efe2c2);border:2px solid var(--g-iron)">
+                <div class="gm-tile candy-grass" style="font-size:9px">🌿</div><div class="gm-tile candy-grain" style="font-size:9px">🌾</div><div class="gm-tile candy-veg" style="font-size:9px">🥕</div><div class="gm-tile candy-fruit" style="font-size:9px">🍎</div><div class="gm-tile candy-grass" style="font-size:9px">🌿</div><div class="gm-tile candy-tree" style="font-size:9px">🌳</div>
+                <div class="gm-tile candy-fruit" style="font-size:9px">🍎</div><div class="gm-tile candy-veg" style="font-size:9px">🥕</div><div class="gm-tile candy-grain" style="font-size:9px">🌾</div><div class="gm-tile candy-flower" style="font-size:9px">🌸</div><div class="gm-tile candy-grass" style="font-size:9px">🌿</div><div class="gm-tile candy-fruit" style="font-size:9px">🍎</div>
+              </div>
+            </div>
+            <div class="gm-nav"><span class="t on"><span class="ic">🌱</span>Board</span><span class="t"><span class="ic">🏘️</span>Town</span><span class="t"><span class="ic">🗺️</span>Map</span><span class="t"><span class="ic">📦</span>Inventory</span><span class="t"><span class="ic">👥</span>Townsfolk</span><span class="t"><span class="ic">📖</span>Quests</span></div>
+          </div></div>
+          <figcaption>Two tall panels sit above the grid; the board is clipped and its bottom rows fall below
+          the nav. First thing the eye lands on is empty stockpile, not the game.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">board first; chrome collapses</span></div>
+        <figure class="light">
+          <div class="device phone"><div class="screen">
+            <div class="gm-hud" style="padding:5px 9px"><span class="burger">☰</span><span class="gm-pill title" style="font-size:11px">Hearthwood Vale</span><span class="gm-spacer"></span><span class="gm-pill gold" style="padding:3px 7px">◉ 1,240</span><span class="gm-pill ember" style="padding:3px 7px">Lv 4</span></div>
+            <div class="gm-bg" style="padding:7px;gap:6px">
+              <div style="display:flex;align-items:center;gap:6px;font:700 10px/1 system-ui;color:var(--g-ink-soft)">
+                <span class="gm-title" style="color:var(--g-season-spring)">🌸 Spring</span>
+                <div class="gm-bar" style="flex:1"><i style="width:55%;background:var(--g-season-spring)"></i></div>
+                <span>8 turns</span>
+              </div>
+              <div class="gm-board gm-wrap" style="--n:6;background:linear-gradient(180deg,var(--g-field-spring-top),var(--g-field-spring-bot));border:2px solid var(--g-iron);padding:8px">
+                <div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grass">🌳</div>
+                <div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft fruit">🍎</div>
+                <div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌸</div>
+                <div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft veg">🥕</div>
+                <div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌿</div>
+                <div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft grass">🌿</div>
+                <span class="gm-flag good" style="top:6px;right:6px">grid dominates, above the fold</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:6px">
+                <div class="gm-row" style="margin:0;padding:5px 8px;font-size:11px">🌾 <b>4</b></div>
+                <span class="gm-spacer"></span>
+                <div style="display:flex;gap:5px">
+                  <div class="gm-tile candy-veg" style="width:30px;border-radius:8px">🪓</div>
+                  <div class="gm-tile candy-grain" style="width:30px;border-radius:8px">💣</div>
+                  <div class="gm-tile gold" style="width:30px;border-radius:8px;background:var(--g-gold);border:1px solid #b98a1e">＋</div>
+                </div>
+              </div>
+            </div>
+            <div class="gm-nav"><span class="t on"><span class="ic">🌱</span>Board</span><span class="t"><span class="ic">🏘️</span>Town</span><span class="t"><span class="ic">🗺️</span>Map</span><span class="t"><span class="ic">📦</span>Inventory</span><span class="t"><span class="ic">👥</span>Folk</span><span class="t more"><span class="ic">⋯</span>More</span></div>
+          </div></div>
+          <figcaption>Season readout compresses to one line; the stockpile collapses to owned-only chips and
+          docks with a thin hotbar <em>under</em> the grid. The 6×6 is now the biggest object on screen.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Make the idle stockpile height content-driven, not the fixed 148px
+          (<span class="filechip">puzzleBoard.tsx ~768</span>); collapse to owned-only chips + a "+N more"
+          affordance (this is B5).</li>
+        <li>Replace the season strip with a single-line season + turn readout on mobile (this is B4); move the
+          tool rack to a thin hotbar pinned below the grid.</li>
+        <li>Target: on 390×844 the grid's top edge sits within the first 30% and all 6 rows clear the nav.
+          Add an e2e assertion in <span class="filechip">tests/e2e</span> measuring the board rect vs viewport.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= B3 -->
+  <article class="prop" id="b3">
+    <div class="phd"><span class="pid">B3</span><span class="sev S1">S1</span><span class="eff">Effort L</span></div>
+    <div class="ptitle">Desktop: a purpose-built composition instead of a blown-up phone column</div>
+    <p class="why">On desktop the square board floats in a stretched portrait column with ~40–45% dead
+    parchment, while a thin rail of secondary chrome (stockpile 0-rows, greyed tools) competes for the eye.
+    Hierarchy inverts — the chrome reads bigger than the game. <span class="mut">Grid is
+    <code>minmax(360px,44%) minmax(0,1fr)</code>, <code>puzzleBoard.tsx BOARD_LAYOUT_CSS ~1749</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">desktop, 1280×1024</span></div>
+        <figure>
+          <img src="../shots/desktop/board-farm-idle.png" alt="desktop farm board, small square with dead parchment">
+          <figcaption>The board is a small centered square; ~40% of the viewport is empty parchment above and
+          below, and the left rail's stockpile 0-rows and greyed locked tools out-mass the grid.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">board-dominant, docked rail</span></div>
+        <figure class="light">
+          <div class="device desktop"><div class="screen">
+            <div class="gm-hud"><span class="burger">☰</span><span class="gm-pill title">Hearthwood Vale · Farm</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span><span class="gm-pill ember">Lv 4 ▸</span></div>
+            <div class="gm-bg" style="flex-direction:row;padding:12px;gap:12px">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0">
+                <div style="display:flex;align-items:center;gap:8px;font:700 11px/1 system-ui;color:var(--g-ink-soft);width:min(340px,100%);margin-bottom:6px">
+                  <span class="gm-title" style="color:var(--g-season-spring)">🌸 Spring</span>
+                  <div class="gm-bar" style="flex:1"><i style="width:55%;background:var(--g-season-spring)"></i></div><span>8 turns</span>
+                </div>
+                <div class="gm-board" style="--n:6;width:min(340px,100%);background:linear-gradient(180deg,var(--g-field-spring-top),var(--g-field-spring-bot));border:2px solid var(--g-iron);padding:9px">
+                  <div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grass">🌳</div>
+                  <div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft fruit">🍎</div>
+                  <div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌸</div>
+                  <div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft veg">🥕</div>
+                  <div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌿</div>
+                  <div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft grass">🌿</div>
+                </div>
+              </div>
+              <div style="width:150px;flex:none;display:flex;flex-direction:column;gap:8px">
+                <div class="gm-card" style="padding:8px">
+                  <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">STOCKPILE</div>
+                  <div class="gm-row" style="margin:5px 0 0;padding:5px 7px;font-size:11px">🌾 <b>4</b></div>
+                </div>
+                <div class="gm-card" style="padding:8px">
+                  <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">TOOLS</div>
+                  <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px">
+                    <div class="gm-tile candy-veg" style="width:34px;border-radius:8px">🪓</div>
+                    <div class="gm-tile candy-grain" style="width:34px;border-radius:8px">💣</div>
+                    <div class="gm-tile gold" style="width:34px;border-radius:8px;background:var(--g-gold);border:1px solid #b98a1e">＋</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div></div>
+          <figcaption>Board grows toward the vertical ceiling and centers; the rail (stockpile + tools) docks
+          as a fixed-width sidebar of compact cards. The dead parchment becomes structure, not emptiness.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — how to spend the desktop width</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Board + docked rail</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Center a size-capped board, dock tools/stockpile as a sidebar (shown). <b>Pro:</b>
+        true desktop layout, uses the width for real chrome. <b>Con:</b> a genuine second layout to maintain.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Centered "play frame"</span></div>
+        <div class="tradeoff">Keep the single phone-width column but center it in a decorative parchment frame
+        (map-style border art on the sides). <b>Pro:</b> cheap, one layout. <b>Con:</b> still doesn't grow the
+        board; the sides are decoration, not function.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Give <code>BOARD_LAYOUT_CSS</code> a <code>@media (min-width:900px)</code> composition
+          (<span class="filechip">puzzleBoard.tsx ~1749</span>): board column <code>flex:1</code> with a
+          <code>max-inline-size</code> cap and <code>place-items:center</code>; rail a fixed
+          <code>~180px</code> column of stacked cards.</li>
+        <li>Size the board off min(available-height, width-cap) via <span class="filechip">game/layout.ts:54</span>
+          so it grows toward the vertical ceiling rather than a fixed 44% column.</li>
+        <li>Reuse the same collapsed stockpile/tools components from B5 so mobile and desktop share one source.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= B4 -->
+  <article class="prop" id="b4">
+    <div class="phd"><span class="pid">B4</span><span class="sev S1">S1</span><span class="eff">Effort M</span></div>
+    <div class="ptitle">Season strip: stop overprinting four words on the art and the wagon</div>
+    <p class="why">Season zones are proportional to turn-count (not equal quarters) and each full label is
+    centered in its often-narrow zone with no width-fit, sharing the same bottom band as the walking wagon
+    sprite. On a 390px phone four words collide with the icons and the wagon — worst on fishing.
+    <span class="mut"><code>seasonStripScene.ts:306</code>, <code>buildLabels ~776</code>,
+    <code>buildWagon:821</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">text-on-art-on-sprite</span></div>
+        <figure>
+          <div class="gm" style="padding:10px">
+            <div class="gm-wrap" style="height:52px;border-radius:10px;overflow:hidden;border:1.5px solid var(--g-iron);display:flex">
+              <div style="width:56px;background:#2f3f57;color:#dfe8f4;display:flex;flex-direction:column;align-items:center;justify-content:center;font:800 15px/1 system-ui">8<span style="font-size:7px;letter-spacing:.06em">TURNS</span></div>
+              <div style="flex:1;position:relative;background:linear-gradient(90deg,#9fc758 0 32%,#e0a52a 32% 60%,#cf6a1f 60% 82%,#3f6f9e 82% 100%)">
+                <span style="position:absolute;left:6%;top:50%;transform:translateY(-50%);font:700 9px/1 system-ui;color:#20300f;text-shadow:0 1px 1px rgba(255,255,255,.4)">Spring</span>
+                <span style="position:absolute;left:38%;top:50%;transform:translateY(-50%);font:700 9px/1 system-ui;color:#3a2a08">Sum…</span>
+                <span style="position:absolute;left:64%;top:50%;transform:translateY(-50%);font:700 9px/1 system-ui;color:#fff">Aut…</span>
+                <span style="position:absolute;left:86%;top:50%;transform:translateY(-50%);font:700 8px/1 system-ui;color:#dfe8f4">Wi…</span>
+                <span style="position:absolute;left:24%;bottom:2px;font-size:13px">🛻</span>
+                <span class="gm-flag bad" style="top:-2px;right:2px">labels + wagon share pixels</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>The wagon overlaps "Summer", narrow zones truncate their own labels, and the only
+          "what season / how many turns" readout is the least legible thing on the board.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED — Option A</span><span class="lead-in">current season named once + ticks</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:10px">
+            <div style="height:52px;border-radius:10px;overflow:hidden;border:1.5px solid var(--g-iron);display:flex;background:var(--g-paper)">
+              <div style="flex:none;padding:0 12px;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(180deg,#eaf3d8,#d6e8b0);border-right:1.5px solid var(--g-iron)">
+                <span class="gm-title" style="font-size:13px;color:var(--g-season-spring)">🌸 Spring</span>
+                <span style="font:800 10px/1 system-ui;color:var(--g-ink-soft)">8 turns left</span>
+              </div>
+              <div style="flex:1;position:relative;display:flex;align-items:center;padding:0 10px">
+                <div class="gm-bar" style="flex:1;height:8px"><i style="width:26%;background:var(--g-season-spring)"></i></div>
+                <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 10px;pointer-events:none">
+                  <span style="position:absolute;left:26%;font-size:11px">🌸</span>
+                  <span style="position:absolute;left:52%;font-size:11px;opacity:.5">☀️</span>
+                  <span style="position:absolute;left:74%;font-size:11px;opacity:.5">🍂</span>
+                  <span style="position:absolute;left:94%;font-size:11px;opacity:.5">❄️</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figcaption>Season name + turns-left is stated once, large, in the panel; the track shows the four
+          seasons as glyph ticks (dimmed until reached). The wagon gets its own track above, never over text.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options</span>
+    <div class="opts two">
+      <div class="opt rec"><div class="oh"><span class="name">A · Name once + glyph ticks</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Current season spelled out in the numeral panel; other seasons are dimmed glyph
+        ticks on a progress track. <b>Pro:</b> zero text-on-art collisions, works at any width. <b>Con:</b>
+        the exact turn each season starts is implicit (glyph position).</div></div>
+      <div class="opt"><div class="oh"><span class="name">B · SPR/SUM/AUT/WIN + elide</span></div>
+        <div class="tradeoff">Keep four zones but 3-letter abbreviations, and elide any label whose zone is
+        narrower than its text. <b>Pro:</b> keeps the timeline metaphor. <b>Con:</b> still puts text on the
+        gradient; wagon still needs its own track.</div></div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Rework <span class="filechip">seasonStripScene.ts buildLabels ~776</span> to render only the current
+          season name in the numeral panel; draw the other three as glyphs at their zone starts.</li>
+        <li>Move <span class="filechip">buildWagon:821</span> to a dedicated y-track above the label band so
+          sprite and text never share pixels.</li>
+        <li>On fishing, give the tide chip its own row (see B6 status-chip slot).</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= B5 -->
+  <article class="prop" id="b5">
+    <div class="phd"><span class="pid">B5</span><span class="sev S2">S2</span><span class="eff">Effort M</span></div>
+    <div class="ptitle">Stockpile & tools: collapse empties, split "owned" from "craftable"</div>
+    <p class="why">Idle lists every reachable resource up to 12 and renders empties at 0.55 opacity; the panel
+    is a fixed 148px regardless of content (fish idle shows "0/0 KINDS" — a full panel saying nothing). The
+    tool rack shows count-0 tools as greyed first-class tiles that read as broken affordances.
+    <span class="mut"><code>puzzleBoard.tsx IdleView ~233</code>, <code>puzzleToolFilter.ts:113</code>,
+    <code>ToolTile ~887</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">empties at full prominence</span></div>
+        <figure>
+          <div class="gm" style="padding:10px">
+            <div class="gm-panel" style="padding:9px">
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">STOCKPILE · 1/3 KINDS</div>
+              <div style="display:flex;gap:6px;margin:7px 0 9px">
+                <div class="gm-row" style="margin:0;flex:1;padding:6px 8px">🌾 <b>4</b></div>
+                <div class="gm-row" style="margin:0;flex:1;padding:6px 8px;opacity:.5">🥕 0</div>
+                <div class="gm-row" style="margin:0;flex:1;padding:6px 8px;opacity:.5">🍎 0</div>
+              </div>
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">TOOLS</div>
+              <div class="gm-wrap" style="display:flex;gap:6px;margin-top:6px">
+                <div class="gm-tile candy-veg" style="width:34px;border-radius:8px">🪓</div>
+                <div class="gm-tile candy-grain" style="width:34px;border-radius:8px">💣</div>
+                <div class="gm-tile" style="width:34px;border-radius:8px;background:#d9ccae;filter:grayscale(.85);opacity:.55">⛏️</div>
+                <div class="gm-tile" style="width:34px;border-radius:8px;background:#d9ccae;filter:grayscale(.85);opacity:.55">🌾</div>
+                <div class="gm-tile" style="width:34px;border-radius:8px;background:#d9ccae;filter:grayscale(.85);opacity:.55">🔪</div>
+                <span class="gm-flag bad" style="bottom:-4px;right:0">"0" tools read as broken art</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>The densest state drove the panel height, so an empty stockpile reserves 148px to say
+          nothing, and a wall of grey "0" tools dilutes the two live ones.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">owned first, rest tucked</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:10px">
+            <div class="gm-panel" style="padding:9px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <div class="gm-row" style="margin:0;padding:6px 9px">🌾 <b>4</b> <span class="gm-mini">Wheat</span></div>
+                <span class="chip" style="background:var(--g-well);border:1px solid var(--g-iron);font-size:10px">+8 more to gather</span>
+              </div>
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);margin-top:10px">TOOLS</div>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+                <div class="gm-tile candy-veg" style="width:36px;border-radius:8px">🪓</div>
+                <div class="gm-tile candy-grain" style="width:36px;border-radius:8px">💣</div>
+                <span style="width:1px;height:26px;background:var(--g-iron);opacity:.5"></span>
+                <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:var(--g-ink-light)">
+                  <span class="gm-status locked">＋ Craft more</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figcaption>Owned resources first with a quiet "+N more to gather" footer; owned tools only, with a
+          single "Craft more" shelf entry replacing the grey wall. Panel shrinks so the board rises (feeds B2).</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>In <span class="filechip">puzzleBoard.tsx IdleView ~233</span> render owned kinds first, hide
+          0-count behind a "+N more" chip; when a biome has 0 kinds, show a one-line hint ("Chain fish to start
+          your catch") and let the panel auto-height.</li>
+        <li>Split <span class="filechip">puzzleToolFilter.ts:113</span> output into
+          <code>owned&&count&gt;0</code> (rack) vs <code>craftable&&unowned</code> (a subdued "Craft more"
+          shelf); drop the empty dashed hotbar slots on mobile.</li>
+        <li>Keep the fixed height only for the chain/tool active states that actually need it.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= B6 -->
+  <article class="prop" id="b6">
+    <div class="phd"><span class="pid">B6</span><span class="sev S2">S1–S2</span><span class="eff">Effort S–M</span>
+      <span class="chip good">Top priority #5, #11</span></div>
+    <div class="ptitle">Close the feedback gaps — silent failures, blind tools, invisible bosses, motion safety</div>
+    <p class="why">Four edge-of-the-board feedback gaps sit right next to the lavish success juice, so their
+    absence reads as a bug. They share one fix pattern: make every input produce a proportional response, and
+    gate the vestibular-heavy juice behind <code>prefers-reduced-motion</code>.</p>
+
+    <div class="opts two">
+      <div class="opt">
+        <div class="oh"><span class="name">a · Too-short chain = zero feedback</span><span class="sev S2" style="margin-left:auto">S2</span></div>
+        <div class="tradeoff">A sub-min release calls <code>clearPath(true)</code> silently; an "error" SFX is
+        <em>defined</em> but never played (<span class="filechip">GameScene.ts:1730</span>,
+        <span class="filechip">audio/index.ts:83</span>). <b>Fix:</b> on the invalid branch fire the existing
+        error SFX low, a 20ms haptic, a 140ms shrink+fade of the dropped path, and a one-shot red edge flash.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">b · Tap-tools show no target preview</span><span class="sev S2" style="margin-left:auto">S2</span></div>
+        <div class="tradeoff">Bomb (3×3) / sickle (row) fire immediately on tap with no aim preview, so a mis-tap
+        wastes a scarce charge (<span class="filechip">GameScene.ts:1447</span>). <b>Fix:</b> on pointer-move
+        while armed, glow the exact affected cells; add press-and-hold-to-aim / two-tap confirm for area tools.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">c · Active boss has no on-board reminder</span><span class="sev S2" style="margin-left:auto">S2</span></div>
+        <div class="tradeoff">Once the intro modal is dismissed, the board shows no objective, progress, or raised
+        min-chain (<span class="filechip">features/boss/index.tsx:9</span>, <span class="filechip">GameScene.ts:598</span>).
+        <b>Fix:</b> a persistent boss banner (portrait, name, progress bar, "Chains need N+" pill) + a flame tint
+        on the idle panel. Mock below.</div>
+      </div>
+      <div class="opt rec">
+        <div class="oh"><span class="name">d · Reduced-motion leaks on canvas</span><span class="badge">Priority #5</span></div>
+        <div class="tradeoff">CSS motion is gated but screen-shake, radial flash, particle bursts and collapse are
+        not (<span class="filechip">GameScene.ts:485/2052/572</span>); <code>_dur()</code> is a no-op. <b>Fix:</b>
+        route shake/flash/burst/duration through one <code>_motionEnabled()</code> check; keep the audio/haptic
+        ladder so success still feels rewarded. Also fix the stale <code>tokens.css</code> comment.</div>
+      </div>
+    </div>
+
+    <span class="lbl">Mock — the persistent boss banner (proposal c)</span>
+    <div class="ba stack">
+      <div class="col">
+        <figure class="light" style="max-width:520px">
+          <div class="gm" style="padding:10px">
+            <div class="gm-panel" style="padding:9px;border-color:var(--g-flame);box-shadow:0 0 0 2px rgba(255,122,0,.16);background:linear-gradient(180deg,#fdefe0,#f6e3cd)">
+              <div style="display:flex;align-items:center;gap:9px">
+                <div style="width:40px;height:40px;border-radius:10px;background:radial-gradient(circle at 40% 35%,#7fb2d6,#3f6f9e);display:flex;align-items:center;justify-content:center;font-size:19px;border:1.5px solid var(--g-flame-frame)">🧊</div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <span class="gm-title" style="font-size:14px;color:#8a3410">Hoarfrost, the Frozen Titan</span>
+                    <span class="gm-status need" style="border-color:var(--g-flame-frame);background:#fde3cf;color:#8a3410">Chains need 5+</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+                    <div class="gm-bar" style="flex:1;background:rgba(168,67,26,.2)"><i style="width:45%;background:var(--g-flame)"></i></div>
+                    <span class="gm-mini" style="color:#8a3410">9 / 20</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figcaption>A compact, always-visible boss banner in/above the action panel: portrait, name, live
+          progress (<code>boss.progress/targetCount</code> already computed) and the raised min-chain pill. The
+          idle board picks up a faint flame tint so it signals "boss active" at rest.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li><b>a:</b> add the invalid-release branch feedback in <span class="filechip">GameScene.ts:1730</span>;
+          wire <code>play('error')</code> (already defined, called nowhere).</li>
+        <li><b>b:</b> add a pointer-move highlight for armed area tools in the tool-aim path
+          (<span class="filechip">GameScene.ts:1447/1767</span>); optional hold-to-aim.</li>
+        <li><b>c:</b> render a persistent boss banner component fed by <code>boss.*</code>; tint the idle panel
+          with the flame accent while a boss is live.</li>
+        <li><b>d:</b> gate <code>_shake</code>/<code>radialFlash</code>/<code>emitCollectParticles</code>/<code>_dur</code>
+          behind <code>_motionEnabled()</code> (<span class="filechip">GameScene.ts:2114</span>); correct the
+          <span class="filechip">tokens.css:188</span> motion comment.</li>
+      </ul>
+    </div>
+
+    <h3 class="disp" style="margin-top:18px">Also folded in (S3 / polish)</h3>
+    <ul class="small">
+      <li><strong>Hazard atmosphere is invisible</strong> — "fire & rats" looks identical to idle. Add a colored
+        edge glow/vignette, a hazard chip in the rail head (name + turns-to-resolve), and per-tile smoke/flame/gnaw
+        markers; verify the atmosphere renders at all (<span class="filechip">GameScene.ts ~529</span>).</li>
+      <li><strong>Winter/mine tiles lose type-identity</strong> — snow/grey wash flattens silhouettes; a match game
+        needs instant parsing. Preserve each crop's silhouette through the overlay (this also de-risks B1 Option A/C).</li>
+      <li><strong>One status-chip slot across biomes</strong> — fish gets a tiny "High Tide ·3" pill, mine gets
+        nothing. Standardize a labeled rail-head status chip ("flips in 3") for all three biomes.</li>
+      <li><strong>Fertilizer has no armed state</strong> — add a persistent "Fertilizer active" chip + a one-shot
+        sparkle on the biased spawns.</li>
+      <li><strong>1500ms idle warm-up</strong> — ramp ambient amplitude 0→1 over ~500ms instead of hard-gating
+        so the first-seen board is subtly alive (<code>ANIM_STARTUP_DELAY_MS</code>).</li>
+    </ul>
+  </article>
+
+  <!-- ============================================================= B7 -->
+  <article class="prop" id="b7">
+    <div class="phd"><span class="pid">B7</span><span class="sev NEW">NEW</span><span class="eff">from this pass</span></div>
+    <div class="ptitle">New findings surfaced while grounding these mockups</div>
+    <p class="why">Items not in the original report, found reading the board code for this proposal pass. Verify
+    against the live build before scheduling.</p>
+    <ul>
+      <li><strong>The season field gradient is drawn but almost fully occluded</strong> — the <code>--field-*</code>
+        tokens exist and the bed reads them, yet 36 opaque candy tiles + a 0.55 band leave only a sliver visible.
+        B1 doesn't just neutralize tiles; it <em>activates</em> an already-built system that currently renders for
+        nothing. Worth calling out as "free" seasonal payoff.</li>
+      <li><strong>Board host is a bare <code>&lt;div&gt;</code></strong> with no <code>role</code>/aria-label/tabIndex
+        (<span class="filechip">prototype.tsx:360</span>) — the a11y keyboard/AT gap (cross-cutting) starts here;
+        adding <code>role="application"</code> + an announce() bridge is a board-local change.</li>
+      <li><strong>Overloaded dim signal</strong> — "can't select" and "legal but low-value" both use 0.35 alpha, so
+        useful tool targets read as disabled. Use ~0.6 for suboptimal or invert to a positive glow on high-value
+        targets.</li>
+    </ul>
+  </article>
+
+  <footer>puzzleDrag2 · Board proposals · mockups are HTML built from <code>src/tokens.css</code>; "Now"
+  desktop shot is a real render of the running game.</footer>
+</main>
+</div>
+<script src="./assets/mockup.js"></script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proposals & Mockups · puzzleDrag2 Design Review</title>
+<link rel="stylesheet" href="./assets/mockup.css">
+</head>
+<body>
+<header class="top">
+  <span class="brand">puzzleDrag2 · <span class="em">Design Review — Proposals</span></span>
+  <span class="crumb"><a href="../index.html">← Findings report</a></span>
+  <span class="meta">before → after · fully-defined · options where merited</span>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <a class="home" href="../index.html">← Findings report</a>
+  <div class="sep">Proposals</div>
+  <a href="./index.html" class="active"><span class="k">00</span>Overview & method</a>
+  <a href="./board.html"><span class="k">01</span>The Board</a>
+  <a href="./town.html"><span class="k">02</span>The Town</a>
+  <a href="./map.html"><span class="k">03</span>World Map</a>
+  <a href="./screens.html"><span class="k">04</span>Screens & panels</a>
+  <a href="./story.html"><span class="k">05</span>Story & moments</a>
+  <a href="./shell.html"><span class="k">06</span>Shell & onboarding</a>
+  <a href="./crosscutting.html"><span class="k">07</span>Cross-cutting</a>
+  <a href="./additional-findings.html"><span class="k">08</span>Additional findings</a>
+  <div class="sep">On this page</div>
+  <a href="#method">The method</a>
+  <a href="#priorities">Top-12 → proposals</a>
+  <a href="#index">Proposal index</a>
+</nav>
+
+<main>
+  <p class="eyebrow">Proposals companion · 2026-07</p>
+  <h1>Proposals &amp; mock-ups — what to build, shown before → after</h1>
+  <p class="lead">This companion turns the <a href="../index.html">findings report</a> into a set of
+  <strong>fully-defined, buildable proposals</strong>. Each one pairs a picture of the game
+  <span class="chip" style="background:var(--now);color:#fff;border:0">as it is</span> with a rendered
+  mock-up of <span class="chip" style="background:var(--next);color:#fff;border:0">what to build</span>,
+  gives you <strong>options where the call is yours</strong>, and lands on a concrete
+  <code>file:line</code> implementation spec. It's split into one page per surface so the surfaces can be
+  read — and worked — independently.</p>
+
+  <div class="callout tldr"><p style="margin:0"><strong>Why a separate companion.</strong> The findings report
+  answers "what's wrong and why." This answers "here is exactly what it becomes, here's the picture, here are
+  the choices, here's the code to touch." Where a design decision is genuinely yours (how far to pull tile
+  saturation, true multi-column vs. a centered play-frame, name-once vs. abbreviated season strip) the
+  proposal lays out 2–3 options with trade-offs and a recommendation rather than picking for you.</p></div>
+
+  <h2 id="method"><span class="n">§</span>How to read a proposal</h2>
+  <div class="grid2">
+    <div>
+      <p>Every proposal is one <code>&lt;article class="prop"&gt;</code> with the same anatomy:</p>
+      <ul>
+        <li><strong>ID + severity + effort</strong> — carried over from the findings report so you can trace it
+          back (e.g. <code>B1</code> ↔ the Board tab's candy-square finding).</li>
+        <li><strong>Why</strong> — a one-line restatement of the problem with the <code>file:line</code> behind it.</li>
+        <li><strong>Now → Proposed</strong> — a real screenshot (where one exists) or a game-accurate HTML mock on
+          the left; the proposed design, rendered with the actual <code>src/tokens.css</code> palette, on the right.</li>
+        <li><strong>Options</strong> — 2–3 routes with trade-offs when the choice is yours; the recommended one is
+          flagged.</li>
+        <li><strong>Implementation</strong> — the files and functions to change, as a checklist.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="callout good" style="margin-top:0"><strong>The mock-ups are HTML, not sketches.</strong> They
+      reuse the game's real tokens (parchment ladder, ember/gold/moss accents, season field gradients, Fraunces
+      display font), so a "Proposed" panel is a believable picture of the change on the real chrome — not a
+      wireframe in a different visual language. They're intentionally schematic (emoji stand in for painterly
+      art) so they stay cheap to iterate; treat them as art-direction, not pixel specs.</div>
+      <p class="small mut">Legend: <span class="pin now" style="display:inline-block;padding:3px 8px;border-radius:999px;color:#fff;font:800 10px system-ui;background:var(--now)">NOW</span>
+      current build · <span class="pin next" style="display:inline-block;padding:3px 8px;border-radius:999px;color:#fff;font:800 10px system-ui;background:var(--next)">PROPOSED</span>
+      what to build · <span class="chip good" style="margin:0">Recommended</span> the default we'd pick.</p>
+    </div>
+  </div>
+
+  <h2 id="priorities"><span class="n">§</span>The top-12 priorities, mapped to proposals</h2>
+  <p>The findings report's twelve highest-leverage changes, each now with a fully-defined proposal + mock-up.</p>
+  <table>
+    <thead><tr><th style="width:34px">#</th><th style="width:56px">Sev</th><th>Change</th><th style="width:120px">Proposal</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span class="sev S1">S1</span></td><td>Navigation hub — give every built system a door</td><td><a href="./shell.html#nav-hub">Shell · SH1</a></td></tr>
+      <tr><td>2</td><td><span class="sev S1">S1</span></td><td>Make rewards legible end-to-end (XP + "what unlocked" + values)</td><td><a href="./crosscutting.html#rewards">X · RW1</a> · <a href="./story.html#levelup">Story · ST1</a></td></tr>
+      <tr><td>3</td><td><span class="sev S1">S1</span></td><td>Mobile board real-estate</td><td><a href="./board.html#b2">Board · B2</a></td></tr>
+      <tr><td>4</td><td><span class="sev S1">S1</span></td><td>Reconcile board tile treatment (kill candy squares)</td><td><a href="./board.html#b1">Board · B1</a></td></tr>
+      <tr><td>5</td><td><span class="sev S1">S1</span></td><td>Gate vestibular-heavy motion behind reduced-motion</td><td><a href="./board.html#b6">Board · B6d</a></td></tr>
+      <tr><td>6</td><td><span class="sev S1">S1</span></td><td>Repair leaked placeholder/mislabeled states</td><td><a href="./screens.html#leaks">Screens · SC-leaks</a></td></tr>
+      <tr><td>7</td><td><span class="sev S2">S2</span></td><td>One modal shell + one status vocabulary + 44px tap targets</td><td><a href="./shell.html#modal-shell">Shell · SH2</a></td></tr>
+      <tr><td>8</td><td><span class="sev S2">S2</span></td><td>Show what every craft/order/action produces & is worth</td><td><a href="./screens.html#crafting">Screens · SC-craft</a></td></tr>
+      <tr><td>9</td><td><span class="sev S2">S2</span></td><td>Make the layout responsive on both ends</td><td><a href="./board.html#b3">Board · B3</a> · <a href="./screens.html">Screens</a></td></tr>
+      <tr><td>10</td><td><span class="sev S2">S2</span></td><td>Fix the Town first impression</td><td><a href="./town.html">Town · T1–T5</a></td></tr>
+      <tr><td>11</td><td><span class="sev S2">S2</span></td><td>Add missing board feedback</td><td><a href="./board.html#b6">Board · B6</a></td></tr>
+      <tr><td>12</td><td><span class="sev S3">S3</span></td><td>Unify iconography + align modals to tokens</td><td><a href="./crosscutting.html#icons">X · VC-icons</a></td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="index"><span class="n">§</span>Proposal index — one page per surface</h2>
+  <div class="opts two" style="grid-template-columns:1fr 1fr">
+    <div class="opt"><div class="oh"><span class="name"><a href="./board.html">01 · The Board</a></span></div>
+      <div class="tradeoff">Tile treatment, mobile & desktop real-estate, season strip, stockpile/tools declutter,
+      the feedback ladder (reject cue, tap-tool preview, boss banner, reduced-motion).</div></div>
+    <div class="opt"><div class="oh"><span class="name"><a href="./town.html">02 · The Town</a></span></div>
+      <div class="tradeoff">The dirt-pit board bed, confetti grass, empty-plot affordances, the founding/tier
+      signpost, inverted CTA emphasis, harbor HUD collision.</div></div>
+    <div class="opt"><div class="oh"><span class="name"><a href="./map.html">03 · World Map</a></span></div>
+      <div class="tradeoff">The 38% mobile panel + pinned CTA footer, persistent node selection, distinct
+      undiscovered nodes, the zone-info affordance, the legend rewrite, the keeper choice ceremony.</div></div>
+    <div class="opt"><div class="oh"><span class="name"><a href="./screens.html">04 · Screens & panels</a></span></div>
+      <div class="tradeoff">The leaked-state repair pass, crafting outputs/value + collapsed-row craft, trophy
+      density, inventory zeros, the tiles key-drift & backwards buy line, the meta roster.</div></div>
+    <div class="opt"><div class="oh"><span class="name"><a href="./story.html">05 · Story & moments</a></span></div>
+      <div class="tradeoff">Level-up "what unlocked", the run-summary staged reveal, the dated Chronicle, the
+      story skin → tokens, the boss modal reskin.</div></div>
+    <div class="opt"><div class="oh"><span class="name"><a href="./shell.html">06 · Shell & onboarding</a></span></div>
+      <div class="tradeoff">The navigation hub, one modal shell + status vocabulary, the structured menu, the
+      daily-reward ladder, and the first-run spotlight/coach-mark fixes.</div></div>
+    <div class="opt"><div class="oh"><span class="name"><a href="./crosscutting.html">07 · Cross-cutting</a></span></div>
+      <div class="tradeoff">Reward legibility, iconography unification, the shared motion scale, responsive
+      strategy, and the accessibility (keyboard/AT/reduced-motion) program.</div></div>
+    <div class="opt"><div class="oh"><span class="name"><a href="./additional-findings.html">08 · Additional findings</a></span></div>
+      <div class="tradeoff">New findings from this pass — the areas the original review flagged as out of scope
+      (cold-start/loading, error paths, audio/mute, offline/returning, Settings).</div></div>
+  </div>
+
+  <div class="callout q" style="margin-top:26px"><p style="margin-top:0"><strong>Decisions this companion surfaces
+  for you</strong> (each has an options block on its page):</p>
+  <ol style="margin:0">
+    <li>Board tile saturation — kraft + hairline (recommended) vs. desaturated tint vs. full seasonal wash
+      (<a href="./board.html#b1">B1</a>).</li>
+    <li>Desktop — true multi-column board+rail (recommended) vs. a centered decorative play-frame
+      (<a href="./board.html#b3">B3</a>).</li>
+    <li>Season strip — name-once + glyph ticks (recommended) vs. abbreviated four-zone
+      (<a href="./board.html#b4">B4</a>).</li>
+    <li>Sequencing — bank the Phase-0 quick wins first, or lead with the navigation hub (the biggest single
+      unlock)? See the <a href="../index.html#roadmap">roadmap</a>.</li>
+  </ol></div>
+
+  <footer>puzzleDrag2 · proposals companion to the full design review · mock-ups rendered from the live
+  <code>src/tokens.css</code>.</footer>
+</main>
+</div>
+<script src="./assets/mockup.js"></script>
+</body>
+</html>
