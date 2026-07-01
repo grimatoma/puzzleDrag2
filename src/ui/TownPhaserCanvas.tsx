@@ -84,6 +84,17 @@ export default function TownPhaserCanvas({
     readyFiredRef.current = true;
     onReadyRef.current?.();
   };
+  // True until the component actually unmounts. The one-shot "town.ready"
+  // listener below dismisses the loading overlay gated on THIS, not on the boot
+  // effect's per-run `cancelled` flag: `cancelled` flips true on any benign boot
+  // re-run (e.g. `active` false→true when the player opens Town after a hidden
+  // pre-warm, or `warm` toggling), the effect then returns early without
+  // rebinding the listener, and the listener's captured `cancelled` would stay
+  // true forever — permanently swallowing every future overlay dismissal (the
+  // pre-warm bake AND later tier/zone re-bakes), leaving the overlay stuck over
+  // an already-rendered map. Unmount is the only condition under which we must
+  // NOT touch state, so guard on that alone.
+  const mountedRef = useRef(true);
 
   // The scene's event listeners are bound once at postBoot, so they would
   // otherwise capture the first render's prop closures forever (e.g. a
@@ -244,7 +255,12 @@ export default function TownPhaserCanvas({
                   // effect may now sleep a still-hidden (pre-warmed) scene.
                   setHasBaked(true);
                   requestAnimationFrame(() => {
-                    if (!cancelled) {
+                    // Guard on unmount (mountedRef), NOT this boot run's
+                    // `cancelled`: `cancelled` latches true on benign re-runs
+                    // (active/warm toggles) without tearing the game down, and
+                    // this listener is bound once, so a `cancelled` gate here
+                    // would strand the overlay up permanently. See mountedRef.
+                    if (mountedRef.current) {
                       setLoading(false);
                       fireReady();
                     }
@@ -339,6 +355,7 @@ export default function TownPhaserCanvas({
   // Unmount-only teardown: this is the single place the game is destroyed.
   useEffect(() => {
     return () => {
+      mountedRef.current = false;
       const game = gameRef.current;
       if (game) {
         saveCamera(zoneIdRef.current);
