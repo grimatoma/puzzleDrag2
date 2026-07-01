@@ -55,4 +55,30 @@ export default [
     files: ["src/__tests__/**/*.{js,ts}"],
     languageOptions: { globals: { ...globals.node } },
   },
+  {
+    // Test-file override for no-restricted-syntax. Flat config REPLACES (doesn't
+    // merge) a rule when a later block re-declares it, so this block must re-list
+    // the reducer-state-through-unknown selector from the block above (kept, just
+    // at `warn` here) AND add the new `as Action` dispatch-cast guard. The latter
+    // steers test code to `testAction({...})` from src/testUtils/testState.js:
+    // `{...} as Action` discards the TypedAction union, so a renamed slice payload
+    // field wouldn't fail the typecheck (health review §9). `warn` while the
+    // existing casts are paid down against the test-typecheck baseline — promote
+    // to `error` once tools/test-tsc-baseline.json has zero `as Action` entries.
+    files: ["**/*.test.{ts,tsx}", "src/__tests__/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-syntax": [
+        "warn",
+        {
+          selector: "TSAsExpression > TSAsExpression[typeAnnotation.type='TSUnknownKeyword'] > Identifier[name=/^(state|next|s|ns)$/]",
+          message: "Do not cast reducer state through `unknown`; add the field to GameState instead.",
+        },
+        {
+          selector: "TSAsExpression[typeAnnotation.typeName.name='Action']",
+          message:
+            "Avoid `as Action` on a dispatch object — it discards the TypedAction union so a renamed payload field won't fail typecheck. Use testAction({...}) from src/testUtils/testState.js (or an un-cast typed action).",
+        },
+      ],
+    },
+  },
 ];

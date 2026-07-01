@@ -3,10 +3,10 @@
  * §17 locked: linear 150 XP/level; sources: 1/chain, 5/order, 10/build, 25/boss, 20/quest.
  */
 import { describe, it, expect } from "vitest";
-import { patchInventory } from "../src/testUtils/inventory.js";
-import { awardXp, XP_PER_LEVEL } from "../src/features/almanac/data.js";
-import { createInitialState, rootReducer } from "../src/state.js";
-import { BUILDINGS } from "../src/constants.js";
+import { patchInventory } from "../../testUtils/inventory.js";
+import { awardXp, XP_PER_LEVEL } from "./data.js";
+import { createInitialState, rootReducer } from "../../state.js";
+import { BUILDINGS } from "../../constants.js";
 
 function fresh() {
   globalThis.localStorage?.clear?.();

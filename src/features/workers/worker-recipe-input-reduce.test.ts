@@ -4,12 +4,12 @@
 // slice. No vi.mock; the production worker definition shipped in #284
 // (Phase 5b) is the system under test.
 import { describe, it, expect } from "vitest";
-import { inv, patchInventory } from "../src/testUtils/inventory.js";
-import { computeWorkerEffects } from "../src/features/workers/aggregate.js";
-import { effectiveRecipeInputs, reduce as craftingReduce } from "../src/features/crafting/slice.js";
-import { TYPE_WORKER_MAP } from "../src/features/workers/data.js";
-import { RECIPES } from "../src/constants.js";
-import { createInitialState } from "../src/state.js";
+import { inv, patchInventory } from "../../testUtils/inventory.js";
+import { computeWorkerEffects } from "./aggregate.js";
+import { effectiveRecipeInputs, reduce as craftingReduce } from "../crafting/slice.js";
+import { TYPE_WORKER_MAP } from "./data.js";
+import { RECIPES } from "../../constants.js";
+import { createInitialState } from "../../state.js";
 
 const BAKER = TYPE_WORKER_MAP.baker;
 

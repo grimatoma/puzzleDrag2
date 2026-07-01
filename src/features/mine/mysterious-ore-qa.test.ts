@@ -2,7 +2,7 @@
  * QA Batch 2 — Fix 5: spawnMysteriousOre / tickMysteriousOre wired to game flow
  */
 import { describe, it, expect } from "vitest";
-import { createInitialState, rootReducer } from "../src/state.js";
+import { createInitialState, rootReducer } from "../../state.js";
 
 function makeGrid(rows = 6, cols = 6, key = "tile_mine_stone") {
   return Array.from({ length: rows }, () =>
