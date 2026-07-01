@@ -30,7 +30,30 @@ the screenshot it came from, and the `file:line` behind it, plus a concrete prop
 
 ## Headline summary
 
-<!-- PLACEHOLDER:readme-summary -->
+**161 findings across 18 review scopes** (24 S1 · 70 S2 · 57 S3 · 10 polish). The game is genuinely
+charming with a strong core: the chain-drag interaction, the town/building art, the world map, and the
+storybook identity are real strengths worth protecting. The prior color/contrast pass landed well — so the
+work that's left is **not** more color. Seven themes recur:
+
+1. **Systems exist but are unreachable / unnamed / scattered.** Seven full-screen systems (Orders, Castle,
+   Bosses, Portal, Decorations, Tiles, Chronicle) are reachable *only* via the Debug menu; the 6-tab nav can't
+   scale and has no "More"/hub pattern.
+2. **Rewards & progress are illegible.** XP is invisible; level-up celebrates a bare number; crafts/orders
+   never show output value; fractional harvest progress silently vanishes; the board states no season goal.
+3. **Two identities fight** — warm painterly parchment vs. saturated "candy-square" board tiles, a generic
+   boss-modal popup, two icon families, and grass "confetti" noise.
+4. **Layout isn't truly responsive** — desktop wastes ~40% as dead parchment; mobile starves the board and
+   truncates titles; the 44px tap-target token is defined but never applied.
+5. **Feedback & motion are incoherent and partly accessibility-unsafe** — canvas screen-shake/flash ignore
+   `prefers-reduced-motion` (DOM motion *is* gated); the board is pointer-only and opaque to assistive tech.
+6. **Placeholder / mislabeled states leak** — a researched tile labeled "Locked", snake_case boss tributes,
+   "Done" over a 12/100 bar, a backwards "balance / cost" line, an off-screen tutorial spotlight.
+7. **Modal / CTA / status vocabulary is inconsistent** across the shell.
+
+**Top three fixes:** (1) build a navigation hub so every built system has a door; (2) make rewards legible
+end-to-end (XP + "what unlocked" + output values); (3) reclaim the board's real-estate on both viewports.
+A cheap "repair the leaks" pass (Phase 0 in the report's Roadmap) removes most of the "unfinished" feel almost
+for free. Full detail, screenshots, and `file:line` evidence are in **`index.html`**.
 
 ---
 

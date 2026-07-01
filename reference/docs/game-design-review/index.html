@@ -191,21 +191,789 @@
   </div>
 
   <h2><span class="n">§</span>The big themes</h2>
-  <p class="ink-3"><em>(Synthesized across all reviewers — see the Cross-cutting tab for detail and the
-  Roadmap tab for sequencing.)</em></p>
-  <!-- PLACEHOLDER:overview-themes -->
+  <p><em>Seven patterns recur across the whole game. Every specific finding below rolls up into one of
+  these. Detail lives in the <a href="#crosscut" data-jump="crosscut">Cross-cutting</a> tab; sequencing in
+  the <a href="#roadmap" data-jump="roadmap">Roadmap</a>.</em></p>
+
+  <div class="find"><div class="hd"><span class="sev S1">T1</span><span class="ft">Systems exist but are unreachable, unnamed, or scattered</span></div>
+    <div class="body">A large share of built content has no player-facing door. Seven full-screen systems
+    (Orders, Castle, Bosses, Portal, Decorations, Tiles, Chronicle) are reachable <strong>only via the Debug
+    menu</strong>; Boons hides behind a story-flag-gated floating button; Charter is a drill-down under a hub
+    with no entry. Where systems <em>are</em> reachable, the taxonomy misleads ("Townsfolk" = only Workers;
+    "Almanac" names three different things; the menu says "Hearthlands" while everything else says "Hearthwood
+    Vale") and related goal systems (Daily, Orders, Achievements) sit on three unconnected surfaces. The 6-tab
+    bottom nav can't scale and has no "More"/hub pattern, so 9+ views are homeless.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S1">T2</span><span class="ft">Rewards & progress are illegible — you can't see what you earned or what a thing is worth</span></div>
+    <div class="body">The economy runs but the payoff is hidden at every junction. XP is invisible in the
+    moment and absent from the run summary; level-up celebrates a bare number with no "here's what unlocked."
+    Crafting rows never show what a craft produces or its coin yield. Order rewards render as floating
+    berry-icon bubbles instead of legible coin payouts. Boss victory reward is the faintest text on the modal.
+    Fractional harvest progress silently vanishes when you stop chaining. The board never states a season
+    <em>goal</em>, only a decrementing turn budget.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S1">T3</span><span class="ft">Two identities fight: warm painterly parchment vs. flat/generic mobile-game chrome</span></div>
+    <div class="body">The brand is warm parchment + painterly canvas art, but the app keeps breaking it. Board
+    tiles sit on saturated per-category "candy" squares that clash and override the seasonal read; two icon
+    families (flat vector vs. painterly canvas-baked, plus gloss/3D thumbnails) render side by side; the boss
+    modal is a generic dark-scrim popup; story variants use a bespoke serif and hardcoded palette divorced
+    from tokens; locked tools render as flat gray icons that read as broken art; the town grass is buried
+    under dense multicolored flower speckle that reads as pixel noise.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S1">T4</span><span class="ft">Layout is not truly responsive — mobile is starved and desktop wastes space</span></div>
+    <div class="body">The play surface loses on both viewports. On desktop the square board floats in a
+    stretched-wide portrait column with ~40–45% dead parchment; list views render as narrow centered columns.
+    On mobile a tall chrome stack + fixed-height action panel + season strip push the board into the lower
+    ~55% (below the fold); the trophy grid truncates every title; inventory wastes width; crafting hides
+    inputs/Craft behind a tap; the map detail panel is capped so CTAs fall below a fold; headers truncate
+    ("The Hearthwo…"). The 44px tap-target token is defined but never applied.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">T5</span><span class="ft">Feedback & motion are incoherent and accessibility-unsafe</span></div>
+    <div class="body">Reduced-motion is honored for idle sway but <strong>not</strong> for the vestibular-heavy
+    effects — screen-shake, radial flash, particle bursts, collapse/refill — on both board and town, and
+    <code>tokens.css</code> documents a motion policy that contradicts <code>index.css</code>. Motion-duration
+    tokens are defined but consumed nowhere; cinematic holds are unrelated magic numbers; the run summary (the
+    season climax) has zero motion. Feedback is missing where it matters: a too-short chain release gives zero
+    feedback; tap tools fire blind; an active boss leaves no on-board reminder; a 1500ms warm-up makes the
+    first board look frozen.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">T6</span><span class="ft">Placeholder / empty / locked / mislabeled states leak into the finished product</span></div>
+    <div class="body">States that should degrade gracefully read as broken: zero-count inventory items shown
+    at full prominence; the currently-researched tile labeled "Locked"; category tabs with no text labels
+    (mismatched keys); boss tributes as raw <code>snake_case</code>; a wall of 24 identical "???" cells;
+    trophy cards that say "Done" while progress reads 12/100; empty "Plot" ghost boxes; dead-end CTAs that
+    point at "Build the Bakery in town" with no route there; an onboarding spotlight aimed at an off-screen
+    (−9999px) element and the wrong nav tab.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S3">T7</span><span class="ft">Modal, CTA, and status vocabulary are inconsistent across the shell</span></div>
+    <div class="body">The chrome lacks a single spec: two competing modal shells (titled+divider, no-X vs.
+    centered title with top-right X); a leave-board confirm that warns of loss without saying what's lost;
+    inverted CTA emphasis on the Town (pale primary "Enter", loud green secondary "Build") plus two floating
+    CTAs; status words ("ready", "No station", "Village", "Locked", "Done", "violated") carried by bare text
+    with no visual differentiation; NPC bubbles and Market News as generic portrait-less top-center toasts;
+    a Menu of 9–10 equal-weight buttons in the hardest-to-reach corner.</div></div>
 
   <h2><span class="n">§</span>Top priorities at a glance</h2>
-  <!-- PLACEHOLDER:overview-priorities -->
+  <p>The twelve highest-leverage changes across the whole game, ranked. Each fixes a <em>class</em> of
+  problems rather than one screen. Full sequencing (quick wins vs. bets) is in the
+  <a href="#roadmap" data-jump="roadmap">Roadmap</a> tab.</p>
+  <table>
+    <thead><tr><th style="width:34px">#</th><th style="width:58px">Sev</th><th>Change</th><th>Why it's high-leverage</th></tr></thead>
+    <tbody>
+      <tr><td>1</td><td><span class="sev S1">S1</span></td><td>Build a <strong>navigation hub / "More"</strong> pattern; give every built system a door</td><td>7 full-screen systems + Boons/Charter/Chronicle are reachable only via Debug or a hidden button — this unlocks the most already-built content and fixes the un-scalable 6-tab nav.</td></tr>
+      <tr><td>2</td><td><span class="sev S1">S1</span></td><td>Make <strong>rewards legible end-to-end</strong> — surface XP in the moment + run summary; state what a level-up unlocked with a route to claim</td><td>The core progression payoff is invisible across chaining, level-up, and the season climax — players never see what they earned.</td></tr>
+      <tr><td>3</td><td><span class="sev S1">S1</span></td><td>Fix the <strong>mobile board real-estate</strong> — collapse the chrome/action-panel/season stack so the 6×6 grid dominates above the fold</td><td>On the primary target the signature interaction is squeezed into the lower ~55% behind fixed-height chrome — degrades every session of the core loop.</td></tr>
+      <tr><td>4</td><td><span class="sev S1">S1</span></td><td>Reconcile the <strong>board tile treatment</strong> with the parchment identity — kill the saturated candy squares; let seasonal art read</td><td>One change removes the loudest brand-clash, restores the seasonal system on-board, and unifies the game's signature surface with its identity.</td></tr>
+      <tr><td>5</td><td><span class="sev S1">S1</span></td><td><strong>Gate all vestibular-heavy motion</strong> (shake, flash, particles, collapse) behind <code>prefers-reduced-motion</code>; reconcile the token policy</td><td>A named accessibility-safety gap affecting real users, currently only half-honored, plus a documented policy contradiction that will re-introduce the bug.</td></tr>
+      <tr><td>6</td><td><span class="sev S1">S1</span></td><td><strong>Repair leaked placeholder/mislabeled states</strong> (researched tile "Locked", missing tab labels, snake_case tributes, "???" walls, off-screen spotlight)</td><td>A class of bugs where finished features render as broken/contradictory — cheap per-item fixes that remove the "unfinished demo" impression.</td></tr>
+      <tr><td>7</td><td><span class="sev S2">S2</span></td><td>Adopt <strong>one modal shell + one status-chip vocabulary</strong>; apply the 44px tap-target token everywhere</td><td>Standardizing shell primitives fixes competing modals, ambiguous status words, and sub-minimum tap targets across nearly every screen in one pass.</td></tr>
+      <tr><td>8</td><td><span class="sev S2">S2</span></td><td>Show <strong>what every craft/order/board action produces and is worth</strong>; surface fractional progress persistently</td><td>Players commit to crafts, orders, and chains blind to value — making outputs and partial progress legible fixes decision-making across the economy.</td></tr>
+      <tr><td>9</td><td><span class="sev S2">S2</span></td><td>Make the <strong>layout responsive on both ends</strong> — reclaim desktop dead space; give inventory/trophy/map grids proper mobile density</td><td>One effort addresses ~40% wasted desktop viewport plus truncation and buried-CTA problems across inventory, quests, craft, map, trophies.</td></tr>
+      <tr><td>10</td><td><span class="sev S2">S2</span></td><td>Fix the <strong>Town first impression</strong> — quiet the flower speckle, replace debug-looking founding boxes/signs, correct inverted CTA emphasis, give the board plot a crop affordance</td><td>The Town is the hub and first surface after onboarding; compounding issues make the primary gameplay entry read as broken/placeholder.</td></tr>
+      <tr><td>11</td><td><span class="sev S2">S2</span></td><td>Add the <strong>missing board feedback</strong> — reject cue for too-short chains, target previews for tap tools, persistent boss/hazard indicator, a stated season goal</td><td>Closes the highest-value game-feel gaps where input currently produces zero or blind feedback on the signature interaction.</td></tr>
+      <tr><td>12</td><td><span class="sev S3">S3</span></td><td><strong>Unify iconography</strong> into one treatment; align boss/story modals + cinematics to parchment tokens and a shared motion cadence</td><td>Removes the most visible remaining art-vs-chrome incoherence and the magic-number motion timings in one system-level pass.</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn"><p style="margin:0"><strong>Scope note — what this review did <em>not</em> cover.</strong>
+  For honesty, these areas were out of frame and are worth a follow-up pass: cold-start / loading / slow-network
+  &amp; failed-asset states; error/failure paths (insufficient-resource, save corruption, migration failure);
+  audio/SFX &amp; haptics coherence and mute; the returning-player / offline-progression flow; the Settings
+  screen's actual contents; landscape/tablet/foldable layouts; monetization surfaces (if any); localization/i18n
+  &amp; RTL; the <em>content</em> of festivals / decorations / portal / npcs; the post-story endgame loop; and
+  screen-reader/AT coverage of the full-screen React views (only the board was audited for AT).</p></div>
+
+  <p style="margin-top:26px"><strong>How the rest of this document is organized:</strong> the core surfaces
+  (<a href="#board" data-jump="board">Board</a>, <a href="#town" data-jump="town">Town</a>,
+  <a href="#map" data-jump="map">Map</a>), then <a href="#screens" data-jump="screens">Screens &amp; panels</a>,
+  <a href="#story" data-jump="story">Story &amp; moments</a>, and
+  <a href="#shell" data-jump="shell">Shell/nav/onboarding</a>; then the
+  <a href="#crosscut" data-jump="crosscut">Cross-cutting</a> lenses and the
+  <a href="#roadmap" data-jump="roadmap">Roadmap</a>. Findings carry a severity badge, the screen(s) they
+  came from, and the <code>file:line</code> behind them.</p>
 </section>
-<section class="tab" id="tab-board"><!-- PLACEHOLDER:board --></section>
-<section class="tab" id="tab-town"><!-- PLACEHOLDER:town --></section>
-<section class="tab" id="tab-map"><!-- PLACEHOLDER:map --></section>
-<section class="tab" id="tab-screens"><!-- PLACEHOLDER:screens --></section>
-<section class="tab" id="tab-story"><!-- PLACEHOLDER:story --></section>
-<section class="tab" id="tab-shell"><!-- PLACEHOLDER:shell --></section>
-<section class="tab" id="tab-crosscut"><!-- PLACEHOLDER:crosscut --></section>
-<section class="tab" id="tab-roadmap"><!-- PLACEHOLDER:roadmap --></section>
+<section class="tab" id="tab-board">
+  <p class="eyebrow">Core surface · 01</p>
+  <h1>The Board — the puzzle</h1>
+  <p class="lead">The 6×6 drag-to-chain board is the heart of the game and its best-executed interaction.
+  The feedback <em>during</em> a chain is genuinely excellent; the problems are in how the board is
+  <em>framed</em> (layout on both viewports, the season strip, the stockpile) and in the feedback that's
+  missing at the edges (failed chains, tap-tools, hazards, bosses, reduced-motion).</p>
+
+  <div class="callout good"><strong>What works — protect it.</strong>
+  <ul style="margin:6px 0 0">
+    <li>The <strong>chain-in-progress panel</strong> is superb: a live fill bar, the inline "UPGRADE TO
+      Pheasant 2/6 → +1" strip, the escalating BONUS!/DOUBLE!/TRIPLE!/FRENZY! tier chips
+      (<code>puzzleBoard.tsx:149</code>), and the "N more to collect" header when short. You always know
+      what a chain is worth and how close the next reward is.</li>
+    <li>The <strong>build-up feedback ladder</strong> is layered and tuned: rising per-tile audio pitch
+      (<code>dragFeedback.ts:12</code>), a one-shot "chainReady" cue + stronger buzz at the collectable
+      threshold, escalating haptics, and the animated growing path + ring-burst + tier-scaled star
+      previews (<code>GameScene.ts:1559</code>).</li>
+    <li>The <strong>armed-tool banner</strong> is clear and safe (name, plain-language effect, "TAP A TILE",
+      big DISARM). <strong>Dead boards auto-reshuffle</strong> instead of soft-locking
+      (<code>GameScene.ts:1078</code>). The season-tinted tile art reads instantly at a glance.</li>
+  </ul></div>
+
+  <div class="shots">
+    <figure><img src="./shots/desktop/board-farm-idle.png" alt="desktop farm board idle"><figcaption>Desktop farm board (idle). The 6×6 board floats center-right with ~40% dead parchment above and below; a tall left rail of stockpile 0-rows and greyed locked tools competes for the eye. Hierarchy inverts — the chrome reads bigger than the game.</figcaption></figure>
+    <figure><img src="./shots/mobile/board-farm-chain-7.png" alt="mobile held chain"><figcaption>Mobile, mid-chain. This is the game at its best: glowing path + node dots, dimmed non-matches, the "1/6+1 BONUS!" combo panel, the "UPGRADE TO Pheasant" strip and a floating reward chip. Legible and satisfying.</figcaption></figure>
+  </div>
+
+  <h2><span class="n">§</span>Layout &amp; framing</h2>
+
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">L</span><span class="ft">Desktop board is a blown-up phone layout — a small square stranded in ~40% dead parchment</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-farm-idle, board-mine-idle, board-fish-idle-high-tide (desktop)
+    <span class="lbl">Evidence</span>The board grid is <code>minmax(360px,44%) minmax(0,1fr)</code> with the board a square centered in its cell (<code>puzzleBoard.tsx BOARD_LAYOUT_CSS ~1749</code>; <code>game/layout.ts:54,61</code>), so a wide short column yields a small centered square with dead margins on every side.
+    <span class="lbl">Diagnosis</span>The board is the signature object, yet on desktop it does <em>not</em> dominate — it's small and off-center while a thin rail of secondary chrome (stockpile 0-rows, locked tools) competes. Classic "portrait blown up to desktop": nothing was re-composed for the wide aspect, so hierarchy inverts.
+    <span class="lbl">Proposal</span>Give desktop a purpose-built composition: center the board in the full width, cap its size and let it grow toward the ceiling, and dock the rail (tools + stockpile) as a fixed-width sidebar or float the panel/tools as compact overlays anchored to the board corners. Move the tool grid into the dead bottom-right rather than stacking it in the narrow rail.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">M</span><span class="ft">Season-strip labels overprint the season art and the walking wagon — unreadable, worst on fishing</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-fish-idle-high-tide, board-farm-idle, board-boss-weather
+    <span class="lbl">Evidence</span>Season zones are proportional to turn-count, not equal quarters (<code>seasonStripScene.ts:306</code>), and each full label is centered in its (often narrow) zone with no width-fit (<code>buildLabels ~776</code>); labels and the wagon sprite share the same bottom band (<code>buildWagon:821</code>). On a 390px phone the numeral panel eats 56px, leaving ~300px for four words — which collide with the icons and the wagon.
+    <span class="lbl">Diagnosis</span>The strip is the player's only readout of "what season / how many turns left," and it's illegible in exactly the state (fishing, narrow) where they look. Text-on-text-on-sprite is a hard readability failure, not polish.
+    <span class="lbl">Proposal</span>Stop drawing four full words. Show only the <em>current</em> season name once (large, in the numeral panel) plus tick marks — or abbreviate to SPR/SUM/AUT/WIN, elide any label whose zone is narrower than its text, and move the wagon to its own track so sprite and text never share pixels. On fish, give the tide chip its own row.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">STOCKPILE panel burns prime top real-estate on mostly-empty "0/greyed" rows</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-farm-idle, board-mine-idle, board-fish-idle-high-tide
+    <span class="lbl">Evidence</span>Idle lists every reachable resource up to 12, rendering empties at 0.55 opacity (<code>puzzleBoard.tsx IdleView ~233</code>); the panel is a fixed 148px regardless of content (<code>~768</code>). Fish idle shows "0/0 KINDS" — a full panel saying nothing; mine shows "1/3 KINDS" with 2 greyed.
+    <span class="lbl">Diagnosis</span>The densest state drove the panel height, so an empty stockpile reserves 148px of the most valuable band to say nothing; on mobile this pushes the board down, on desktop it pads the rail. The panel is loud where it should be quiet.
+    <span class="lbl">Proposal</span>Collapse empties — owned first, hide 0-count kinds behind a "+N more" chip or a muted "not yet gathered" footer. When a biome has 0 kinds, replace the card with a one-line hint ("Chain fish to start your catch") and let the panel shrink so the board rises. Keep the fixed height only for the chain/tool states that need it.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">Tools rack presents greyed locked/empty tools as first-class tiles</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-farm-idle, board-mine-idle
+    <span class="lbl">Evidence</span><code>visiblePuzzleTools</code> returns any reachable-or-owned tool regardless of count (<code>puzzleToolFilter.ts:113</code>); count-0 tiles render at <code>grayscale(0.85)</code>, opacity 0.55 (<code>ToolTile ~887</code>). Desktop shows ~7 owned tools then a block of dead grey tiles (rake 0, axe 0, sickle 0…); mobile shows empty dashed hotbar slots.
+    <span class="lbl">Diagnosis</span>Greyed "0" tiles read as broken/disabled affordances in the primary action rack — the player can't tell "not crafted yet" from "out of charges" from "wrong biome." A wall of dead tiles dilutes the few live tools and adds load every board entry.
+    <span class="lbl">Proposal</span>Separate "owned &amp; usable" from "craftable but unowned." Show only count&gt;0 tools (plus armed) in the rack/hotbar; move zero-count reachable tools into a subdued "Craft more" shelf with a distinct locked treatment. Drop the empty dashed hotbar slots on mobile.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">Hazard atmosphere is invisible — "fire &amp; rats" looks identical to idle</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-farm-fire-rats vs board-farm-idle
+    <span class="lbl">Evidence</span>The fire/rats shot is visually indistinguishable from idle — no flames, smoke, gnawed tiles, rat sprites, tint, vignette or banner (only a bee is added). The GameScene hazard atmosphere (~529) produces no legible signal in the capture.
+    <span class="lbl">Diagnosis</span>Hazards are a core seasonal threat, but if the board doesn't visibly change the player has no idea one is present or which tiles are threatened — "a hazard is attacking your board" fails legibility-of-state. (Even the tide state at least gets a chip.)
+    <span class="lbl">Proposal</span>Give active hazards an unmistakable board signal: a colored edge glow/vignette on the frame (reuse the armed-pulse), a hazard chip in the rail head naming it + turns-to-resolve, and per-tile markers (smoke/flame/gnaw) on affected tiles. Also verify the fire/rats atmosphere renders at all — the shot suggests it's absent or far too subtle.</div></div>
+
+  <h2><span class="n">§</span>Feel &amp; feedback</h2>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">S</span><span class="ft">Releasing a too-short chain gives ZERO feedback — the path silently vanishes</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-farm-chain-2-short
+    <span class="lbl">Evidence</span>A sub-min release calls <code>clearPath(true)</code> with no sound, shake, or animation (<code>GameScene.ts:1730</code>). An "error" descending-buzz SFX is <em>defined</em> (<code>audio/index.ts:83</code>) but <code>play('error')</code> is called nowhere in <code>src</code>.
+    <span class="lbl">Diagnosis</span>Game feel demands a proportional response to every input. A committed drag that fails the length gate produces nothing, so a beginner can't tell whether the game ignored them or they just need one more tile. Next to the lavish success juice, total silence on failure reads as a bug.
+    <span class="lbl">Proposal</span>On the invalid branch, fire the existing "error" SFX at low volume, a short haptic (<code>vibrate(20)</code>), and a quick shrink+fade of the dropped path (alpha→0, scale→0.9 over ~140ms) plus a one-shot red flash. Keep it brief so near-misses don't nag.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">Tap-target tools (bomb, sickle) show no preview of what they'll hit — you spend a scarce charge blind</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-farm-tool-bomb, board-farm-tool-sickle
+    <span class="lbl">Evidence</span>The banner says "destroys a 3×3 area" / "harvest that entire row" but the board shows no highlight. Bomb has no dim strategy → <code>clearDimming()</code> (<code>GameScene.ts:1767</code>); sickle's "type_multi" never highlights the row. Firing is immediate on tap (<code>~1447</code>) with no hover/confirm.
+    <span class="lbl">Diagnosis</span>Tools are consumable and scarce (bomb ×3). An area/line effect with no aim preview means you can't see the footprint before spending the charge — a mis-tap wastes an irreversible resource. Feedback must precede commitment for destructive area actions.
+    <span class="lbl">Proposal</span>On pointer-move while armed, highlight the exact affected cells (glowing 3×3 for bomb, full-row band for sickle/rake). Add a brief press-and-hold-to-aim (release to fire) or two-tap confirm for area tools so the preview is actually seen.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">An active boss leaves no persistent on-board reminder; its raised min-chain surfaces only mid-drag</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-boss-active, board-boss-minimized
+    <span class="lbl">Evidence</span>Both render as a plain stockpile board with no objective, timer, or min-chain banner. Boss UI is a dismissable modal (<code>features/boss/index.tsx:9</code>); the scene consumes <code>boss.minChain</code> only inside <code>_effectiveMinChain</code> (<code>GameScene.ts:598</code>) and only surfaces via the chain panel's "N more" during a drag.
+    <span class="lbl">Diagnosis</span>Once the modal is dismissed, the player fights a boss with no visible objective, no progress toward the target, and no reminder that chains now need 5+ — they discover the raised gate by failing a drag (which is itself silent, per the finding above). A signature moment vanishes from the play surface.
+    <span class="lbl">Proposal</span>Add a compact persistent boss banner in/above the action panel: portrait, name, progress bar (<code>boss.progress/targetCount</code> already computed), and a "Chains need N+" pill when min-chain is raised. Tint the idle panel with the flame accent so the board signals "boss active" at rest.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">S</span><span class="ft">Reduced-motion gates idle sway but NOT screen-shake, radial flash, particles, or collapse</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-farm-chain-7 &nbsp;·&nbsp; <em>(see also the Accessibility &amp; Motion cross-cutting lenses)</em>
+    <span class="lbl">Evidence</span><code>_motionEnabled()</code> checks <code>prefers-reduced-motion</code> but gates only ambient tile sway (<code>GameScene.ts:2149</code>). <code>_shake</code> calls <code>cameras.main.shake</code> unconditionally (<code>485</code>, fired on every 3+ chain), <code>radialFlash</code> always fires (<code>2052</code>), <code>emitCollectParticles</code> always explodes (<code>572</code>), and <code>_dur()</code> is an identity passthrough.
+    <span class="lbl">Diagnosis</span>Screen shake and full-screen flashes are exactly the effects that trigger vestibular discomfort — far more than a swaying tile. Gating only the least-harmful motion inverts the accessibility priority and makes reduced-motion effectively non-functional for the signature interaction.
+    <span class="lbl">Proposal</span>Route shake, flash, upgrade-burst, and particle counts through one reduced-motion check. When on: skip the camera shake, replace the flash with a brief static tint pulse, cut particles to a token few — keeping the audio/haptic ladder so success still feels rewarded.</div></div>
+
+  <h3><span class="n">§</span>Also noted (S3 / polish)</h3>
+  <ul>
+    <li><strong>Winter/mine tiles lose type-identity</strong> (S3) — snow/grey wash flattens wheat/carrot/apple/tree into similar mounds (board-season-winter) and the first mine columns blur into grey lumps; a match game needs instant silhouette parsing. Preserve each crop's silhouette through the overlay; push hue/shape separation between ore tiers. <em>Per-tile art pass.</em></li>
+    <li><strong>Tide/mine status vocabulary is inconsistent</strong> (S3) — fish gets a tiny top-right "High Tide ·3" pill with an unlabeled countdown; mine gets no board-state chip at all. Standardize one rail-head status-chip slot across all three biomes and label the countdown ("flips in 3").</li>
+    <li><strong>Mobile board sits below a tall chrome stack</strong> (S3) — railhead → tools → 148px stockpile → board (begins ~45% down). Collapse the idle stockpile and pin a thin hotbar so the board rises above the fold.</li>
+    <li><strong>Fertilizer has no armed state</strong> (S3) — unlike bomb/sickle/rake it shows no banner; the biased-spawn payoff is diffuse and delayed, so it feels like it did nothing. Add a persistent "Fertilizer active" chip + a one-shot sparkle on the biased spawns.</li>
+    <li><strong>1500ms idle-motion warm-up</strong> (S3) — the first-seen board looks frozen before it "comes alive" (<code>ANIM_STARTUP_DELAY_MS</code>). Shorten to ~400–600ms or ramp amplitude 0→1 so it's subtly alive immediately.</li>
+    <li><strong>Auto-reshuffle notice is a tiny transient float</strong> (S3) — the same micro-float used for "+N resource," so players miss <em>why</em> the board rearranged. Promote to a ~1.2s centered banner shown <em>before</em> the shuffle spin.</li>
+    <li><strong>Overloaded dim signal</strong> (POLISH) — "can't select" and "legal but low-value" both use 0.35 alpha, so useful tool targets read as disabled. Use a lighter dim (~0.6) for suboptimal, or invert to a positive glow on high-value targets.</li>
+  </ul>
+</section>
+<section class="tab" id="tab-town">
+  <p class="eyebrow">Core surface · 02</p>
+  <h1>The Town — the hub &amp; first impression</h1>
+  <p class="lead">The town is the hub and the first surface after onboarding. The building art and the
+  sense of a settlement that <em>grows</em> are real strengths — but a cluster of compounding issues
+  (a dirt-pit board bed, confetti grass, debug-looking founding boxes, inverted CTAs) make the primary
+  gameplay entry read as unfinished. This is the screen with the highest ratio of "cheap fix → big
+  first-impression win."</p>
+
+  <div class="callout good"><strong>What works.</strong> The vector town props (cottages, windmill,
+  stalls, lamps, fountain, benches) are charming and depth-sorted, and the town visibly densifies
+  fresh→built-out→city (<code>TownScene.rebuildBuildingsAndPlots ~749</code>) — the "growing settlement"
+  promise reads. Per-biome identity is distinct (farm = warm grass, mine = desert/scrub, harbor =
+  water-edged pier), and board-entry pills carry the correct biome accent on their border
+  (<code>Town.tsx:441</code>).</div>
+
+  <div class="shots">
+    <figure><img src="./shots/desktop/shell-town-fresh.png" alt="fresh town desktop"><figcaption>Fresh town (desktop). The central <strong>Farm is a flat empty dirt rectangle</strong> — the game's primary entry looks like unbuilt land. The grass is peppered with <strong>multicolored confetti</strong>. The "Upgrade to Hamlet" sign <strong>floats unanchored</strong> mid-screen like a debug overlay. And the CTA emphasis is inverted: the pale "Enter Farm Field" (the core loop) vs. the loud green "Build" (the sink).</figcaption></figure>
+    <figure><img src="./shots/mobile/town-home-built-out.png" alt="built-out town mobile"><figcaption>Built-out town (mobile). The growth reads well — the settlement genuinely fills in. But the same dirt-pit Farm, confetti grass, and floating sign persist even here.</figcaption></figure>
+  </div>
+
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">M</span><span class="ft">The Farm/Harbor board bed — the primary gameplay entry — renders as a flat empty dirt pit / water rectangle</span></div>
+    <div class="body"><span class="lbl">Screens</span>town-home-fresh, town-home-built-out, town-harbor-settlement
+    <span class="lbl">Evidence</span><code>TownScene.drawBoards</code> fills the whole footprint with one ground tile — DIRT for farm/mine, WATER for fish (<code>TownScene.ts:690</code>) — then draws only a 2px border + a 68px label plate. No crop rows, furrows, tools or produce on the farm bed (mine at least scatters 4 ore boulders; farm/fish get nothing).
+    <span class="lbl">Diagnosis</span>The board is <em>the</em> signature interaction, yet its town entry looks like unbuilt land — a dirt pit and a puddle, with less visual life than a decorative plot. On the fresh screen it competes with the empty "Plot" ghosts and loses. This undercuts the invitation to play.
+    <span class="lbl">Proposal</span>Dress each board bed as a living mini-scene: tile 3–4 furrow rows with a few seasonal crop sprites + a scarecrow/basket on the farm (reuse the seasonal tile catalog); add ripple/foam + a moored boat on the harbor; keep the mine's boulders + a cart/pickaxe. Add a subtle idle shimmer or a pulsing "tap to enter" halo so the board out-reads the plots.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">S</span><span class="ft">Dense multicolored grass speckle is visual noise from TWO compounding random-flower systems</span></div>
+    <div class="body"><span class="lbl">Screens</span>shell-town-fresh, town-home-fresh, town-home-built-out
+    <span class="lbl">Evidence</span>Two independent scatterers stack: (1) <code>proceduralGround</code> paints per-pixel specks from a 4-colour palette wherever <code>hash&gt;0.993</code> (<code>proceduralGround.ts:291</code>); (2) <code>TownScene.scatterGroundDetail</code> stamps GRASS_FLOWER tiles on 4% of grass cells (<code>TownScene.ts:561</code>).
+    <span class="lbl">Diagnosis</span>At default zoom the specks are sub-tile confetti with no legible shape — they read as JPEG noise / dead pixels, not meadow flowers, and add chromatic clutter that fights the readable buildings and board. Boldness is spent <em>everywhere</em>, so nothing calms the eye — the loudest ambient texture is the wrong loud thing.
+    <span class="lbl">Proposal</span>Pick ONE flower system. Drop the per-pixel <code>proceduralGround</code> specks (noisiest), lower <code>scatterGroundDetail</code> from 0.04 to ~0.012, and <em>cluster</em> flowers (place one only if a neighbour also rolled one) so they read as intentional patches. Desaturate the palette ~20%.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">Empty "Plot" ghosts read as broken/placeholder UI — and are inert (non-tappable) outside build mode</span></div>
+    <div class="body"><span class="lbl">Screens</span>town-home-fresh, town-build-picker-ready, town-mine-settlement
+    <span class="lbl">Evidence</span>Floating rounded rects labeled "Plot" in white on a 14%-black fill (<code>TownScene.ts:770</code>); the interactive hit-zone is only added <code>if (isPlacing)</code> (<code>~786</code>), so a tap outside build mode does nothing.
+    <span class="lbl">Diagnosis</span>A translucent dark box labeled "Plot" over grass looks like a debug rect or a loading placeholder, not "buildable land." Worse, it looks like a button but is dead unless you're already in build mode — a silent no-op that teaches the town is unresponsive.
+    <span class="lbl">Proposal</span>Style plots as in-world affordances (light dashed picket/rope border, faint sunlit-grass fill, a small "For Build" signpost or foundation stones — no dark overlay). Make them tappable at all times; a tap outside build mode opens the BuildPicker pre-targeted to that plot.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">Founding a settlement stacks 3–4 dark floating boxes that read as a debug overlay</span></div>
+    <div class="body"><span class="lbl">Screens</span>town-found-biome-picker, town-unfounded-blocked
+    <span class="lbl">Evidence</span>Stacked at screen-center: a black "…isn't yours yet" pill, a brown "Found this settlement · 12 Plank · 10 Bread Loaf · 8 Hay Bundle" sign, and a red gate pill — three separately-positioned divs, each with its own background (<code>FoundSettlementBanner, Town.tsx:114</code>).
+    <span class="lbl">Diagnosis</span>Three differently-coloured dark boxes floating over the map, none anchored, read as stacked debug toasts. The message (name, cost, blocker) is fragmented across three surfaces with three visual languages — the signature "found a new town" moment feels like an error state.
+    <span class="lbl">Proposal</span>Collapse into ONE carved-wood signpost card: title ("Claim Wild Orchard"), a cost row using RequirementChips (green owned / amber short), and a single inline lock line with the blocker + icon — one background, one border, planted on a post graphic so it reads as an in-world sign.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">S</span><span class="ft">CTA emphasis is inverted — the core action ("Enter") is pale; the sink ("Build") is the loud green one</span></div>
+    <div class="body"><span class="lbl">Screens</span>town-home-fresh, town-home-built-out, town-harbor-settlement
+    <span class="lbl">Evidence</span>"Enter Farm Field" is cream (<code>#fbf4e2</code>, biome border — <code>Town.tsx:452</code>); "Build · N/M plots" is a saturated green gradient (<code>#6db83f→#4f8c2a</code>, <code>:413</code>). Build is the visually dominant CTA in every state.
+    <span class="lbl">Diagnosis</span>Entering the board is the core loop (you can't build without first earning on the board); building is the spend side-action. Making Build the single loudest thing mis-points new players toward the sink before the faucet — and two co-equal pills read as a paired choice, not a primary/secondary relationship.
+    <span class="lbl">Proposal</span>Swap emphasis: give "Enter Farm Field" the confident filled accent (ideally the board's biome colour), demote "Build" to a soft/outline secondary. Or keep Build green only when plots are free <em>and</em> affordable, else mute it so it stops shouting when the player can't act.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">S</span><span class="ft">Harbor HUD collides — settlement name overlaps the Tide pill and coins on mobile</span></div>
+    <div class="body"><span class="lbl">Screens</span>town-harbor-settlement
+    <span class="lbl">Evidence</span>"Saltspray Ha…" collides with a "High Tide ·3" pill overlapping the "12,500" coins pill. The title is <code>flex-shrink-0</code> so it never truncates (<code>Hud.tsx:181</code>), the center flex holds the TideChip, and coins are also <code>flex-shrink-0</code>; at 390px the name + tide + coins + level exceed the row and stack.
+    <span class="lbl">Diagnosis</span>The top bar is unreadable in the harbor on the primary target — the town's own name is clipped under a pill, so "where am I" fails right after founding a new-named settlement. Desktop hides it because the row is wide.
+    <span class="lbl">Proposal</span>Let the title truncate (<code>min-w-0 + truncate</code>, capped max-width); on narrow viewports move the Tide pill into the coins Popover or shrink it to icon-only. Test at 390px with the longest zone name.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S3">S3</span><span class="eff">M</span><span class="ft">Two divergent town renderers ship — the polished Phaser canvas and a flat SVG-grid fallback</span></div>
+    <div class="body"><span class="lbl">Screens</span>town-placement-mode, town-building-tooltip vs the Phaser shots
+    <span class="lbl">Evidence</span>Most shots show the rich Phaser town, but placement-mode + building-tooltip render a completely different flat top-down SVG grid ("+ Place here" dashed squares, simple house icons, a different HUD with Chronicle/Tiles/Portal tabs). This is the pre-Phaser <code>buildTownPlan</code> surface.
+    <span class="lbl">Diagnosis</span>A player who lands on the SVG grid sees a markedly lower-fidelity, programmer-art version of the same screen — and placement mode (a core CUJ) shouldn't drop to the flat grid. Shipping two divergent looks for one view is a coherence + quality risk. <em>(This is also the source of the "flat vs painterly" confusion — the stale visual golden captured this fallback.)</em>
+    <span class="lbl">Proposal</span>Make the Phaser canvas the single source of truth; the placement/hint overlay is meant to sit <em>over</em> it (<code>Town.tsx:470</code>). If the SVG grid is a real fallback, bring it to parity or remove it, and verify placement mode never downgrades.</div></div>
+
+  <h3><span class="n">§</span>Also noted (S3 / polish)</h3>
+  <ul>
+    <li><strong>Tier-up / found sign floats unanchored</strong> (S2) — the "Upgrade to Hamlet · …" box hovers mid-canvas with no post or ground shadow, reading as a HUD/debug element and crowding the (already weak) Farm entry — despite a code comment saying it should read "as an in-world signpost" (<code>Town.tsx:67</code>). Render it as an actual planted signpost sprite, or dock it as a compact chip under the HUD.</li>
+    <li><strong>Default camera is zoomed too far in</strong> (S3) — a fresh town shows mostly empty speckled grass + one house + the dirt pit, so it never reads as a cozy whole. Fit-to-content on the founded lots + board + plaza, and only allow zooming in from there.</li>
+    <li><strong>Locked board entry is under-communicated</strong> (S3) — only the DOM pill greys out and the reason lives in an unhoverable <code>title</code> attribute (no hover on phones); the board bed shows no lock. Draw a lock badge + "Lv N / Found first" on the bed and an always-visible caption under the pill.</li>
+    <li><strong>"Build · N/M plots" polarity is backwards</strong> (POLISH) — N is <em>free</em> plots, so "0/12" (a fresh city, all buildable) looks like "0 of 12 done / you have no plots." Relabel to "12 plots free" or flip to "built/total."</li>
+  </ul>
+</section>
+<section class="tab" id="tab-map">
+  <p class="eyebrow">Core surface · 03</p>
+  <h1>World Map — Cartography</h1>
+  <p class="lead">The map has the strongest, most cohesive identity in the game and uses the widescreen
+  space well — it's the internal benchmark other screens should aspire to. But that praise is a
+  <em>desktop</em> read: on mobile the decision panel is capped so its CTAs fall below a fold, tapping a
+  node leaves no persistent selection, and half the nodes collapse into interchangeable grey discs.</p>
+
+  <div class="callout good"><strong>What works.</strong> A parchment world-map identity distinct from
+  the town chrome — watercolour region lobes, ink-stroke roads (solid = traveled, dashed = waiting), smoke
+  columns, ember glow. Status is encoded on the medallion itself (pulsing flame ring = "you are here",
+  gilded halo = "ready", moss/iron keeper tint — <code>MapScene:952,987</code>). The node detail panel
+  tells a coherent story: kind + subtitle + lore + "what waits here" + status (<code>NodePanel:510</code>).</div>
+
+  <div class="shots">
+    <figure><img src="./shots/desktop/map-current-home.png" alt="map desktop"><figcaption>Desktop: cohesive, on-brand, and it fills the space — the benchmark. Note the right two-thirds is mostly interchangeable grey "???" discs.</figcaption></figure>
+    <figure><img src="./shots/mobile/map-keeper-choice.png" alt="map mobile panel"><figcaption>Mobile: the detail panel is capped at 38% height, so lore + activities + status + the load-bearing CTA ("Face the Deer-Spirit"/"Found") are crammed into a tiny scroll region under an always-on legend — the core decision is below the fold.</figcaption></figure>
+  </div>
+
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">M</span><span class="ft">Mobile detail panel is capped at 38% height — founding/travel CTAs land below a scroll fold</span></div>
+    <div class="body"><span class="lbl">Screens</span>map-keeper-choice, map-founded-complete, map-ready-road
+    <span class="lbl">Evidence</span>The portrait rail is <code>maxHeight: "38%"</code> (<code>index.tsx:805</code>) and NodePanel is <code>overflow-y-auto</code> with the primary ActionButton pinned <code>mt-auto</code> at the very bottom (<code>:572</code>); the always-on legend eats ~90px below.
+    <span class="lbl">Diagnosis</span>The map is the aspiration surface, but the panel is where every decision happens (found, walk, fast-travel, face keeper). Capping it at 38% and stacking lore + activities + status + CTAs inside guarantees the load-bearing buttons are off-screen on a 390×844 phone — the core CUJ is below the fold.
+    <span class="lbl">Proposal</span>On portrait give the panel ~55% and the map ~40%; drop the always-on legend to a collapsible "Key" chip. Pin the primary ActionButton to a non-scrolling footer <em>outside</em> the <code>overflow-y-auto</code> region so "Found this hearth"/"Walk the road" is always visible; only lore/activities scroll.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">M</span><span class="ft">Tapping a node leaves no persistent selection — the panel and map are visually disconnected</span></div>
+    <div class="body"><span class="lbl">Screens</span>map-current-home, map-founded-complete, map-keeper-choice
+    <span class="lbl">Evidence</span><code>applyTappedHighlight</code> runs only a transient scale bounce that returns to 1.0 (<code>MapScene.ts:1003</code>) — no lingering ring/pin. The panel describes "Greenmeadow" but nothing on the map stays marked.
+    <span class="lbl">Diagnosis</span>On mobile the map (top) and panel (bottom 38%) are separate regions with ~13 near-identical medallions. Without a persistent "this is the node you're reading about" marker, the player can't map the panel text back to a location — the most basic requirement of a map+detail pattern. The bounce is long gone by the time the eye reaches the panel.
+    <span class="lbl">Proposal</span>Give the tapped node a persistent treatment in <code>paintNodeStatus</code> (driven off <code>carto.tapped</code>): a bright dashed selection ring + a caret/pin, and gently dim the other regions. Keep the one-shot bounce as tap feedback, layer the sticky ring on top.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">Undiscovered/locked nodes are near-identical grey ledger discs — the map reads as interchangeable circles</span></div>
+    <div class="body"><span class="lbl">Screens</span>map-empty-panel, map-current-home, map-ready-road
+    <span class="lbl">Evidence</span>Hidden nodes force <code>icon.setAlpha(0.10)</code> + a "? ? ?" label (<code>MapScene.ts:929</code>) with a low-contrast brown ring; kind is only distinguished by the baked icon, which is hidden for "???" nodes.
+    <span class="lbl">Diagnosis</span>A map's job is to make destinations feel distinct and enticing. When half the nodes collapse to the same grey disc + glyph + "???" label, the world stops reading as <em>places</em> (a quarry, a harbor, a capital) and reads as "locked slot #4" — killing the aspirational pull that justifies the whole surface, and making the completion counter feel like grind.
+    <span class="lbl">Proposal</span>Keep a faint region-tinted silhouette even for undiscovered nodes (mine = pickaxe, harbor = anchor, boss = antlers) and vary the "???" frame by region so clusters read as different territories. Reserve the flat grey disc only for truly-unknown nodes.</div></div>
+
+  <h3><span class="n">§</span>Also noted (S2 / S3)</h3>
+  <ul>
+    <li><strong>The zone-info "i" is a mystery-meat floating circle</strong> (S2) — the single most information-dense action (spawn rates, hazards, entry cost) is a bare 32px circle with only an <code>aria-label</code> (<code>ZoneEntryCostInfo.tsx:33</code>), orphaned in empty space. Replace with a labeled "ⓘ Spawn rates &amp; hazards" row, or fold key facts into a stat strip.</li>
+    <li><strong>The legend is stale and incomplete</strong> (S2) — it says "Level-locked" but gating is by zone <em>tier</em> ("Grow Hearthwood Vale to City"), omits the settled/keeper states the map actually paints, and reuses the same red dot for two entries (<code>LegendBar index.tsx:681</code>). Rewrite to match reality; add Settled / Coexisting / Driven-out / Hearth-token swatches.</li>
+    <li><strong>The keeper choice is a permanent branch presented as a low-ceremony purple button</strong> (S2) — an irreversible signature decision framed purely as two reward chips, with no "this is permanent / here's the lasting difference" framing (<code>FoundSettlementBlock:280</code>). Elevate the encounter and echo the consequence back on the panel.</li>
+    <li><strong>Header truncates to "The Hearthwo…"</strong> (S3) — both title and "smoke rises from…" subtitle clip at 390px while three empty token pills take the space (<code>HeaderBar index.tsx:659</code>). Stack the sub-header full-width; move the token strip to an icon cluster.</li>
+    <li><strong>Founding affordability is opaque on touch</strong> (S3) — the only "why disabled / how close" feedback is a hover <code>title</code> that never fires on touch (<code>index.tsx:316</code>). Show an inline have/need line ("Plank 8/12 · Bread 10/10 · Hay 3/8", shortfalls red) and a jump-to affordance when a tier gate is the blocker.</li>
+  </ul>
+</section>
+<section class="tab" id="tab-screens">
+  <p class="eyebrow">Systems · 04</p>
+  <h1>Screens &amp; panels</h1>
+  <p class="lead">The full-screen feature views: Quests/Orders/Achievements, Tile Collection &amp; research,
+  Crafting, Inventory, and the meta roster (Workers/Castle/Bosses/Boons/Charter). Two patterns dominate:
+  <strong>the mobile layouts hide the decision-critical content behind a tap</strong> while desktop shows
+  it inline, and <strong>rewards/outputs/state are frequently illegible or mislabeled</strong>. The card
+  <em>designs</em> are often good — the problem is what's shown, where, and on which viewport.</p>
+
+  <h2><span class="n">§</span>Quests · Orders · Achievements <span style="font:400 14px system-ui;color:var(--ink-3)">(the "goals" surfaces)</span></h2>
+  <div class="callout good" style="margin-top:8px"><strong>What works.</strong> The reworked quest
+  <strong>RewardManifest</strong> is strong — every reward gets icon + name + typed pill, with the best prize
+  surfaced top-right (<code>RewardBundle.tsx:182</code>). The Orders board has a clean, scannable card rhythm
+  (NPC avatar + in-character line + bond chip + have/need bar). Progress is consistently legible (ready-first
+  sort, pulsing Claim that only enables when earned).</div>
+  <div class="shots">
+    <figure><img src="./shots/mobile/achievements-trophies-mixed.png" alt="trophies mobile"><figcaption>Trophies on mobile: a forced 2-column grid truncates every title ("First St…", "Patient…") and body — the achievement list is unreadable on the primary target. Note "✓ Done" over a 12/100 bar.</figcaption></figure>
+    <figure><img src="./shots/desktop/quests-daily-mixed.png" alt="quests desktop"><figcaption>Quests (desktop): the reward manifest is genuinely good — but the top prize is billed twice (headline chip + a manifest row), and each card is tall.</figcaption></figure>
+  </div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">S</span><span class="ft">Mobile trophy grid forces 2 columns, truncating every achievement title &amp; description</span></div>
+    <div class="body"><span class="lbl">Screens</span>achievements-trophies-mixed
+    <span class="lbl">Evidence</span><code>grid-cols-3 portrait:grid-cols-2</code> puts two ~165px cards on a 390px phone (<code>achievements/index.tsx:284</code>), then <code>truncate</code>/<code>line-clamp-1</code> eat the text. Desktop (secondary) shows the full strings.
+    <span class="lbl">Diagnosis</span>The one viewport where the trophy list is unreadable is the primary one — a player can't tell what any locked goal is, defeating the whole point of an achievement menu.
+    <span class="lbl">Proposal</span>On portrait drop to a single full-width column (<code>portrait:grid-cols-1</code>) — a one-line row like Orders — and remove the truncation (or allow 2 lines). Keep 2–3 columns only for landscape/desktop.</div></div>
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">S</span><span class="ft">Trophy cards say "✓ Done" while their bar reads 12/100 — the earned state contradicts the count</span></div>
+    <div class="body"><span class="lbl">Screens</span>achievements-trophies-mixed
+    <span class="lbl">Evidence</span><code>trophyState</code> is set from <code>unlockedMap[a.id]</code> independent of <code>current</code> (<code>index.tsx:290</code>), so the unlocked flag and the live counter disagree — a partial bar painted green + labelled Done.
+    <span class="lbl">Diagnosis</span>A "Done" badge over a 12/100 bar is a contradiction the player will notice, undermining trust in every other progress number on screen.
+    <span class="lbl">Proposal</span>Derive the visual from one source: when claimed, clamp the bar to 100% and show <code>target/target</code>; if the counter is truth, don't mark earned until <code>current ≥ target</code>. Add a dev assertion <code>earned ⇒ current ≥ target</code>.</div></div>
+  <ul>
+    <li><strong>"Deliver 1 order" daily duplicates the Orders board</strong> (S2) with near-identical framing and no cross-link — make the "Deliver" category deep-link to the Orders tab and reword so the two read as one funnel, not two copies.</li>
+    <li><strong>Almanac shows a ×100 XP ladder but the reducer gates on a ×150/level ladder</strong> (S2) — the number you watch climb isn't the number that unlocks (<code>quests/index.tsx:226</code> vs <code>almanac/data.ts:90</code>). Derive the cost, "unlocked", and header directly from <code>ALMANAC_TIERS[].level × 150</code>.</li>
+    <li><strong>Achievement rewards are 9px grey text stubs</strong> (S2) while the identical reward on a quest gets the rich manifest — reuse <code>RewardManifest</code> in the trophy card.</li>
+    <li><strong>Order reward shows a bond-modified total next to a bare "×1.25"</strong> (S3) that invites re-multiplying — render it as an uplift ("90 → 113, +25% Beloved").</li>
+    <li><strong>Collection is a wall of 24 identical "???" cells</strong> (S3) with no information scent — give locked chips a silhouette + a one-word "how" ("from Farm chains").</li>
+    <li><strong>Headline reward chip duplicates a manifest row</strong> (POLISH) — drop the headline from the manifest so the chip is the sole billing of the top prize (confirms the tall-card redundancy).</li>
+  </ul>
+
+  <h2><span class="n">§</span>Tile Collection &amp; research</h2>
+  <div class="callout good" style="margin-top:8px"><strong>What works.</strong> The detail-pane pattern is
+  strong (tinted icon, tier eyebrow, in-world status line, prose flavor, explicit BONUSES, one primary action).
+  Discovery is genuinely multi-path and each path narrates itself ("chain 20", "research 32/50", "buy 200",
+  "build a building"). The research state — a labeled ProgressTrack + "Stop researching" toggle — is the
+  best-communicated passive mechanic in the game.</div>
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">S</span><span class="ft">Mining &amp; Water category tabs render with NO text labels (icon-only) due to a key-drift bug</span></div>
+    <div class="body"><span class="lbl">Screens</span>tiles-mining-stone, tiles-water-fish
+    <span class="lbl">Evidence</span>Catalog categories are <code>mine_stone</code>/<code>fish</code> (<code>tileCatalog.ts:615</code>) but <code>CATEGORY_LABELS</code> keys them with a spurious <code>tile_</code> prefix (<code>index.tsx:52</code>), so the lookup returns <code>undefined</code> and prints an empty label span. Icons survive because they resolve via a correctly-keyed registry. TypeScript didn't catch it (<code>Record</code> index access silently returns undefined).
+    <span class="lbl">Diagnosis</span>A whole biome's navigation is unlabeled — Mining/Water look half-broken next to a fully-labeled Farm. A legibility failure caused by dead-key drift.
+    <span class="lbl">Proposal</span>Re-key <code>CATEGORY_LABELS</code>/<code>ICONS</code> to the real category values (or derive from <code>displayName</code>); add a titleized fallback in <code>renderOption</code>; add a test asserting every category has a non-empty label.</div></div>
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">S</span><span class="ft">Buy-cost line reads "balance / cost" — a backwards fraction that inverts affordability</span></div>
+    <div class="body"><span class="lbl">Screens</span>tiles-buy-clover
+    <span class="lbl">Evidence</span>Shows "1,000 / 200 coins" (you have 1,000, it costs 200) via <code>{coins} / {coinCost} coins</code> (<code>index.tsx:272</code>) — the "X / Y" format reads as "200 of 1,000 needed," the opposite of the truth. The button correctly says "Buy 200◉", so the well contradicts the button.
+    <span class="lbl">Diagnosis</span>A cost readout that inverts affordability is a trust bug at the exact spend decision.
+    <span class="lbl">Proposal</span>Show cost primary, balance secondary ("Cost 200◉" large, "You have 1,000" small) or drop the balance (the HUD shows coins). Never render "balance / cost".</div></div>
+  <ul>
+    <li><strong>Activating a tile doesn't move the detail pane to it</strong> (S2) — after the key action, the pane still shows the old tile as "Active" while the list marks the new one Active (<code>SET_ACTIVE_TILE</code> never updates <code>selectedTileId</code>, <code>index.tsx:229</code>). Follow the activated tile + a check-morph flourish.</li>
+    <li><strong>Grid titles truncate ("Meadow G…", "Spiky Gras")</strong> (S2) on the narrow desktop column — names cut mid-word. Wrap to two lines or raise the grid min. <em>(Confirmed independently.)</em></li>
+    <li><strong>The "Uncategorized" tab overflows into "Hazards"</strong> (S2) at 390px — drop it from the player-facing tabs (or make the bar scroll) and rename to "Other".</li>
+    <li><strong>Locked/Discovered/Active carried by a tiny subtitle word</strong> (S3) — give each a distinct affordance (moss check / outlined / padlock badge); rename ambiguous "Unlocked" → "Available".</li>
+    <li><strong>Research pace is opaque</strong> (S3) — no rate, no ETA, and switching focus silently pauses the previous tile. Show "+~X per grass chain", an estimate, and a "paused" note on the other card.</li>
+    <li><strong>"+3 free moves" chip lives only in the Tiles view</strong> (S3), not on the board where turns are spent — surface it on the turn HUD and make it attributable to the tiles that grant it.</li>
+  </ul>
+
+  <h2><span class="n">§</span>Crafting</h2>
+  <div class="callout good" style="margin-top:8px"><strong>What works.</strong> Sound two-level IA (station
+  menu → recipe list, station projected onto the URL). The desktop detail pane is a model recipe card
+  (output icon+title, "Ready to craft", have/need input grid, one loud Craft CTA). Stations carry real
+  identity — named proprietors, tinted chips, flavor — so crafting feels like visiting people.</div>
+  <div class="shots"><figure style="max-width:420px"><img src="./shots/mobile/crafting-bakery.png" alt="crafting mobile"><figcaption>Crafting on mobile: recipe rows are just "Bread Loaf / Ready" — no ingredients, no have/need, no Craft button, no output value. All of it is two disclosure taps away.</figcaption></figure></div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">M</span><span class="ft">Mobile recipe rows hide inputs, have/need, and the Craft button behind an extra tap</span></div>
+    <div class="body"><span class="lbl">Screens</span>crafting-bakery, crafting-menu
+    <span class="lbl">Evidence</span>The collapsed <code>RecipeExpandRow</code> is only icon+title+subtitle (<code>ExpandList.tsx:168</code>); inputs (CostGrid) + the Craft button live in <code>RecipeCraftBody</code>, shown only after toggle (<code>index.tsx:240</code>).
+    <span class="lbl">Diagnosis</span>On the primary surface the recipe list carries zero decision info — to craft bread you tap the station open, the recipe open, then Craft (three taps + two animations), with no way to compare two recipes' costs without opening each. The core verb is two levels down.
+    <span class="lbl">Proposal</span>Surface a right-aligned mini "Craft" pill on the collapsed row (dispatches directly when craftable), and render the input chips in the subtitle ("Bread Loaf · Flour 12/2 · Eggs 12/1"). Reserve expansion for the long description.</div></div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">M</span><span class="ft">Recipe rows never show what a craft PRODUCES or what it's worth</span></div>
+    <div class="body"><span class="lbl">Screens</span>crafting-bakery
+    <span class="lbl">Evidence</span>CostGrid is fed only inputs (<code>index.tsx:229</code>); the +1 output and <code>recipe.coins</code> reward (<code>slice.ts:72</code>) appear nowhere structured — only in desktop prose ("sold for 125 coins"), hidden inside the mobile collapse.
+    <span class="lbl">Diagnosis</span>The player can't answer the one question crafting exists to answer — is this worth it? They see what they'll spend but not what they'll get back.
+    <span class="lbl">Proposal</span>Add an explicit outputs row — "→ 1 Bread Loaf" + a "+125" coin chip from <code>recipe.coins</code> — next to the Inputs grid; label tool-vs-item outputs; consider a net-value hint on higher tiers.</div></div>
+  <ul>
+    <li><strong>Locked station is a dead end</strong> (S2) — "Build the Bakery in town to unlock" is plain text with no button (<code>index.tsx:541</code>). Make it an actionable "Go to Town / Build the Bakery" card, and show the build cost.</li>
+    <li><strong>Ambiguous status vocabulary</strong> (S2) — "Ready", "Missing inputs", "Village", "No station" all render as the same muted subtitle (<code>index.tsx:279</code>). Give each a distinct tone/glyph and make "Missing inputs" diagnostic ("Need 2 flour").</li>
+    <li><strong>No batch/repeat craft</strong> (S3) — every unit is a fresh multi-tap round trip with a 1500ms toast. Add "Craft ×5 / Craft Max" with a single batched dispatch.</li>
+    <li><strong>Vast empty canvas below a 2–4 item list</strong> (POLISH) — reads as "is this all there is?". Show dimmed "coming soon" recipes with unlock conditions so the list has body and teases progression.</li>
+  </ul>
+
+  <h2><span class="n">§</span>Inventory</h2>
+  <div class="callout good" style="margin-top:8px"><strong>What works.</strong> A clear "Storehouse" identity
+  header with a "20 kinds" summary; a genuinely good desktop master-detail (list + persistent detail pane with
+  Sell/Buy/Tags/Orders); dense, well-aligned rows (icon, tabular-nums count, order status column).</div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">S</span><span class="ft">Zero-count items show at full prominence in the mobile list, burying what you actually own</span></div>
+    <div class="body"><span class="lbl">Screens</span>inventory-grid-all, inventory-list-mode, inventory-mid-progress
+    <span class="lbl">Evidence</span>The screen hardcodes <code>sort='alpha'</code> (<code>index.tsx:209</code>) and the mobile list never passes <code>muted</code>, so "Cured Meat 0", "Dirt 0", "Hay Bundle 0" sit between owned items at identical weight (the <code>.is-muted</code> dim only fires on grid cells).
+    <span class="lbl">Diagnosis</span>An inventory should answer "what do I have" at a glance; interleaving zeros alphabetically at full contrast drowns the signal, and the 0/0/0 count column actively misleads.
+    <span class="lbl">Proposal</span>Default sort to count-desc (<code>sortKeys</code> already supports it) and pass <code>muted={count===0}</code> so empties dim; optionally hide zeros behind a "Show empty" toggle.</div></div>
+  <ul>
+    <li><strong>"20 kinds" contradicts the ~28 rows shown</strong> (S2) — the pill counts entries &gt;0 but the list is seeded from all biome resources including zeros (<code>Inventory.tsx:537</code>). Filter to owned by default, or relabel "N of M catalogued".</li>
+    <li><strong>Grid-vs-list toggle is clutter</strong> (S2) — the two desktop modes are pixel-identical (both card grids) and the toggle is an unlabeled icon. Make the modes visibly different (Rows vs Icons) with a labeled control, or drop it.</li>
+    <li><strong>Fractional progress is never surfaced</strong> (S2) — harvests are fractional but counts render as bare integers; a ProgressTrack primitive exists but is unused. Show a ring for the fractional remainder and a have/need bar against an active order.</li>
+    <li><strong>Order state is a bare wrapping word ("ready")</strong> (S3) — use the existing <code>StatusPill</code> ("Order N" moss / "Need N" gold) in the list meta column.</li>
+    <li><strong>Filters segment by catalog kind, not intent</strong> (S3) — add "Owned" and "For sale" (a sellable filter already exists in code but is unexposed); strengthen the faint active-chip contrast.</li>
+  </ul>
+
+  <h2><span class="n">§</span>Workers · Castle · Bosses · Boons · Charter <span style="font:400 14px system-ui;color:var(--ink-3)">(meta &amp; roster)</span></h2>
+  <div class="callout good" style="margin-top:8px"><strong>What works.</strong> The <strong>Charter</strong> is
+  the standout meta screen — a numbered pact whose terms show honored/violated/pending derived from your actual
+  story choices, each opening the exact choice + date that tested it. The <strong>Boons</strong> screen has a
+  clear Coexist-vs-Drive-Out dual-path model with a currency wallet. The new <strong>worker portraits</strong>
+  read cleanly at both row and detail sizes (distinct silhouettes/props), and the desktop worker master-detail
+  has an honest "Next hire cost" grid.</div>
+  <div class="shots"><figure style="max-width:420px"><img src="./shots/mobile/townsfolk-workers.png" alt="workers mobile"><figcaption>Workers on mobile: rows are collapsed, so the effect summary, cost grid, and Hire button are all hidden behind a tap — the core verb (hire) has no visible affordance, and the description clips mid-sentence.</figcaption></figure></div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">M</span><span class="ft">Castle &amp; Bosses views have NO in-game entry point — only the Debug panel links them</span></div>
+    <div class="body"><span class="lbl">Screens</span>townsfolk-castle, townsfolk-bosses &nbsp;·&nbsp; <em>(see the IA cross-cutting lens)</em>
+    <span class="lbl">Evidence</span><code>SET_VIEW view:'castle'|'bosses'</code> appears only in <code>features/debug/index.tsx</code> and the visual matrix; nothing in <code>ui/*</code>, <code>prototype.tsx</code>, or BottomNav navigates to them, and the 6 fixed tabs have no slot.
+    <span class="lbl">Diagnosis</span>Two fully-built meta screens (the endgame "Capital's Call" sink and the seasonal boss gallery) are effectively dead in the shipping build — the definition of "bolted-on."
+    <span class="lbl">Proposal</span>Surface the Boss Gallery as a Townsfolk sub-tab or Town card; gate a "Capital's Call" entry behind its unlock flag. At minimum add both to a "More" overflow in the nav (see the top-priority nav-hub work).</div></div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">S</span><span class="ft">Boss tributes render raw snake_case resource keys ("Tribute: 30 tile_tree_oak")</span></div>
+    <div class="body"><span class="lbl">Screens</span>townsfolk-bosses
+    <span class="lbl">Evidence</span><code>Gallery.tsx:91</code> renders <code>{amount} {boss.target.resource}</code> with no label lookup; data stores raw keys. A label helper (<code>humanizeKey</code>) already exists and is used elsewhere.
+    <span class="lbl">Diagnosis</span>Developer data leaking onto a primary player surface — it looks broken and the player can't tell what "tile_tree_oak" is.
+    <span class="lbl">Proposal</span>Resolve via the existing label path (→ "Tribute: 30 Oak Logs") and prepend the resource icon.</div></div>
+  <ul>
+    <li><strong>Mobile worker roster hides the Hire CTA + effect behind a tap</strong> (S1) — collapsed rows show only clipped prose; cost/effect/Hire mount only on expand (<code>index.tsx:310</code>). Put the concrete effect + a "+ Hire" chip + cost pill on the collapsed row.</li>
+    <li><strong>Castle needs never state their reward</strong> (S2) — it asks you to pour 43–53 of each resource into a one-way sink with no stated payoff, so a rational player never contributes. Add a reward banner, or gate the view and mark it "Coming soon".</li>
+    <li><strong>Bosses gallery is read-only even for the ACTIVE foe</strong> (S2) — "ACTIVE" badge, no progress, no "Fight/Go to board" CTA. Show live <code>boss.progress/target</code> + a primary CTA for the active boss; order by season proximity.</li>
+    <li><strong>"0 villagers · 7 hired" with the economy in fine print</strong> (S2) — two numbers that look contradictory with the causal link (Housing → villagers) buried at 11px. Make the villager pill loud/red when it's the blocker with a "Build Housing" hint.</li>
+    <li><strong>Boons wallet icons are unlabeled</strong> (S3) — two novel currencies as bare 12px glyphs easily confused with HUD coins; label them ("✦ 12 Embers", "▭ 9 Ingots") and tint by path.</li>
+    <li><strong>Castle "Contribute 1" is 40+ taps of friction</strong> (S3) next to "All (N)" — demote it, make "All" primary, add a "Contribute 10".</li>
+    <li><strong>Charter "violated" verdict has no stated stakes</strong> (S3) — add a consequence chip and a running "4 honored · 1 violated → path" tally.</li>
+  </ul>
+</section>
+<section class="tab" id="tab-story">
+  <p class="eyebrow">Systems · 05</p>
+  <h1>Story &amp; big moments</h1>
+  <p class="lead">Narrative presentation, the Chronicle, and the game's designated "signature moments"
+  (level-up, boss intro, run summary). The <em>architecture</em> is smart — story beats route by shape to a
+  bottom bar, a center-stage cutscene, or a gilded finale. But the big moments consistently under-deliver on
+  their payoff: level-up celebrates a bare number, the boss art undercuts its menace, the story skin diverges
+  from the brand, and the Chronicle reads as an undated debug dump.</p>
+
+  <div class="callout good"><strong>What works.</strong> The three-way story split is genuinely smart
+  (<code>Modals.tsx:534</code>) — continue-only one-liners keep the board visible, choice/prompt beats get a
+  center-stage panel, the finale gets a full-bleed gilded card. The cutscene skin is atmospheric (per-scene
+  gradient backgrounds, book serif, gold hairline). And the <strong>run-summary is a strong payoff</strong>:
+  a "Best moment" hero (longest chain), a resources-brought-home grid, and a warm "What the vale noticed"
+  bonds block that turns numbers into narrative.</div>
+
+  <div class="shots">
+    <figure><img src="./shots/mobile/run-summary.png" alt="run summary"><figcaption>Run summary — a strong screen. But the just-advanced story beat ("The First Harvest") is the quietest element, below coins and bonds, and XP appears nowhere.</figcaption></figure>
+    <figure><img src="./shots/mobile/boss-modal.png" alt="boss modal"><figcaption>Boss intro: the copy and framing ("A frozen titan stirs", danger ring, 700ms shake) promise a threat; the art delivers a friendly blue blob. The victory reward — the number you're deciding on — is the faintest text on the card.</figcaption></figure>
+  </div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">Level-up cinematic is a bare number — no reward, no "what unlocked", 1600ms of non-interactive spectacle</span></div>
+    <div class="body"><span class="lbl">Screens</span>(LevelUpCinematic) &nbsp;·&nbsp; <em>see also Progression legibility (T2)</em>
+    <span class="lbl">Evidence</span><code>LevelUpCinematic.tsx:40</code> renders only "Level Up" + the numeral over rays, held 1600ms, <code>pointer-events-none</code>. No line for what the level grants.
+    <span class="lbl">Diagnosis</span>A level-up earns a 1.6s full-screen takeover but delivers no information — the player watches a number inflate and deflate, learns nothing, and can't act. The worst of both worlds for a designated signature moment.
+    <span class="lbl">Proposal</span>Add a reward/unlock line under the numeral from almanac tier data ("Unlocked: Fertilizer" / "+1 farm plot" / "Bigger harvests ahead"). Drop the hold to ~1100ms when nothing unlocks; reserve the full 1600ms for level-ups that grant something.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">Chronicle shows no chronology — every entry reads "ACT 1", ordered by authoring not completion</span></div>
+    <div class="body"><span class="lbl">Screens</span>chronicle-progressed, chronicle-empty
+    <span class="lbl">Evidence</span>All four entries carry the identical "ACT 1" eyebrow; <code>completedBeats</code> is built in authored order (<code>chronicle/index.tsx:14</code>) and the date is hardcoded <code>'Act ' + beat.act</code>. A <code>choiceLog</code> with timestamps exists (<code>story.ts:22</code>) but the Chronicle never reads it.
+    <span class="lbl">Diagnosis</span>Captioned "THE RECORD OF YOUR IMPACT" but presents as an undated list whose only metadata repeats verbatim down the column — it reads as a debug dump, not a chronicle, with no sense of progression or milestone weight.
+    <span class="lbl">Proposal</span>Sort by the <code>choiceLog</code> timestamp, render a real "Year 1 · Spring" marker per entry (state tracks year), and group consecutive same-act beats under one "ACT I" header instead of repeating it.</div></div>
+
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">Three story variants use a bespoke serif + hardcoded palette divorced from the brand tokens</span></div>
+    <div class="body"><span class="lbl">Screens</span>story-bar, story-prompt, story-win vs chronicle-progressed &nbsp;·&nbsp; <em>see also Visual cohesion (T3)</em>
+    <span class="lbl">Evidence</span><code>Modals.tsx:79</code> defines <code>STORY_SERIF = 'Iowan Old Style…'</code> (an OS-fallback stack, not the bundled Fraunces) and hardcodes an entire SC colour object instead of consuming <code>tokens.css</code>. The same beat renders dark-iron live but warm-parchment in the Chronicle.
+    <span class="lbl">Diagnosis</span>The same beat looks like two different games depending on where you meet it, and a hand-maintained hex table + OS-fallback serif will silently drift as tokens evolve.
+    <span class="lbl">Proposal</span>Point <code>STORY_SERIF</code> at the bundled Fraunces stack; replace the SC literals with a "story" block in <code>tokens.css</code>; pick one canonical narrative surface so a beat looks like itself live and in the Chronicle.</div></div>
+
+  <h3><span class="n">§</span>Also noted (S2 / S3 / polish)</h3>
+  <ul>
+    <li><strong>Story-bar says "Board paused while we talk." on the Town</strong> (S2) where no board exists, and the town CTAs bleed through the scrim (<code>Modals.tsx:443</code>). Show the caption only on a board view; raise the scrim on Town.</li>
+    <li><strong>Boss intro art undercuts the menace</strong> (S3) — a cartoon blue-blob face under "a frozen titan stirs." Give bosses a menacing portrait (art-pipeline task) or, short-term, darken the background + add a frost vignette so it looms.</li>
+    <li><strong>Chronicle bakes speaker names into prose</strong> (S3, "Wren: '…'") unlike the live modal's portrait + label — render a compact portrait+label in the Chronicle and drop the fragile text prefixes.</li>
+    <li><strong>The win finale buries "sandbox continues" in a parenthetical</strong> (S3) with a flat "CONTINUE" — promote the continuation to a "What's next" footer, rename the button to its destination, and show a tally so the finale feels earned.</li>
+    <li><strong>Multi-line beats gate the footer behind "NEXT LINE" with no n-of-m</strong> (S3) — add a subtle dot row / "Line 2 / 4" so the player knows how far to a decision.</li>
+    <li><strong>Run-summary treats story progress as a receipt line-item</strong> (S3) — elevate a triggered beat to a "STORY ADVANCED" row near the top in the display serif.</li>
+    <li><strong>Boss victory reward is the faintest text on the modal</strong> (POLISH) — the exact number being decided on. Promote it to a gold reward pill next to "ACCEPT THE CHALLENGE".</li>
+  </ul>
+</section>
+<section class="tab" id="tab-shell">
+  <p class="eyebrow">Systems · 06</p>
+  <h1>Shell, navigation &amp; onboarding</h1>
+  <p class="lead">The persistent chrome (HUD, bottom nav, menu/modals/toasts) and the first-run tutorial.
+  The HUD's right cluster and the tutorial's <em>architecture</em> are good; the problems are inconsistency
+  (two modal shells, ambiguous status words, an undifferentiated menu) and a first-run that repeatedly points
+  the player at the wrong thing.</p>
+
+  <h2><span class="n">§</span>HUD, nav &amp; modals</h2>
+  <div class="callout good" style="margin-top:8px"><strong>What works.</strong> The HUD's right cluster is a
+  genuinely good status object — a gold coins pill with an animated count-up + fly-to-HUD receipt chips, and
+  an ember level pill with an inline XP micro-bar (<code>Hud.tsx:216</code>). Season/tide context is correctly
+  scoped to where it matters. The 6-tab nav uses clear labels with live badges (orders-ready, claimable).</div>
+  <div class="shots"><figure style="max-width:420px"><img src="./shots/mobile/shell-menu-main.png" alt="menu mobile"><figcaption>The main Menu: 9–10 equal-weight parchment buttons (incl. a destructive Debug tool and dead-end Docs links) opened from the ☰ in the hardest-to-reach top-left corner. Nothing is the loud thing.</figcaption></figure></div>
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">The main Menu is an undifferentiated stack of 9–10 equal-weight buttons from the hardest-to-reach corner</span></div>
+    <div class="body"><span class="lbl">Screens</span>shell-menu-main
+    <span class="lbl">Evidence</span>The sheet renders Tutorial, Fullscreen, Settings, About, Trophies, Town Hall, Debug, Update, Wiki, Docs as ~identical <code>&lt;ActionBtn&gt;</code> rows (<code>settings/index.tsx:155</code>), triggered by the ☰ pinned top-<em>left</em> (<code>Hud.tsx:173</code>).
+    <span class="lbl">Diagnosis</span>A menu with no hierarchy forces the player to read every label; it mixes a destructive dev tool (Debug) and dead-end links (Docs) with primary settings; top-left is the worst one-thumb spot on a 390px phone.
+    <span class="lbl">Proposal</span>Group with weight: a header row (icon + name + version), a 2-col grid of quiet utilities, one prominent Settings row; move Debug behind a long-press or the <code>/b/</code> panel; anchor/duplicate the trigger for thumb reach.</div></div>
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">M</span><span class="ft">Modals ship two competing shells (titled + divider, no X) vs. (centered title + top-right X)</span></div>
+    <div class="body"><span class="lbl">Screens</span>shell-menu-main, shell-debug-modal &nbsp;·&nbsp; <em>see the modal-vocabulary theme (T7)</em>
+    <span class="lbl">Evidence</span>Debug + Menu bypass <code>ParchmentDialog.Title</code> and add their own centered heading + a top-right × (<code>settings/index.tsx:349</code>); Season + Daily use <code>ParchmentDialog.Title</code> with a divider and have NO close X (<code>Modals.tsx:43</code>). <code>Dialog.tsx</code> provides no built-in close, so each modal invents one.
+    <span class="lbl">Diagnosis</span>Inconsistent modal grammar makes the shell feel assembled — the player can't form a reliable "where's close / do titled dialogs have dividers" model. Two dismissal contracts is a legibility problem.
+    <span class="lbl">Proposal</span>Bake an optional close X into <code>ParchmentDialog</code> (a <code>dismissable</code> prop) and route every modal through <code>.Title/.Body/.Actions</code>; pick one rule for X vs CTA-only.</div></div>
+  <ul>
+    <li><strong>NPC bubbles &amp; Market News are a generic portrait-less top toast</strong> (S2) — <code>NpcBubble</code> passes the label string instead of the NPC key, so no avatar renders (<code>Modals.tsx:616</code>); Market News self-destructs in 4000ms with no history. Give the bubble a real speaker chip (reuse StoryPortrait) and add a persistent town news "ticker" pill for the season's price event.</li>
+    <li><strong>Daily Reward modal throws away the 17-day ladder</strong> (S2) — it renders only today's reward as a bare <code>&lt;ul&gt;</code> while <code>DAILY_REWARDS</code> defines a rich escalating ladder (<code>constants.ts:1156</code>). Show a horizontal day strip (past checked, future dimmed, day-7/14 milestones larger) — that anticipation is the retention hook.</li>
+    <li><strong>Bottom nav has zero horizontal headroom</strong> (S3) — 6 <code>whitespace-nowrap</code> labels on flex-1 tabs with no overflow strategy; a 7th makes labels literally touch ("TownsfolkChronicle"). Cap at 5 + a "More" sheet; shorten "Townsfolk"; set truncation so it degrades predictably. <em>(This is the mechanism behind the IA theme T1.)</em></li>
+    <li><strong>Empty HUD center off-board + season accent dropped</strong> (S3) — the middle third of the bar carries nothing in town, and the accent strip falls back to flat ember. Fill it with a tier-progress / news chip and carry the world season's accent off-board.</li>
+    <li><strong>Two "info" affordances in opposite corners</strong> (S3) — a top-right "i" (zone spawn rates) vs the top-left ☰ (About/Help). The universal "i" glyph misleads. Re-icon/label the zone affordance so it isn't confused with generic help.</li>
+    <li><strong>Leave-board confirm reuses the menu shell</strong> (POLISH) and warns "will not be saved" without saying what's lost. Give it a dedicated dialog with a one-line run summary (turns/harvests/orders) and label the button "Leave &amp; Forfeit Run".</li>
+  </ul>
+
+  <h2><span class="n">§</span>Onboarding &amp; first-run</h2>
+  <div class="callout good" style="margin-top:8px"><strong>What works.</strong> The 9-step wizard is
+  non-imprisoning — action-gated steps auto-advance on the real action (CHAIN_COLLECTED, BUILD, CRAFT,
+  TURN_IN_ORDER) yet every step offers manual Next, and it never yanks a wandering player back. The spotlight
+  is robust (four dim panels, a 40-frame rect-measure retry, a clean centered-card fallback). The step copy is
+  tight and scoped to the core loop.</div>
+  <div class="shots">
+    <figure><img src="./shots/mobile/tutorial-corner.png" alt="tutorial board step"><figcaption>The "puzzle" step: the coach card overlaps the tools rack (top) while the grid it describes is below; and the "seasons &amp; turns" step points its ring at an off-screen (−9999px) DOM node because the visible "8 TURNS LEFT" is drawn inside the canvas with no DOM anchor.</figcaption></figure>
+    <figure><img src="./shots/mobile/tutorial-center.png" alt="tutorial welcome"><figcaption>The welcome card leads with warm narrative framing — but the narrator "Wren" is a bare green circle with a "W", undercutting the emotional first impression in an otherwise painterly game.</figcaption></figure>
+  </div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">M</span><span class="ft">The "Seasons &amp; turns" step spotlights an off-screen (−9999px) element — it points at nothing</span></div>
+    <div class="body"><span class="lbl">Screens</span>tutorial-corner
+    <span class="lbl">Evidence</span><code>steps.ts:78</code> targets <code>[data-testid="turns-left"]</code>; both nodes with that id are positioned off-screen (the SSR fallback at <code>puzzleBoard.tsx:133</code> and the hidden Phaser mirror at <code>seasonStripPhaser.tsx:157</code>). The visible "8 TURNS LEFT" is drawn inside the canvas with no DOM node, so <code>readRect</code> returns x=−9999 and the dim-hole + ring render off the left edge.
+    <span class="lbl">Diagnosis</span>A coach-mark whose spotlight lands off-screen teaches the wrong thing — the player reads "you have limited turns" while the ring highlights empty space, breaking the one contract a tour must keep.
+    <span class="lbl">Proposal</span>Give the visible season-strip host a <code>data-tour="turns"</code> anchor (or render a small visible turns pill) and target that. Add a guard in <code>readRect</code> rejecting rects with <code>left&lt;0 || top&lt;0</code> so any off-screen target cleanly falls back to the centered card.</div></div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">M</span><span class="ft">"Build your first building" spotlights the bottom-nav Town tab, not a plot or the Build button</span></div>
+    <div class="body"><span class="lbl">Screens</span>tutorial-center, town-home-fresh
+    <span class="lbl">Evidence</span><code>steps.ts:98</code> targets <code>[data-tour="nav-town"]</code> with body "tap an empty plot, choose a building…" — but the wizard already navigated to Town, so the ring circles the already-active nav tab instead of the plots or the green "Build" CTA. The same mismatch repeats on the craft step (nav-crafting) and quest step (nav-inventory).
+    <span class="lbl">Diagnosis</span>Instruction and spotlight disagree: the copy says tap a plot, the ring circles the nav — the player follows the ring, taps the tab, nothing happens.
+    <span class="lbl">Proposal</span>Add <code>data-tour="build-cta"</code> to the Build button (or a plot cell) and target it; rewrite the body. For craft/quest, either spotlight the primary in-view control once on the view, or split into a two-beat (nav → in-view control).</div></div>
+  <ul>
+    <li><strong>The narrator avatar is a bare lettered circle</strong> (S2) — the tour is framed as NPCs guiding you, but the speaker is an anonymous disc with a "W" in Arial (<code>index.tsx:26</code>). Render the actual NPC portrait (reuse town/bubble art); set the font to Fraunces.</li>
+    <li><strong>The puzzle-step card sits over the tools rack, not the grid</strong> (S2) — target the tile-grid sub-element specifically and float the card in the empty band below the grid; add an animated finger/path hint on a few tiles.</li>
+    <li><strong>Fresh town leads with an un-actionable "Upgrade to Hamlet" sign</strong> (S2) — the largest central element is tier-upgrade resource math the new player is nowhere near, while "Enter Farm Field" (the real first action) is the quietest CTA. Suppress the tier sign until after the first run; make "Enter" the single loud primary. <em>(Reinforces the Town CTA-emphasis finding.)</em></li>
+    <li><strong>Unexplained 50-coin entry cost during onboarding</strong> (S3) — fresh state seeds 150 coins, then the Start-Farming modal charges 50 (with an "ACTIVE DANGERS" warning) before the first income, which the "coins" step never mentions. Waive the first-ever entry ("the first field is on the house") and defer the dangers panel.</li>
+    <li><strong>Nine steps, no "almost done", and Back re-navigates views</strong> (S3) — add a "Step 3 of 9" label, consider merging upgrades+turns to ~7 steps, and suppress the auto-navigate when going backward.</li>
+    <li><strong>Auto-start fires on the first arbitrary action</strong> (S3) — tapping Inventory before reading anything abruptly yanks the player to Town with the welcome card. Start deterministically on first boot, or narrow the trigger to an explicit intent.</li>
+  </ul>
+</section>
+<section class="tab" id="tab-crosscut">
+  <p class="eyebrow">Cross-cutting · 07</p>
+  <h1>Cross-cutting lenses</h1>
+  <p class="lead">Six whole-game lenses. These are where the highest-leverage work lives — each fixes a
+  <em>class</em> of problems that recurs across many screens. They map to the seven themes on the
+  <a href="#overview" data-jump="overview">Overview</a>.</p>
+
+  <h2><span class="n">§</span>1 · Information architecture &amp; navigation <span style="font:400 14px system-ui;color:var(--ink-3)">(theme T1 — the #1 priority)</span></h2>
+  <div class="callout good" style="margin-top:8px"><strong>What works.</strong> The 6-tab spine maps cleanly to
+  the core loop; contextual badges (orders-ready on Inventory, claimable on Quests) pull the player back; and
+  the router is genuinely deep-linkable and back-button-correct, with the leave-board confirm intercepting a
+  mid-run exit (<code>router.ts:236</code>).</div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">L</span><span class="ft">Seven full-screen systems are reachable ONLY through the Debug menu</span></div>
+    <div class="body"><span class="lbl">Systems</span>Orders · Castle · Bosses · Portal · Decorations · Tiles · Chronicle
+    <span class="lbl">Evidence</span><code>debug/index.tsx:32</code> lists them as debug buttons; a repo-wide grep for <code>view:"&lt;x&gt;"</code> outside debug/tests finds <strong>no other dispatch</strong> that opens them. The player menu lists only Tutorial/Fullscreen/Settings/About/Trophies/Debug/Wiki. So a real player literally cannot open these seven art-complete screens.
+    <span class="lbl">Diagnosis</span>Shipped, rendering systems with 0% discoverability — code exists, views render, IA provides no path. Debug is a developer affordance, not navigation; anything gated behind it is effectively unreleased. The single biggest IA failure in the app, and the reason most of the game's built content is invisible.
+    <span class="lbl">Proposal</span>Give each a real home: Orders → a sub-tab in Quests; Bosses + Castle → sub-tabs under a Townsfolk/Map hub; Tiles + Chronicle → the ☰ menu; Decorations → a Town decorate affordance; Portal → a story-gated Map node. Add a CI check asserting every <code>viewKey</code> has ≥1 non-debug dispatch that reaches it.</div></div>
+  <div class="find"><div class="hd"><span class="sev S2">S2</span><span class="eff">L</span><span class="ft">The nav taxonomy has no room to scale — 6 fixed tabs, 9+ homeless views, no "More"/hub pattern</span></div>
+    <div class="body"><span class="lbl">Evidence</span><code>ui.tsx:69</code> hard-codes exactly 6 tabs; <code>KNOWN_VIEWS</code> resolves to ~15 feature views + town/board; the ☰ menu is a flat unstructured list mixing app-chrome with content. As Portal/Castle/Festivals/Bosses unlock, there's no defined place for them.
+    <span class="lbl">Diagnosis</span>IA that can't grow forces every new system into a floating button (Boons) or the debug menu (7 systems). The structure has already broken under the current feature count.
+    <span class="lbl">Proposal</span>Reserve the 6 tabs for the core loop; turn the ☰ menu into a structured hub with sections (Systems / Settlement / App) and progressive disclosure so a section appears only once its first feature unlocks. <em>This is top-priority #1 and the umbrella fix for the findings below.</em></div></div>
+  <ul>
+    <li><strong>"Townsfolk" is only the Workers roster</strong> (S2) — the label promises the whole social system but delivers one sub-feature while NPCs/Bosses/Castle are homeless. Rename to "Workers", or make Townsfolk a real hub (Workers | Folk | Foes | Castle).</li>
+    <li><strong>Goal systems scattered across three unconnected surfaces</strong> (S2) — Daily quests, Orders (half in Inventory), and Achievements (hidden in ☰) never sit together. Consolidate under Quests: Daily | Orders | Trophies | Almanac.</li>
+    <li><strong>Chronicle → Charter is a drill-down whose top level has no entry</strong> (S2) — Charter's "back" lands on an orphan. Give Chronicle a home; make Charter's back pop real history.</li>
+    <li><strong>Boons hides behind a story-flag-gated floating Town button</strong> (S2) — meta-progression shouldn't live in a transient canvas overlay. Give it a stable home (a Craft sub-tab or menu entry) once unlocked, and announce the unlock.</li>
+    <li><strong>"Almanac" names three different things</strong> (S3) — the Lv pill, a Quests sub-tab (an XP ladder), and an empty <code>almanac</code> feature. Make the Lv pill deep-link to the ladder; rename the ladder "Levels/Progress" and reserve "Almanac" for the compendium.</li>
+    <li><strong>App identity is inconsistent</strong> (S3) — the menu says "Hearthlands" while everything else says "Hearthwood Vale". Pick one product name (or clarify product vs. settlement).</li>
+  </ul>
+
+  <h2><span class="n">§</span>2 · Visual style &amp; art↔chrome cohesion <span style="font:400 14px system-ui;color:var(--ink-3)">(theme T3)</span></h2>
+  <div class="callout good" style="margin-top:8px"><strong>What works.</strong> The warm-parchment shell is
+  cohesive across every React view (HUD, cards, Fraunces titles read as one book). The painterly Phaser town is
+  high-craft. The Map fuses art and chrome into one storybook object — the look the rest of the game should
+  aspire to. <em>The prior color/contrast pass landed well; this is about art-vs-chrome coherence, not tokens.</em></div>
+  <div class="shots"><figure style="max-width:520px"><img src="./shots/desktop/board-farm-idle.png" alt="candy squares"><figcaption>The candy-square problem: every board tile is baked onto a fully-saturated per-category color square (grass=green, grain=yellow, veg=orange, fruit=red…) — a primary-colored match-3 grid dropped into a muted storybook frame. Two different games touching edge to edge, and the saturated squares override any seasonal read.</figcaption></figure></div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">M</span><span class="ft">Board tiles sit on saturated per-category "candy" squares that clash with the parchment identity</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-farm-idle, tiles-farm-grass
+    <span class="lbl">Evidence</span>Tile backdrops are baked per-category primaries (<code>src/textures/categories/*</code>) while the board frame is deliberately parchment-cream (<code>GameScene.ts:700</code>). The most-looked-at screen reads as a generic high-saturation match-3 grid inside a muted frame.
+    <span class="lbl">Diagnosis</span>The board is the signature interaction — where art↔chrome cohesion matters most — and it spends "loud" on the wrong axis: color duplicates the category-coding the illustration silhouette already does, so the boldness is noise, not information (and it drowns the season).
+    <span class="lbl">Proposal</span>Replace the per-category primaries with a single parchment/kraft base and encode category with a <em>subtle</em> tint (±8–12% hue lean) + a thin accent hairline. Bake the shared backdrop once in a helper the category draws call; let the illustration do the identification. <em>Top-priority #4 — one change removes the loudest brand-clash and restores seasonal legibility.</em></div></div>
+  <ul>
+    <li><strong>Two icon families render side by side</strong> (S2) — flat vector chrome (design.* SVG) vs. painterly canvas-baked PNGs vs. a third register of nav emoji, all in one card (<code>Icon.tsx:109/154</code>). Pick one flat line style for small metadata icons (XP/coins/pills/nav); reserve painterly art for large subject thumbnails (add a &lt;28px → SVG threshold).</li>
+    <li><strong>Seasonal system is invisible on the board</strong> (S2) — season is only a thin strip + a 0.55-alpha band while 36 tiles blaze fixed category colors, so the Spring→Winter arc is imperceptible where the player lives. Once tiles are neutralized, let the shared backdrop + vignette breathe with the season accent.</li>
+    <li><strong>Boss modal is a generic dark-scrim/orange-gradient popup</strong> (S2) — reads like an F2P interstitial, the strongest cohesion break outside the board. Reskin into the storybook (vellum card, painterly boss, season-tinted frame, ember-token CTA).</li>
+    <li><strong>Locked tools render as flat gray icons</strong> (S3) that read as broken art next to painterly neighbors — use the same painterly icon at ~35% opacity + a parchment lock badge.</li>
+    <li><strong>Inline thumbnails carry heavy gloss/drop-shadow</strong> (S3) that fights the flat parchment cards — establish one matte illustration spec (soft single-direction light, short contact shadow) via a shared bake helper.</li>
+    <li><strong>Season-strip vignettes are a fourth art register</strong> (S3) and unreadable at ~40px — replace with a single flat glyph family (blossom/sun/leaf/snowflake) on a progress track.</li>
+    <li><strong>Grass flower speckle reads as pixel noise</strong> — the visual-cohesion lens confirms the Town finding: single-pixel, full-chroma specks at ~0.7% density. (See the <a href="#town" data-jump="town">Town</a> tab.)</li>
+  </ul>
+
+  <h2><span class="n">§</span>3 · Motion &amp; game feel <span style="font:400 14px system-ui;color:var(--ink-3)">(theme T5)</span></h2>
+  <p>The board's build-up feedback is excellent (see <a href="#board" data-jump="board">Board</a>); the incoherence is at the system level.</p>
+  <ul>
+    <li><strong>Vestibular-heavy canvas juice ignores reduced-motion</strong> (S1/S2) — see the Accessibility lens below; this is the single biggest motion-safety gap.</li>
+    <li><strong>Motion-duration tokens are defined but consumed nowhere</strong> — <code>--motion-fast/med/slow</code> exist in <code>tokens.css</code> but the canvas uses hard-coded ms and <code>_dur()</code> is a no-op passthrough; cinematic holds (1600ms level-up, 700ms boss) are unrelated magic numbers. Adopt a shared duration/easing scale across CSS and canvas so motion feels like one language.</li>
+    <li><strong>The run summary — the season's climax — has zero motion</strong>, while routine chains get lavish juice. The reward ladder (coin fly-to-HUD → level-up → run summary) doesn't escalate; the biggest payoff is the stillest screen. Give the summary a staged reveal (best-moment card, then resources counting up, then bonds).</li>
+    <li><strong>The 1500ms board-mount warm-up</strong> makes the first-seen board look frozen — ramp ambient amplitude 0→1 over ~500ms instead of hard-gating (see Board).</li>
+  </ul>
+
+  <h2><span class="n">§</span>4 · Mobile-first layout &amp; responsive <span style="font:400 14px system-ui;color:var(--ink-3)">(theme T4)</span></h2>
+  <div class="callout"><p style="margin:0"><strong>The play surface loses on both viewports.</strong> On
+  <strong>desktop</strong> the square board floats in a stretched-wide portrait column with ~40–45% dead
+  parchment, and list views (Quests, Craft) render as narrow centered columns. On <strong>mobile</strong> a tall
+  chrome stack + fixed-height panel + season strip push the board into the lower ~55%; the trophy grid truncates
+  every title; inventory wastes width; crafting hides inputs/Craft behind a tap; the map panel is capped so CTAs
+  fall below a fold; headers truncate ("The Hearthwo…").</p></div>
+  <ul>
+    <li><strong>The 44px tap-target token is defined but never applied</strong> — the town "i" is 32×32 (<code>ZoneEntryCostInfo.tsx:37</code>) and board chips are similar. Enforce a shared min-hit-target utility. <em>(Verified — see Accessibility.)</em></li>
+    <li><strong>No tablet/landscape tuning or safe-area strategy</strong> — the same portrait stack is stretched everywhere; the 500px landscape board switch was untested by this review (a flagged gap).</li>
+    <li><strong>Specific instances are documented per-surface</strong> — desktop board dead-space &amp; buried mobile board (<a href="#board" data-jump="board">Board</a>), trophy truncation &amp; tall cards (<a href="#screens" data-jump="screens">Screens</a>), 38% map panel (<a href="#map" data-jump="map">Map</a>), crafting-behind-a-tap (<a href="#screens" data-jump="screens">Screens</a>). Top-priority #9 is one responsive effort that reclaims desktop space and fixes mobile density across all of them.</li>
+  </ul>
+
+  <h2><span class="n">§</span>5 · Accessibility <span style="font:400 14px system-ui;color:var(--ink-3)">(verified against code)</span></h2>
+  <div class="callout good" style="margin-top:8px"><strong>What works — and a correction.</strong> Contrary to a
+  stale comment in <code>tokens.css</code>, DOM/CSS motion <strong>is</strong> reduced-motion-safe:
+  <code>index.css:533</code> globally collapses every CSS animation/transition to ~0 under
+  <code>prefers-reduced-motion</code>, and quest FX opt out explicitly. Icon-only controls I checked (menu, search,
+  zone "i", season-strip status) <em>do</em> carry accessible names, and the chain panel gives a non-color textual
+  cue ("N more to collect"). The gaps below are real but the foundation is better than the tokens comment claims.</div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">S</span><span class="ft">Board "juice" (screen-shake, radial flash, all tweens) ignores prefers-reduced-motion — the sole motion leak</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-farm-idle
+    <span class="lbl">Evidence</span><code>shakeForChain</code>/<code>radialFlash</code>/<code>upgradeBurst</code> gate only on <code>len&lt;3</code>, never on <code>_motionEnabled()</code> (which reads <code>prefers-reduced-motion</code> and is applied only to ambient sway, <code>GameScene.ts:2114</code>); <code>_dur()</code> is a no-op so all tweens play full-strength. The CSS side IS gated — the canvas is the only leak.
+    <span class="lbl">Diagnosis</span>The signature interaction fires whole-screen camera shake + an expanding flash on every chain — precisely the full-viewport motion <code>prefers-reduced-motion</code> exists to stop for vestibular users. The app suppresses gentle sway and all DOM motion, then shakes the entire screen on the core, high-frequency action.
+    <span class="lbl">Proposal</span>Route shake/flash/burst and <code>_dur()</code> through the reduced-motion check: skip the camera shake, replace the flash with a ~120ms static ring, collapse tween durations. Keep resource float-text (it's information). <em>Top-priority #5 — also reconcile the stale tokens.css comment.</em></div></div>
+  <div class="find"><div class="hd"><span class="sev S1">S1</span><span class="eff">L</span><span class="ft">The puzzle board is pointer-only — unplayable without a mouse/touch, and opaque to assistive tech</span></div>
+    <div class="body"><span class="lbl">Screens</span>board-farm-idle
+    <span class="lbl">Evidence</span>GameScene registers no keyboard input (no keydown/addKey handlers), the Phaser config has no keyboard plugin (<code>prototype.tsx:180</code>), and the canvas host is a bare <code>&lt;div&gt;</code> with no role/aria-label/tabIndex (<code>prototype.tsx:360</code>). Chain results emit only as canvas <code>floatText</code> — the <code>announce()</code> aria-live bridge (<code>a11y.ts</code>) exists but the canvas never calls it.
+    <span class="lbl">Diagnosis</span>The core loop has no keyboard/switch alternative, so a keyboard-only or motor-impaired player is <em>blocked</em>, not merely slowed; and a screen-reader user hits a silent wall at the one screen that matters, even though the rest of the chrome is labeled.
+    <span class="lbl">Proposal</span>(1) Give the host <code>role="application"</code> + an aria-label ("Farm board, 6 by 6"), and pipe chain results into <code>announce()</code> ("Collected 5 wheat, +1 upgrade"). (2) Add a keyboard path mode (arrows move a focus cell, Space/Enter extends, Enter commits) reusing <code>chain.ts</code> adjacency. Even a minimal version unblocks keyboard play.</div></div>
+  <ul>
+    <li><strong>Chain validity is orange-vs-brown color alone</strong> (S2) — the worst hue pair for red-green CVD (~8% of men), and the only on-<em>path</em> cue (<code>GameScene.ts:1527</code>). Add a redundant non-color cue: a count badge on the endpoint node and a hollow→filled node style at the collect threshold.</li>
+    <li><strong>Board action-panel labels are 9–9.5px uppercase</strong> (S2) — below usable minimums on the game's primary, persistent overlay. Raise to ≥11px and drop the caps on the smallest labels; compensate with weight/color.</li>
+    <li><strong>Sub-44px tap targets</strong> (S2) — the "i" is 32×32; audit the hotbar/chips and enforce a 44px hit area.</li>
+    <li><strong>Board results aren't announced to AT</strong> (S3) — the aria-live bridge is built and used elsewhere but the highest-frequency action is silent; hook <code>announce()</code> at the chain-collect/float-text emission point.</li>
+    <li><strong>Stale <code>tokens.css</code> motion comment</strong> (POLISH) — it says "no reduce-motion gating" which contradicts shipped behavior and will mislead the next engineer. Update it to describe reality.</li>
+    <li><em>Gap:</em> screen-reader semantics of the full-screen React views (focus order, heading hierarchy) were not audited — only the board.</li>
+  </ul>
+
+  <h2><span class="n">§</span>6 · Progression, reward &amp; feedback legibility <span style="font:400 14px system-ui;color:var(--ink-3)">(theme T2)</span></h2>
+  <div class="callout"><p style="margin:0">The economy runs but the <strong>payoff is hidden at every
+  junction</strong>. XP is invisible in the moment and absent from the run summary; level-up celebrates a bare
+  number with no "here's what unlocked"; crafting rows never show what a craft produces or its coin yield; order
+  rewards render as floating berry-icon bubbles with an unreconcilable "×1.25"; the boss victory reward is the
+  faintest text on the modal; fractional harvest progress silently vanishes when you stop chaining; and the board
+  never states a season <em>goal</em>, only a decrementing turn budget.</p></div>
+  <ul>
+    <li><strong>Make XP legible end-to-end</strong> (top-priority #2) — surface it in the moment (a "+1 XP" on chain collect) and on the run summary, and give level-up a "what unlocked" line with a route to claim it (see <a href="#story" data-jump="story">Story</a>).</li>
+    <li><strong>Show what every action produces &amp; is worth</strong> (top-priority #8) — crafting outputs + coin yield, order reward breakdowns as an uplift, board season goals — so players stop committing blind (see <a href="#screens" data-jump="screens">Screens</a>).</li>
+    <li><strong>Surface fractional progress persistently</strong> — harvest fractions vanish when you stop chaining and never show in inventory; use the existing (unused) ProgressTrack primitive.</li>
+    <li><strong>State a season goal on the board</strong> — the board shows only turns burning down, never "what am I trying to achieve this season" (unless a boss is active — and even then it's invisible; see <a href="#board" data-jump="board">Board</a>).</li>
+  </ul>
+</section>
+<section class="tab" id="tab-roadmap">
+  <p class="eyebrow">Plan · 08</p>
+  <h1>Prioritized roadmap</h1>
+  <p class="lead">A sequence that front-loads cheap, high-visibility wins, then tackles the structural work.
+  None of this is a rebuild — the bones (art, core loop, token system) are strong. The order below is by
+  leverage-per-effort; the <a href="#overview" data-jump="overview">Overview</a> has the flat ranked list.</p>
+
+  <div class="callout tldr"><p style="margin:0"><strong>The through-line:</strong> the game has built far more
+  than it exposes, and celebrates far less than it should. So the two biggest bets are <em>make the built
+  content reachable</em> (navigation hub) and <em>make the rewards legible</em> (progression). Around those,
+  a cheap "repair the leaks" pass removes the "unfinished demo" feel almost for free.</p></div>
+
+  <div class="phase p0">
+    <span class="tag">Phase 0 · quick wins</span>
+    <h3>Repair the leaks + the highest-visibility papercuts <span style="font:400 13px system-ui;color:var(--ink-3)">(days, not weeks)</span></h3>
+    <p>Small, mostly-mechanical fixes that collectively erase the "unfinished" impression. Highest ratio of
+    perceived-quality to effort — do this first and review live.</p>
+    <ul>
+      <li><strong>Placeholder/mislabeled state repair (P6):</strong> researched tile labeled "Locked"; unlabeled Mining/Water category tabs (key drift); snake_case boss tributes; backwards "balance / cost" buy line; "✓ Done" over a 12/100 bar; "0/12 plots" polarity; zero-count inventory items at full prominence; the "???" collection wall; the off-screen (−9999px) tutorial spotlight + wrong-target coach-marks.</li>
+      <li><strong>Accessibility safety (P5):</strong> gate canvas shake/flash/particles/tweens behind <code>prefers-reduced-motion</code>; fix the stale <code>tokens.css</code> comment.</li>
+      <li><strong>Town first impression (part of P10):</strong> quiet the flower speckle (one system, clustered, muted); flip the CTA emphasis so "Enter" is the loud primary.</li>
+      <li><strong>Missing board feedback (P11):</strong> a reject cue for too-short chains; promote the boss victory reward to a pill; make the season strip legible (abbreviate/elide, lift the wagon off the labels).</li>
+      <li><strong>Tap targets &amp; tiny labels:</strong> apply the existing 44px token; raise 9px panel labels to ≥11px.</li>
+    </ul>
+  </div>
+
+  <div class="phase">
+    <span class="tag">Phase 1 · the big bet #1</span>
+    <h3>Navigation hub — give every built system a door (P1)</h3>
+    <p>The single change that makes the most already-built content playable. Reserve the 6 tabs for the core
+    loop; turn the ☰ menu into a structured hub (Systems / Settlement / App) with progressive disclosure; make
+    Townsfolk and Quests real hubs (Workers|Folk|Foes|Castle; Daily|Orders|Trophies|Almanac). Add a CI check that
+    every <code>viewKey</code> has a non-debug route. Fix the taxonomy names (Townsfolk, Almanac, Hearthlands vs
+    Hearthwood Vale) as part of the same pass.</p>
+  </div>
+
+  <div class="phase">
+    <span class="tag">Phase 2 · the big bet #2</span>
+    <h3>Make rewards legible end-to-end (P2, P8)</h3>
+    <p>Surface XP in the moment and in the run summary; give level-up a "what unlocked" line + a route to claim;
+    show what every craft/order/board action produces and is worth (output qty + coin yield + reward breakdown as
+    an uplift); surface fractional harvest progress persistently (reuse the unused ProgressTrack); state a season
+    goal on the board. This is the payoff loop the whole economy hangs on.</p>
+  </div>
+
+  <div class="phase">
+    <span class="tag">Phase 3 · the core surface</span>
+    <h3>Board real-estate + responsive layout (P3, P9)</h3>
+    <p>Collapse the mobile chrome/action-panel/season stack (and the empty stockpile) so the 6×6 grid dominates
+    above the fold; give desktop a purpose-built composition (center the board, dock the rail) to reclaim the
+    ~40% dead parchment; and make the list/grid views responsive (single-column trophies on mobile, multi-column
+    on desktop; un-cap the map panel; surface crafting inputs/Craft on the collapsed row).</p>
+  </div>
+
+  <div class="phase">
+    <span class="tag">Phase 4 · identity</span>
+    <h3>Visual cohesion — one game, not two (P4, P12)</h3>
+    <p>Neutralize the board's candy-square tile backdrops toward parchment and let the seasonal palette read
+    across the grid; unify iconography (one flat line style for small chrome icons, painterly reserved for large
+    thumbnails); reskin the boss + story modals to the parchment tokens and the bundled Fraunces; adopt one
+    motion duration/easing scale shared by CSS and canvas.</p>
+  </div>
+
+  <div class="phase">
+    <span class="tag">Phase 5 · systematize the shell</span>
+    <h3>One modal shell, one status vocabulary, real board a11y (P7 + board keyboard/AT)</h3>
+    <p>Adopt a single <code>ParchmentDialog</code> (with an optional close X) for every modal; define one
+    status-chip vocabulary (ready / missing / locked / done) used everywhere; give the board an accessible
+    identity + <code>announce()</code> feedback and a minimal keyboard path mode. Restructure the main menu and
+    give NPC bubbles / Market News a persistent, portrait-backed treatment.</p>
+  </div>
+
+  <div class="phase">
+    <span class="tag">Phase 6 · town polish</span>
+    <h3>Town world-overlays &amp; the board bed (rest of P10)</h3>
+    <p>Turn the founding boxes + tier sign into one planted in-world signpost; style empty plots as inviting,
+    always-tappable affordances; dress the Farm/Harbor board bed as a living mini-scene (furrows + crops, ripples
+    + boat) so the primary entry stops reading as a dirt pit; fit the default camera to frame the settlement as a
+    cozy whole.</p>
+  </div>
+
+  <h2><span class="n">§</span>Quick wins vs. bigger bets</h2>
+  <table>
+    <thead><tr><th>Quick wins (Phase 0 — do first, review live)</th><th>Bigger bets (real design + eng work)</th></tr></thead>
+    <tbody>
+      <tr><td>Leaked-state repairs, reduced-motion gate, CTA emphasis flip, flower speckle, reject-cue, boss reward pill, tap targets, label sizes</td><td>Navigation hub &amp; taxonomy (P1), reward legibility (P2/P8), board + responsive layout (P3/P9)</td></tr>
+      <tr><td>~80% of the perceived-quality lift for a small fraction of the effort — mostly one-file, mechanical, low-risk changes</td><td>Multi-file, cross-cutting, and worth staging as separate PRs with their own visual-golden reviews</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout warn"><p style="margin-top:0"><strong>Not covered — recommend a follow-up pass.</strong>
+  This review deliberately scoped to the shipped, reachable UI. Worth a dedicated look next: cold-start / loading
+  / slow-network &amp; failed-asset states; error/failure paths (insufficient-resource, save corruption, migration
+  failure); audio/SFX &amp; haptics coherence + a mute setting; the returning-player / offline-progression flow;
+  the Settings screen's actual contents; landscape/tablet/foldable; monetization surfaces (if any);
+  localization/i18n &amp; RTL; the <em>content</em> of Festivals / Decorations / Portal / NPCs; the post-story
+  endgame loop; and screen-reader coverage of the full-screen React views.</p></div>
+
+  <h2><span class="n">§</span>Open questions for you</h2>
+  <div class="callout q"><ol style="margin:0">
+    <li><strong>Reachability first?</strong> The nav hub (P1) unlocks the most existing value but is the biggest
+    single change. Do you want it sequenced first, or would you rather bank the Phase-0 quick wins and a live
+    review before committing to the structural work?</li>
+    <li><strong>Board tile treatment:</strong> are you comfortable pulling the saturation out of the per-category
+    tile squares (P4)? It's the loudest brand-clash but it's also the current at-a-glance category cue — the
+    proposal keeps a subtle tint + relies on the silhouette. Worth prototyping one board before committing.</li>
+    <li><strong>Desktop vs. phone-frame:</strong> for the ~40% desktop dead space, do you want true multi-column
+    desktop layouts, or a centered "phone frame" with decorative sides (cheaper, keeps one layout)?</li>
+    <li><strong>Scope of this PR:</strong> this branch adds only the report. Want me to open follow-up PRs for the
+    Phase-0 quick wins (they're small and independently shippable), or hold for your review of the full report first?</li>
+  </ol></div>
+</section>
 <footer>puzzleDrag2 design review · generated from the live codebase and screenshots of the running game.</footer>
 </main>
 </div>
@@ -219,6 +987,7 @@
     window.scrollTo({top:0,behavior:'instant'});
   }
   links.forEach(a=>a.addEventListener('click',e=>{e.preventDefault();const id=a.dataset.tab;history.replaceState(null,'','#'+id);show(id);}));
+  document.querySelectorAll('[data-jump]').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();const id=a.dataset.jump;history.replaceState(null,'','#'+id);show(id);}));
   const start=(location.hash||'#overview').slice(1);
   show(document.getElementById('tab-'+start)?start:'overview');
 </script>
