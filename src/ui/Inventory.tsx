@@ -135,14 +135,22 @@ const InventoryIconCell = memo(forwardRef<HTMLButtonElement, { itemKey: string; 
 }));
 
 function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, onClosed, style }: { entry: InventoryEntry | null; isOpen: boolean; arrowLeft: number | null; marketBuilt: boolean; dispatch: Dispatch; onClosed: () => void; style?: React.CSSProperties }) {
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const handleTransitionEnd = (e: React.TransitionEvent<HTMLDivElement>) => {
-    if (e.propertyName === "max-height" && !isOpen) {
+    if (e.propertyName !== "max-height") return;
+    if (!isOpen) {
       onClosed?.();
+    } else {
+      // Once the body has finished expanding to its full height, make sure the
+      // whole panel is on screen — a selection near the bottom of the grid
+      // otherwise opens below the fold. `block: "nearest"` scrolls the minimum
+      // needed, so an already-visible panel doesn't jump.
+      rootRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   };
 
   return (
-    <div className={`inv-accordion${isOpen ? " is-open" : ""}`} style={style}>
+    <div ref={rootRef} className={`inv-accordion${isOpen ? " is-open" : ""}`} style={style}>
       <div
         className="inv-accordion__arrow"
         style={arrowLeft != null ? { left: arrowLeft } : { left: "50%" }}
@@ -245,9 +253,17 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse }:
   const buy = () => dispatch({ type: "BUY_RESOURCE", payload: { key: key as ResourceKey, qty: 1 } });
   const listStatus = orderStatus === "ready" || orderStatus === "needed" ? orderStatus : undefined;
   const showActions = canSell || kind === "resource";
+  const rootRef = useRef<HTMLDivElement | null>(null);
+
+  // List view swaps the collapsed row for this expanded one instantly (no
+  // height animation), so scroll it into view on mount when it opens below the
+  // fold. `block: "nearest"` leaves an already-visible row untouched.
+  useEffect(() => {
+    rootRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }, []);
 
   return (
-    <div className="hl-browser-item is-selected hl-browser-item--expanded">
+    <div ref={rootRef} className="hl-browser-item is-selected hl-browser-item--expanded">
       <button
         type="button"
         className="hl-browser-item__row"
