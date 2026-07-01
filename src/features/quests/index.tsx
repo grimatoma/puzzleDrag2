@@ -449,12 +449,15 @@ export default function QuestsScreen({ state, dispatch, initialTab }: QuestsScre
 
       {tab === "daily" ? (
         <div className="flex-1 overflow-y-auto px-3 pb-3">
-          <DailyList quests={quests} dispatch={dispatch} />
+          {/* Cap the board width so cards stay readable — don't stretch edge-to-edge on desktop. */}
+          <div className="w-full max-w-[720px] mx-auto">
+            <DailyList quests={quests} dispatch={dispatch} />
+          </div>
         </div>
       ) : (
         <div className="flex-1 flex flex-col overflow-hidden px-3 pb-3 gap-2">
           <div
-            className="flex flex-col gap-2 pb-1 overflow-y-auto"
+            className="flex flex-col gap-2 pb-1 overflow-y-auto w-full max-w-[720px] mx-auto"
             style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch" }}
           >
             <AlmanacList

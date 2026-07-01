@@ -50,7 +50,7 @@ interface RewardRow {
   value?: number;
   /** Counted goods: a ×N badge, only rendered when >1. */
   qty?: number;
-  /** Unlock rows: a short pill ("Unlocks" / "New tile"). */
+  /** Unlock/perk rows: a short type pill ("Building" / "Tile" / "Perk"). */
   tag?: string;
   /** Headline-class rewards (building/tile/structural/rune) lead the bundle. */
   headline: boolean;
@@ -138,7 +138,7 @@ export function rewardRows(reward: RewardLike | null | undefined): RewardRow[] {
       iconKey: reward.unlockTile,
       glyph: "🟩",
       name: catalogLabel(reward.unlockTile),
-      tag: "New tile",
+      tag: "Tile",
       headline: true,
       rowClass: "qm-row--unlock-tile",
     });
@@ -149,7 +149,7 @@ export function rewardRows(reward: RewardLike | null | undefined): RewardRow[] {
       iconKey: `bld_${reward.unlockBuilding}`,
       glyph: "🏚",
       name: buildingName(reward.unlockBuilding),
-      tag: "Unlocks",
+      tag: "Building",
       headline: true,
       rowClass: "qm-row--unlock-bld",
     });
@@ -296,6 +296,14 @@ export function RewardManifest({ reward }: { reward: RewardLike | null | undefin
           ) : row.value != null ? (
             <span className={`qm-val qm-val--${row.kind}`}>
               {signed(row.value)}{row.kind === "xp" ? "✦" : ""}
+            </span>
+          ) : row.kind === "tool" || row.kind === "item" ? (
+            // Counted goods carry a type chip ("Tool" / "Item") so a bare reward
+            // (e.g. a single Lockbox) still reads as what it is — with the ×N
+            // count kept alongside when more than one is granted.
+            <span className="qm-goods">
+              {row.qty && row.qty > 1 ? <span className="qm-qty">×{row.qty}</span> : null}
+              <span className="qm-tag qm-tag--goods">{row.kind === "tool" ? "Tool" : "Item"}</span>
             </span>
           ) : row.qty && row.qty > 1 ? (
             <span className="qm-qty">×{row.qty}</span>

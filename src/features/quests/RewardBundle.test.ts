@@ -51,8 +51,8 @@ describe("rewardRows", () => {
     const byKind = Object.fromEntries(rows.map((r) => [r.kind, r]));
     expect(byKind.rune).toMatchObject({ kind: "rune", value: 1, headline: true });
     expect(byKind.structural).toMatchObject({ kind: "structural", headline: true, tag: "Perk" });
-    expect(byKind.tile).toMatchObject({ kind: "tile", headline: true, tag: "New tile" });
-    expect(byKind.building).toMatchObject({ kind: "building", headline: true, tag: "Unlocks" });
+    expect(byKind.tile).toMatchObject({ kind: "tile", headline: true, tag: "Tile" });
+    expect(byKind.building).toMatchObject({ kind: "building", headline: true, tag: "Building" });
     // Building/tile icon keys are derived for the registry lookup.
     expect(byKind.building.iconKey).toBe("bld_mill");
     expect(byKind.tile.iconKey).toBe("tile_cattle_triceratops");

@@ -863,11 +863,13 @@
   .quest-reward--rune .quest-reward-glyph,
   .quest-reward--perk .quest-reward-glyph { background: rgba(106, 58, 160, 0.16); }
 
-  /* The manifest: one row per reward (icon + name + optional ×N / value). */
-  .quest-manifest { @apply list-none m-0 p-0 flex flex-col gap-1; }
+  /* The manifest: one row per reward (icon + name + optional ×N / value).
+     Rows hug their content (items-start) rather than stretching full-width. */
+  .quest-manifest { @apply list-none m-0 p-0 flex flex-col items-start gap-1; }
   .qm-row {
     @apply flex items-center gap-2 rounded-md;
     padding: 4px 8px;
+    max-width: 100%;
     background: #fdf7e7;
     border: 1px solid #eaddbc;
   }
@@ -878,7 +880,7 @@
     background: rgba(138, 74, 38, 0.1);
   }
   .qm-name {
-    @apply flex-1 min-w-0 font-bold truncate;
+    @apply min-w-0 font-bold truncate;
     font-size: 12px;
     color: var(--on-panel);
   }
@@ -897,6 +899,9 @@
     font-size: 8.5px; letter-spacing: 0.05em; padding: 2px 7px;
     color: #fff; background: var(--on-panel-label);
   }
+  /* Counted-goods trailing group: optional ×N badge + a muted type chip. */
+  .qm-goods { @apply inline-flex items-center gap-1.5 flex-shrink-0; }
+  .qm-tag--goods { color: var(--on-panel-dim); background: #efe2c4; border: 1px solid #ddc99a; }
   /* Unlock rows: framed + tinted so the prize reads as the prize. */
   .qm-row--unlock-bld {
     background: linear-gradient(180deg, #fff5d8 0%, #fbe9b6 100%);
