@@ -139,7 +139,6 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
   const meta = categoryMeta(q);
   const catKey = meta.icon;
   const flavor = questFlavor(q);
-  const remaining = Math.max(0, q.target - q.progress);
 
   // One-shot claim celebration. `bursting` mounts the <ClaimBurst> overlay and
   // adds a quick card pop; it clears itself after the animation window so the
@@ -176,28 +175,13 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
         {flavor && <div className="quest-card-flavor">{flavor}</div>}
       </div>
 
-      {/* Progress */}
+      {/* Progress + claim — the bar already conveys "how much is left", so the
+          claim button rides alongside it instead of taking its own row. */}
       <div className="flex items-center gap-2">
         <ProgressBar value={q.progress} max={q.target} color={meta.accent} className="flex-1" />
         <span className="text-[11px] font-bold text-[#6a4b31] whitespace-nowrap tabular-nums">
           {q.progress}/{q.target}
         </span>
-      </div>
-
-      {/* Reward manifest — every reward this quest grants */}
-      <RewardManifest reward={q.reward} />
-
-      {/* Status + claim */}
-      <div className="flex items-center justify-between gap-2">
-        {claimable ? (
-          <span className="quest-card-status"><SparkGlyph size={11} /> Ready to claim</span>
-        ) : claimed ? (
-          <span className="inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-[#7a5e3f]/70">
-            <CheckGlyph size={10} /> Filled
-          </span>
-        ) : (
-          <span className="text-[10px] font-bold text-[#7a5e3f]/70 tabular-nums">{remaining} to go</span>
-        )}
         <button
           disabled={!claimable}
           onClick={handleClaim}
@@ -208,6 +192,9 @@ function QuestCard({ q, dispatch }: QuestCardProps) {
             : "Claim"}
         </button>
       </div>
+
+      {/* Reward manifest — every reward this quest grants */}
+      <RewardManifest reward={q.reward} />
     </div>
   );
 }
