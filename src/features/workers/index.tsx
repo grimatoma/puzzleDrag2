@@ -87,7 +87,7 @@ function WorkerBrowserItem({ worker, count, selected, onSelect }: WorkerBrowserI
   return (
     <BrowserItemButton
       selected={selected}
-      icon={<Icon iconKey={worker.look?.iconKey} size={32} title="" />}
+      icon={<Icon iconKey={worker.look?.iconKey} size={52} title="" />}
       title={worker.name}
       subtitle={worker.description}
       count={`${count}/${worker.maxCount}`}
@@ -214,7 +214,7 @@ function WorkerDetail({ worker, count, state, dispatch }: WorkerDetailProps) {
       title={worker.name}
       status={`${count} / ${worker.maxCount} hired`}
       description={worker.description}
-      icon={<Icon iconKey={worker.look?.iconKey} size={48} title="" />}
+      icon={<Icon iconKey={worker.look?.iconKey} size={104} title="" />}
       headerActions={undefined}
       empty={undefined}
       actions={
@@ -269,7 +269,7 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
   })).filter((s) => s.workers.length > 0);
 
   return (
-    <div className="w-full h-full min-h-0 flex flex-col gap-3">
+    <div className="hl-workers w-full h-full min-h-0 flex flex-col gap-3">
       <div className="hl-board-head">
         <Icon iconKey="ui_build" size={34} title="" className="flex-shrink-0" />
         <div className="flex-1 min-w-0">
@@ -298,7 +298,7 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
                       key={w.id}
                       open={accordion.displayedKey === w.id}
                       isOpen={accordion.isOpen}
-                      icon={<Icon iconKey={w.look?.iconKey} size={40} title="" />}
+                      icon={<Icon iconKey={w.look?.iconKey} size={52} title="" />}
                       title={w.name}
                       subtitle={w.description}
                       meta={`${count}/${w.maxCount}`}
@@ -323,7 +323,7 @@ export function WorkersPanel({ state, dispatch }: WorkersPanelProps) {
               {sections.map(({ section, workers }) => (
                 <div key={section}>
                   <div className="hl-section-label mb-1.5">{section}</div>
-                  <BrowserGrid min={180}>
+                  <BrowserGrid min={210}>
                     {workers.map((w) => (
                       <WorkerBrowserItem
                         key={w.id}
