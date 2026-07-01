@@ -1,0 +1,35 @@
+{
+  // Single-program strict-ish typecheck for ALL unit/integration test files
+  // (src/**/*.test.* and tests/**/*.test.*), driven by tools/typecheck-test-files.mjs.
+  //
+  // Replaces the old tools/scan-test-tsc.mjs, which spawned one `tsc` per file
+  // from a temp dir — that was O(n) (~200s over 222 files) AND silently vacuous:
+  // the temp configs couldn't resolve @types/node or vite/client from /tmp, so
+  // GameState degraded to `any` and real errors never fired. Running one program
+  // from the repo root resolves types correctly and is ~15s.
+  //
+  // Strictness mirrors tsconfig.tests.json (strict:false): it catches import
+  // resolution, structural mismatches (TS2345/TS2339 — the "renamed a slice
+  // payload field" regression the review flagged), and obvious type errors,
+  // while tolerating the loosely-typed stub states the existing test corpus
+  // relies on. The known pre-existing errors are frozen in
+  // tools/test-tsc-baseline.json; the gate fails on any NEW error signature.
+  // See reference/docs/projects/24-test-suite-and-infra-review.html §9.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "strict": false,
+    "noImplicitAny": false,
+    "strictNullChecks": false,
+    "types": ["node", "vitest/globals", "vite/client"]
+  },
+  "include": [
+    "src/**/*.test.ts",
+    "src/**/*.test.tsx",
+    "tests/**/*.test.ts",
+    "tests/**/*.test.tsx",
+    "src/__tests__/setup.ts",
+    "src/types/virtual-seasonal.d.ts"
+  ],
+  "exclude": ["node_modules", "dist", "tests/e2e/**", "tests/visual/**"]
+}

@@ -131,6 +131,15 @@ export async function clearSave(page: Page): Promise<void> {
 
 export async function getReactState(page: Page): Promise<ReactStateSnapshot | null> {
   return await page.evaluate(() => {
+    // Prefer the stable dev/e2e store bridge (prototype.tsx installs
+    // window.__hearthStore under import.meta.env.DEV). Falls back to the fiber
+    // walk so this helper stays resilient if the bridge is absent (prod build,
+    // pre-hook save, etc.).
+    const store = (window as unknown as { __hearthStore?: { getState: () => unknown } }).__hearthStore;
+    if (store && typeof store.getState === "function") {
+      const s = store.getState();
+      if (s && typeof s === "object" && "view" in s) return s as ReactStateSnapshot;
+    }
     const root = document.getElementById("root");
     if (!root) return null;
     const fk = Object.keys(root).find((k) => k.startsWith("__reactContainer"));
@@ -171,6 +180,13 @@ type HookWalk = {
 
 export async function dispatchAction(page: Page, action: unknown): Promise<void> {
   await page.evaluate((act: unknown) => {
+    // Prefer the stable dev/e2e store bridge (prototype.tsx). Falls back to the
+    // fiber walk if the bridge isn't installed so the helper stays resilient.
+    const store = (window as unknown as { __hearthStore?: { dispatch: (a: unknown) => void } }).__hearthStore;
+    if (store && typeof store.dispatch === "function") {
+      store.dispatch(act);
+      return;
+    }
     const root = document.getElementById("root");
     if (!root) return;
     const fk = Object.keys(root).find((k) => k.startsWith("__reactContainer"));
@@ -343,15 +359,18 @@ export async function expectCoinsAtLeast(page: Page, n: number): Promise<void> {
  *     as a console.error (not a warn) whenever a texture key is re-added across a
  *     scene re-mount. The app runs four `new Phaser.Game(...)` instances
  *     (board / town / season strip / map), so scene churn re-adds keys; benign.
- *   - "Cannot read properties of null": a known Phaser tween race surfaced under
- *     fast e2e sequencing (the board can advance a turn mid-tween).
+ *   - "Cannot read properties of null (reading 'destroy')": the one known Phaser
+ *     tween race surfaced under fast e2e sequencing — a tween's onComplete fires
+ *     after the tile it destroys was already torn down (the board can advance a
+ *     turn mid-tween). Scoped to the exact `destroy` reader so a genuinely-new
+ *     null-deref (`...reading 'foo'`) is NOT swallowed and still fails the guard.
  *   - favicon / "Failed to load resource": asset 404s, irrelevant to behavior.
  * Anything NOT matched here still fails the guard, so a real new console.error
  * is still caught.
  */
 export const IGNORED_CONSOLE: RegExp[] = [
   /Texture key already in use/i,
-  /Cannot read properties of null/i,
+  /Cannot read properties of null \(reading 'destroy'\)/i,
   /favicon|Failed to load resource/i,
 ];
 

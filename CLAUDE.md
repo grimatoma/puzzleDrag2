@@ -151,6 +151,17 @@ and visual-smoke jobs.
 - **E2E:** Playwright in `tests/e2e/` (`playwright.config.js`).
 - **Visual regression:** Playwright in `tests/visual/` (`playwright.visual.config.js`); goldens in `tests/visual/__goldens__/`.
 
+**Coverage gate is a reducer / game-logic gate — not a UI gate.** The
+`coverage.thresholds` in `vitest.config.js` intentionally measure only the
+logic layer: the reducer and core game rules (`src/game/**`), state
+(`src/state*/**`), balance config (`src/config/**`), and feature slices — with
+`.tsx`/`.jsx` files excluded. It does **not** cover the React UI components or
+the Phaser canvas layer; those are exercised (if at all) by the Playwright
+e2e/visual suites instead. So a passing coverage gate says the game *logic* is
+tested, not the *rendering*. Keep new logic (rules, reducers, config) inside the
+included dirs so it stays gated; don't expect the gate to catch UI or canvas
+regressions.
+
 ---
 
 ## Engineering rules

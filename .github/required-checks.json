@@ -1,0 +1,13 @@
+{
+  "_comment": "Authoritative list of CI checks that MUST pass before a PR can merge into main. GitHub branch protection is NOT in the tree, so this file is the source of truth and the `gate-guard` CI job (tools/check-required-checks.mjs) fails if branch protection drifts from it. NOTE: e2e runs as a 3-shard matrix reported as `e2e (1..3)`; the `e2e-required` fan-in job aggregates them into this one stable name — require e2e-required, NOT `e2e`. visual-smoke is intentionally informational (WebGL goldens are runner-sensitive) and is NOT listed here.",
+  "branch": "main",
+  "required": [
+    "lint",
+    "typecheck",
+    "typecheck-tests",
+    "typecheck-test-files",
+    "test",
+    "build",
+    "e2e-required"
+  ]
+}

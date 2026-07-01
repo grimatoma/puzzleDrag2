@@ -46,6 +46,25 @@ import { TOOL_BY_KEY, isTapTargetTool } from "./src/ui/toolRegistry.js";
 // The shared window augmentation lives in src/visualTesting/global.d.ts so
 // every module agrees on the shape of __phaserScene and friends.
 
+/**
+ * Stable dev/e2e-only store bridge. E2E specs (tests/e2e/helpers.ts) previously
+ * hand-walked the React fiber tree to reach the `useReducer` dispatch/state,
+ * which is brittle across React internals changes. When installed (dev builds
+ * only, see the guarded effect in App), `window.__hearthStore` exposes the live
+ * state getter + the real reducer dispatch so helpers can read/drive state
+ * directly. Guarded behind `import.meta.env.DEV` so it never ships to prod.
+ */
+interface HearthStoreBridge {
+  getState: () => GameState;
+  dispatch: React.Dispatch<GameAction>;
+}
+
+declare global {
+  interface Window {
+    __hearthStore?: HearthStoreBridge;
+  }
+}
+
 /** Phaser.Game instance with board sleep/wake bookkeeping from prototype. */
 interface HearthPhaserGame extends Phaser.Game {
   __boardRuntimeActive?: boolean;
@@ -530,6 +549,25 @@ export default function App() {
   useEffect(() => {
     stateRef.current = state;
   }, [state]);
+
+  // Dev/e2e-only store bridge. Exposes the live reducer state + dispatch on
+  // window so e2e helpers can drive/read state without walking React's fiber
+  // tree. `getState` reads through stateRef (kept current by the effect above),
+  // so it always returns the latest committed state rather than a mount-time
+  // snapshot. Guarded to dev builds so it never ships to production.
+  useEffect(() => {
+    if (!import.meta.env.DEV) return undefined;
+    if (typeof window === "undefined") return undefined;
+    window.__hearthStore = {
+      getState: () => stateRef.current,
+      dispatch,
+    };
+    return () => {
+      if (window.__hearthStore?.dispatch === dispatch) {
+        delete window.__hearthStore;
+      }
+    };
+  }, [dispatch]);
 
   // When a chain drag ends (chainInfo goes null) and no tool is armed, reset the
   // inspected tool so the panel returns to the idle resources view by default.

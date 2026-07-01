@@ -1,52 +1,26 @@
 import { describe, it, expect } from "vitest";
-import { ACTION_TYPES, type ActionType } from "../types/actions.js";
+import { ACTION_TYPES } from "../types/actions.js";
 import type { ChainCollectedAction, ToolFiredAction } from "../types/actionPayloads.js";
+// Import the REAL slice-routing sets straight from state.ts rather than a
+// hand-copied list. The old copy had silently drifted (it omitted
+// SETTINGS/SET_TILE_ART_MODE, CIVIC/CLAIM, CIVIC/OPEN_CARE_PACKAGE and
+// TOASTS/DISMISS) and only did a subset check, so the drift produced no
+// failure. Importing the source makes drift impossible by construction; the
+// remaining assertions verify the source itself stays coherent with the
+// ACTION_TYPES catalog. See reference/docs/projects/24-test-suite-and-infra-review.html §1.
+import { SLICE_PRIMARY_ACTIONS, ALWAYS_RUN_SLICES } from "../state.js";
 
-/** Slice routing sets in state.ts — must stay in sync with ACTION_TYPES. */
-const SLICE_PRIMARY: ActionType[] = [
-  "WORKERS/HIRE",
-  "WORKERS/FIRE",
-  "BUILD_DECORATION",
-  "SUMMON_MAGIC_TOOL",
-  "MARKET/SELL",
-  "QUESTS/CLAIM_QUEST",
-  "QUESTS/CLAIM_ALMANAC",
-  "QUESTS/PROGRESS_QUEST",
-  "BOSS/TRIGGER",
-  "BOSS/RESOLVE",
-  "BOSS/REJECT",
-  "BOSS/MINIMIZE",
-  "BOSS/EXPAND",
-  "BOSS/CLOSE",
-  "CARTO/TRAVEL",
-  "STORY/DISMISS_MODAL",
-  "STORY/PICK_CHOICE",
-  "SETTINGS/SET_TAB",
-  "SETTINGS/OPEN_DEBUG",
-  "SETTINGS/LEAVE_BOARD",
-  "SETTINGS/TOGGLE",
-  "SETTINGS/RESET_SAVE",
-  "SETTINGS/SHOW_TUTORIAL",
-  "TUTORIAL/START",
-  "TUTORIAL/NEXT",
-  "TUTORIAL/PREV",
-  "TUTORIAL/SKIP",
-  "CASTLE/CONTRIBUTE",
-  "FISH/FORCE_TIDE_FLIP",
-  "BOON/PURCHASE",
-  "RUN_SUMMARY/OPEN",
-  "RUN_SUMMARY/CLOSE",
-];
-
-const ALWAYS_RUN: ActionType[] = ["CRAFTING/CRAFT_RECIPE", "USE_TOOL"];
-
-const KNOWN = new Set<ActionType>(ACTION_TYPES);
+const KNOWN = new Set<string>(ACTION_TYPES);
 
 describe("ACTION_TYPES catalog", () => {
   it("includes every slice-primary and always-run action", () => {
-    for (const t of [...SLICE_PRIMARY, ...ALWAYS_RUN]) {
-      expect(KNOWN.has(t), `missing ActionType: ${t}`).toBe(true);
-    }
+    const missing = [...SLICE_PRIMARY_ACTIONS, ...ALWAYS_RUN_SLICES].filter((t) => !KNOWN.has(t));
+    expect(missing, `slice-routed actions absent from ACTION_TYPES: ${missing.join(", ")}`).toEqual([]);
+  });
+
+  it("keeps the slice-primary and always-run sets disjoint", () => {
+    const overlap = [...SLICE_PRIMARY_ACTIONS].filter((t) => ALWAYS_RUN_SLICES.has(t));
+    expect(overlap, `actions in BOTH slice-routing sets: ${overlap.join(", ")}`).toEqual([]);
   });
 
   it("has no duplicates", () => {

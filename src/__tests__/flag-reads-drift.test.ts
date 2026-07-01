@@ -12,13 +12,13 @@ function walk(dir, out = []) {
     if (ent.name === "__tests__" || ent.name === "visualTesting") continue;
     const p = path.join(dir, ent.name);
     if (ent.isDirectory()) walk(p, out);
-    else if (/\.(js|jsx)$/.test(ent.name)) out.push(p);
+    else if (/\.(ts|tsx)$/.test(ent.name)) out.push(p);
   }
   return out;
 }
 
 function directFlagReads() {
-  const files = walk(SRC).filter((p) => !/\/(balanceManager|storyEditor)\//.test(p) && !p.endsWith("/flags.js") && !p.endsWith("/flagReads.js"));
+  const files = walk(SRC).filter((p) => !/\/(balanceManager|storyEditor)\//.test(p) && !p.endsWith("/flags.ts") && !p.endsWith("/flagReads.ts"));
   const found = new Map();
   const patterns = [
     /\bstory\??\.flags\??\.([a-zA-Z_][a-zA-Z0-9_]*)/g,
@@ -31,7 +31,10 @@ function directFlagReads() {
     for (const re of patterns) {
       for (const m of text.matchAll(re)) {
         const id = m[1];
-        if (["length", "map", "filter", "find", "push", "some", "slice", "sort", "js"].includes(id)) continue;
+        // Non-flag property accesses & file-extension false positives from
+        // `flags.<ext>` references (e.g. `from "./flags.ts"`, `src/flags.js` in
+        // comments). `new`/`byId` are storyEditor draft-flag containers, not ids.
+        if (["length", "map", "filter", "find", "push", "some", "slice", "sort", "js", "jsx", "ts", "tsx", "new", "byId"].includes(id)) continue;
         if (!found.has(id)) found.set(id, new Set());
         found.get(id).add(`src/${rel}`);
       }

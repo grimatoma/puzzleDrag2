@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { gameReducer } from "../state.js";
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
@@ -23,36 +23,6 @@ function minState(overrides = {}) {
     _hintsShown: {},
     ...overrides,
   };
-}
-
-/**
- * Stub for mockShuffleBoard: returns a fully populated 6×6 grid (plain objects).
- * The real Phaser shuffle randomises resources; here we just want all cells defined.
- */
-function mockShuffleBoard() {
-  const ROWS = 6, COLS = 6;
-  const grid = [];
-  const resources = ["tile_grass_grass", "tile_tree_oak", "berry", "tile_grain_wheat", "grain", "eggs"];
-  for (let r = 0; r < ROWS; r++) {
-    grid[r] = [];
-    for (let c = 0; c < COLS; c++) {
-      grid[r][c] = { res: { key: resources[(r + c) % resources.length] }, row: r, col: c };
-    }
-  }
-  return grid;
-}
-
-/**
- * Stub for invokeShuffleAnimation: calls scene.tweens.add with the expected params.
- */
-function invokeShuffleAnimation(scene) {
-  scene.tweens.add({
-    targets: scene.board,
-    rotation: Math.PI * 2,
-    duration: 600,
-    ease: "Sine.easeInOut",
-    onComplete: () => {},
-  });
 }
 
 // ─── tests ────────────────────────────────────────────────────────────────────
@@ -80,21 +50,5 @@ describe("Reshuffle Horn — USE_TOOL { key: 'shuffle' }", () => {
     const s = minState({ tools: { shuffle: 1, clear: 0, basic: 0, rare: 0 } });
     const after = gameReducer(s, { type: "USE_TOOL", payload: { key: "shuffle" } });
     expect(after.toolPending).toBe("shuffle");
-  });
-
-  it("post-shuffle board is fully populated", () => {
-    const grid = mockShuffleBoard();
-    for (let r = 0; r < 6; r++) {
-      for (let c = 0; c < 6; c++) expect(grid[r][c]).toBeDefined();
-    }
-  });
-
-  it("rotation tween fires on the board container (600ms, 2π)", () => {
-    const tween = vi.fn();
-    const scene = { tweens: { add: tween }, board: { rotation: 0 } };
-    invokeShuffleAnimation(scene);
-    expect(tween).toHaveBeenCalledWith(expect.objectContaining({
-      duration: 600, rotation: Math.PI * 2,
-    }));
   });
 });

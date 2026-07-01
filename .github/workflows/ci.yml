@@ -1,24 +1,23 @@
-# CI — lint + typecheck + test + build + e2e (gating) + visual smoke (non-blocking) on every PR vs main and push to main.
-# Branch protection (set in repo settings — adding jobs here does NOT auto-gate merges):
-#   - Require status checks: lint, typecheck, typecheck-tests, typecheck-test-files, test, build, e2e
-#   - `e2e` is now GATING: the rotted specs were de-rotted and its `continue-on-error` removed
-#     (see reference/docs/projects/09-ci-e2e-gate-findings.md). A HUMAN must still add `e2e` to the required
-#     status checks above in repo settings — flipping continue-on-error here does NOT auto-gate merges.
-#   - `visual-smoke` is still NON-BLOCKING; add it AFTER its goldens are re-baselined on CI and
-#     its `continue-on-error` is removed (see the `visual-rebaseline` job + procedure below).
-#   - Require branches to be up to date before merging
-#   - Dismiss stale approvals on push
-# The gating checks must pass before a PR can merge; visual-smoke is informational for now.
+# CI — lint + typecheck + tests + build + e2e (gating) + visual smoke (informational)
+# on every PR vs main and push to main.
 #
-# Re-baselining visual goldens (NEVER do this on a Windows/local host — DOM drifts 3–5%,
-# Phaser WebGL ~38% off due to GPU/font differences; goldens must be made on this Linux runner):
-#   1. gh workflow run ci.yml --ref <branch> -f update_goldens=true   (or trigger via the Actions
-#      tab, selecting the branch you want re-baselined).
-#   2. The `visual-rebaseline` job regenerates the desktop goldens on this Linux runner and commits
-#      them straight back to that branch (it also uploads a `regenerated-goldens` artifact for
-#      inspection). Pull the branch to review the new PNGs.
-#   3. Once `visual-smoke` is green against the committed goldens, remove its `continue-on-error`
-#      and add `visual-smoke` to the required status checks above.
+# Branch protection (set in repo settings — adding jobs here does NOT auto-gate merges).
+# The authoritative required-check list is committed at .github/required-checks.json; the
+# `gate-guard` job reads branch protection via the API and fails if the two drift apart
+# (it soft-skips when the token can't read protection). Keep them in sync.
+#
+# Required to merge: lint, typecheck, typecheck-tests, typecheck-test-files, test, build,
+# e2e-required.
+#   - e2e runs as a 3-shard matrix, so GitHub reports it as `e2e (1)`, `e2e (2)`, `e2e (3)`
+#     — NONE of which is named `e2e`. Requiring the bare name `e2e` would gate on nothing
+#     (health review §6/§8). The `e2e-required` fan-in job aggregates all shards into ONE
+#     stable check name; require THAT.
+#   - visual-smoke is INFORMATIONAL, not required. The committed board goldens are
+#     WebGL/GPU/font-sensitive and were not captured on this exact runner, so a pixel
+#     compare here is unreliable — the gating visual signal is the structural/manifest
+#     vitest test (src/__tests__/visual-scenarios), not pixels. Regenerate desktop goldens
+#     on THIS runner via the `visual-rebaseline` workflow_dispatch when you need them.
+#   - Require branches to be up to date before merging; dismiss stale approvals on push.
 
 name: CI
 on:
@@ -71,9 +70,13 @@ jobs:
       - run: npm ci
       - run: npm run typecheck:tests
 
+  # Single-program strict-ish typecheck of every unit/integration test file,
+  # gated against tools/test-tsc-baseline.json (fails only on NEW errors).
+  # Replaced the old per-file spawn scanner: ~200s O(n) AND silently vacuous
+  # (temp configs couldn't resolve @types from /tmp) → ~15s and real. (§9)
   typecheck-test-files:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -100,9 +103,39 @@ jobs:
           name: coverage
           path: coverage/
 
+  # Builds the shippable app (`build` = vite only — reference docs are NOT part of
+  # the shippable build), asserts the output's chunk-splitting invariants
+  # (tools/verify-build-output.mjs, moved out of the vitest loop — §3), then
+  # builds the docs site too so /docs/ is validated + uploaded. build:docs is
+  # guarded (warn-and-exit-0) so a reference-doc/git failure can never fail this
+  # job. NOTE: if GitHub Pages deploys via `npm run build`, switch it to
+  # `npm run build:site` to keep shipping /docs.
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # build:docs reads git history for per-doc creation dates
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: npm run verify:build
+      - run: npm run build:docs
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  # End-to-end smoke of the headless playtest CLI (SSR-load → simulate) with
+  # --no-write, so the 344-line CLI plumbing gets exercised in CI without
+  # mutating the tree or auto-accepting its own drift-guard snapshot. (§10)
+  playtest-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -110,30 +143,32 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: npm run build
-      - uses: actions/upload-artifact@v4
+      - run: npm run playtest:smoke
+
+  # gate-guard: fail if branch protection drifts from .github/required-checks.json.
+  # Soft-skips when the token can't read protection (fork PRs, missing scope), so
+  # it never blocks a legitimate build — it only bites on observable drift. (§6)
+  gate-guard:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          name: dist
-          path: dist/
+          node-version: 20
+      - name: Assert branch protection matches .github/required-checks.json
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node tools/check-required-checks.mjs
 
   # Playwright e2e — the only CI coverage of the React → registry → GameScene →
   # TileObj canvas bridge that vitest (node/no-canvas) can't see. Runs all e2e
-  # specs on chromium/Linux (the config's single forced project). Playwright
-  # starts its own Vite via `webServer` (reuseExistingServer is a no-op on a
-  # clean runner).
-  #
-  # GATING: the previously-rotted specs were de-rotted (stale action fixtures,
-  # selectors, balance/unlock assumptions, the zoned-inventory model, and the
-  # dialogs-disabled-by-default flag — see reference/docs/projects/09-ci-e2e-gate-findings.md).
-  # `npm run test:e2e` is green on chromium/Linux. A human must add `e2e` to the
-  # branch-protection required checks (see header) for it to actually block merges.
-  # Sharded across 3 parallel runners: the full suite boots the whole game
-  # (Phaser/WebGL) per test, so single-runner wall-clock (+ the 360s full-year
-  # spec, ×3 under CI retries) reliably blew the 20-min cap. Playwright's
-  # `--shard` splits the test list deterministically; each shard runs ~1/3 of
-  # the tests and fits comfortably. `fail-fast: false` keeps the other shards
-  # running when one fails. NOTE: the job now reports as `e2e (1|2|3)` — update
-  # the branch-protection required check accordingly.
+  # specs on chromium/Linux. Sharded ×3: the full suite boots the whole game
+  # (Phaser/WebGL) per test, so single-runner wall-clock reliably blew the cap.
+  # `fail-fast: false` keeps the other shards running when one fails. GitHub
+  # reports these as `e2e (1|2|3)` — the `e2e-required` fan-in job below is what
+  # branch protection requires (see header + §6/§8).
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -168,15 +203,33 @@ jobs:
             test-results/
           retention-days: 7
 
-  # Desktop visual smoke (the 3 *.desktop-smoke specs via `npm run test:visual`).
-  # Starts NON-BLOCKING: the committed goldens were not generated on this Linux
-  # runner, so the first run is expected to diff. Once goldens are re-baselined
-  # on CI (see the `visual-rebaseline` job + header procedure) and committed,
-  # remove `continue-on-error` and add `visual-smoke` to the required checks.
+  # Fan-in gate: ONE stable check name that passes iff every e2e shard passed.
+  # `needs.e2e.result` is the matrix job's aggregate result. Require THIS in
+  # branch protection (not `e2e`, which never matches the sharded `e2e (1..3)`
+  # contexts). `if: always()` so it still runs (and can fail) when a shard fails.
+  e2e-required:
+    needs: [e2e]
+    if: always()
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Assert all e2e shards passed
+        run: |
+          echo "aggregate e2e result: ${{ needs.e2e.result }}"
+          if [ "${{ needs.e2e.result }}" != "success" ]; then
+            echo "::error::One or more e2e shards did not pass."
+            exit 1
+          fi
+
+  # Desktop visual smoke — INFORMATIONAL only (see header). continue-on-error
+  # because the committed board goldens are WebGL/GPU/font-sensitive and were not
+  # captured on this runner, so a pixel diff here is expected and not meaningful;
+  # the gating visual signal is the structural manifest test in the `test` job.
+  # Regenerate goldens on THIS runner via the `visual-rebaseline` dispatch.
   visual-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    continue-on-error: true # REMOVE after goldens are re-baselined on CI (see header)
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -202,11 +255,11 @@ jobs:
           retention-days: 7
 
   # Manual re-baseline of the desktop visual goldens ON the canonical Linux
-  # runner (never local — see header). Trigger with:
+  # runner (never local — DOM drifts 3–5%, Phaser WebGL ~38% off due to GPU/font
+  # differences). Trigger with:
   #   gh workflow run ci.yml --ref <branch> -f update_goldens=true
   # The job regenerates the goldens and commits them straight back to the
-  # dispatched branch (and also uploads them as the `regenerated-goldens`
-  # artifact for inspection).
+  # dispatched branch (and uploads them as the `regenerated-goldens` artifact).
   visual-rebaseline:
     if: ${{ github.event_name == 'workflow_dispatch' && inputs.update_goldens }}
     runs-on: ubuntu-latest

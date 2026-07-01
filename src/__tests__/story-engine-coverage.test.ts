@@ -44,16 +44,19 @@ describe("story.js — flag helpers", () => {
   it("nextPendingBeat returns the first incomplete beat at or below state.act", () => {
     const r = nextPendingBeat({ ...INITIAL_STORY_STATE });
     expect(r).toBeDefined();
-    expect(r.act).toBeLessThanOrEqual(INITIAL_STORY_STATE.act);
+    // On a fresh state the first incomplete beat is the act-1 arrival intro.
+    expect(r.id).toBe("act1_arrival");
+    expect(r.act).toBe(INITIAL_STORY_STATE.act);
   });
 });
 
 describe("evaluateStoryTriggers — triggerMatches branches", () => {
   it("session_start matches when next pending beat when is session_start", () => {
     const r = evaluateStoryTriggers(INITIAL_STORY_STATE, { type: "session_start" });
-    if (r) {
-      expect(r.firedBeat.when).toEqual({ fact: "event.type", op: "eq", value: "session_start" });
-    }
+    // On a fresh state the first pending beat is the session-start intro, so a
+    // session_start event MUST fire it — assert unconditionally.
+    expect(r).not.toBeNull();
+    expect(r?.firedBeat.when).toEqual({ fact: "event.type", op: "eq", value: "session_start" });
   });
 
   it("returns null when no pending beat", () => {

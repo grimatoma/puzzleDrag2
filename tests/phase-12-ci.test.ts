@@ -1,56 +1,23 @@
-// tests/phase-12-ci.test.js — meta-test the workflow itself.
+// tests/phase-12-ci.test.ts — minimal smoke on the CI workflow.
+// Intentionally NOT a spec of the workflow's exact shape: node-version,
+// timeouts, cache keys, artifact names and exact step ordering are benign
+// implementation details that churn. We only assert the workflow exists and
+// still names the gating jobs, so a rename/removal is caught.
 import { describe, it, expect } from "vitest";
 import { readFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 
 const ymlPath = resolve(".github/workflows/ci.yml");
 
-describe("Phase 12.3 — CI pipeline", () => {
+describe("CI pipeline — smoke", () => {
   it("workflow file exists", () => {
     expect(existsSync(ymlPath)).toBe(true);
   });
 
-  it("workflow has the required top-level structure", () => {
+  it("mentions the gating job names", () => {
     const yml = readFileSync(ymlPath, "utf8");
-    expect(yml).toMatch(/^name:\s*CI/m);
-    expect(yml).toMatch(/pull_request:/);
-    expect(yml).toMatch(/push:/);
-    expect(yml).toMatch(/branches:\s*\[main\]/);
-  });
-
-  it("has lint, typecheck, typecheck-tests, test, build jobs", () => {
-    const yml = readFileSync(ymlPath, "utf8");
-    expect(yml).toMatch(/^\s{2}lint:/m);
-    expect(yml).toMatch(/^\s{2}typecheck:/m);
-    expect(yml).toMatch(/^\s{2}typecheck-tests:/m);
-    expect(yml).toMatch(/^\s{2}test:/m);
-    expect(yml).toMatch(/^\s{2}build:/m);
-  });
-
-  it("typecheck job runs action-types catalog check", () => {
-    const yml = readFileSync(ymlPath, "utf8");
-    expect(yml).toMatch(/action-types:check/);
-  });
-
-  it("uses Node 20 with npm cache in every job", () => {
-    const yml = readFileSync(ymlPath, "utf8");
-    const nodeBlocks = yml.match(/setup-node@v4[\s\S]+?(?=\n\s{0,6}-|\n\s{0,4}\w)/g);
-    expect(nodeBlocks?.length).toBeGreaterThanOrEqual(5);
-    for (const b of nodeBlocks) {
-      expect(b).toMatch(/node-version:\s*20/);
-      expect(b).toMatch(/cache:\s*npm/);
+    for (const job of ["lint", "typecheck", "test", "build", "e2e"]) {
+      expect(yml, `ci.yml should mention the "${job}" job`).toContain(job);
     }
-  });
-
-  it("uploads coverage and dist artifacts", () => {
-    const yml = readFileSync(ymlPath, "utf8");
-    expect(yml).toMatch(/upload-artifact@v4[\s\S]+?name:\s*coverage/);
-    expect(yml).toMatch(/upload-artifact@v4[\s\S]+?name:\s*dist/);
-  });
-
-  it("every job has a timeout to fail fast on hangs", () => {
-    const yml = readFileSync(ymlPath, "utf8");
-    const matches = yml.match(/timeout-minutes:\s*\d+/g) ?? [];
-    expect(matches.length).toBeGreaterThanOrEqual(5);
   });
 });

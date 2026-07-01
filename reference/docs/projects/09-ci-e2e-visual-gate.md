@@ -1,5 +1,17 @@
 # CI Gate for e2e + Visual Smoke
 
+> **⚠️ HISTORICAL — implementation brief, not current state.** This document
+> predates the e2e **sharding** work and the subsequent **de-rot** pass. Its
+> descriptions of `playwright.config.js` (e.g. `retries: 0`, a single `list`
+> reporter, one un-sharded project) and of the CI `e2e` job now **contradict the
+> code**. The **CODE is authoritative** — see `playwright.config.js` (retries,
+> `list` + `html` reporters, sharding notes) and `.github/workflows/ci.yml`
+> (the `e2e` job is a `matrix: shard: [1, 2, 3]`). For the **current state**,
+> read [09-ci-e2e-gate-findings.md](09-ci-e2e-gate-findings.md) and
+> [24-test-suite-and-infra-review.html](24-test-suite-and-infra-review.html)
+> (doc 24). The body below is kept as-is for historical context — do not treat
+> it as a description of how CI runs today.
+
 > One-line: "Implementation brief — point a fresh session at this file. Self-contained: goal, plan, success criteria, and how to validate & double-check."
 
 ## Goal
