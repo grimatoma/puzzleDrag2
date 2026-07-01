@@ -257,12 +257,24 @@ function PhaserMount({ dispatch, biomeKey, turnsUsed, uiLocked, boardActive, sce
               // was a frame too early — the skeleton vanished before the bake,
               // exposing the bare cream canvas through the freeze. The rAF lets
               // Phaser paint the first board frame before the skeleton is removed.
-              scene.events.on(SCENE_EVENTS.BOARD_READY, () => {
+              //
+              // GameScene has no async preload, so Phaser can (and does, in
+              // practice) finish the whole synchronous create() — including
+              // this BOARD_READY emit — before this postBoot callback even
+              // runs. Subscribing unconditionally then permanently misses a
+              // one-shot event that already fired, leaving the skeleton (and
+              // its full-bleed pointer-events overlay) stuck over the board
+              // forever and blocking every drag. Check the scene's own
+              // `boardReady` flag first and only fall back to the listener
+              // for a create() that's still in flight.
+              const dismissBoardSkeleton = () => {
                 requestAnimationFrame(() => {
                   setLoading(false);
                   onReadyRef.current?.();
                 });
-              });
+              };
+              if (scene.boardReady) dismissBoardSkeleton();
+              else scene.events.on(SCENE_EVENTS.BOARD_READY, dismissBoardSkeleton);
             },
           },
         });

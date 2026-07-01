@@ -117,6 +117,13 @@ export class GameScene extends Phaser.Scene {
   _readyFiredThisDrag: boolean = false;
   dragging: boolean = false;
   locked: boolean = false;
+  /** Flips true once create()'s BOARD_READY has fired. Phaser can finish a
+   *  scene's synchronous create() before the game's postBoot callback runs
+   *  (no async preload means nothing yields the boot in between), so a host
+   *  that only subscribes to BOARD_READY in postBoot can miss the one-shot
+   *  event entirely. Callers should check this flag first and only fall
+   *  back to the event for a create() that hasn't finished yet. */
+  boardReady: boolean = false;
   /** Container used as tween target for shuffle spin; null when idle. */
   board: Phaser.GameObjects.Container | null = null;
 
@@ -409,6 +416,9 @@ export class GameScene extends Phaser.Scene {
     // All heavy synchronous create() work (makeTextures, drawBackground,
     // fillBoard) is done by here. Signal the React host so it dismisses the
     // BoardSkeleton now, not in postBoot (which fires a frame before this bake).
+    // Set the flag before emitting so a host that missed the event (see
+    // `boardReady` doc above) can still observe readiness by polling it.
+    this.boardReady = true;
     this.events.emit(SCENE_EVENTS.BOARD_READY);
   }
 
