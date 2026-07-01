@@ -1,8 +1,8 @@
 // Phase 31 — Start Farming session: FARM/ENTER, fertilizer turn-doubling,
 // 50-coin entry cost, selected-tiles persistence on the session.
 import { describe, it, expect } from "vitest";
-import { createInitialState, rootReducer } from "../src/state.js";
-import { ZONES } from "../src/features/zones/data.js";
+import { createInitialState, rootReducer } from "../../state.js";
+import { ZONES } from "./data.js";
 
 function withCoins(state, coins) {
   return { ...state, coins };
@@ -140,14 +140,14 @@ describe("Phase 31 — FARM/ENTER: selected-tiles persistence", () => {
 describe("Phase 31 — expandZoneCategories", () => {
   it("expands birds (plural) to bird (singular) tile-collection category", async () => {
     const { expandZoneCategories } = await import(
-      "../src/features/zones/data.js"
+      "./data.js"
     );
     expect(expandZoneCategories(["birds"]).has("bird")).toBe(true);
   });
 
   it("expands trees only to the trees tile category (wood is a resource, not a tile)", async () => {
     const { expandZoneCategories } = await import(
-      "../src/features/zones/data.js"
+      "./data.js"
     );
     const set = expandZoneCategories(["trees"]);
     expect(set.has("trees")).toBe(true);
@@ -156,7 +156,7 @@ describe("Phase 31 — expandZoneCategories", () => {
 
   it("returns an empty set for an empty input", async () => {
     const { expandZoneCategories } = await import(
-      "../src/features/zones/data.js"
+      "./data.js"
     );
     expect(expandZoneCategories([]).size).toBe(0);
     expect(expandZoneCategories(undefined).size).toBe(0);
@@ -164,7 +164,7 @@ describe("Phase 31 — expandZoneCategories", () => {
 
   it("ignores unknown zone categories without throwing", async () => {
     const { expandZoneCategories } = await import(
-      "../src/features/zones/data.js"
+      "./data.js"
     );
     expect(expandZoneCategories(["ghost"]).size).toBe(0);
   });

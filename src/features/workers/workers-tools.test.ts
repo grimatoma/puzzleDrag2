@@ -2,11 +2,11 @@
 // (The original named-individual "apprentice" roster was removed; the
 // type-tier workers introduced alongside it are now the worker system.)
 import { describe, it, expect } from "vitest";
-import { inv, patchInventory } from "../src/testUtils/inventory.js";
-import { rootReducer, createInitialState } from "../src/state.js";
-import { BUILDINGS } from "../src/constants.js";
-import { TYPE_WORKERS, TYPE_WORKER_MAP } from "../src/features/workers/data.js";
-import { computeWorkerEffects } from "../src/features/workers/aggregate.js";
+import { inv, patchInventory } from "../../testUtils/inventory.js";
+import { rootReducer, createInitialState } from "../../state.js";
+import { BUILDINGS } from "../../constants.js";
+import { TYPE_WORKERS, TYPE_WORKER_MAP } from "./data.js";
+import { computeWorkerEffects } from "./aggregate.js";
 
 function withCoins(coins, villagers = 10) {
   return {

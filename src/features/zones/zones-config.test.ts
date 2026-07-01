@@ -12,9 +12,9 @@ import {
   zoneHasBoard,
   zoneBoard,
   zoneBaseTurns,
-} from "../src/features/zones/data.js";
-import * as zonesSlice from "../src/features/zones/slice.js";
-import { createInitialState, rootReducer } from "../src/state.js";
+} from "./data.js";
+import * as zonesSlice from "./slice.js";
+import { createInitialState, rootReducer } from "../../state.js";
 
   it("gives each farm zone its own boards.farm instance (not shared references)", () => {
     const homeFarm = ZONES.home.boards.farm!;

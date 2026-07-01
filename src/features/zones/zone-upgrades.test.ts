@@ -9,9 +9,9 @@ import {
   TILE_CATEGORY_TO_ZONE_CATEGORY,
   ZONE_UPGRADE_TARGET_GOLD,
   nextResourceForZone,
-} from "../src/features/zones/data.js";
-import { CATEGORY_OF, TILE_TYPES } from "../src/features/tileCollection/data.js";
-import { BIOMES } from "../src/constants.js";
+} from "./data.js";
+import { CATEGORY_OF, TILE_TYPES } from "../tileCollection/data.js";
+import { BIOMES } from "../../constants.js";
 
 // nextResourceForZone resolves tile entries by CATEGORY_OF, so it needs both tiles and resources.
 const farmResources = [...BIOMES.farm.tiles, ...BIOMES.farm.resources];

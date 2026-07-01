@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { createInitialState } from "../src/state.js";
-import { getCategoryViewModel, getTileDetailViewModel } from "../src/features/tileCollection/effects.js";
+import { createInitialState } from "../../state.js";
+import { getCategoryViewModel, getTileDetailViewModel } from "./effects.js";
 
 describe("tile detail view models", () => {
   it("exposes detail data for locked, buyable, and active tiles", () => {

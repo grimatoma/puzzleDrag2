@@ -6,6 +6,13 @@ export default defineConfig({
   plugins: [react(), seasonalSubjects()],
   test: {
     environment: "node",
+    // Share the module registry across files in a worker instead of re-importing
+    // the heavy graph (state.ts + constants.ts + 68 imports) per file. Verified
+    // safe: the full suite (4019 tests) passes under isolate:false AND under a
+    // shuffled run order (order-independent), and coverage thresholds hold. The
+    // setup.ts beforeEach still resets localStorage, so cross-file save
+    // pollution is guarded. Cuts local wall time ~128s → ~57s (health review §9).
+    isolate: false,
     include: [
       "tests/**/*.test.js",
       "tests/**/*.test.ts",

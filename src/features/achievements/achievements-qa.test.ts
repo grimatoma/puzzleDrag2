@@ -2,7 +2,7 @@
  * QA Batch 2 — Fix 7: canonical achievements list from features/achievements/data.js
  */
 import { describe, it, expect } from "vitest";
-import { ACHIEVEMENTS } from "../src/features/achievements/data.js";
+import { ACHIEVEMENTS } from "./data.js";
 
 describe("Fix 7 — canonical ACHIEVEMENTS list shape", () => {
   it("has at least 12 entries (fish-biome PR added 3 more)", () => {

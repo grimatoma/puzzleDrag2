@@ -2,10 +2,10 @@
  * QA Batch 2 — Fix 4: deterministic 6-slot quests from features/quests/data.js
  */
 import { describe, it, expect } from "vitest";
-import { rollQuests } from "../src/features/quests/data.js";
-import { createInitialState, rootReducer } from "../src/state.js";
-import { zoneInventory } from "../src/state/zoneInventory.js";
-import { inventoryQty } from "../src/types/inventory.js";
+import { rollQuests } from "./data.js";
+import { createInitialState, rootReducer } from "../../state.js";
+import { zoneInventory } from "../../state/zoneInventory.js";
+import { inventoryQty } from "../../types/inventory.js";
 
 function fresh() {
   global.localStorage?.clear?.();

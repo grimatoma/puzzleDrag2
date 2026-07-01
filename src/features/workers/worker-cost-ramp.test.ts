@@ -3,8 +3,8 @@
 // in `src/features/workers/data.js`. Zones-1&2 scope caps each worker at
 // (chain − 3), so the ramp tests hire up to those caps (Farmer 2, Miner 5, Baker 2).
 import { describe, it, expect } from "vitest";
-import { rootReducer, createInitialState } from "../src/state.js";
-import { TYPE_WORKER_MAP, nextHireCost, nextHireResourceCost } from "../src/features/workers/data.js";
+import { rootReducer, createInitialState } from "../../state.js";
+import { TYPE_WORKER_MAP, nextHireCost, nextHireResourceCost } from "./data.js";
 
 const FARMER = TYPE_WORKER_MAP.farmer;
 const LUMBERJACK = TYPE_WORKER_MAP.lumberjack;

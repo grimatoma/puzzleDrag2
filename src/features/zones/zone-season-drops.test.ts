@@ -5,9 +5,9 @@ import {
   seasonIndexInSession,
   seasonNameInSession,
   pickByZoneSeasonDrops,
-} from "../src/features/zones/data.js";
-import { CATEGORY_OF } from "../src/features/tileCollection/data.js";
-import { BIOMES } from "../src/constants.js";
+} from "./data.js";
+import { CATEGORY_OF } from "../tileCollection/data.js";
+import { BIOMES } from "../../constants.js";
 
 // pickByZoneSeasonDrops resolves tile entries by CATEGORY_OF, so it needs both tiles and resources.
 const farmResources = [...BIOMES.farm.tiles, ...BIOMES.farm.resources];
