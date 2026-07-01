@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shell &amp; onboarding — Proposals &amp; Mockups · puzzleDrag2 Design Review</title>
+<link rel="stylesheet" href="./assets/mockup.css">
+</head>
+<body>
+<header class="top">
+  <span class="brand">puzzleDrag2 · <span class="em">Proposals</span></span>
+  <span class="crumb"><a href="./index.html">All proposals</a> › <strong>06 · Shell &amp; onboarding</strong></span>
+  <span class="meta">before → after · grounded in <code>src/</code></span>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <a class="home" href="./index.html">← All proposals</a>
+  <div class="sep">Surfaces</div>
+  <a href="./board.html"><span class="k">01</span>The Board</a>
+  <a href="./town.html"><span class="k">02</span>The Town</a>
+  <a href="./map.html"><span class="k">03</span>World Map</a>
+  <a href="./screens.html"><span class="k">04</span>Screens &amp; panels</a>
+  <a href="./story.html"><span class="k">05</span>Story &amp; moments</a>
+  <a href="./shell.html" class="active"><span class="k">06</span>Shell &amp; onboarding</a>
+  <a href="./crosscutting.html"><span class="k">07</span>Cross-cutting</a>
+  <a href="./additional-findings.html"><span class="k">08</span>Additional findings</a>
+  <div class="sep">On this page</div>
+  <a href="#nav-hub">SH1 · Navigation hub</a>
+  <a href="#hubs">SH2 · Real hubs &amp; taxonomy</a>
+  <a href="#menu">SH3 · Main-menu weight</a>
+  <a href="#modal-shell">SH4 · One modal shell</a>
+  <a href="#toasts">SH5 · Bubbles, news &amp; daily</a>
+  <a href="#onboarding">SH6 · Onboarding spotlights</a>
+  <a href="#new">SH7 · New findings</a>
+</nav>
+
+<main>
+  <p class="eyebrow">Proposals · Core surface 06</p>
+  <h1>Shell &amp; onboarding — fully-defined proposals</h1>
+  <p class="lead">The board is the game; the shell is how a player <em>finds</em> the game. Today the shell hides
+  most of what has already been built: seven full-screen systems have no door except the Debug menu, the modal
+  chrome speaks two dialects, and the first-run tour points its spotlight at things that aren't on screen. Each
+  proposal pairs the game <span class="chip" style="background:var(--now);color:#fff;border:0">as it is now</span>
+  with a rendered mock of <span class="chip" style="background:var(--next);color:#fff;border:0">what to build</span>,
+  and a concrete <code>file:line</code> spec.</p>
+
+  <div class="callout tldr"><p style="margin:0"><strong>Shell through-line.</strong> One change carries the page:
+  <a href="#nav-hub">(SH1) the navigation hub</a> — give every built system a real door and stop the 6-tab nav
+  from capping the game's future. Around it: <a href="#hubs">(SH2)</a> turn Townsfolk &amp; Quests into real
+  sub-hubs and fix the taxonomy; <a href="#menu">(SH3)</a> give the main menu weight and thumb-reach;
+  <a href="#modal-shell">(SH4) one modal shell + one status vocabulary</a>; <a href="#toasts">(SH5)</a> give NPCs
+  a face and the daily reward its ladder back; and <a href="#onboarding">(SH6)</a> aim the tutorial spotlight at
+  elements that actually exist. None is a rewrite.</p></div>
+
+  <!-- ============================================================= SH1 · NAV HUB -->
+  <article class="prop" id="nav-hub">
+    <div class="phd">
+      <span class="pid">SH1</span><span class="sev S1">S1</span><span class="eff">Effort M</span>
+      <span class="chip good">Top priority #1</span>
+    </div>
+    <div class="ptitle">Build the navigation hub — give every finished system a door players can reach</div>
+    <p class="why">Seven full-screen systems — <strong>Orders, Castle, Foes (bosses), Portal, Decorations, Tiles,
+    Chronicle</strong> — are reachable <em>only</em> from the Debug menu's ten shortcut buttons
+    (<span class="mut"><code>features/debug/index.tsx:31</code>; a repo-wide grep for each
+    <code>view:"…"</code> outside debug/visual-tests finds no other dispatch</span>). Charter loops off Chronicle
+    (both debug-only); Boons hides behind a story-gated corner button that only appears after you've faced a
+    keeper (<span class="mut"><code>Town.tsx:376</code></span>). Meanwhile the bottom nav is a fixed <strong>6
+    tabs</strong> — Town, Inventory, Craft, Map, Townsfolk, Quests — with no overflow strategy
+    (<span class="mut"><code>ui.tsx:69–74</code></span>) and the ☰ menu is a flat 10-button stack. There is
+    nowhere to <em>put</em> a new system, so finished content ships invisible.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">6 fixed tabs + a flat menu</span></div>
+        <figure>
+          <div class="device phone"><div class="screen">
+            <div class="gm-hud"><span class="burger">≡</span><span class="gm-pill title" style="font-size:11px">Hearthwood Vale</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span><span class="gm-pill ember">Lv 4</span></div>
+            <div class="gm-bg gm-wrap warm" style="padding:9px;gap:6px;overflow:hidden">
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">🔥 HEARTHLANDS — MENU</div>
+              <div class="gm-cta ghost wide" style="justify-content:flex-start">📖 Show Tutorial</div>
+              <div class="gm-cta ghost wide" style="justify-content:flex-start">⛶ Go Fullscreen</div>
+              <div class="gm-cta ghost wide" style="justify-content:flex-start">⚙ Settings</div>
+              <div class="gm-cta ghost wide" style="justify-content:flex-start">ℹ About</div>
+              <div class="gm-cta ghost wide" style="justify-content:flex-start">🏆 Trophies</div>
+              <div class="gm-cta ghost wide" style="justify-content:flex-start">🏛 Town Hall</div>
+              <div class="gm-cta ghost wide" style="justify-content:flex-start">🛠 Debug</div>
+              <div class="gm-cta ghost wide" style="justify-content:flex-start;opacity:.7">📖 Wiki · 📄 Docs</div>
+              <span class="gm-flag bad" style="top:30px;right:8px">flat 10-item stack; no grouping</span>
+            </div>
+            <div class="gm-wrap">
+              <div class="gm-nav">
+                <span class="t on"><span class="ic">⭐</span>Town</span>
+                <span class="t"><span class="ic">📦</span>Inventory</span>
+                <span class="t"><span class="ic">🛠</span>Craft</span>
+                <span class="t"><span class="ic">🗺️</span>Map</span>
+                <span class="t"><span class="ic">👥</span>Townsfolk</span>
+                <span class="t"><span class="ic">📖</span>Quests</span>
+              </div>
+              <span class="gm-flag bad" style="bottom:34px;right:6px">6 tabs, no room; a 7th makes labels touch</span>
+            </div>
+          </div></div>
+          <figcaption>Orders, Castle, Foes, Portal, Decorations, Tiles and Chronicle appear <em>nowhere</em> on
+          this phone — they live behind 🛠 Debug. The nav is full and the menu is an undifferentiated list.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED — Option A</span><span class="lead-in">5 core tabs + a structured "More" sheet</span></div>
+        <figure class="light">
+          <div class="device phone"><div class="screen">
+            <div class="gm-hud"><span class="burger">≡</span><span class="gm-pill title" style="font-size:11px">Hearthwood Vale</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span><span class="gm-pill ember">Lv 4</span></div>
+            <div class="gm-bg gm-wrap" style="padding:0;justify-content:flex-end">
+              <div style="flex:1"></div>
+              <div class="gm-panel" style="border-radius:16px 16px 0 0;padding:11px 11px 6px">
+                <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+                  <span class="gm-title" style="font-size:14px">More</span><span class="gm-spacer"></span>
+                  <span class="gm-mini">grows as you unlock</span>
+                </div>
+
+                <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);margin:4px 0 3px">SYSTEMS</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+                  <div class="gm-row" style="margin:0;padding:6px 8px;font-size:11px">🐉 Foes</div>
+                  <div class="gm-row" style="margin:0;padding:6px 8px;font-size:11px">🏰 Castle</div>
+                  <div class="gm-row" style="margin:0;padding:6px 8px;font-size:11px">🧩 Tiles</div>
+                  <div class="gm-row" style="margin:0;padding:6px 8px;font-size:11px">📜 Chronicle</div>
+                  <div class="gm-row" style="margin:0;padding:6px 8px;font-size:11px;opacity:.6">🌀 Portal <span class="gm-spacer"></span><span class="gm-status locked" style="font-size:8px">Ch.2</span></div>
+                  <div class="gm-row" style="margin:0;padding:6px 8px;font-size:11px;opacity:.6">✨ Boons <span class="gm-spacer"></span><span class="gm-status locked" style="font-size:8px">Keeper</span></div>
+                </div>
+
+                <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);margin:8px 0 3px">SETTLEMENT</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+                  <div class="gm-row" style="margin:0;padding:6px 8px;font-size:11px">🌿 Decorations</div>
+                  <div class="gm-row" style="margin:0;padding:6px 8px;font-size:11px">🏛 Town Hall</div>
+                </div>
+
+                <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);margin:8px 0 3px">APP</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:5px">
+                  <div class="gm-row" style="margin:0;padding:6px 8px;font-size:11px">⚙ Settings</div>
+                  <div class="gm-row" style="margin:0;padding:6px 8px;font-size:11px">📖 Wiki</div>
+                </div>
+              </div>
+              <span class="gm-flag good" style="top:12px;right:8px">every built system has a door</span>
+            </div>
+            <div class="gm-nav">
+              <span class="t"><span class="ic">⭐</span>Town</span>
+              <span class="t"><span class="ic">📦</span>Goods</span>
+              <span class="t"><span class="ic">🛠</span>Craft</span>
+              <span class="t"><span class="ic">🗺️</span>Map</span>
+              <span class="t more on"><span class="ic">⋯</span>More</span>
+            </div>
+          </div></div>
+          <figcaption>The nav caps at 5 core-loop tabs + <strong>More</strong>. "More" opens a grouped sheet —
+          <em>Systems / Settlement / App</em> — and each row appears only once its feature unlocks (Portal and
+          Boons are dimmed with an unlock chip). A new system is one row, never a nav crisis.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — where the overflow lives</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · 5 tabs + a "More" sheet</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Keep 5 core-loop tabs; a "More" tab opens a grouped bottom sheet (shown).
+        <b>Pro:</b> the core loop stays one thumb-tap away; the sheet is a scalable, sectioned home with room for
+        progressive disclosure and unlock chips. <b>Con:</b> secondary systems are two taps deep — acceptable for
+        systems you visit occasionally, not every turn.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · A full "Systems" hub tab</span></div>
+        <div class="tradeoff">Replace one tab with a full-screen hub view (a grid of system cards with art +
+        status), not a sheet. <b>Pro:</b> more room per system, richer cards, a real destination. <b>Con:</b> a
+        whole new screen to build and keep in sync; heavier than a sheet for what is mostly a launcher, and it
+        spends a scarce tab slot on navigation rather than a system.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Cap <span class="filechip">src/ui.tsx:64</span> <code>BottomNav</code> at 5 <code>&lt;Tab&gt;</code>s
+          for the core loop and add a 6th <code>More</code> tab that dispatches
+          <code>OPEN_MODAL &#123;modal:"more"&#125;</code> instead of a <code>SET_VIEW</code>.</li>
+        <li>Add a <span class="filechip">src/features/more/</span> feature (<code>modalKey:"more"</code>) whose
+          sheet reads a static <code>HUB_SECTIONS</code> map (Systems / Settlement / App → the real
+          <code>viewKey</code>s currently hard-coded in <span class="filechip">features/debug/index.tsx:31</span>),
+          and hides any row whose unlock predicate is false (progressive disclosure).</li>
+        <li>Move the ☰ menu's non-system entries into the sheet's <em>App</em> section so there is one launcher,
+          not two (<span class="filechip">features/settings/index.tsx:148</span> — see SH3).</li>
+        <li><b>Guard-rail:</b> add a test/CI check asserting every <code>viewKey</code> in the feature glob has at
+          least one non-debug dispatch that reaches it (walk <code>HUB_SECTIONS</code> + nav + known links). This
+          is what prevents a future system from silently shipping Debug-only again.</li>
+      </ul>
+    </div>
+    <p class="small mut" style="margin-top:8px">The sub-navigation (Townsfolk &amp; Quests becoming real hubs) and
+    the taxonomy fixes are <a href="#hubs">SH2</a>; the menu-weight pass is <a href="#menu">SH3</a>.</p>
+  </article>
+
+  <!-- ============================================================= SH2 · HUBS -->
+  <article class="prop" id="hubs">
+    <div class="phd"><span class="pid">SH2</span><span class="sev S2">S2</span><span class="eff">Effort M</span></div>
+    <div class="ptitle">Make Townsfolk &amp; Quests real hubs — and fix the names that mislead</div>
+    <p class="why">The <strong>Townsfolk</strong> tab promises the whole social system but delivers only the
+    Workers roster, while NPCs, Foes and the Castle are homeless. The goal systems are scattered: Daily quests,
+    Orders (half of which live in Inventory), and Trophies (buried in ☰) never sit together. And the words
+    collide: "Almanac" names three different things (the Lv pill, a Quests XP ladder, and an empty
+    <code>almanac</code> feature), while the menu title says "Hearthlands" and everything else says "Hearthwood
+    Vale". <span class="mut">Nav labels at <code>ui.tsx:69–74</code>; menu title
+    <code>settings/index.tsx:151</code> vs HUD label <code>Hud.tsx:142</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">one tab = one sub-feature</span></div>
+        <figure>
+          <div class="gm" style="padding:10px">
+            <div class="gm-card" style="padding:10px">
+              <div class="gm-title" style="font-size:14px">👥 Townsfolk</div>
+              <div class="gm-mini" style="margin:2px 0 8px">= the Workers roster, and nothing else</div>
+              <div class="gm-row" style="margin:4px 0;font-size:12px">🧑‍🌾 Mira <span class="gm-spacer"></span><span class="gm-status ready">Assigned</span></div>
+              <div class="gm-row" style="margin:4px 0;font-size:12px">🧑‍🔧 Bram <span class="gm-spacer"></span><span class="gm-status need">Idle</span></div>
+              <div style="display:flex;gap:6px;margin-top:9px;flex-wrap:wrap">
+                <span class="chip">Folk? → nowhere</span>
+                <span class="chip">Foes? → Debug</span>
+                <span class="chip">Castle? → Debug</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>The label over-promises: three of the four social systems have no home in the tab that
+          names them.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">a hub with a sub-tab bar</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:10px">
+            <div class="gm-card" style="padding:0;overflow:hidden">
+              <div style="display:flex;background:linear-gradient(180deg,#faf3df,#f1e7cd);border-bottom:1.5px solid var(--g-iron)">
+                <div style="flex:1;text-align:center;padding:7px 2px;font:800 10px/1.2 system-ui;color:var(--g-ember);border-bottom:2px solid var(--g-ember)">Workers</div>
+                <div style="flex:1;text-align:center;padding:7px 2px;font:700 10px/1.2 system-ui;color:var(--g-ink-light)">Folk</div>
+                <div style="flex:1;text-align:center;padding:7px 2px;font:700 10px/1.2 system-ui;color:var(--g-ink-light)">Foes</div>
+                <div style="flex:1;text-align:center;padding:7px 2px;font:700 10px/1.2 system-ui;color:var(--g-ink-light)">Castle</div>
+              </div>
+              <div style="padding:10px">
+                <div class="gm-row" style="margin:4px 0;font-size:12px">🧑‍🌾 Mira <span class="gm-spacer"></span><span class="gm-status ready">Assigned</span></div>
+                <div class="gm-row" style="margin:4px 0;font-size:12px">🧑‍🔧 Bram <span class="gm-spacer"></span><span class="gm-status need">Idle</span></div>
+              </div>
+            </div>
+            <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);margin:12px 2px 4px">QUESTS — same pattern</div>
+            <div style="display:flex;gap:5px">
+              <span class="gm-cta gold" style="flex:1;padding:7px 4px;font-size:10px">Daily</span>
+              <span class="gm-cta ghost" style="flex:1;padding:7px 4px;font-size:10px">Orders</span>
+              <span class="gm-cta ghost" style="flex:1;padding:7px 4px;font-size:10px">Trophies</span>
+              <span class="gm-cta ghost" style="flex:1;padding:7px 4px;font-size:10px">Almanac</span>
+            </div>
+          </div>
+          <figcaption>Townsfolk becomes <b>Workers · Folk · Foes · Castle</b>; Quests becomes <b>Daily · Orders ·
+          Trophies · Almanac</b>. Two tabs now honor their labels and re-home four Debug-only systems for free.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Give <span class="filechip">src/features/townsfolk/index.tsx</span> an internal sub-tab bar
+          (Workers | Folk | Foes | Castle) that mounts the existing <code>bosses</code> and <code>castle</code>
+          view bodies as panels instead of separate <code>viewKey</code>s.</li>
+        <li>Do the same in <span class="filechip">src/features/quests/index.tsx</span> (Daily | Orders | Trophies
+          | Almanac); fold the Inventory-side order list and the Debug-only <code>orders</code> /
+          <code>achievements</code> views into it.</li>
+        <li><b>Taxonomy:</b> rename the nav <code>Tab label</code> "Townsfolk" (<span class="filechip">ui.tsx:73</span>);
+          make the ☰ title read the same product name as the HUD (<span class="filechip">settings/index.tsx:151</span>);
+          reserve "Almanac" for the compendium and rename the XP ladder "Levels", deep-linking the Lv pill
+          (<span class="filechip">Hud.tsx:248</span>) to it.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= SH3 · MENU WEIGHT -->
+  <article class="prop" id="menu">
+    <div class="phd"><span class="pid">SH3</span><span class="sev S2">S2</span><span class="eff">Effort S</span></div>
+    <div class="ptitle">Give the main menu weight — and put its trigger within thumb reach</div>
+    <p class="why">The ☰ menu is an undifferentiated vertical stack of ten equal-weight buttons — Show Tutorial,
+    Fullscreen, Settings, About, Trophies, Town Hall, Debug, Update, Wiki, Docs — so a destructive dev tool sits
+    the same size and shade as "About". The trigger is pinned to the top-<em>left</em> corner, the hardest reach
+    on a phone held right-handed. <span class="mut">Stack at <code>settings/index.tsx:155–205</code>; ☰ button is
+    the first HUD child, top-left, at <code>Hud.tsx:173–179</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">mobile ☰ menu</span></div>
+        <figure>
+          <img src="../shots/mobile/shell-menu-main.png" alt="the main menu: ten equal-weight stacked buttons">
+          <figcaption>Ten buttons, one weight, one column. Debug is as prominent as Settings; nothing signals
+          which of these you'll want daily vs. once.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">grouped by weight, thumb-anchored</span></div>
+        <figure class="light">
+          <div class="device phone"><div class="screen">
+            <div class="gm-hud"><span class="burger" style="opacity:.4">≡</span><span class="gm-pill title" style="font-size:11px">Hearthwood Vale</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span></div>
+            <div class="gm-bg gm-wrap" style="padding:11px;gap:8px">
+              <div class="center" style="margin-top:4px">
+                <div class="gm-title" style="font-size:20px;color:var(--g-ember)">🔥 Hearthwood Vale</div>
+                <div class="gm-mini" style="font-style:italic">A puzzle of seasons and stews</div>
+              </div>
+              <div class="gm-cta ember wide" style="margin-top:2px">⚙ Settings</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+                <div class="gm-cta ghost">📖 Tutorial</div>
+                <div class="gm-cta ghost">⛶ Fullscreen</div>
+                <div class="gm-cta ghost">🏛 Town Hall</div>
+                <div class="gm-cta ghost">📖 Wiki</div>
+                <div class="gm-cta ghost">ℹ About</div>
+                <div class="gm-cta ghost">📄 Docs</div>
+              </div>
+              <div style="flex:1"></div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;font-size:10px;color:var(--g-ink-light)">
+                <span class="gm-mini">v0.1.0</span><span>·</span><span class="gm-mini">🛠 Debug — long-press to open</span>
+              </div>
+              <span class="gm-flag good" style="top:64px;right:10px">one prominent action; utilities quiet &amp; paired</span>
+            </div>
+          </div></div>
+          <figcaption>A header row states the identity, <b>Settings</b> is the one prominent action, quiet
+          utilities pair off in a 2-col grid, and Debug retreats to a long-press on the version line. The trigger
+          moves to bottom-anchored reach (see spec).</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Restructure <code>MainTab</code> (<span class="filechip">settings/index.tsx:148</span>): a header row,
+          one <code>variant="ember"</code> Settings button, a 2-column grid of quiet utilities, and a footer
+          version line.</li>
+        <li>Gate the Debug entry behind a long-press (<code>onPointerDown</code> + timer) on the version line
+          instead of a first-class <code>ActionBtn</code> (<span class="filechip">settings/index.tsx:180</span>);
+          keep the <code>tutorialDisabled</code> flag reachable there.</li>
+        <li>Move/mirror the trigger for thumb reach: keep ☰ top-left for AT/landscape but add a bottom-anchored
+          affordance (or fold it into the SH1 "More" tab) so the menu isn't a top-corner-only reach on tall
+          phones (<span class="filechip">Hud.tsx:173</span>).</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= SH4 · MODAL SHELL -->
+  <article class="prop" id="modal-shell">
+    <div class="phd">
+      <span class="pid">SH4</span><span class="sev S2">S2</span><span class="eff">Effort M</span>
+      <span class="chip good">Top priority #7</span>
+    </div>
+    <div class="ptitle">Adopt one modal shell + one status vocabulary — and bake the close X into it</div>
+    <p class="why">Two modal dialects live in the same app. <strong>Debug</strong> and <strong>Menu</strong> render
+    a plain <code>ParchmentDialog.Body</code> with their <em>own</em> centered heading and a bolt-on top-right ×
+    (<span class="mut"><code>settings/index.tsx:349–356</code>, <code>debug/index.tsx:60–71</code></span>).
+    <strong>Season</strong> and <strong>Daily</strong> use <code>ParchmentDialog.Title</code> — a heading with a
+    hairline divider — and <em>no</em> close X at all, dismissing only by backdrop/ESC
+    (<span class="mut"><code>Modals.tsx:43</code>, <code>dailyStreak/index.tsx:15–16</code></span>). The shell
+    itself provides no built-in close affordance (<span class="mut"><code>Dialog.tsx:120–165</code></span>), so
+    every modal improvises. Status words are just as loose: "Idle", "Assigned", "need", "locked" appear ad hoc
+    with no shared chip.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">two shells, two dismiss rules</span></div>
+        <figure>
+          <div class="gm" style="padding:10px;display:flex;flex-direction:column;gap:10px">
+            <div class="gm-wrap" style="background:var(--g-parchment-soft);border:3px solid var(--g-iron);border-radius:14px;padding:12px;position:relative">
+              <div style="position:absolute;top:8px;right:8px;width:22px;height:22px;border-radius:6px;border:1.5px solid var(--g-iron);display:flex;align-items:center;justify-content:center;font-size:12px;color:var(--g-ink-soft)">×</div>
+              <div class="center gm-title" style="font-size:14px">🛠 Debug Tools</div>
+              <div class="gm-mini center" style="margin-top:4px">centered heading · own × · no divider</div>
+              <span class="gm-flag bad" style="bottom:-6px;left:8px">shell A: bolt-on ×</span>
+            </div>
+            <div class="gm-wrap" style="background:var(--g-parchment-soft);border:3px solid var(--g-iron);border-radius:14px;padding:12px;position:relative">
+              <div class="gm-title" style="font-size:14px">Daily Reward — Day 3</div>
+              <div style="height:1px;margin:7px 0;background:linear-gradient(90deg,transparent,rgba(178,139,98,.45),transparent)"></div>
+              <div class="gm-mini">Title+divider · <b>no ×</b> · ESC/backdrop only</div>
+              <span class="gm-flag bad" style="bottom:-6px;right:8px">shell B: no close at all</span>
+            </div>
+          </div>
+          <figcaption>Same app, two heading treatments and two different answers to "how do I close this?" — one
+          has an X, the other doesn't.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">one shell · one X rule · one chip set</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:10px;display:flex;flex-direction:column;gap:10px">
+            <div class="gm-wrap" style="background:var(--g-parchment-soft);border:3px solid var(--g-iron);border-radius:14px;padding:12px;position:relative">
+              <div style="position:absolute;top:9px;right:9px;width:28px;height:28px;border-radius:8px;border:1.5px solid var(--g-iron);background:var(--g-paper);display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--g-ink-soft)">×</div>
+              <div class="gm-title" style="font-size:14px">🛠 Debug Tools</div>
+              <div style="height:1px;margin:7px 0;background:linear-gradient(90deg,transparent,rgba(178,139,98,.45),transparent)"></div>
+              <div class="gm-mini"><code>.Title</code> + <code>dismissable</code> X (44px)</div>
+            </div>
+            <div class="gm-wrap" style="background:var(--g-parchment-soft);border:3px solid var(--g-iron);border-radius:14px;padding:12px;position:relative">
+              <div class="gm-title" style="font-size:14px">Daily Reward — Day 3</div>
+              <div style="height:1px;margin:7px 0;background:linear-gradient(90deg,transparent,rgba(178,139,98,.45),transparent)"></div>
+              <div style="display:flex;gap:6px;margin:4px 0 8px">
+                <span class="gm-status ready">ready</span><span class="gm-status need">missing</span>
+                <span class="gm-status locked">locked</span><span class="gm-status done">done</span>
+              </div>
+              <div style="display:flex;justify-content:flex-end"><span class="gm-cta ember" style="padding:7px 14px">Collect</span></div>
+            </div>
+            <span class="gm-flag good" style="top:6px;right:8px">identical frame, dismiss, status words</span>
+          </div>
+          <figcaption>Every modal routes through <code>.Title / .Body / .Actions</code>; an optional
+          <code>dismissable</code> X is baked into the shell (one 44px target, one place). One <b>X-vs-CTA</b>
+          rule and one status vocabulary — <b>ready / missing / locked / done</b> — used everywhere.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — the close-affordance rule</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · X for exploratory, CTA for transactional</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Panels you browse (Debug, Menu, Town Hall) get the <code>dismissable</code> X; modals
+        that resolve an action (Daily "Collect", Season "Return to Town") lead with the CTA and also accept
+        backdrop/ESC. <b>Pro:</b> the affordance matches intent; no modal is a dead-end. <b>Con:</b> a per-modal
+        judgement call — encode it as the default of the shell prop.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · X on every modal, always</span></div>
+        <div class="tradeoff">Ship the X on all of them unconditionally. <b>Pro:</b> zero ambiguity, one habit.
+        <b>Con:</b> a redundant X above a single "Collect" button adds a second, competing exit and clutters small
+        reward modals.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Add a <code>dismissable</code> prop to <span class="filechip">src/ui/primitives/Dialog.tsx:120</span>
+          that renders a shared 44&times;44 close button in the panel corner (reusing
+          <code>FeaturePanel.CloseButton</code>), so no modal hand-rolls one.</li>
+        <li>Delete the bespoke <code>CloseButton</code> + centered <code>text-[18px]</code> headings in
+          <span class="filechip">settings/index.tsx:352</span> and <span class="filechip">debug/index.tsx:62</span>;
+          route both through <code>&lt;ParchmentDialog.Title&gt;</code> with <code>dismissable</code>.</li>
+        <li>Promote the four <code>.gm-status</code> chips (<code>ready / missing / locked / done</code>) to a
+          shared <code>&lt;StatusChip&gt;</code> and replace ad-hoc words ("Idle", "Assigned", "need") across
+          features.</li>
+        <li>Apply the 44px tap-target token to the shell's close button and all modal footer CTAs.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= SH5 · TOASTS + DAILY -->
+  <article class="prop" id="toasts">
+    <div class="phd"><span class="pid">SH5</span><span class="sev S2">S2</span><span class="eff">Effort M</span></div>
+    <div class="ptitle">Give NPCs a face, the news a home, and the daily reward its ladder back</div>
+    <p class="why">NPC dialogue and Market News both surface as portrait-less top toasts. <code>NpcBubble</code>
+    hands the notifier a <em>label string</em> (<code>"Mira · Cook"</code>) where a portrait key should go, so the
+    speaker never gets a face (<span class="mut"><code>Modals.tsx:616–621</code></span>), and Market News is a
+    4000ms bubble that self-destructs (<span class="mut"><code>state.ts:1133</code></span>) — a market you can't
+    consult. And the Daily Reward modal renders only <em>today's</em> line, throwing away a rich 30-day ladder
+    with real milestones at days 3/5/7/14/30 (<span class="mut"><code>dailyStreak/index.tsx:16–24</code> renders
+    one day; <code>DAILY_REWARDS</code> is keyed 1–30 at <code>constants.ts:1142</code></span>).</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">faceless toast · today-only reward</span></div>
+        <figure>
+          <div class="gm" style="padding:10px;display:flex;flex-direction:column;gap:10px">
+            <div class="gm-wrap gm-card" style="padding:8px 10px">
+              <div class="gm-mini" style="color:var(--g-ink-soft)">Mira · Cook</div>
+              <div style="font-size:12px;margin-top:2px">"The stew pot's empty again…"</div>
+              <span class="gm-flag bad" style="top:-6px;right:6px">no portrait; label passed as key</span>
+            </div>
+            <div class="gm-card" style="padding:8px 10px;font-size:12px">
+              📣 Market News: Cocoa boom! Prices are up.
+              <span class="gm-mini" style="display:block;margin-top:2px;font-style:italic">…gone in 4 seconds</span>
+            </div>
+            <div class="gm-wrap gm-card" style="padding:10px">
+              <div class="gm-title" style="font-size:13px">Daily Reward — Day 3</div>
+              <div style="font-size:12px;margin-top:4px">+1 basic tool</div>
+              <span class="gm-flag bad" style="bottom:-6px;right:6px">days 1–30 exist; you see one</span>
+            </div>
+          </div>
+          <figcaption>Three cozy, character-driven moments rendered as anonymous, disappearing text.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">speaker chip · ticker pill · day strip</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:10px;display:flex;flex-direction:column;gap:10px">
+            <div class="gm-card" style="padding:8px 10px;display:flex;align-items:center;gap:9px">
+              <div style="width:34px;height:34px;border-radius:9px;background:radial-gradient(circle at 40% 35%,#e6a86a,#b56a2a);display:flex;align-items:center;justify-content:center;font-size:17px;border:1.5px solid var(--g-iron);flex-shrink:0">🧑‍🍳</div>
+              <div style="min-width:0"><div class="gm-title" style="font-size:12px">Mira <span class="gm-mini" style="font-weight:400">· Cook</span></div><div style="font-size:12px">"The stew pot's empty again…"</div></div>
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;background:var(--g-paper);border:1.5px solid var(--g-iron);border-radius:999px;padding:5px 10px;font-size:11px">
+              <span style="font-weight:800;color:var(--g-ember)">📣 NEWS</span>
+              <span style="opacity:.5">·</span> Cocoa boom — sell high <span class="gm-spacer"></span><span class="gm-mini">tap for market</span>
+            </div>
+            <div class="gm-card" style="padding:10px">
+              <div class="gm-title" style="font-size:13px;margin-bottom:6px">Daily Reward — <span style="color:var(--g-ember)">Day 3</span></div>
+              <div style="display:flex;align-items:flex-end;gap:4px">
+                <div style="flex:1;text-align:center"><div style="height:30px;border-radius:7px;background:#d3f9d8;border:1px solid #1f7a36;display:flex;align-items:center;justify-content:center;font-size:12px">✓</div><div class="gm-mini">1</div></div>
+                <div style="flex:1;text-align:center"><div style="height:30px;border-radius:7px;background:#d3f9d8;border:1px solid #1f7a36;display:flex;align-items:center;justify-content:center;font-size:12px">✓</div><div class="gm-mini">2</div></div>
+                <div style="flex:1.2;text-align:center"><div style="height:40px;border-radius:8px;background:linear-gradient(180deg,#ffd34c,#e2b24a);border:2px solid #b98a1e;display:flex;align-items:center;justify-content:center;font-size:15px">🔧</div><div class="gm-mini" style="font-weight:800;color:var(--g-ember)">3 ★</div></div>
+                <div style="flex:1;text-align:center;opacity:.45"><div style="height:30px;border-radius:7px;background:var(--g-well);border:1px solid var(--g-iron);display:flex;align-items:center;justify-content:center;font-size:11px">◉</div><div class="gm-mini">4</div></div>
+                <div style="flex:1.2;text-align:center;opacity:.55"><div style="height:40px;border-radius:8px;background:var(--g-well);border:1.5px solid var(--g-iron);display:flex;align-items:center;justify-content:center;font-size:14px">💎</div><div class="gm-mini">5 ★</div></div>
+                <div style="flex:1;text-align:center;opacity:.4"><div style="height:30px;border-radius:7px;background:var(--g-well);border:1px solid var(--g-iron);display:flex;align-items:center;justify-content:center;font-size:11px">◉</div><div class="gm-mini">…</div></div>
+              </div>
+              <div class="gm-mini" style="text-align:center;margin-top:6px">past checked · today lifted · milestones larger · day 30 unlocks a tile</div>
+            </div>
+          </div>
+          <figcaption>The speaker gets a portrait chip (pass <code>bubble.npc</code>, not the label); news becomes
+          a persistent ticker pill you can consult; and the daily modal shows the <em>ladder</em> — past days
+          checked, today lifted, milestone days larger — so the streak reads as a journey worth keeping.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>In <span class="filechip">src/ui/Modals.tsx:618</span> pass <code>npcKey: bubble.npc</code> (the real
+          key) and move the <code>name · role</code> string into a separate <code>label</code> field so the toast
+          can render the portrait via <code>NPCS[key].look</code>.</li>
+        <li>Split Market News out of the ephemeral bubble path (<span class="filechip">src/state.ts:1133</span>)
+          into a persistent <code>marketNews</code> state field; render it as a dismissible ticker pill in the HUD
+          / above the nav rather than a 4000ms toast.</li>
+        <li>Rework <span class="filechip">src/features/dailyStreak/index.tsx:14</span> to map over
+          <code>DAILY_REWARDS</code> (<span class="filechip">constants.ts:1142</span>) into a horizontal day
+          strip: <code>day &lt; current</code> → checked, <code>=== current</code> → highlighted CTA,
+          <code>&gt;</code> → dimmed; scale milestone days (3/5/7/14/30) larger; auto-scroll to today.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= ONBOARDING SECTION -->
+  <h2 id="onboarding"><span class="n">SH6</span>Onboarding — aim the spotlight at things that exist</h2>
+  <p>The nine-step first-run tour (<span class="mut"><code>features/tutorial/steps.ts</code></span>) walks the core
+  loop, but two of its spotlight steps target elements the player can't see, so the tour's most confident moments
+  — a glowing ring that says "look here" — point at nothing or at the wrong control.</p>
+
+  <!-- SH6a -->
+  <article class="prop">
+    <div class="phd"><span class="pid">SH6a</span><span class="sev S1">S1</span><span class="eff">Effort S</span></div>
+    <div class="ptitle">"Seasons &amp; turns" spotlights an off-screen element — anchor it to the visible strip</div>
+    <p class="why">The <code>turns</code> step targets <code>[data-testid="turns-left"]</code>
+    (<span class="mut"><code>steps.ts:78</code></span>). That testid exists <em>only</em> as two hidden numeral
+    mirrors positioned at <code>left:-9999px</code> (<span class="mut"><code>puzzleBoard.tsx:133</code> and
+    <code>seasonStripPhaser.tsx:158</code></span>) — the real season strip is a Phaser canvas with no DOM anchor.
+    <code>readRect</code> rejects only zero-size nodes, not negative coordinates
+    (<span class="mut"><code>tutorial/index.tsx:284</code></span>), so a &minus;9999px span passes the guard and the
+    ring is drawn far off-screen, leaving a fully-dimmed board with a coach card pointing at emptiness.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">ring off-screen, board fully dimmed</span></div>
+        <figure>
+          <img src="../shots/mobile/tutorial-corner.png" alt="tutorial spotlight with the ring not on the season strip">
+          <figcaption>The coach card explains "seasons &amp; turns", but the highlight the player is told to look
+          at is off-screen — the whole board dims with nothing lit.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">ring on the real HUD strip</span></div>
+        <figure class="light">
+          <div class="device phone"><div class="screen">
+            <div class="gm-wrap gm-hud"><span class="burger">←</span>
+              <span class="gm-spacer"></span>
+              <div style="display:flex;align-items:center;gap:5px;font:700 10px/1 system-ui;color:var(--g-ink-soft);border:2px solid var(--g-season-spring);border-radius:8px;padding:4px 7px;box-shadow:0 0 0 4px rgba(90,158,46,.28)">
+                <span class="gm-title" style="color:var(--g-season-spring)">🌸 Spring</span><span>· 8 turns</span>
+              </div>
+              <span class="gm-spacer"></span>
+              <span class="gm-pill gold">◉ 1,240</span>
+              <span class="gm-flag good" style="top:2px;left:8px" >ring on the visible strip</span>
+            </div>
+            <div class="gm-bg" style="padding:8px;position:relative">
+              <div class="gm-board" style="--n:6;background:linear-gradient(180deg,var(--g-field-spring-top),var(--g-field-spring-bot));border:2px solid var(--g-iron);padding:6px;opacity:.5">
+                <div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grass">🌳</div>
+                <div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft fruit">🍎</div>
+                <div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌸</div>
+              </div>
+              <div style="background:var(--g-parchment);border:3px solid var(--g-iron);border-radius:14px;padding:10px;margin-top:8px;display:flex;gap:9px;align-items:center">
+                <div style="width:32px;height:32px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#8fb0d6,#3f6f9e);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🧑‍🌾</div>
+                <div><div class="gm-title" style="font-size:12px">Seasons &amp; turns</div><div style="font-size:11px;color:var(--g-ink-soft)">Each run flows through the seasons — spend your turns before winter.</div></div>
+              </div>
+            </div>
+          </div></div>
+          <figcaption>A real <code>data-tour="season-strip"</code> anchor on the visible HUD strip; the ring lands
+          on it. A <code>left&lt;0 / top&lt;0</code> guard in <code>readRect</code> stops any off-screen mirror
+          from ever being spotlighted again.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Add <code>data-tour="season-strip"</code> to the visible <code>SeasonIndicator</code> in the HUD
+          (<span class="filechip">Hud.tsx:205</span>) and retarget the step
+          (<span class="filechip">steps.ts:78</span>) to it.</li>
+        <li>Harden <code>readRect</code> (<span class="filechip">tutorial/index.tsx:284</span>) to also return
+          <code>null</code> when <code>r.left &lt; 0</code> or <code>r.top &lt; 0</code> (or right/bottom fall off
+          the viewport) so an off-screen node degrades to the centered card instead of an invisible ring.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- SH6b -->
+  <article class="prop">
+    <div class="phd"><span class="pid">SH6b</span><span class="sev S1">S1</span><span class="eff">Effort S</span></div>
+    <div class="ptitle">"Build your first building" points at the nav tab, not a plot — retarget &amp; rewrite</div>
+    <p class="why">The <code>build</code> step spotlights <code>[data-tour="nav-town"]</code> — the bottom-nav Town
+    <em>tab</em> (<span class="mut"><code>steps.ts:98</code>; anchor set in
+    <code>primitives/TabBar.tsx:83</code></span>), while its copy says "Tap an empty plot, choose a building like
+    the Mill, and build it." The ring sits on a nav icon; the instruction describes a plot the player must find on
+    their own. The step auto-advances on <code>BUILD</code>, so a confused player is stuck staring at the wrong
+    thing.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">ring on the nav tab</span></div>
+        <figure>
+          <div class="device phone"><div class="screen">
+            <div class="gm-hud"><span class="burger">≡</span><span class="gm-pill title" style="font-size:11px">Hearthwood Vale</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 50</span></div>
+            <div class="gm-bg" style="padding:8px;position:relative">
+              <div style="background:var(--g-parchment);border:3px solid var(--g-iron);border-radius:14px;padding:10px;display:flex;gap:9px;align-items:center">
+                <div style="width:30px;height:30px;border-radius:50%;background:#8c6f44;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0">B</div>
+                <div><div class="gm-title" style="font-size:12px">Build your first building</div><div style="font-size:11px;color:var(--g-ink-soft)">Tap an empty plot, choose a building like the Mill…</div></div>
+              </div>
+              <div style="flex:1"></div>
+            </div>
+            <div class="gm-wrap gm-nav">
+              <div style="flex:1;text-align:center;padding:6px 2px;position:relative">
+                <span style="position:absolute;inset:2px;border:2px solid var(--g-moss);border-radius:8px;box-shadow:0 0 0 4px rgba(95,107,58,.3)"></span>
+                <span class="ic" style="font-size:14px;display:block">⭐</span><span style="font:700 9px/1.2 system-ui;color:var(--g-ember)">Town</span>
+              </div>
+              <span class="t"><span class="ic">📦</span>Goods</span><span class="t"><span class="ic">🛠</span>Craft</span><span class="t"><span class="ic">🗺️</span>Map</span><span class="t"><span class="ic">👥</span>Folk</span>
+              <span class="gm-flag bad" style="bottom:34px;left:6px">ring on the tab, not a plot</span>
+            </div>
+          </div></div>
+          <figcaption>The copy talks about plots; the highlight is on the Town nav icon. The player is already on
+          the Town view — the ring points at the button that got them here.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">ring on a real plot's Build CTA</span></div>
+        <figure class="light">
+          <div class="device phone"><div class="screen">
+            <div class="gm-hud"><span class="burger">≡</span><span class="gm-pill title" style="font-size:11px">Hearthwood Vale</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 50</span></div>
+            <div class="gm-bg warm" style="padding:10px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px">
+              <div style="display:flex;gap:8px">
+                <div class="gm-card" style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:22px">🏠</div>
+                <div class="gm-wrap gm-card" style="width:56px;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-style:dashed;border-color:var(--g-moss);box-shadow:0 0 0 4px rgba(95,107,58,.28)">
+                  <span style="font-size:18px">＋</span><span class="gm-mini" style="font-weight:800;color:var(--g-moss)">Build</span>
+                </div>
+                <div class="gm-card" style="width:56px;height:56px;display:flex;align-items:center;justify-content:center;font-size:22px;opacity:.6">🌳</div>
+              </div>
+              <div style="background:var(--g-parchment);border:3px solid var(--g-iron);border-radius:14px;padding:10px;display:flex;gap:9px;align-items:center;max-width:250px">
+                <div style="width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#c7996a,#8c6f44);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🧑‍🔧</div>
+                <div><div class="gm-title" style="font-size:12px">Raise your first building</div><div style="font-size:11px;color:var(--g-ink-soft)">Tap this empty plot to build the Mill — it unlocks recipes.</div></div>
+              </div>
+              <span class="gm-flag good" style="top:8px;right:8px">ring on the empty plot itself</span>
+            </div>
+          </div></div>
+          <figcaption>A <code>data-tour="build-cta"</code> anchor on the first empty plot (or its Build button); the
+          ring lands where the action is, and the copy names <em>that</em> plot.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Add <code>data-tour="build-cta"</code> to the first empty/buildable plot (or its Build affordance) in
+          the Town view (<span class="filechip">src/ui/Town.tsx</span>) and point the step at it
+          (<span class="filechip">steps.ts:98</span>).</li>
+        <li>Rewrite the step body to reference the highlighted plot directly ("Tap <em>this</em> plot to build the
+          Mill"), and keep the <code>advanceOn:"BUILD"</code> gate.</li>
+        <li>If no plot is buildable yet (can't afford it), fall back to the centered card so the ring never
+          dangles — this pairs with the SH6a <code>readRect</code> guard.</li>
+      </ul>
+    </div>
+
+    <h3 class="disp" style="margin-top:18px">Also folded in (S3 / polish)</h3>
+    <ul class="small">
+      <li><strong>Narrator is a bare lettered circle</strong> — <code>NpcAvatar</code> draws a colored disc with
+        <code>npc.name[0]</code>, not the real portrait (<span class="filechip">tutorial/index.tsx:26–49</span>).
+        Render the actual NPC art (same fix family as SH5's speaker chip) so Wren/Mira/Bram have faces.</li>
+      <li><strong>No "Step 3 of 9"</strong> — the tour shows only dot pips (<span class="filechip">tutorial/index.tsx:52–68</span>);
+        add a numeric "Step N of 9" so players gauge how long the tour is.</li>
+      <li><strong>Puzzle step card can cover the tool rack</strong> — the <code>top</code>-preferred placement on a
+        near-full-height board can land the coach card over the tools; bias to a side gap on the board step.</li>
+      <li><strong>Fresh town leads with an un-actionable "Upgrade to Hamlet" sign</strong> — the first thing a new
+        caretaker reads is a locked upgrade they can't afford; suppress it until the first building stands.</li>
+      <li><strong>Unexplained 50-coin first entry</strong> — the tutorial hands 50 coins with no line about where
+        it came from or what it's for; add a one-line "Here's 50 coins to start" beat.</li>
+      <li><strong>Auto-start fires on the first arbitrary action</strong> — the tour can kick off mid-gesture;
+        gate its auto-start on a deliberate entry (first Town view) rather than any first dispatch.</li>
+    </ul>
+  </article>
+
+  <!-- ============================================================= SH7 · NEW -->
+  <article class="prop" id="new">
+    <div class="phd"><span class="pid">SH7</span><span class="sev NEW">NEW</span><span class="eff">from this pass</span></div>
+    <div class="ptitle">New findings surfaced while grounding these mockups</div>
+    <p class="why">Items not in the original report, found reading the shell / tutorial code for this proposal
+    pass. Verify against the live build before scheduling.</p>
+    <ul>
+      <li><strong>The visible season strip has no DOM anchor at all</strong> — the only elements carrying
+        <code>data-testid="turns-left"</code> are the two hidden <code>left:-9999px</code> numeral mirrors
+        (<span class="filechip">puzzleBoard.tsx:133</span>, <span class="filechip">seasonStripPhaser.tsx:158</span>);
+        the real readout is painted on the Phaser canvas. Any tour/AT/analytics hook that wants "the season strip"
+        currently has nothing on-screen to bind to — SH6a's anchor is the general fix.</li>
+      <li><strong><code>readRect</code>'s guard is a latent trap for every spotlight</strong> — because it accepts
+        any node with non-zero size regardless of position (<span class="filechip">tutorial/index.tsx:284</span>),
+        <em>any</em> off-screen-but-sized element (a parked Popover at &minus;9999, a collapsed drawer) would be
+        "spotlighted" invisibly. The turns step is just the one that trips it today.</li>
+      <li><strong>The whole tour silently vanishes if a non-tutorial modal opens</strong> — <code>Tutorial</code>
+        returns <code>null</code> whenever <code>state.modal</code> is set to anything but <code>"tutorial"</code>
+        (<span class="filechip">tutorial/index.tsx:366</span>). A spotlight step sets no modal, so if the player
+        taps ☰ mid-tour the coach card disappears; it only returns when they close the menu. A resume affordance
+        (or pausing rather than unmounting) would keep first-run guidance from feeling broken.</li>
+      <li><strong>Boons can be permanently unreachable in normal play</strong> — its only non-debug door is a Town
+        corner button gated on a <code>keeper_*_coexist / _driveout</code> story flag
+        (<span class="filechip">Town.tsx:376</span>). A player who hasn't faced a keeper has no route to a built
+        meta-progression system except Debug — reinforcing SH1's "every system a door" rule (give Boons an
+        unlock-chipped row in the hub).</li>
+    </ul>
+  </article>
+
+  <footer>puzzleDrag2 · Shell &amp; onboarding proposals · mockups are HTML built from <code>src/tokens.css</code>;
+  "Now" mobile shots are real renders of the running game.</footer>
+</main>
+</div>
+<script src="./assets/mockup.js"></script>
+</body>
+</html>

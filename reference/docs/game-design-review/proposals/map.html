@@ -1,0 +1,722 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>World Map — Proposals & Mockups · puzzleDrag2 Design Review</title>
+<link rel="stylesheet" href="./assets/mockup.css">
+</head>
+<body>
+<header class="top">
+  <span class="brand">puzzleDrag2 · <span class="em">Proposals</span></span>
+  <span class="crumb"><a href="./index.html">All proposals</a> › <strong>03 · World Map</strong></span>
+  <span class="meta">before → after · grounded in <code>src/</code></span>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <a class="home" href="./index.html">← All proposals</a>
+  <div class="sep">Surfaces</div>
+  <a href="./board.html"><span class="k">01</span>The Board</a>
+  <a href="./town.html"><span class="k">02</span>The Town</a>
+  <a href="./map.html" class="active"><span class="k">03</span>World Map</a>
+  <a href="./screens.html"><span class="k">04</span>Screens & panels</a>
+  <a href="./story.html"><span class="k">05</span>Story & moments</a>
+  <a href="./shell.html"><span class="k">06</span>Shell & onboarding</a>
+  <a href="./crosscutting.html"><span class="k">07</span>Cross-cutting</a>
+  <a href="./additional-findings.html"><span class="k">08</span>Additional findings</a>
+  <div class="sep">On this page</div>
+  <a href="#m1">M1 · Mobile panel</a>
+  <a href="#m2">M2 · Persistent selection</a>
+  <a href="#m3">M3 · Node legibility</a>
+  <a href="#m4">M4 · Zone-info affordance</a>
+  <a href="#m5">M5 · Legend rewrite</a>
+  <a href="#m6">M6 · Keeper ceremony</a>
+  <a href="#m7">M7 · New findings</a>
+</nav>
+
+<main>
+  <p class="eyebrow">Proposals · Core surface 03</p>
+  <h1>World Map — fully-defined proposals</h1>
+  <p class="lead">Say it plainly first: <strong>the map is the best-realized screen in the game.</strong> A
+  cohesive parchment atlas — watercolor terrain, themed medallions, solid-vs-dashed roads, drifting smoke over
+  lit hearths, a real compass rose. It's the one surface that already fills a widescreen and reads as a
+  <em>place</em>. None of these proposals is a redesign. They're about the two spots where the craft doesn't
+  reach the edge: the <strong>mobile detail panel</strong> (where every decision is actually made) and
+  <strong>node legibility</strong> (so the right two-thirds of the atlas stops reading as interchangeable grey
+  discs).</p>
+
+  <div class="callout good"><p style="margin:0"><strong>Keep, don't touch.</strong> The desktop composition,
+  the terrain/region painting, the ember-smoke language, the road states, and the panel's storybook voice all
+  land. <code>MapScene.ts</code> is a model for how the rest of the game should feel. Everything below layers
+  <em>onto</em> that, changing behavior in a handful of functions.</p></div>
+
+  <div class="ba stack" style="margin-top:12px">
+    <div class="col">
+      <div class="caph"><span class="pin now" style="background:var(--next)">BENCHMARK — real render</span><span class="lead-in">desktop, the surface to protect</span></div>
+      <figure>
+        <img src="../shots/desktop/map-current-home.png" alt="desktop world map — cohesive parchment atlas that fills the widescreen">
+        <figcaption>The desktop map: a cohesive parchment atlas that actually fills the widescreen, with themed
+        medallions, solid-vs-dashed roads and a clean detail rail. This is the bar the rest of the game should
+        reach. Note only the right two-thirds — the interchangeable grey "???" discs (M3) — and the
+        panel-side refinements are in play below.</figcaption>
+      </figure>
+    </div>
+  </div>
+
+  <div class="callout tldr"><p style="margin:0"><strong>Map through-line.</strong> Two S1 fixes carry the value:
+  (M1) un-cap the mobile panel and pin the load-bearing CTA to a non-scrolling footer so "Found this hearth" /
+  "Walk the road" is never below the fold; and (M2) give the tapped node a persistent selection ring so the
+  panel and the map stop being two disconnected regions. Then (M3–M6) make undiscovered nodes read as
+  <em>places</em>, label the mystery-meat "i", true up the stale legend, and give the permanent keeper choice
+  the ceremony it deserves.</p></div>
+
+  <!-- ============================================================= M1 -->
+  <article class="prop" id="m1">
+    <div class="phd">
+      <span class="pid">M1</span><span class="sev S1">S1</span><span class="eff">Effort M</span>
+      <span class="chip good">Top priority #9</span>
+    </div>
+    <div class="ptitle">Mobile: un-cap the detail panel and pin the primary CTA to a non-scrolling footer</div>
+    <p class="why">Every map decision — found, walk, fast-travel, face keeper — happens in the detail panel, but
+    on portrait that panel is capped at <strong>38%</strong> of the map area. Lore + subtitle + zone-info +
+    status chip + activities + the settlement block all live in an <code>overflow-y-auto</code> region, and the
+    load-bearing <code>ActionButton</code> is pinned <code>mt-auto</code> at the very bottom — so on a 390×844
+    phone the button that the whole screen exists to press is below the scroll fold. An always-on legend eats
+    another ~90px underneath. <span class="mut">Portrait rail <code>maxHeight:"38%"</code>
+    (<code>index.tsx:805</code>); <code>NodePanel</code> is <code>overflow-y-auto</code> with the CTA at
+    <code>mt-auto</code> (<code>index.tsx:572</code>); <code>LegendBar</code> renders always
+    (<code>index.tsx:813</code>).</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">keeper choice, 38% panel</span></div>
+        <figure>
+          <img src="../shots/mobile/map-keeper-choice.png" alt="mobile map with a cramped 38% detail panel; the decision CTA is below the fold">
+          <figcaption>The panel is a tiny 38% strip: name, lore, status and the load-bearing decision are
+          crammed into a scroll region, with an always-on legend below eating more of the little that's left.
+          The core CUJ — the button — is off-screen.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED — Option A</span><span class="lead-in">panel ~55%, CTA pinned</span></div>
+        <figure class="light">
+          <div class="device phone-tall"><div class="screen">
+            <!-- map's own header (not the shell HUD) -->
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px;padding:6px 9px;background:linear-gradient(180deg,#f0ddb5,#e6cf9e);border-bottom:1.5px solid #b08040">
+              <span class="gm-title" style="font-size:12px;color:var(--g-ink)">🗺 The Hearthwood</span>
+              <span style="display:flex;align-items:center;gap:3px">
+                <span title="Heirloom Seed" style="width:15px;height:15px;border-radius:50%;background:#9bbf68;display:grid;place-items:center;font-size:8px;border:1px solid #5a3a20">🌱</span>
+                <span title="Pact-Iron" style="width:15px;height:15px;border-radius:50%;background:rgba(58,39,21,.4);display:grid;place-items:center;font-size:8px;border:1px dashed #6a4b31;color:#cbb892">·</span>
+                <span title="Tidesinger's Pearl" style="width:15px;height:15px;border-radius:50%;background:rgba(58,39,21,.4);display:grid;place-items:center;font-size:8px;border:1px dashed #6a4b31;color:#cbb892">·</span>
+              </span>
+            </div>
+            <div class="gm-bg" style="padding:0;gap:0;background:#d4b585">
+              <!-- MAP AREA ~40% -->
+              <div class="gm-wrap" style="height:38%;position:relative;background:radial-gradient(120% 100% at 50% 35%,#eecb8f,#caa66a);border-bottom:2px solid #b08040;overflow:hidden">
+                <!-- a couple of roads + medallions -->
+                <svg viewBox="0 0 260 150" style="position:absolute;inset:0;width:100%;height:100%">
+                  <path d="M40 108 Q90 70 128 74" stroke="#6a3a18" stroke-width="3" fill="none"/>
+                  <path d="M128 74 Q170 60 208 48" stroke="#c87a28" stroke-width="2.4" stroke-dasharray="7 5" fill="none"/>
+                </svg>
+                <div style="position:absolute;left:9%;top:64%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px">
+                  <div style="width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#e8c98a,#caa66a);border:3px solid #5a3a20;display:grid;place-items:center;font-size:15px">🏡</div>
+                </div>
+                <div style="position:absolute;left:49%;top:49%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:1px">
+                  <!-- selected node (from M2) -->
+                  <div style="position:absolute;top:-16px;font-size:12px;color:#b9851f">▼</div>
+                  <div style="width:34px;height:34px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#cad579,#94a85a);border:3px solid #5a3a20;outline:2px dashed var(--g-gold-bright);outline-offset:3px;display:grid;place-items:center;font-size:15px">🌾</div>
+                </div>
+                <div style="position:absolute;left:80%;top:32%;transform:translate(-50%,-50%);opacity:.85">
+                  <div style="width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#c6c6c4,#8a8a8e);border:3px solid #5a3a20;display:grid;place-items:center;font-size:13px">⛏️</div>
+                </div>
+                <span class="gm-flag good" style="top:6px;right:6px">map keeps 40%</span>
+              </div>
+              <!-- PANEL ~55% + pinned footer -->
+              <div style="flex:1;min-height:0;display:flex;flex-direction:column;background:#f0ddb5">
+                <!-- scroll region -->
+                <div style="flex:1;min-height:0;overflow:hidden;padding:8px 10px 4px;position:relative">
+                  <div style="font:700 9px/1 system-ui;letter-spacing:.14em;text-transform:uppercase;color:#7c4f2c;display:flex;align-items:center;gap:3px">🌾 Farming hold</div>
+                  <div style="font:700 16px/1.1 'Newsreader',serif;color:var(--g-ink);margin-top:1px">Greenmeadow</div>
+                  <div style="font:italic 10px/1.3 'Newsreader',serif;color:#5a3a20">The frontier — open fields with a stony seam.</div>
+                  <!-- zone-info stat strip (from M4) -->
+                  <div style="display:flex;gap:5px;margin-top:6px;flex-wrap:wrap">
+                    <span class="gm-status" style="background:#eef3da;border-color:var(--g-moss);color:#3a4a20">🌾 Spring ×3</span>
+                    <span class="gm-status need">⚠ Cave-in</span>
+                    <span class="gm-status" style="background:#fdeecb;border-color:#b98a1e;color:#6a4708">◉ 50</span>
+                  </div>
+                  <div style="margin-top:7px"><span class="gm-status ready" style="width:100%;justify-content:center">★ Ready to walk</span></div>
+                  <div style="font:700 8px/1 system-ui;letter-spacing:.1em;text-transform:uppercase;color:#7c4f2c;margin-top:9px">What waits here</div>
+                  <div style="font-size:10px;color:var(--g-ink)">• Harvest farm tiles &nbsp; • Work the mine seam</div>
+                  <div style="position:absolute;left:0;right:0;bottom:0;height:18px;background:linear-gradient(180deg,rgba(240,221,181,0),#f0ddb5)"></div>
+                </div>
+                <!-- NON-SCROLLING FOOTER: CTA + Key chip -->
+                <div class="gm-wrap" style="flex:none;padding:7px 10px 9px;border-top:1.5px solid #b08040;background:#e8d4a8">
+                  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                    <span class="chip" style="background:#f0ddb5;border:1px solid #b08040;font-size:10px;color:#5a3a20">🔑 Key ▸</span>
+                    <span style="font:italic 9px/1 'Newsreader',serif;color:#7c4f2c">6 / 13 known</span>
+                  </div>
+                  <div class="gm-cta primary wide" style="background:linear-gradient(180deg,#7a9f2a,#5a7a18);border-color:#4a6a10">★ WALK THE ROAD</div>
+                  <span class="gm-flag good" style="top:-9px;right:8px">CTA never scrolls away</span>
+                </div>
+              </div>
+            </div>
+          </div></div>
+          <figcaption>Panel grows to ~55%; lore/activities scroll inside a bounded region while the primary
+          <code>ActionButton</code> lives in a fixed footer <em>outside</em> the scroll. The always-on legend
+          collapses to a "🔑 Key" chip. The decision is always one tap away.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — how to split the portrait screen</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Fixed 55/40 + pinned CTA footer</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Give the panel ~55%, the map ~40%; move the CTA into a non-scrolling footer;
+        legend → a "Key" chip that expands on tap. <b>Pro:</b> smallest change, CTA is guaranteed visible,
+        the map still shows the tapped node in context. <b>Con:</b> a fixed split isn't optimal for the
+        lore-heavy nodes (they scroll).</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Draggable bottom sheet</span></div>
+        <div class="tradeoff">Panel becomes a sheet with peek / half / full snap points the player drags; CTA
+        pinned to the sheet header. <b>Pro:</b> the map can go near-full when browsing, the panel near-full
+        when deciding. <b>Con:</b> a real gesture component to build and test; more than the finding needs.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Raise the portrait rail from <code>maxHeight:"38%"</code> to <code>~55%</code> and let the map area
+          take the rest (<span class="filechip">src/features/cartography/index.tsx:803</span>).</li>
+        <li>In <code>NodePanel</code> split the body: keep <code>overflow-y-auto</code> on a
+          lore/activities/status wrapper, then render the <code>&lt;FoundSettlementBlock/&gt;</code> +
+          <code>&lt;ActionButton/&gt;</code> in a sibling footer <em>outside</em> the scroll region — drop the
+          <code>mt-auto</code> (<span class="filechip">src/features/cartography/index.tsx:510–579</span>).</li>
+        <li>Replace the always-on <code>&lt;LegendBar/&gt;</code> with a collapsible "Key" disclosure
+          (<span class="filechip">src/features/cartography/index.tsx:681,813</span>); default collapsed on
+          portrait, open on landscape/desktop where there's room.</li>
+        <li>Add an e2e assertion that on 390×844 the primary <code>ActionButton</code> rect is fully within the
+          viewport for a tapped node (<span class="filechip">tests/e2e</span>).</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= M2 -->
+  <article class="prop" id="m2">
+    <div class="phd">
+      <span class="pid">M2</span><span class="sev S1">S1</span><span class="eff">Effort M</span>
+    </div>
+    <div class="ptitle">Give the tapped node a persistent selection ring so the panel and the map connect</div>
+    <p class="why">Tapping a node opens its panel, but the only on-map response is a transient scale
+    bounce that yoyos straight back to 1.0 — gone before your eye reaches the panel. Nothing on the map stays
+    marked, so with ~13 near-identical medallions the player can't map "Greenmeadow" in the panel back to a
+    location. That's the one thing a map+detail pattern must do. <span class="mut">
+    <code>applyTappedHighlight</code> is a <code>scale:1.08, yoyo, repeat:1</code> tween back to 1.0
+    (<code>MapScene.ts:1003</code>); the selected id already flows through the <code>carto.tapped</code>
+    registry key.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">bounce, then nothing</span></div>
+        <figure>
+          <div class="gm" style="padding:14px 10px">
+            <div class="gm-wrap" style="display:flex;justify-content:space-around;align-items:flex-start;background:radial-gradient(120% 120% at 50% 40%,#eecb8f,#caa66a);border:2px solid #b08040;border-radius:12px;padding:16px 6px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#e8c98a,#caa66a);border:3px solid #5a3a20;display:grid;place-items:center;font-size:20px">🏡</div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#2a1505">Hearthwood</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#cad579,#94a85a);border:3px solid #5a3a20;display:grid;place-items:center;font-size:20px">🌾</div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#2a1505">Greenmeadow</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#c6c6c4,#8a8a8e);border:3px solid #5a3a20;display:grid;place-items:center;font-size:20px">⛏️</div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#2a1505">Cracked Quarry</span>
+              </div>
+              <span class="gm-flag bad" style="top:2px;right:2px">panel reads "Greenmeadow" — but which disc?</span>
+            </div>
+          </div>
+          <figcaption>All three look equally un-selected. The panel is describing the middle node, but the map
+          gives no lasting cue — the bounce fired 160ms ago.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">sticky ring + pin, others dim</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:14px 10px">
+            <div class="gm-wrap" style="display:flex;justify-content:space-around;align-items:flex-start;background:radial-gradient(120% 120% at 50% 40%,#eecb8f,#caa66a);border:2px solid #b08040;border-radius:12px;padding:16px 6px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;opacity:.45">
+                <div style="width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#e8c98a,#caa66a);border:3px solid #5a3a20;display:grid;place-items:center;font-size:20px">🏡</div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#2a1505">Hearthwood</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;position:relative">
+                <div style="font-size:15px;color:#b9851f;line-height:.6">▼</div>
+                <div style="width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#cad579,#94a85a);border:3px solid #5a3a20;outline:2.5px dashed var(--g-gold-bright);outline-offset:4px;display:grid;place-items:center;font-size:20px;box-shadow:0 0 10px 2px rgba(255,210,72,.5)">🌾</div>
+                <span style="font:800 9px/1 'Newsreader',serif;color:#2a1505">Greenmeadow</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px;opacity:.45">
+                <div style="width:44px;height:44px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#c6c6c4,#8a8a8e);border:3px solid #5a3a20;display:grid;place-items:center;font-size:20px">⛏️</div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#2a1505">Cracked Quarry</span>
+              </div>
+              <span class="gm-flag good" style="top:2px;right:2px">the map holds your place</span>
+            </div>
+          </div>
+          <figcaption>The tapped node keeps a bright dashed selection ring + a caret pin above it, and the rest
+          of the map dims slightly. Now the panel's "Greenmeadow" has an unmistakable home on the map. The
+          one-shot bounce stays as tap feedback, layered under the sticky ring.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Thread the current <code>carto.tapped</code> id into <code>paintNodeStatus</code> (or a dedicated
+          <code>paintSelection</code> pass) so it draws a persistent dashed selection ring + a caret sprite on
+          the selected node (<span class="filechip">src/features/cartography/MapScene.ts:887</span>).</li>
+        <li>In <code>applyTappedHighlight</code>, keep the bounce but stop treating it as the only signal —
+          clear/redraw the selection ring on the previous and new node, and drop a container alpha (~0.55) on
+          every non-selected node group while a selection exists
+          (<span class="filechip">src/features/cartography/MapScene.ts:1003</span>).</li>
+        <li>Optional: on select, ease the camera so the node is comfortably in view (ties to M7 · N1) so on a
+          zoomed/portrait map the selection is never off-screen.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= M3 -->
+  <article class="prop" id="m3">
+    <div class="phd">
+      <span class="pid">M3</span><span class="sev S2">S2</span><span class="eff">Effort M</span>
+    </div>
+    <div class="ptitle">Undiscovered nodes: region-tinted silhouettes instead of identical grey "???" discs</div>
+    <p class="why">Half the atlas is undiscovered, and every hidden node collapses to the same look: the baked
+    icon forced to <code>alpha 0.10</code>, a faint lantern-mark, and a "? ? ?" label under a low-contrast brown
+    ring. So the right two-thirds of this beautiful map reads as "locked slot #4, #5, #6" — interchangeable
+    circles — instead of a quarry, a harbor, a capital worth walking toward. That kills the aspirational pull
+    that justifies the whole surface. <span class="mut">Hidden branch forces
+    <code>icon.setAlpha(0.10)</code> + <code>label.setText("? ? ?")</code>
+    (<code>MapScene.ts:929</code>); hidden ring is <code>0x8a6a50</code> for all of them
+    (<code>MapScene.ts:924</code>).</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">four identical grey discs</span></div>
+        <figure>
+          <div class="gm" style="padding:14px 8px;background:#e8c98a;border-radius:10px">
+            <div style="display:flex;justify-content:space-around;align-items:flex-start">
+              <!-- 4 near-identical hidden discs -->
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#d8c49a,#b7a074);border:2px solid #8a6a50">
+                  <svg width="42" height="42" style="opacity:.5"><line x1="14" y1="14" x2="28" y2="14" stroke="#3a2410" stroke-width="1.6"/><line x1="14" y1="21" x2="28" y2="21" stroke="#3a2410" stroke-width="1.6"/><line x1="14" y1="28" x2="28" y2="28" stroke="#3a2410" stroke-width="1.6"/></svg>
+                </div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#7a5e3f;opacity:.5">? ? ?</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#d8c49a,#b7a074);border:2px solid #8a6a50">
+                  <svg width="42" height="42" style="opacity:.5"><line x1="14" y1="14" x2="28" y2="14" stroke="#3a2410" stroke-width="1.6"/><line x1="14" y1="21" x2="28" y2="21" stroke="#3a2410" stroke-width="1.6"/><line x1="14" y1="28" x2="28" y2="28" stroke="#3a2410" stroke-width="1.6"/></svg>
+                </div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#7a5e3f;opacity:.5">? ? ?</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#d8c49a,#b7a074);border:2px solid #8a6a50">
+                  <svg width="42" height="42" style="opacity:.5"><line x1="14" y1="14" x2="28" y2="14" stroke="#3a2410" stroke-width="1.6"/><line x1="14" y1="21" x2="28" y2="21" stroke="#3a2410" stroke-width="1.6"/><line x1="14" y1="28" x2="28" y2="28" stroke="#3a2410" stroke-width="1.6"/></svg>
+                </div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#7a5e3f;opacity:.5">? ? ?</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#d8c49a,#b7a074);border:2px solid #8a6a50">
+                  <svg width="42" height="42" style="opacity:.5"><line x1="14" y1="14" x2="28" y2="14" stroke="#3a2410" stroke-width="1.6"/><line x1="14" y1="21" x2="28" y2="21" stroke="#3a2410" stroke-width="1.6"/><line x1="14" y1="28" x2="28" y2="28" stroke="#3a2410" stroke-width="1.6"/></svg>
+                </div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#7a5e3f;opacity:.5">? ? ?</span>
+              </div>
+            </div>
+            <div class="gm-wrap"><span class="gm-flag bad" style="top:-52px;right:2px">no sense of what any of these places are</span></div>
+          </div>
+          <figcaption>Quarry, caves, forge, harbor — all the same disc + "???". The world stops reading as
+          distinct destinations, so the completion counter feels like grind instead of discovery.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">region silhouette + varied frame</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:14px 8px;background:#e8c98a;border-radius:10px">
+            <div style="display:flex;justify-content:space-around;align-items:flex-start">
+              <!-- mine: pickaxe silhouette on stone tint -->
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#b7bcc2,#8a8a8e);border:2px solid #5a5e62;display:grid;place-items:center;font-size:17px;color:#2b2f34;filter:brightness(.85) contrast(.9)">⛏</div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#4a4e52">Deep Ways ？</span>
+              </div>
+              <!-- harbor: anchor on sea tint -->
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#8fbccb,#3a6a8c);border:2px solid #2f5a72;display:grid;place-items:center;font-size:17px;color:#12303e">⚓</div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#1f4a5e">Saltspray ？</span>
+              </div>
+              <!-- boss: antlers on abyss tint -->
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#6a3838,#2a1416);border:2px solid #7a1e1e;display:grid;place-items:center;font-size:16px;color:#e0a0a0">🝔</div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#7a2a2a">The Deep ？</span>
+              </div>
+              <!-- capital: crown/gilt tint -->
+              <div style="display:flex;flex-direction:column;align-items:center;gap:3px">
+                <div style="width:42px;height:42px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#e6cf66,#8a6a18);border:2px solid #a88a2a;display:grid;place-items:center;font-size:16px;color:#4a3208">♜</div>
+                <span style="font:700 9px/1 'Newsreader',serif;color:#6a4708">Old Capital</span>
+              </div>
+            </div>
+            <div class="gm-wrap"><span class="gm-flag good" style="top:-52px;right:2px">reads as a mine, a harbor, a boss, a capital</span></div>
+          </div>
+          <figcaption>Even undiscovered, each node keeps a faint region-tinted silhouette (mine = pickaxe,
+          harbor = anchor, boss = antlers, capital = crown) and a region-varied frame color, with a teasing
+          half-name. The mystery stays; the <em>place</em> arrives. Reserve the flat grey disc only for
+          genuinely-unknown event nodes.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — how much to reveal before discovery</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Region silhouette + tinted frame</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">A generic per-region glyph (pickaxe/anchor/antlers/crown) at low alpha on the
+        region's terrain tint; keep a "???"-flavored half-name. <b>Pro:</b> preserves the sense of the unknown
+        while making regions read as territories; one glyph per region, cheap. <b>Con:</b> not the node's exact
+        identity (that's the point — it's still undiscovered).</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Dim the real baked icon</span></div>
+        <div class="tradeoff">Show each node's actual <code>cartoIcon_*</code> at ~0.35 alpha instead of 0.10 +
+        "???". <b>Pro:</b> zero new art — the icons already exist. <b>Con:</b> spoils the exact destination
+        before you've earned it; loses the "fog of war" tease.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>In the hidden branch of <code>paintNodeStatus</code>, stop forcing <code>alpha 0.10</code> + "? ? ?"
+          for regioned nodes; instead swap the medallion icon to a per-region silhouette texture and tint the
+          disc from <code>NODE_TERRAIN[node.id].palette</code>
+          (<span class="filechip">src/features/cartography/MapScene.ts:929</span>,
+          <span class="filechip">MapScene.ts:124</span>).</li>
+        <li>Bake one silhouette texture per <code>MapRegionId</code> in <code>bakeNodeTextures</code> (reuse the
+          existing <code>REGION_ICON</code> mapping in <span class="filechip">src/features/cartography/index.tsx:38</span>),
+          alongside the current lantern-mark (<span class="filechip">MapScene.ts:229</span>).</li>
+        <li>Vary the hidden ring color by region rather than the single <code>0x8a6a50</code>
+          (<span class="filechip">MapScene.ts:924</span>); keep the flat grey path only for
+          <code>kind:"event"</code> / truly-unknown nodes.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= M4 -->
+  <article class="prop" id="m4">
+    <div class="phd">
+      <span class="pid">M4</span><span class="sev S2">S2</span><span class="eff">Effort S</span>
+    </div>
+    <div class="ptitle">Label the zone-info "i" — the map's most information-dense action is mystery meat</div>
+    <p class="why">The single richest action in the panel — spawn rates, seasonal drops, hazards, and entry
+    cost — is a bare 32px white circle with a lowercase "i", floating with only an <code>aria-label</code> to
+    say what it does. On touch there's no hover, so a player has no reason to believe that unlabeled dot hides
+    the whole zone briefing. <span class="mut">The affordance is a <code>w-8 h-8 rounded-full</code> button
+    whose only visible content is "i" (<code>ZoneEntryCostInfo.tsx:33</code>).</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">unlabeled 32px circle</span></div>
+        <figure>
+          <div class="gm" style="padding:14px">
+            <div class="gm-panel" style="padding:10px 12px;background:#f0ddb5">
+              <div style="font:700 9px/1 system-ui;letter-spacing:.14em;text-transform:uppercase;color:#7c4f2c">🌾 Farming hold</div>
+              <div style="font:700 17px/1.1 'Newsreader',serif;color:var(--g-ink);margin:1px 0 2px">Greenmeadow</div>
+              <div class="gm-wrap" style="display:flex;align-items:center;gap:8px;margin-top:4px">
+                <div style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.85);border:2px solid rgba(255,255,255,.6);display:grid;place-items:center;font:700 15px/1 'Newsreader',serif;color:var(--g-ink);box-shadow:0 1px 3px rgba(0,0,0,.15)">i</div>
+                <span style="font-size:11px;color:#7c4f2c;font-style:italic">…what does this open?</span>
+                <span class="gm-flag bad" style="top:-8px;left:0">richest action, zero label</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>Spawn rates, hazards and entry cost hide behind an orphaned "i". On the primary (touch)
+          target there's not even a hover title to hint at it.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">labeled row + at-a-glance strip</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:14px">
+            <div class="gm-panel" style="padding:10px 12px;background:#f0ddb5">
+              <div style="font:700 9px/1 system-ui;letter-spacing:.14em;text-transform:uppercase;color:#7c4f2c">🌾 Farming hold</div>
+              <div style="font:700 17px/1.1 'Newsreader',serif;color:var(--g-ink);margin:1px 0 4px">Greenmeadow</div>
+              <!-- at-a-glance stat strip -->
+              <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:6px">
+                <span class="gm-status" style="background:#eef3da;border-color:var(--g-moss);color:#3a4a20">🌾 Spring ×3</span>
+                <span class="gm-status need">⚠ Cave-in · Gas</span>
+                <span class="gm-status" style="background:#fdeecb;border-color:#b98a1e;color:#6a4708">◉ 50 entry</span>
+              </div>
+              <!-- labeled disclosure row -->
+              <div class="gm-row" style="margin:0;justify-content:space-between;background:var(--g-paper);cursor:pointer">
+                <span style="display:flex;align-items:center;gap:6px;font:700 12px/1 system-ui;color:var(--g-ink)">
+                  <span style="width:20px;height:20px;border-radius:50%;background:var(--g-indigo);color:#fff;display:grid;place-items:center;font-size:12px">ⓘ</span>
+                  Spawn rates &amp; hazards
+                </span>
+                <span style="color:var(--g-ink-light);font-size:14px">›</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>A labeled "ⓘ Spawn rates &amp; hazards ›" row opens the same modal, and the headline facts
+          (dominant drop, hazards, entry cost) surface as an at-a-glance chip strip so the common questions are
+          answered without a tap.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Replace the bare circle button in <code>ZoneEntryCostInfo</code> with a labeled full-width
+          disclosure row ("ⓘ Spawn rates &amp; hazards") that opens the same
+          <code>ZoneInfoModal</code> (<span class="filechip">src/features/zones/ZoneEntryCostInfo.tsx:31–43</span>).</li>
+        <li>Add a compact stat strip above it in the panel — dominant seasonal drop, hazard names, entry cost —
+          sourced from the zone's <code>boards</code>/<code>dangers</code>/<code>entryCost</code>
+          (<span class="filechip">src/features/cartography/index.tsx:528–532</span>,
+          <span class="filechip">src/features/cartography/data.ts:62</span>).</li>
+        <li>Keep <code>aria-label</code> but back it with a visible label so it works on touch and passes the
+          "unlabeled control" a11y lens.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= M5 -->
+  <article class="prop" id="m5">
+    <div class="phd">
+      <span class="pid">M5</span><span class="sev S2">S2</span><span class="eff">Effort S</span>
+    </div>
+    <div class="ptitle">Rewrite the legend to match what the map actually paints</div>
+    <p class="why">The legend has drifted from the renderer. It says "Level-locked" — but gating moved to the
+    zone <em>tier</em> ladder ("Grow Hearthwood Vale to City"). It reuses the <em>same</em> red dot
+    (<code>#bb3b2f</code>) for two different entries. And it omits every state the map does draw: the settled
+    wreath, the moss-green coexist tint, the iron driveout tint, and the Hearth-Token seals on the Old Capital.
+    A key that misdescribes the map is worse than no key. <span class="mut">Entries hard-coded in
+    <code>LegendBar</code> — "Level-locked" and the duplicate <code>#bb3b2f</code> dots at
+    <code>index.tsx:687–689</code>; the states it omits are painted in
+    <code>MapScene.ts:987–1000</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">stale + incomplete</span></div>
+        <figure>
+          <div class="gm" style="padding:12px">
+            <div class="gm-wrap" style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 10px;border:2px solid #b08040;background:#e8d4a8;border-radius:8px">
+              <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><span style="width:10px;height:10px;border-radius:50%;background:#bb3b2f;border:1.5px solid #2a1a0a"></span>Lit hearth</span>
+              <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><span style="width:10px;height:10px;border-radius:50%;background:#f5e09a;border:1.5px solid #f5e09a;box-shadow:0 0 6px #f5e09a"></span>Ready to walk</span>
+              <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><span style="width:10px;height:10px;border-radius:50%;background:#bb3b2f;border:1.5px solid #9a3a2a;opacity:.5"></span>Level-locked</span>
+              <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#6a3a18" stroke-width="3"/></svg>Traveled road</span>
+              <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#c87a28" stroke-width="2" stroke-dasharray="3 2"/></svg>Road waiting</span>
+              <span class="gm-flag bad" style="top:-8px;right:4px">"Level-locked" is wrong · two red dots · no settled states</span>
+            </div>
+          </div>
+          <figcaption>Two entries share one red dot, the lock label names a system that no longer exists, and
+          the four settled/keeper states the map paints aren't in the key at all.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">true to the renderer, as a "Key"</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div style="border:1.5px solid #b08040;background:#f0ddb5;border-radius:10px;overflow:hidden">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 10px;background:#e8d4a8;font:700 11px/1 system-ui;color:#5a3a20">🔑 Key<span style="font-size:12px">▾</span></div>
+              <div style="display:flex;flex-wrap:wrap;gap:7px 14px;padding:9px 11px">
+                <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><span style="width:11px;height:11px;border-radius:50%;background:#e8c98a;border:2px solid #f5a623"></span>You are here</span>
+                <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><span style="width:11px;height:11px;border-radius:50%;background:#f5e09a;border:1.5px solid #f5e09a;box-shadow:0 0 6px #f5e09a"></span>Ready to walk</span>
+                <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><span style="width:11px;height:11px;border-radius:50%;background:#c9b48a;border:1.5px solid #9a3a2a"></span>Tier-locked</span>
+                <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><span style="width:11px;height:11px;border-radius:50%;background:#d8c49a;border:1.5px solid #8a6a50"></span>Untraveled</span>
+                <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><span style="width:11px;height:11px;border-radius:50%;background:#e8c98a;border:2px solid #d2b46a"></span>Settled</span>
+                <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><span style="width:11px;height:11px;border-radius:50%;background:#e8c98a;border:2px solid #6a9a3a"></span>Coexisting</span>
+                <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><span style="width:11px;height:11px;border-radius:50%;background:#e8c98a;border:2px solid #6a6a6e"></span>Driven out</span>
+                <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><span style="width:11px;height:11px;border-radius:50%;background:#d4af37;border:1.5px solid #fff2c0"></span>Hearth-Token</span>
+                <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#6a3a18" stroke-width="3"/></svg>Traveled road</span>
+                <span style="display:flex;align-items:center;gap:5px;font:400 10px/1 'Newsreader',serif;color:#5a3a20"><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#c87a28" stroke-width="2" stroke-dasharray="3 2"/></svg>Road waiting</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>Every swatch now matches a real renderer state: distinct rings for here / ready /
+          tier-locked / untraveled, plus the Settled wreath and the Coexisting (moss), Driven-out (iron) and
+          Hearth-Token states the map already paints. Collapsed to a "Key" chip on mobile (M1).</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Rewrite the <code>&lt;Legenda/&gt;</code> entries in <code>LegendBar</code>: rename "Level-locked" →
+          "Tier-locked", give it its own swatch, and add Settled / Coexisting / Driven-out / Hearth-Token rows
+          (<span class="filechip">src/features/cartography/index.tsx:681–704</span>).</li>
+        <li>Drive the swatch colors from the same constants
+          <code>paintNodeStatus</code> uses (ring colors at
+          <span class="filechip">src/features/cartography/MapScene.ts:918–924</span>, keeper tints at
+          <span class="filechip">MapScene.ts:987–1000</span>) so the key can't drift again — ideally a shared
+          <code>LEGEND</code> table both read.</li>
+        <li>Render as the collapsible "Key" disclosure from M1 rather than an always-on bar.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= M6 -->
+  <article class="prop" id="m6">
+    <div class="phd">
+      <span class="pid">M6</span><span class="sev S2">S2</span><span class="eff">Effort M</span>
+    </div>
+    <div class="ptitle">Give the permanent keeper choice real ceremony — and echo the consequence back</div>
+    <p class="why">Each settled hold hosts a keeper (the Deer-Spirit, the Stone-Knocker, the Tidesinger) who
+    offers an <em>irreversible</em> branch: <strong>Coexist</strong> (+5 Embers, the land stays rich) or
+    <strong>Trial / drive-out</strong> (+5 Core Ingots, the hold is yours alone). Today it's entered from a
+    small low-ceremony purple button and framed as two reward chips — a vending machine for a decision that
+    permanently shapes a settlement. Nothing signals "this is permanent," and once chosen the lasting
+    difference barely reads. <span class="mut">Entry button + reward-chip framing in
+    <code>FoundSettlementBlock</code> (<code>index.tsx:280</code>); the resolved state is a small chip at
+    <code>index.tsx:267</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">a purple button + two reward chips</span></div>
+        <figure>
+          <div class="gm" style="padding:14px">
+            <div class="gm-panel" style="padding:10px 12px;background:#f0ddb5;max-width:300px">
+              <div style="font:700 13px/1.1 'Newsreader',serif;color:var(--g-ink);margin-bottom:8px">✓ Settled · 🌲 Greenmeadow</div>
+              <div style="border-radius:8px;padding:8px 10px;text-align:center;font:700 11px/1 'Newsreader',serif;color:#fff;background:linear-gradient(180deg,#7a3a8a,#5a2a6a);border:2px solid #4a1a5a">⚔ Face The Deer-Spirit</div>
+              <div class="gm-wrap"><span class="gm-flag bad" style="top:2px;right:2px">a permanent branch, framed as a side-quest button</span></div>
+            </div>
+          </div>
+          <figcaption>The irreversible decision hides behind a small purple button, and the modal behind it
+          presents the two paths purely as reward chips (+Embers / +Ingots) — no weight, no sense that this is
+          forever.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">encounter with weight + a lasting echo</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div style="border-radius:14px;overflow:hidden;border:2px solid #4a1a5a;max-width:300px;margin:0 auto;box-shadow:0 6px 20px rgba(30,10,40,.35)">
+              <div style="background:linear-gradient(180deg,#3a2450,#241436);padding:12px 14px;color:#f0e6f6;text-align:center">
+                <div style="font-size:30px;line-height:1">🦌</div>
+                <div class="gm-title" style="font-size:15px;color:#f5e6a0">The Deer-Spirit</div>
+                <div style="font:italic 10px/1.2 'Newsreader',serif;color:#c8b0d8">Keeper of Field &amp; Herd · at Greenmeadow</div>
+                <div style="margin-top:6px;font:700 8px/1 system-ui;letter-spacing:.12em;text-transform:uppercase;color:#e0a0b0">⚠ This choice is permanent</div>
+              </div>
+              <div style="background:#f0ddb5;padding:10px 12px;display:flex;flex-direction:column;gap:7px">
+                <div style="border:2px solid var(--path-coexist-edge,#6a9a3a);background:#eef6dc;border-radius:10px;padding:7px 9px">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font:800 12px/1 system-ui;color:#3a5a1a">🤝 Coexist</span>
+                    <span class="gm-status" style="background:#e2b24a;border-color:#b98a1e;color:#6a4708">+5 🔥 Embers</span>
+                  </div>
+                  <div style="font-size:10px;color:#3a4a20;margin-top:3px">Forever: soil stays rich, herds stay calm — a mossy-green hold on your map.</div>
+                </div>
+                <div style="border:2px solid #6a6a6e;background:#ece6da;border-radius:10px;padding:7px 9px">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font:800 12px/1 system-ui;color:var(--g-ink)">⚔ Trial</span>
+                    <span class="gm-status" style="background:#c2c6ca;border-color:#6a6a6e;color:#2b2f34">+5 ▣ Core Ingots</span>
+                  </div>
+                  <div style="font-size:10px;color:#4a3a2a;margin-top:3px">Forever: the hold is yours alone — an iron-grey mark, the keeper gone for good.</div>
+                </div>
+                <div style="text-align:center;font:700 10px/1 system-ui;color:#7a5e3f;padding-top:1px">Not yet</div>
+              </div>
+            </div>
+            <!-- panel echo after resolving -->
+            <div style="max-width:300px;margin:9px auto 0">
+              <div style="border-radius:8px;padding:6px 9px;text-align:center;font:700 10px/1.1 'Newsreader',serif;background:var(--path-coexist-bg,#eef6dc);border:1.5px solid #6a9a3a;color:#3a5a1a">🤝 The Deer-Spirit · Coexisting — forever</div>
+            </div>
+          </div>
+          <figcaption>Full-bleed keeper header (portrait, name, title, a bold "permanent" banner), and each path
+          states its <em>lasting world-effect</em>, not just the reward number. After the choice, the panel
+          keeps a clear echo chip ("Coexisting — forever") that matches the medallion's map tint.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — how much ceremony</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Enriched dialog + permanence framing</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Keep the existing <code>KeeperEncounterModal</code> but add the portrait header,
+        the "permanent" banner, and a world-effect line under each path. <b>Pro:</b> reuses the built dialog and
+        the keeper data (intro/pitch already exist); ships fast. <b>Con:</b> still a modal, not a set-piece.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Full-screen story takeover</span></div>
+        <div class="tradeoff">Route the encounter through the story-beat system as a full-screen moment (the
+        intro lines already read like a beat). <b>Pro:</b> maximum weight for a signature, irreversible choice.
+        <b>Con:</b> more wiring (story slice + effects); sequence it after A if the encounter tests well.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Enrich <code>KeeperEncounterModal</code> with a portrait header + a "This choice is permanent"
+          banner, and add the lasting-effect line to each path button
+          (<span class="filechip">src/features/cartography/index.tsx:108–191</span>); source copy from the
+          keeper's <code>coexist.pitch</code>/<code>driveout.pitch</code>
+          (<span class="filechip">src/keepers.ts:25–40</span>).</li>
+        <li>Elevate the entry: replace the small purple "Face" button with a bordered, portrait-bearing prompt
+          card (<span class="filechip">src/features/cartography/index.tsx:280–294</span>).</li>
+        <li>Strengthen the resolved echo chip so "Coexisting / Driven out" reads as permanent and its swatch
+          matches the map tint from M5 (<span class="filechip">src/features/cartography/index.tsx:267–279</span>).</li>
+      </ul>
+    </div>
+
+    <h3 class="disp" style="margin-top:18px">Also folded in (S3 / polish)</h3>
+    <ul class="small">
+      <li><strong>Header truncates to "The Hearthwo…"</strong> — both the title and the "your smoke rises
+        from…" subtitle clip at 390px because three always-present Hearth-Token pills take the row. Stack the
+        sub-header full-width and shrink the token strip to an icon cluster (lit vs unlit dots), reclaiming the
+        width (<span class="filechip">src/features/cartography/index.tsx:654–676</span>).</li>
+      <li><strong>Founding affordability is opaque on touch</strong> — the only "why can't I found this / how
+        close am I" feedback is a hover <code>title</code> that never fires on a phone. Show an inline have/need
+        line ("Plank 8/12 · Bread 10/10 · Hay 3/8", shortfalls red) under the Found button, and when a tier
+        gate is the blocker add a "Grow Hearthwood Vale ›" jump-to
+        (<span class="filechip">src/features/cartography/index.tsx:311–328</span>).</li>
+      <li><strong>Empty-panel copy vs. the collapsed key</strong> — with the legend collapsed (M1), fold a
+        one-line "tap 🔑 Key for symbols" hint into <code>EmptyPanel</code> so first-timers still find the
+        legend (<span class="filechip">src/features/cartography/index.tsx:434–452</span>).</li>
+    </ul>
+  </article>
+
+  <!-- ============================================================= M7 -->
+  <article class="prop" id="m7">
+    <div class="phd"><span class="pid">M7</span><span class="sev NEW">NEW</span><span class="eff">from this pass</span></div>
+    <div class="ptitle">New findings surfaced while grounding these mockups</div>
+    <p class="why">Items not in the original report, found reading <code>MapScene.ts</code> and
+    <code>index.tsx</code> for this proposal pass. Verify against the live build before scheduling.</p>
+    <ul>
+      <li><strong>Tapping a node never moves the camera to it.</strong> <code>applyTappedHighlight</code> only
+        runs a scale bounce — it never pans/centers the tapped node (<span class="filechip">MapScene.ts:1003</span>),
+        and there's no recenter or zoom-to-fit control (camera goes up to <code>maxZoom:8</code>). On a
+        pinch-zoomed or portrait map you can tap a node from the panel/URL and be reading about a place that's
+        entirely off-screen. Pair with M2: on select, ease the camera so the node is comfortably in view, and
+        add a small "recenter" affordance.</li>
+      <li><strong>No keyboard / assistive-tech path to select a node.</strong> Selection fires only from Phaser
+        pointer zones (<code>gameobjectup → carto.nodetap</code>, <span class="filechip">MapScene.ts:209</span>);
+        the canvas exposes no focusable, labeled node list, so the entire map is unreachable without a pointer.
+        The panel is React (partly accessible) but you can't <em>get</em> to a node's panel via keyboard. A
+        parallel focusable node list (buttons that dispatch the same <code>SET_VIEW_PARAMS</code>) fixes it and
+        also helps M4's labeling story.</li>
+      <li><strong><code>discovered-unreachable</code> has no distinct medallion.</strong> In
+        <code>paintNodeStatus</code> the ring-color chain covers here / visited / ready / locked / capital /
+        hidden but <em>not</em> <code>discovered-unreachable</code>, so it falls through to the default brown
+        ring and a 0.78 icon — visually a plain discovered node (<span class="filechip">MapScene.ts:918–924</span>).
+        Only the panel disambiguates "↯ No road from here". Give it its own subdued ring (e.g. a dashed
+        cool-grey) so "you can see it but there's no road" reads on the map itself.</li>
+    </ul>
+  </article>
+
+  <footer>puzzleDrag2 · World Map proposals · mockups are HTML built from <code>src/tokens.css</code>; "Now"
+  mobile shot is a real render of the running game. The map is the game's benchmark surface — these are
+  refinements, not a redesign.</footer>
+</main>
+</div>
+<script src="./assets/mockup.js"></script>
+</body>
+</html>

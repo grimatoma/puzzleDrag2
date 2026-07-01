@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Additional findings — Proposals & Mockups · puzzleDrag2 Design Review</title>
+<link rel="stylesheet" href="./assets/mockup.css">
+</head>
+<body>
+<header class="top">
+  <span class="brand">puzzleDrag2 · <span class="em">Proposals</span></span>
+  <span class="crumb"><a href="./index.html">All proposals</a> › <strong>08 · Additional findings</strong></span>
+  <span class="meta">fresh hunt · grounded in <code>src/</code></span>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <a class="home" href="./index.html">← All proposals</a>
+  <div class="sep">Surfaces</div>
+  <a href="./board.html"><span class="k">01</span>The Board</a>
+  <a href="./town.html"><span class="k">02</span>The Town</a>
+  <a href="./map.html"><span class="k">03</span>World Map</a>
+  <a href="./screens.html"><span class="k">04</span>Screens & panels</a>
+  <a href="./story.html"><span class="k">05</span>Story & moments</a>
+  <a href="./shell.html"><span class="k">06</span>Shell & onboarding</a>
+  <a href="./crosscutting.html"><span class="k">07</span>Cross-cutting</a>
+  <a href="./additional-findings.html" class="active"><span class="k">08</span>Additional findings</a>
+  <div class="sep">On this page</div>
+  <a href="#af1">AF1 · Dev menu leaks to players</a>
+  <a href="#af2">AF2 · Silent save failures</a>
+  <a href="#af3">AF3 · No reset / start-over</a>
+  <a href="#af4">AF4 · No failed-asset fallback</a>
+  <a href="#af5">AF5 · Thin Settings tab</a>
+  <a href="#ok">Checked and OK</a>
+</nav>
+
+<main>
+  <p class="eyebrow">Proposals · Additional findings 08</p>
+  <h1>Additional findings — a fresh hunt through the code</h1>
+  <p class="lead">This page is not a proposal against the original report — it is a second pass through the areas
+  that review scoped <em>out</em>: the Settings screen, cold-start/loading, error and failure paths, audio,
+  the returning-player flow, and small-viewport behaviour. Everything below is read straight from
+  <code>src/</code>, with the <code>file:line</code> and a fully-defined fix. Where an area turned out to be
+  genuinely solid, it is listed under <a href="#ok">Checked and OK</a> rather than dressed up as a problem.</p>
+
+  <div class="callout tldr"><p style="margin:0"><strong>Through-line.</strong> The engine-robustness story is good — a
+  first-byte boot splash, a root error boundary with a Reload screen, a wired daily-streak return, and
+  crafting that shows exactly which input you're short. The gaps are all in <em>what the player is (not) told
+  when something goes wrong or when they want out</em>: save writes fail silently (AF2), a developer cheat
+  menu and internal design-docs link ship inside the player menu (AF1), the entire reset-save pipeline exists
+  but no button triggers it (AF3), a failed town-art load paints a blank scene with no retry (AF4), and the
+  Settings tab is missing the three controls players reach for first — volume, reduce-motion, tutorial (AF5).</p></div>
+
+  <!-- ============================================================= AF1 -->
+  <article class="prop" id="af1">
+    <div class="phd">
+      <span class="pid">AF1</span><span class="sev S2">S2</span><span class="eff">Effort S</span>
+      <span class="chip new">new</span>
+    </div>
+    <div class="ptitle">Gate the Debug cheat panel and the internal Docs link out of the player-facing menu</div>
+    <p class="why">The main menu renders a <strong>🛠 Debug</strong> button unconditionally — in every build — and it
+    opens a panel of dev cheats (<code>DEV/ADD_GOLD +10,000</code>, <code>DEV/ADD_LEVEL</code>, jump-to shortcuts for
+    in-development views). Right below it, a <strong>📄 Docs</strong> link opens the internal <em>design-docs</em>
+    site. Neither is behind any dev flag, so a shipped player can grant themselves infinite gold and browse the
+    team's design notes. <span class="mut">Debug button: <code>features/settings/index.tsx:180</code>; Docs link:
+    <code>settings/index.tsx:196</code>; cheat actions: <code>features/debug/index.tsx:102</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">dev affordances in the player menu</span></div>
+        <figure>
+          <div class="gm" style="padding:6px">
+            <div class="device phone"><div class="screen">
+              <div class="gm-hud"><span class="burger">☰</span><span class="gm-pill title">Menu</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span></div>
+              <div class="gm-bg gm-wrap" style="padding:12px;gap:7px;align-items:center">
+                <div class="gm-title disp" style="font-size:19px;color:var(--g-ember)">🔥 Hearthlands</div>
+                <div style="width:100%;display:flex;flex-direction:column;gap:6px;max-width:220px">
+                  <div class="gm-cta ghost wide">📖 Show Tutorial</div>
+                  <div class="gm-cta ghost wide">⚙ Settings</div>
+                  <div class="gm-cta ghost wide">🏆 Trophies</div>
+                  <div class="gm-cta ghost wide" style="border-color:var(--fail);color:var(--fail)">🛠 Debug</div>
+                  <div class="gm-cta ghost wide">📖 Game Wiki</div>
+                  <div class="gm-cta ghost wide" style="border-color:var(--fail);color:var(--fail)">📄 Docs</div>
+                </div>
+                <span class="gm-flag bad" style="bottom:78px;right:10px">+10,000 gold, one tap away</span>
+                <span class="gm-flag bad" style="bottom:14px;right:10px">internal design docs</span>
+              </div>
+              <div class="gm-nav"><span class="t on"><span class="ic">🌱</span>Board</span><span class="t"><span class="ic">🏘️</span>Town</span><span class="t"><span class="ic">🗺️</span>Map</span><span class="t more"><span class="ic">⋯</span>More</span></div>
+            </div></div>
+          </div>
+          <figcaption>Both flagged buttons are always rendered. Tapping Debug lands on a grid whose top row is
+          <code>🪙 +10,000 Gold</code> / <code>⭐ +1 Level</code>; Docs opens <code>/docs/</code>, the design-docs build.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">hidden unless <code>?dev=1</code></span></div>
+        <figure class="light">
+          <div class="gm" style="padding:6px">
+            <div class="device phone"><div class="screen">
+              <div class="gm-hud"><span class="burger">☰</span><span class="gm-pill title">Menu</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span></div>
+              <div class="gm-bg gm-wrap" style="padding:12px;gap:7px;align-items:center">
+                <div class="gm-title disp" style="font-size:19px;color:var(--g-ember)">🔥 Hearthlands</div>
+                <div style="width:100%;display:flex;flex-direction:column;gap:6px;max-width:220px">
+                  <div class="gm-cta ghost wide">📖 Show Tutorial</div>
+                  <div class="gm-cta ghost wide">⚙ Settings</div>
+                  <div class="gm-cta ghost wide">🏆 Trophies</div>
+                  <div class="gm-cta ghost wide">🏛 Town Hall</div>
+                  <div class="gm-cta ghost wide">📖 Game Wiki</div>
+                  <div class="gm-cta gold wide" style="opacity:.9">↻ Check for Updates</div>
+                </div>
+                <span class="gm-flag good" style="bottom:20px;right:10px">clean, player-only menu</span>
+              </div>
+              <div class="gm-nav"><span class="t on"><span class="ic">🌱</span>Board</span><span class="t"><span class="ic">🏘️</span>Town</span><span class="t"><span class="ic">🗺️</span>Map</span><span class="t more"><span class="ic">⋯</span>More</span></div>
+            </div></div>
+          </div>
+          <figcaption>Debug and Docs are gated behind a dev flag and simply absent for players. The build already
+          ships a session-persisted query-flag pattern (<code>conceptTiles=1</code>) — reuse it as <code>dev=1</code>.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — how to gate it</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Session query flag (<code>?dev=1</code>)</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Reuse the existing <code>appQueryParams</code> + <code>sessionStorage</code> pattern to expose a
+        <code>dev</code> flag; render Debug/Docs only when set. <b>Pro:</b> still reachable in a deployed build for QA
+        without a rebuild. <b>Con:</b> discoverable by anyone who reads the URL scheme — fine for a cheat, not a secret.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Build-time (<code>import.meta.env.DEV</code>)</span></div>
+        <div class="tradeoff">Compile the buttons out of production entirely. <b>Pro:</b> zero chance of a player reaching
+        cheats. <b>Con:</b> QA on a production build can't reach the panel; the DEV cheat actions themselves would want
+        the same guard in the reducer.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Add a <code>isDevFlagEnabled()</code> next to <code>isConceptTilesFlagEnabled()</code>
+          (<span class="filechip">src/appQueryParams.ts:36</span>), keyed on <code>dev=1</code>.</li>
+        <li>In <span class="filechip">src/features/settings/index.tsx:180</span> wrap the <code>🛠 Debug</code> button and the
+          <code>📄 Docs</code> anchor (<span class="filechip">settings/index.tsx:196</span>) in that check; leave the player-facing
+          <code>📖 Game Wiki</code> / update buttons untouched.</li>
+        <li>Belt-and-braces: no-op the <code>DEV/*</code> cheat actions unless the flag is set, so the buttons can't be
+          replayed via a saved action log (<span class="filechip">src/features/debug/index.tsx:102</span>).</li>
+        <li>Confirm the <code>📖 Game Wiki</code> link (<span class="filechip">settings/index.tsx:186</span> → <code>/b/</code>, the Dev
+          Panel) is the intended player build; if the balance-tuning tools ride along, gate it too.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= AF2 -->
+  <article class="prop" id="af2">
+    <div class="phd">
+      <span class="pid">AF2</span><span class="sev S2">S2</span><span class="eff">Effort S–M</span>
+      <span class="chip new">new</span>
+    </div>
+    <div class="ptitle">Make save failures visible — a full or blocked storage loses a whole session silently</div>
+    <p class="why">Two failure paths in the save layer report only to <code>console.warn</code> and never to the player.
+    <strong>Writes:</strong> <code>persistStateNow</code> swallows a quota-exceeded / private-mode error and warns exactly
+    once (<span class="mut"><code>state/persistence.ts:57</code></span>) — a player in a private tab or with full storage
+    plays for an hour and loses everything with no signal. <strong>Loads:</strong> a corrupt or unmigratable save is
+    <code>removeItem</code>'d and discarded, again with only a console line (<span class="mut"><code>persistence.ts:28</code>,
+    <code>:42</code></span>) — the next launch is a silent fresh start.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">failure only reaches the console</span></div>
+        <figure>
+          <div class="gm" style="padding:6px">
+            <div class="device phone"><div class="screen">
+              <div class="gm-hud"><span class="burger">☰</span><span class="gm-pill title">Hearthwood Vale</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span><span class="gm-pill ember">Lv 4</span></div>
+              <div class="gm-bg" style="padding:8px;display:flex;align-items:center;justify-content:center">
+                <div class="gm-board" style="--n:6;background:linear-gradient(180deg,var(--g-field-spring-top),var(--g-field-spring-bot));border:2px solid var(--g-iron);padding:8px;width:100%">
+                  <div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌳</div>
+                  <div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft fruit">🍎</div>
+                  <div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft grass">🌿</div>
+                </div>
+              </div>
+              <div style="background:#141414;color:#e6b0a8;font:600 9px/1.4 ui-monospace,monospace;padding:6px 8px;border-top:1px solid #333">
+                ⚠ [hearth] storage quota exceeded — progress may not be saved
+                <div style="opacity:.55">↳ nobody but the devtools console ever sees this</div>
+              </div>
+            </div></div>
+          </div>
+          <figcaption>The game plays on as if nothing is wrong. The one-shot warning lives in the console the player
+          never opens; there is no toast, no banner, no badge.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">one honest, non-blocking notice</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:6px">
+            <div class="device phone"><div class="screen">
+              <div class="gm-hud"><span class="burger">☰</span><span class="gm-pill title">Hearthwood Vale</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span><span class="gm-pill ember">Lv 4</span></div>
+              <div class="gm-bg gm-wrap" style="padding:8px;display:flex;align-items:center;justify-content:center">
+                <div class="gm-card" style="position:absolute;top:8px;left:8px;right:8px;z-index:5;border-color:var(--g-ember);border-left:4px solid var(--g-ember);display:flex;align-items:center;gap:8px;padding:8px 10px">
+                  <span style="font-size:16px">⚠️</span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font:800 11px/1.2 system-ui;color:#8a3410">Progress isn't saving</div>
+                    <div class="gm-mini">Storage is full or this is a private tab. Free space or exit private mode.</div>
+                  </div>
+                  <span style="font-size:13px;color:var(--g-ink-light)">✕</span>
+                </div>
+                <div class="gm-board" style="--n:6;background:linear-gradient(180deg,var(--g-field-spring-top),var(--g-field-spring-bot));border:2px solid var(--g-iron);padding:8px;width:100%;margin-top:26px">
+                  <div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌳</div>
+                  <div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft fruit">🍎</div>
+                  <div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft grass">🌿</div>
+                </div>
+                <span class="gm-flag good" style="bottom:10px;right:10px">player can act before losing a session</span>
+              </div>
+            </div></div>
+          </div>
+          <figcaption>A single dismissible parchment banner on first write-failure. The load-discard path gets its own
+          one-time line on the next launch: "We couldn't read your last save, so we've started fresh."</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Have <code>persistStateNow</code> return a boolean/status and, on the first failure, dispatch a toast
+          (the <span class="filechip">src/features/toasts</span> slice already exists) instead of only warning
+          (<span class="filechip">src/state/persistence.ts:57</span>). Keep the once-guard so it never spams.</li>
+        <li>Distinguish quota vs unavailable (the code already sniffs <code>/quota/i</code> at
+          <span class="filechip">persistence.ts:63</span>) to pick the copy ("storage full" vs "private mode").</li>
+        <li>On load-discard, set a transient flag in the returned state (or a sessionStorage marker) that the shell reads
+          once to show the "started fresh" notice (<span class="filechip">persistence.ts:28</span>).</li>
+        <li>Add a reducer/unit test that a stubbed <code>setItem</code> throw surfaces exactly one toast.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= AF3 -->
+  <article class="prop" id="af3">
+    <div class="phd">
+      <span class="pid">AF3</span><span class="sev S3">S3</span><span class="eff">Effort S</span>
+      <span class="chip new">new</span>
+    </div>
+    <div class="ptitle">Add a "Start Over" control — the entire reset-save pipeline is wired but nothing dispatches it</div>
+    <p class="why">There is a complete, working reset path: the reducer handles <code>SETTINGS/RESET_SAVE</code>
+    (<span class="mut"><code>state.ts:1873</code></span>), its effect clears every <code>hearth.*</code> key
+    (<code>clearAllHearthStorage</code>, <span class="mut"><code>features/settings/slice.ts:27</code></span>), and
+    <code>prototype.tsx:647</code> reloads on <code>pendingReload</code>. But <strong>no component ever dispatches
+    <code>SETTINGS/RESET_SAVE</code></strong> (grep across <code>src/</code> finds only the type, reducer, and tests). A
+    player with a broken or unwanted save has no way to start over short of clearing site data by hand.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">Settings tab · no way out</span></div>
+        <figure>
+          <div class="gm" style="padding:10px">
+            <div class="gm-panel" style="padding:12px">
+              <div class="gm-mini disp" style="font-weight:700;text-align:center;color:var(--g-ink-soft);letter-spacing:.1em">AUDIO</div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Sound Effects</b><span style="width:34px;height:18px;border-radius:999px;background:var(--g-ember);position:relative"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span></div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Haptics</b><span style="width:34px;height:18px;border-radius:999px;background:var(--g-ember);position:relative"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span></div>
+              <div class="gm-mini disp" style="font-weight:700;text-align:center;color:var(--g-ink-soft);letter-spacing:.1em;margin-top:8px">GRAPHICS</div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Tile Art</b><span class="gm-mini">Animated ▾</span></div>
+              <div class="gm-wrap" style="height:20px"><span class="gm-flag bad" style="top:0;right:0">no reset · no start-over</span></div>
+            </div>
+          </div>
+          <figcaption>Settings ends at Tile Art. The reset machinery underneath is fully built and completely unreachable
+          — dead code from the player's side.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">a guarded Data section</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:10px">
+            <div class="gm-panel" style="padding:12px">
+              <div class="gm-mini disp" style="font-weight:700;text-align:center;color:var(--g-ink-soft);letter-spacing:.1em">AUDIO</div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Sound Effects</b><span style="width:34px;height:18px;border-radius:999px;background:var(--g-ember);position:relative"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span></div>
+              <div class="gm-mini disp" style="font-weight:700;text-align:center;color:var(--fail);letter-spacing:.1em;margin-top:10px">DATA</div>
+              <div class="gm-card" style="border-color:var(--fail);padding:9px 10px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                  <div style="min-width:0"><b style="font-size:12px;color:#8f2a18">Start Over</b><div class="gm-mini">Erases your save and reloads.</div></div>
+                  <div class="gm-cta" style="background:#c23b22;border-color:#8f2a18;color:#fff;padding:7px 12px">Reset…</div>
+                </div>
+              </div>
+              <div class="gm-card" style="margin-top:8px;padding:9px 10px;background:var(--g-parchment-soft)">
+                <div class="gm-mini" style="text-align:center">Reset your save? This can't be undone.</div>
+                <div style="display:flex;gap:6px;margin-top:7px">
+                  <div class="gm-cta wide" style="background:#c23b22;border-color:#8f2a18;color:#fff;flex:1">Reset</div>
+                  <div class="gm-cta ghost wide" style="flex:1">Cancel</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figcaption>A red "Start Over" row opens the same two-button confirm the app already uses for "Leave the board".
+          Confirm dispatches <code>SETTINGS/RESET_SAVE</code> — every downstream step is already implemented.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Add a "Data" section to <code>SettingsTab</code> with an <code>ActionBtn variant="danger"</code>
+          (<span class="filechip">src/features/settings/index.tsx:262</span>) that opens a confirm.</li>
+        <li>Reuse the existing inline confirm markup from the <code>leaveBoard</code> branch
+          (<span class="filechip">settings/index.tsx:359</span>); on confirm dispatch
+          <code>{ type: 'SETTINGS/RESET_SAVE' }</code>.</li>
+        <li>Nothing else to build: <span class="filechip">state.ts:1876</span> clears storage and
+          <span class="filechip">prototype.tsx:647</span> performs the reload via <code>pendingReload</code>.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= AF4 -->
+  <article class="prop" id="af4">
+    <div class="phd">
+      <span class="pid">AF4</span><span class="sev S3">S3</span><span class="eff">Effort S–M</span>
+      <span class="chip new">new</span>
+    </div>
+    <div class="ptitle">Give the town a failed-asset fallback — a load error renders a silent blank scene</div>
+    <p class="why">The board bakes its art procedurally to canvas, so it has no network-asset risk. The <strong>town</strong>
+    does: <code>TownScene.preload</code> network-loads <code>town/tileset.png</code> and the
+    <code>character-atlas</code> (<span class="mut"><code>ui/town/TownScene.ts:145</code></span>) with <strong>no
+    <code>loaderror</code> handler anywhere</strong> in the codebase. If the tileset fails (flaky first load, 404),
+    <code>create()</code> hits <code>addTilesetImage(…) → null</code> and early-returns
+    (<span class="mut"><code>TownScene.ts:181</code></span>), leaving an empty scene — no ground, no message, no retry.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">tileset fails → blank</span></div>
+        <figure>
+          <div class="gm" style="padding:6px">
+            <div class="device phone"><div class="screen">
+              <div class="gm-hud"><span class="burger">☰</span><span class="gm-pill title">Hearthwood Vale</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span></div>
+              <div class="gm-bg" style="padding:0;display:flex;align-items:center;justify-content:center;background:#cdbf9d">
+                <div class="gm-mini" style="opacity:.5">·</div>
+              </div>
+              <div class="gm-nav"><span class="t"><span class="ic">🌱</span>Board</span><span class="t on"><span class="ic">🏘️</span>Town</span><span class="t"><span class="ic">🗺️</span>Map</span><span class="t more"><span class="ic">⋯</span>More</span></div>
+            </div></div>
+          </div>
+          <figcaption>An empty tan rectangle where the town should be. The scene didn't crash — it bailed — so the app
+          looks broken with nothing to act on.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">honest error + retry</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:6px">
+            <div class="device phone"><div class="screen">
+              <div class="gm-hud"><span class="burger">☰</span><span class="gm-pill title">Hearthwood Vale</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span></div>
+              <div class="gm-bg" style="padding:14px;display:flex;align-items:center;justify-content:center">
+                <div class="gm-card" style="text-align:center;padding:18px 16px;max-width:220px">
+                  <div style="font-size:30px">🏚️</div>
+                  <div class="gm-title" style="font-size:14px;margin-top:6px;color:var(--g-ink)">Couldn't load the town</div>
+                  <div class="gm-mini" style="margin:5px 0 12px">Its art didn't finish downloading. Check your connection and try again.</div>
+                  <div class="gm-cta ember wide">↻ Retry</div>
+                </div>
+              </div>
+              <div class="gm-nav"><span class="t"><span class="ic">🌱</span>Board</span><span class="t on"><span class="ic">🏘️</span>Town</span><span class="t"><span class="ic">🗺️</span>Map</span><span class="t more"><span class="ic">⋯</span>More</span></div>
+            </div></div>
+          </div>
+          <figcaption>On a load error the scene raises a bridge event; React renders a parchment card with a Retry that
+          re-runs the scene. Better still: paint a flat grass fallback so the town degrades to plain-but-usable.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>In <code>preload</code>, add <code>this.load.on('loaderror', (f) =&gt; …)</code> to set a
+          <code>this.assetsFailed</code> flag and emit a registry/bridge event
+          (<span class="filechip">src/ui/town/TownScene.ts:142</span>).</li>
+        <li>Replace the silent <code>if (!tilesetImg) return;</code> at
+          <span class="filechip">TownScene.ts:181</span> with a flat-colour fallback ground so the scene still renders.</li>
+        <li>Have <span class="filechip">src/ui/TownPhaserCanvas.tsx</span> subscribe to the failure event and render a
+          Retry card that calls <code>scene.restart()</code>; the map already models a boot-failure overlay
+          (<span class="filechip">src/features/cartography/PhaserMap.tsx:217</span>) — mirror it.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= AF5 -->
+  <article class="prop" id="af5">
+    <div class="phd">
+      <span class="pid">AF5</span><span class="sev S3">S3</span><span class="eff">Effort S–M</span>
+      <span class="chip new">new</span>
+    </div>
+    <div class="ptitle">Round out a thin Settings tab — master volume, an in-app reduce-motion toggle, tutorial off-switch</div>
+    <p class="why">Settings currently offers exactly two audio toggles and a tile-art picker
+    (<span class="mut"><code>AUDIO_ROWS</code> = <code>sfxOn</code>, <code>hapticsOn</code>, <code>features/settings/index.tsx:211</code></span>).
+    Three controls players reach for are missing: (1) <strong>volume</strong> — audio is binary on/off with no level
+    (<span class="mut"><code>audio/index.ts</code> plays at fixed per-sound gains</span>); (2) an <strong>in-app
+    reduce-motion</strong> toggle — motion is only honoured from the OS media query
+    (<span class="mut"><code>GameScene.ts:2163</code></span>), so a player who wants calm without changing system
+    settings can't; (3) a <strong>tutorial off-switch</strong> — <code>DEFAULT_SETTINGS.tutorialDisabled</code> exists
+    (<span class="mut"><code>settings/slice.ts:46</code></span>) but no UI ever sets it (only a one-shot "Show Tutorial"
+    replay in the main menu).</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">two toggles + tile art</span></div>
+        <figure>
+          <div class="gm" style="padding:10px">
+            <div class="gm-panel" style="padding:12px">
+              <div class="gm-mini disp" style="font-weight:700;text-align:center;color:var(--g-ink-soft);letter-spacing:.1em">AUDIO</div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Sound Effects</b><span style="width:34px;height:18px;border-radius:999px;background:var(--g-ember);position:relative"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span></div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Haptics</b><span style="width:34px;height:18px;border-radius:999px;background:var(--g-ember);position:relative"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span></div>
+              <div class="gm-mini disp" style="font-weight:700;text-align:center;color:var(--g-ink-soft);letter-spacing:.1em;margin-top:8px">GRAPHICS</div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Tile Art</b><span class="gm-mini">Animated ▾</span></div>
+            </div>
+          </div>
+          <figcaption>Sound is all-or-nothing; motion follows the OS only; the tutorial can be replayed but never turned
+          off from here.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">the three expected controls</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:10px">
+            <div class="gm-panel" style="padding:12px">
+              <div class="gm-mini disp" style="font-weight:700;text-align:center;color:var(--g-ink-soft);letter-spacing:.1em">AUDIO</div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Sound Effects</b><span style="width:34px;height:18px;border-radius:999px;background:var(--g-ember);position:relative"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span></div>
+              <div class="gm-row" style="flex-direction:column;align-items:stretch;gap:5px"><div style="display:flex;justify-content:space-between"><b style="font-size:12px">Volume</b><span class="gm-mini">70%</span></div><div class="gm-bar"><i style="width:70%"></i></div></div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Haptics</b><span style="width:34px;height:18px;border-radius:999px;background:var(--g-ember);position:relative"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span></div>
+              <div class="gm-mini disp" style="font-weight:700;text-align:center;color:var(--g-ink-soft);letter-spacing:.1em;margin-top:8px">GRAPHICS & MOTION</div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Tile Art</b><span class="gm-mini">Animated ▾</span></div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Reduce Motion</b><span style="width:34px;height:18px;border-radius:999px;background:#9a8a72;position:relative"><span style="position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span></div>
+              <div class="gm-row" style="justify-content:space-between"><b style="font-size:12px">Show Tutorial Tips</b><span style="width:34px;height:18px;border-radius:999px;background:var(--g-ember);position:relative"><span style="position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#fff"></span></span></div>
+            </div>
+          </div>
+          <figcaption>A volume slider, an in-app "Reduce Motion" that feeds the same gate the OS query does, and a
+          tutorial-tips toggle bound to the existing <code>tutorialDisabled</code> flag.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Add a <code>volume</code> (0–1) setting; multiply each step's <code>gain</code> by it in
+          <span class="filechip">src/audio/index.ts:127</span> (read via <code>setEnabled</code>-style sync in
+          <span class="filechip">src/audio/useAudio.tsx:26</span>). Render a range row in
+          <span class="filechip">features/settings/index.tsx:262</span>.</li>
+        <li>Add a <code>reduceMotion</code> setting and OR it into <code>_motionEnabled()</code> beside the media-query
+          check (<span class="filechip">src/GameScene.ts:2163</span>); mirror into the CSS-motion gate so both layers agree.</li>
+        <li>Expose the existing <code>tutorialDisabled</code> flag as a toggle
+          (<span class="filechip">features/settings/slice.ts:46</span>) so tips can be turned off, not just replayed.</li>
+      </ul>
+    </div>
+
+    <h3 class="disp" style="margin-top:18px">Also folded in (polish)</h3>
+    <ul class="small">
+      <li><strong>No ambient music track.</strong> <code>SOUNDS</code> is SFX-only synthesis
+        (<span class="filechip">src/audio/index.ts:48</span>) — a cozy seasons game reads as unusually quiet at rest. If
+        music is ever added, it wants its own volume row (the reason the slider above is "Volume", not "SFX Volume").</li>
+      <li><strong>Haptics is binary only.</strong> The vibrate calls are hard-coded durations in
+        <span class="filechip">src/audio/useAudio.tsx:43</span>; fine, but a "subtle / strong" choice is cheap once the
+        toggle grows a slider neighbour.</li>
+    </ul>
+  </article>
+
+  <!-- ============================================================= OK -->
+  <article class="prop" id="ok">
+    <div class="phd"><span class="pid">OK</span><span class="sev POLISH" style="background:var(--ok)">CHECKED</span><span class="eff">no change</span></div>
+    <div class="ptitle">Checked and OK — areas that turned out solid</div>
+    <p class="why">These were on the hunt list and hold up in the code; noting them so they aren't re-litigated.</p>
+    <ul>
+      <li><strong>Cold-start / loading.</strong> A hand-crafted boot splash is painted on the first byte in
+        <span class="filechip">index.html</span> (animated hearth, honours <code>prefers-reduced-motion</code>), dismissed
+        by <code>dismissBootSplash()</code> once the board engine is up (<span class="filechip">prototype.tsx:440</span>),
+        with a 12 s safety-net so a boot failure can't trap the player. Strong.</li>
+      <li><strong>Render-crash recovery.</strong> A root error boundary shows a "Something went wrong · Reload" screen
+        and reassures the player their save is intact (<span class="filechip">main.tsx:36</span>); per-feature boundaries
+        wrap every modal/screen (<span class="filechip">src/ui.tsx:21</span>). The map also models a Phaser/WebGL
+        boot-failure overlay (<span class="filechip">features/cartography/PhaserMap.tsx:217</span>).</li>
+      <li><strong>Returning-player flow.</strong> <code>LOGIN_TICK</code> is dispatched on mount
+        (<span class="filechip">prototype.tsx:637</span>), advances/breaks the streak by date diff, credits the
+        <code>DAILY_REWARDS</code> ladder, and opens the daily-reward modal — idempotent per local day. (This game has no
+        idle/offline production, so a "while you were away" economy summary would be inventing a system that doesn't
+        exist; the daily reward is the correct return moment.)</li>
+      <li><strong>Insufficient-resource feedback (crafting).</strong> The recipe detail renders a per-input
+        have-vs-need grid with an OK check and a "Missing inputs" status, and disables the Craft button — so a failed
+        craft explains itself (<span class="filechip">src/features/crafting/index.tsx:187</span>).</li>
+      <li><strong>Save migration.</strong> An out-of-version save is run through a migration ladder rather than blindly
+        wiped; only truly forward/corrupt saves are discarded (<span class="filechip">src/state/persistence.ts:24</span>).
+        The gap is only that the discard is <em>silent</em> — see AF2.</li>
+      <li><strong>Landscape / small-viewport.</strong> The board has a purpose-built landscape composition at
+        <span class="filechip">src/ui/puzzleBoard.tsx:1749</span> (rail beside a full-height board), the town scene
+        reflows its zoom for portrait phones, and cartography swaps rail↔bottom-card by orientation. Desktop/tablet
+        board width is covered separately by the Board page (B3).</li>
+    </ul>
+  </article>
+
+  <footer>puzzleDrag2 · Additional findings · a second pass over Settings, loading, error paths, audio,
+  returning-player, and small-viewport. Mockups are HTML built from <code>src/tokens.css</code>; every claim traces to a
+  cited <code>src/</code> line.</footer>
+</main>
+</div>
+<script src="./assets/mockup.js"></script>
+</body>
+</html>

@@ -30,6 +30,7 @@
   <a href="#method">The method</a>
   <a href="#priorities">Top-12 → proposals</a>
   <a href="#index">Proposal index</a>
+  <a href="#new-findings">New findings this pass</a>
 </nav>
 
 <main>
@@ -123,6 +124,30 @@
       <div class="tradeoff">New findings from this pass — the areas the original review flagged as out of scope
       (cold-start/loading, error paths, audio/mute, offline/returning, Settings).</div></div>
   </div>
+
+  <h2 id="new-findings"><span class="n">§</span>New findings from this pass</h2>
+  <p>Grounding each mock-up in the live code surfaced <strong>23 findings not in the original report</strong> —
+  including several that are <em>logic</em> issues, not just UX. Each is written up in full on its surface page's
+  <strong>New findings</strong> article; the highest-value ones:</p>
+  <table>
+    <thead><tr><th style="width:56px">Sev</th><th>New finding</th><th style="width:150px">Where</th></tr></thead>
+    <tbody>
+      <tr><td><span class="sev S2">S2</span></td><td><strong>Silent save-write / load failure = data loss.</strong> A quota-exceeded/private-mode <code>setItem</code> throw is swallowed with a console warn, and an unmigratable/corrupt save is <code>removeItem</code>'d and discarded — no on-screen signal either way (<code>persistence.ts:57/28/42</code>).</td><td><a href="./additional-findings.html">Additional · AF2</a></td></tr>
+      <tr><td><span class="sev S2">S2</span></td><td><strong>Debug cheat panel + internal Docs link ship in the player-facing menu</strong>, ungated by <code>import.meta.env.DEV</code> — top actions are <code>ADD_GOLD +10,000</code> / <code>ADD_LEVEL</code> (<code>settings/index.tsx:180/196</code>).</td><td><a href="./additional-findings.html">Additional · AF1</a></td></tr>
+      <tr><td><span class="sev S2">S2</span></td><td><strong>Boons can be permanently unreachable.</strong> Its only non-debug door is a story-flag-gated Town corner button — a player who never faces a keeper cannot open the built meta-system (<code>Town.tsx:376</code>).</td><td><a href="./shell.html#new">Shell · SH7-4</a></td></tr>
+      <tr><td><span class="sev S2">S2</span></td><td><strong>Almanac CLAIM enables at the wrong XP.</strong> The UI's ×100 unlock math is looser than the reducer's ×150 gate, so for higher tiers the button lights up on XP the reducer rejects → a silent no-op tap (<code>quests/index.tsx:212</code> vs <code>almanac/data.ts:120</code>).</td><td><a href="./screens.html#new">Screens · SC8</a></td></tr>
+      <tr><td><span class="sev S2">S2</span></td><td><strong>The off-screen tutorial spotlight has a systemic root cause</strong>, not a one-off: the visible season strip has <em>no</em> DOM anchor (only two <code>-9999px</code> mirrors carry <code>data-testid="turns-left"</code>), and <code>readRect</code> accepts any node with size &gt; 0 regardless of position — a latent trap for every spotlight (<code>tutorial/index.tsx:284</code>).</td><td><a href="./shell.html#new">Shell · SH7-1/2</a></td></tr>
+      <tr><td><span class="sev S2">S2</span></td><td><strong>Level-up unlock copy is hardcoded in the reducer</strong>, divergent from <code>ALMANAC_TIERS</code>, and almanac rewards need a manual claim that nothing signals — so rewards pile up unclaimed (<code>state.ts:587</code>; <code>almanac/data.ts:111</code>).</td><td><a href="./story.html#new">Story · S7</a></td></tr>
+      <tr><td><span class="sev S2">S2</span></td><td><strong>Tapping a map node never moves the camera to it</strong>, and there's no keyboard/AT path to select a node at all — the selected node can sit entirely off-screen (<code>MapScene.ts:1003/209</code>).</td><td><a href="./map.html#m7">Map · M7</a></td></tr>
+      <tr><td><span class="sev S2">S2</span></td><td><strong>The icon-family split keys off icon identity, never render size</strong> — the mechanical root cause of flat + painterly registers colliding at one scale (<code>Icon.tsx:246</code>).</td><td><a href="./crosscutting.html#new">X · N2</a></td></tr>
+      <tr><td><span class="sev S3">S3</span></td><td><strong>Town scene has no failed-asset fallback</strong> — a tileset/atlas load error paints a silent blank town with no message or retry (<code>TownScene.ts:145/181</code>).</td><td><a href="./additional-findings.html">Additional · AF4</a></td></tr>
+      <tr><td><span class="sev S3">S3</span></td><td><strong>Settings is missing volume, in-app reduce-motion, and a tutorial off-switch</strong>; audio is binary on/off with no master volume and no ambient music; <code>RESET_SAVE</code> is fully wired but nothing dispatches it (<code>settings/index.tsx:211</code>; <code>state.ts:1873</code>).</td><td><a href="./additional-findings.html">Additional · AF3/AF5</a></td></tr>
+      <tr><td><span class="sev S3">S3</span></td><td><strong>The recipe <code>coins</code> field is dead code</strong> — declared and read (<code>coins += recipe.coins ?? 0</code>) but never set by any recipe, so it always adds 0. Surface the item's <em>sell</em> value instead. <span class="mut">(Corrects an in-pass over-reading that briefly called this a coin "double-grant" — it isn't.)</span></td><td><a href="./screens.html#new">Screens · SC8</a></td></tr>
+      <tr><td><span class="sev S3">S3</span></td><td><strong>Refinements that make existing fixes cheaper/more correct:</strong> the Farm bed can reuse the existing (but unreached) furrow renderer; in-world town labels are hardcoded Arial; the <code>--tap-min</code> token is applied only in the Dev-Panel wiki, not the game; the Mining wiki <code>treasure</code> tab has no label at all; the computed "recent" inventory sort is dead.</td><td>Town/X/Screens · New</td></tr>
+    </tbody>
+  </table>
+  <p class="small mut">Full list (23 findings, with evidence and proposals) lives in the <strong>New findings</strong>
+  article at the foot of each surface page.</p>
 
   <div class="callout q" style="margin-top:26px"><p style="margin-top:0"><strong>Decisions this companion surfaces
   for you</strong> (each has an options block on its page):</p>

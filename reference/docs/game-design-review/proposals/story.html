@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Story & big moments — Proposals & Mockups · puzzleDrag2 Design Review</title>
+<link rel="stylesheet" href="./assets/mockup.css">
+</head>
+<body>
+<header class="top">
+  <span class="brand">puzzleDrag2 · <span class="em">Proposals</span></span>
+  <span class="crumb"><a href="./index.html">All proposals</a> › <strong>05 · Story &amp; big moments</strong></span>
+  <span class="meta">before → after · grounded in <code>src/</code></span>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <a class="home" href="./index.html">← All proposals</a>
+  <div class="sep">Surfaces</div>
+  <a href="./board.html"><span class="k">01</span>The Board</a>
+  <a href="./town.html"><span class="k">02</span>The Town</a>
+  <a href="./map.html"><span class="k">03</span>World Map</a>
+  <a href="./screens.html"><span class="k">04</span>Screens &amp; panels</a>
+  <a href="./story.html" class="active"><span class="k">05</span>Story &amp; moments</a>
+  <a href="./shell.html"><span class="k">06</span>Shell &amp; onboarding</a>
+  <a href="./crosscutting.html"><span class="k">07</span>Cross-cutting</a>
+  <a href="./additional-findings.html"><span class="k">08</span>Additional findings</a>
+  <div class="sep">On this page</div>
+  <a href="#levelup">S1 · Level-up cinematic</a>
+  <a href="#runsummary">S2 · Run-summary reveal</a>
+  <a href="#chronicle">S3 · Chronicle timeline</a>
+  <a href="#unify">S4 · One narrative surface</a>
+  <a href="#boss">S5 · Boss modal reskin</a>
+  <a href="#polish">S6 · Also folded in</a>
+  <a href="#new">S7 · New findings</a>
+</nav>
+
+<main>
+  <p class="eyebrow">Proposals · Surface 05</p>
+  <h1>Story &amp; big moments — fully-defined proposals</h1>
+  <p class="lead">The narrative bones are unusually good. The work here is to make the <em>peaks</em> — a
+  level-up, a season's climax, a boss standing in your path — land with the weight the writing already earns.
+  Each proposal pairs the game <span class="chip" style="background:var(--now);color:#fff;border:0">as it is now</span>
+  with a rendered mock of <span class="chip" style="background:var(--next);color:#fff;border:0">what to build</span>
+  and a concrete <code>file:line</code> spec.</p>
+
+  <div class="callout tldr"><p style="margin:0"><strong>What already works — keep it.</strong> The three-way story
+  split is genuinely smart: heavy beats get a center-stage modal, one-liners get a bottom bar, the finale keeps its
+  gilded card (<code>Modals.tsx:534–542</code>). And the <strong>run-summary is strong content</strong> — best-moment
+  hero, a resource tally, bond deltas, supplies consumed, all in one screen (<code>runSummary/index.tsx</code>). The
+  fixes below don't rebuild any of that. They (S1) put a <em>reward</em> under the level-up numeral, (S2) give the
+  season's climax motion and promote a story beat out of the receipt, (S3) make the Chronicle an actual timeline,
+  (S4) unify the narrative onto one bundled-Fraunces surface, and (S5) reskin the boss popup out of F2P-interstitial
+  territory. None is a rewrite.</p></div>
+
+  <!-- ============================================================= S1 · LEVEL-UP -->
+  <article class="prop" id="levelup">
+    <div class="phd">
+      <span class="pid">S1</span><span class="sev S2">S2</span><span class="eff">Effort S–M</span>
+      <span class="chip good">Top priority #2 partner</span>
+    </div>
+    <div class="ptitle">Put a reward under the level-up numeral — say what actually unlocked</div>
+    <p class="why">A level-up is one of the game's few earned peaks, and it fires a full-bleed cinematic that shows
+    <em>only the number</em>. No tier name, no reward, no "what's new" — the moment that should sell progression is
+    the emptiest screen in the game. It holds for a fixed <strong>1600ms</strong> and is
+    <code>pointer-events-none</code>, so it can't be tapped through or into.
+    <span class="mut"><code>LevelUpCinematic.tsx:5</code> (HOLD_MS=1600), <code>:36</code> (pointer-events-none),
+    <code>:44–49</code> (the lone numeral). The reward data already exists —
+    <code>ALMANAC_TIERS</code> carries a <code>name</code> + <code>description</code> + <code>reward</code> for every
+    level (<code>features/almanac/data.ts:14</code>).</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">a bare numeral</span></div>
+        <figure>
+          <div class="gm" style="padding:0">
+            <div class="gm-wrap" style="height:264px;border-radius:9px;overflow:hidden;
+              background:radial-gradient(120% 90% at 50% 42%, #3a2c12 0%, #1a120a 58%, #0b0805 100%);
+              display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center">
+              <div style="font:800 11px/1 system-ui;letter-spacing:.42em;color:#d9c69f;text-transform:uppercase;margin-bottom:10px">Level Up</div>
+              <div class="disp" style="font-size:86px;line-height:1;font-weight:800;color:var(--g-gold-bright);
+                text-shadow:0 4px 0 rgba(0,0,0,.5),0 0 30px rgba(255,210,72,.6)">5</div>
+              <span class="gm-flag bad" style="bottom:8px;left:8px">1600ms · non-interactive · no reward, no name</span>
+            </div>
+          </div>
+          <figcaption>The whole cinematic. A number appears, holds, fades. The player is told they advanced but
+          not <em>into what</em> — the reward the level actually grants is invisible here.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">numeral + tier name + reward</span></div>
+        <figure>
+          <div class="gm" style="padding:0">
+            <div class="gm-wrap" style="height:264px;border-radius:9px;overflow:hidden;
+              background:radial-gradient(120% 90% at 50% 38%, #46340f 0%, #1c130a 58%, #0b0805 100%);
+              display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:14px">
+              <div style="font:800 10px/1 system-ui;letter-spacing:.42em;color:#d9c69f;text-transform:uppercase;margin-bottom:6px">Level Up</div>
+              <div class="disp" style="font-size:66px;line-height:1;font-weight:800;color:var(--g-gold-bright);
+                text-shadow:0 4px 0 rgba(0,0,0,.5),0 0 26px rgba(255,210,72,.6)">5</div>
+              <div class="disp" style="font-size:17px;font-weight:700;color:#f0c965;margin-top:8px">Master Harvester</div>
+              <span class="gm-status" style="margin-top:9px;background:rgba(226,178,74,.16);border:1px solid rgba(226,178,74,.5);color:#f0c965">🗡️ Legendary scythe · every season</span>
+              <div style="margin-top:9px;font:700 10px/1 system-ui;letter-spacing:.04em;color:rgba(240,230,207,.72)">Tap to claim in the Almanac ›</div>
+              <span class="gm-flag good" style="bottom:8px;right:8px">names the tier · reward reads · dismiss on tap</span>
+            </div>
+          </div>
+          <figcaption>Look up the tier for <code>level</code> in <code>ALMANAC_TIERS</code> and render its
+          <strong>name</strong> and a one-line reward badge under the numeral. Since tier rewards are claimed
+          manually, the moment also nudges toward the Almanac. When the level has no tier (past 10), skip the line
+          and drop the hold to ~1100ms.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — how interactive should the peak be</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Timed, but tappable</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Keep the auto-dismiss (1600ms with a reward, ~1100ms without) but drop
+        <code>pointer-events-none</code> so a tap dismisses early, and make the reward line a link into the Almanac.
+        <b>Pro:</b> respects the player's time, still ambient for those who don't touch it. <b>Con:</b> one extra
+        tap-target to wire and test.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Hold until dismissed</span></div>
+        <div class="tradeoff">On the levels that unlock something real, hold with a "Continue / Open Almanac"
+        button instead of a timer. <b>Pro:</b> guarantees the reward is seen. <b>Con:</b> interrupts flow mid-run;
+        reserve it for milestone tiers (2 / 5 / 10) rather than every level.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>In <span class="filechip">src/ui/LevelUpCinematic.tsx:44</span>, after the numeral, look up
+          <code>ALMANAC_TIERS.find(t =&gt; t.level === shown.level)</code> from
+          <span class="filechip">features/almanac/data.ts:14</span> and render <code>tier.name</code> + a compact
+          reward badge derived from <code>tier.reward</code> (tools / structural / coins → one human label).</li>
+        <li>Make <code>HOLD_MS</code> conditional (<span class="filechip">LevelUpCinematic.tsx:5</span>): ~1600ms when
+          a tier line renders, ~1100ms when none does.</li>
+        <li>Drop <code>pointer-events-none</code> (<span class="filechip">:36</span>) for Option A; add an
+          <code>onPointerDown</code> that clears <code>shown</code> early, and route the reward line to
+          <code>SET_VIEW: "almanac"</code>.</li>
+        <li>Fix the <code>aria-live</code> region to announce the tier, not the bare digit (see S7).</li>
+      </ul>
+    </div>
+    <p class="small mut" style="margin-top:8px">Partners with the report's level-up priority — this is the "make the
+    reward legible" half; the almanac-claim flow is the other.</p>
+  </article>
+
+  <!-- ============================================================= S2 · RUN SUMMARY -->
+  <article class="prop" id="runsummary">
+    <div class="phd"><span class="pid">S2</span><span class="sev S2">S2</span><span class="eff">Effort M</span></div>
+    <div class="ptitle">Stage the run-summary reveal — and lift a triggered beat out of the receipt</div>
+    <p class="why">This is the season's climax and it's the <em>stillest</em> screen in the game: a
+    <code>ParchmentDialog</code> that paints everything at once with zero motion. And when a story beat fires during
+    the run, it's demoted to a row of small gold pills under a "Story beats" label near the bottom — the same visual
+    weight as "Supplies consumed" — so the narrative payoff reads as a line-item on a receipt.
+    <span class="mut"><code>runSummary/index.tsx</code> renders top-to-bottom with no animation;
+    <code>BeatsBlock ~:120–133</code> is the buried pill row; <code>ParchmentDialog.Body ~:183</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">mobile · everything at once</span></div>
+        <figure>
+          <img src="../shots/mobile/run-summary.png" alt="run summary receipt with story beats buried near the bottom">
+          <figcaption>Strong content — but it all appears in one static paint, and "The First Harvest" (a story
+          beat!) is a pale pill in the <em>Story beats</em> strip low on the card, tied with "Supplies consumed:
+          Fertilizer" for attention.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">staged · beat elevated</span></div>
+        <figure class="light">
+          <div class="device phone-tall"><div class="screen">
+            <div class="gm-bg warm" style="padding:12px;gap:9px;overflow:hidden">
+              <div class="center" style="flex-shrink:0">
+                <div class="gm-mini disp" style="letter-spacing:.2em;color:var(--g-ink-light);font-weight:700">HARVEST COMPLETE</div>
+                <div class="gm-title" style="font-size:19px;color:var(--g-ink)">The home vale kept its word.</div>
+              </div>
+              <!-- STORY ADVANCED — promoted to the top, in the display serif -->
+              <div class="gm-wrap gm-card" style="padding:10px 12px;border-color:var(--g-gold);
+                background:linear-gradient(180deg,#fff5df,#f6e6bf);display:flex;align-items:center;gap:10px">
+                <div style="width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;
+                  background:radial-gradient(circle at 35% 30%,#ffe9ad,#e2b24a);border:1.5px solid #b98a1e;font-size:17px">📖</div>
+                <div style="flex:1;min-width:0">
+                  <div class="gm-mini disp" style="letter-spacing:.16em;color:var(--g-gold-ink);font-weight:700">STORY ADVANCED</div>
+                  <div class="disp" style="font-size:15px;font-weight:700;color:var(--g-ink)">The First Harvest</div>
+                </div>
+                <span class="gm-mini" style="color:var(--g-gold-ink);white-space:nowrap">Read ›</span>
+                <span class="gm-flag good" style="top:-9px;right:8px">beat elevated, not buried</span>
+              </div>
+              <!-- best-moment hero -->
+              <div class="gm-card" style="padding:9px;display:flex;align-items:center;gap:10px">
+                <div style="display:flex;flex-direction:column;align-items:center">
+                  <span style="font-size:24px">🥬</span>
+                  <span class="disp" style="font-size:20px;font-weight:800;color:var(--g-ink);line-height:1">x12</span>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div class="gm-mini" style="letter-spacing:.14em;color:var(--g-ink-light)">BEST MOMENT</div>
+                  <div style="font-size:13px;font-weight:700;color:var(--g-ink)">Grass chain · 12 tiles</div>
+                  <div style="display:flex;gap:5px;margin-top:4px">
+                    <span class="gm-status" style="background:linear-gradient(180deg,#ffe08a,#f0c14a);border-color:#b98a1e;color:#6a4708">+28 coins</span>
+                    <span class="gm-status" style="background:linear-gradient(180deg,#ff9a55,#e0631f);border-color:#a8431a;color:#fff">+2 upgrades</span>
+                  </div>
+                </div>
+              </div>
+              <!-- resources counting up -->
+              <div>
+                <div class="gm-mini" style="letter-spacing:.14em;color:var(--g-ink-light);margin-bottom:4px">WHAT YOU BROUGHT HOME</div>
+                <div class="gm-wrap" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+                  <div class="gm-row" style="margin:0;justify-content:space-between;padding:5px 8px">🥬 <b>34</b></div>
+                  <div class="gm-row" style="margin:0;justify-content:space-between;padding:5px 8px">🌾 <b>8</b></div>
+                  <div class="gm-row" style="margin:0;justify-content:space-between;padding:5px 8px">🍎 <b>5</b></div>
+                  <span class="gm-flag note" style="top:-9px;right:8px">counts tick up</span>
+                </div>
+              </div>
+              <!-- bonds -->
+              <div>
+                <div class="gm-mini" style="letter-spacing:.14em;color:var(--g-ink-light);margin-bottom:4px">WHAT THE VALE NOTICED</div>
+                <div class="gm-card" style="padding:4px 10px">
+                  <div class="gm-row" style="margin:0;border:0;padding:5px 0;background:transparent">👩‍🌾 <span style="flex:1">Wren</span> <span class="gm-status ready">Bond +0.5</span></div>
+                  <div class="gm-row" style="margin:0;border:0;padding:5px 0;background:transparent;border-top:1px solid rgba(168,137,90,.25)">🧕 <span style="flex:1">Mira</span> <span class="gm-status ready">Bond +0.3</span></div>
+                </div>
+              </div>
+              <div style="flex:1"></div>
+              <button class="gm-cta ember wide" style="flex-shrink:0">Return to Town</button>
+            </div>
+          </div></div>
+          <figcaption>Same data, sequenced: the <strong>STORY ADVANCED</strong> row reveals first in the display
+          serif, then the best-moment hero, then resources counting up, then bonds — a ~700ms cascade (skipped under
+          <code>prefers-reduced-motion</code>). The climax now moves.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Promote <span class="filechip">runSummary/index.tsx BeatsBlock ~:120</span> to a top-of-body
+          <code>StoryAdvancedRow</code> rendered above <code>ChainsHeadline</code> when
+          <code>run.beatsTriggered</code> is non-empty; render the beat title in the display serif with a "Read in
+          Chronicle ›" affordance (<code>SET_VIEW: "chronicle"</code>).</li>
+        <li>Add a staged reveal: wrap each body section
+          (<span class="filechip">runSummary/index.tsx ~:183–207</span>) in a small
+          <code>revealDelay</code> ladder (beat → hero → tally → bonds), guarded by a
+          <code>prefers-reduced-motion</code> check so it degrades to the current instant paint.</li>
+        <li>Count the headline numbers (chains, coins, longest) up from 0 with a short tween; the values already
+          live in <code>run.*</code> so this is presentation-only.</li>
+        <li>Keep <code>alwaysMounted</code> and the existing close/CLOSE_SEASON wiring untouched.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= S3 · CHRONICLE -->
+  <article class="prop" id="chronicle">
+    <div class="phd"><span class="pid">S3</span><span class="sev S2">S2</span><span class="eff">Effort M</span></div>
+    <div class="ptitle">Make the Chronicle a real timeline — order by when it happened, not by authoring</div>
+    <p class="why">The Chronicle is a keepsake of your journey, but it has no chronology. It filters
+    <code>STORY_BEATS</code> by their completion flag and renders them in <em>authoring order</em>, stamping each with
+    a static <code>Act {beat.act || 1}</code> label — so a fresh save's log is a wall of rows that all read
+    "ACT 1", in an order the player never experienced. Meanwhile a timestamped <code>choiceLog</code>
+    (<code>{ beatId, choiceId, ts }</code>) is recorded on every pick and <em>read nowhere here</em> — the Charter
+    screen already sorts it by <code>ts</code>, so the pattern exists.
+    <span class="mut"><code>chronicle/index.tsx:14</code> (flag filter, authoring order), <code>:50</code>
+    (<code>dateStr = `Act ${beat.act || 1}`</code>); log written at <code>features/story/slice.ts:119</code>, seeded
+    <code>story.ts:22</code>; sorted precedent at <code>features/charter/index.tsx:329</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">every row says "ACT 1"</span></div>
+        <figure>
+          <div class="gm" style="padding:12px;background:var(--g-parchment-soft);border-radius:9px">
+            <div class="gm-wrap" style="border-left:2px solid rgba(168,137,90,.5);margin-left:8px;padding-left:18px;display:flex;flex-direction:column;gap:16px">
+              <div style="position:relative">
+                <span style="position:absolute;left:-25px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--g-paper);border:2px solid var(--g-ember)"></span>
+                <div class="gm-mini" style="letter-spacing:.2em;color:var(--g-ink-light);font-weight:700">ACT 1</div>
+                <div class="disp" style="font-size:15px;font-weight:700;color:var(--g-ink)">The First Harvest</div>
+              </div>
+              <div style="position:relative">
+                <span style="position:absolute;left:-25px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--g-paper);border:2px solid var(--g-ember)"></span>
+                <div class="gm-mini" style="letter-spacing:.2em;color:var(--g-ink-light);font-weight:700">ACT 1</div>
+                <div class="disp" style="font-size:15px;font-weight:700;color:var(--g-ink)">First Light</div>
+              </div>
+              <div style="position:relative">
+                <span style="position:absolute;left:-25px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--g-paper);border:2px solid var(--g-ember)"></span>
+                <div class="gm-mini" style="letter-spacing:.2em;color:var(--g-ink-light);font-weight:700">ACT 1</div>
+                <div class="disp" style="font-size:15px;font-weight:700;color:var(--g-ink)">The First Delivery</div>
+              </div>
+              <span class="gm-flag bad" style="top:2px;right:2px">no dates · authoring order · all "ACT 1"</span>
+            </div>
+          </div>
+          <figcaption>Three real early beats, all tagged "ACT 1", in the order they appear in the source file — not
+          the order the player played them. The "timeline" has no time.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">season markers · played order</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px;background:var(--g-parchment-soft);border-radius:9px">
+            <div style="margin-left:8px">
+              <div class="disp" style="font-size:12px;font-weight:700;color:var(--g-season-spring);letter-spacing:.06em;margin-bottom:8px">🌸 Year 1 · Spring</div>
+              <div class="gm-wrap" style="border-left:2px solid rgba(90,158,46,.45);padding-left:18px;display:flex;flex-direction:column;gap:14px;margin-bottom:14px">
+                <div style="position:relative">
+                  <span style="position:absolute;left:-25px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--g-paper);border:2px solid var(--g-season-spring)"></span>
+                  <div class="disp" style="font-size:15px;font-weight:700;color:var(--g-ink)">The First Harvest</div>
+                </div>
+                <div style="position:relative">
+                  <span style="position:absolute;left:-25px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--g-paper);border:2px solid var(--g-season-spring)"></span>
+                  <div class="disp" style="font-size:15px;font-weight:700;color:var(--g-ink)">First Light</div>
+                </div>
+                <span class="gm-flag good" style="top:-9px;right:2px">grouped · sorted by ts</span>
+              </div>
+              <div class="disp" style="font-size:12px;font-weight:700;color:var(--g-season-summer);letter-spacing:.06em;margin-bottom:8px">☀️ Year 1 · Summer</div>
+              <div style="border-left:2px solid rgba(224,165,42,.5);padding-left:18px;display:flex;flex-direction:column;gap:14px">
+                <div style="position:relative">
+                  <span style="position:absolute;left:-25px;top:2px;width:12px;height:12px;border-radius:50%;background:var(--g-paper);border:2px solid var(--g-season-summer)"></span>
+                  <div class="disp" style="font-size:15px;font-weight:700;color:var(--g-ink)">The First Delivery</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figcaption>Beats sorted by <code>choiceLog</code> timestamp, then grouped under real "Year N · Season"
+          markers derived from the run count. Consecutive same-act beats sit under one act/season header instead of
+          repeating the label on every row.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — what the grouping key is</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Year · Season markers</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Sort by <code>ts</code>; header each group with the in-world "Year N · Season" the beat
+        was completed in (derivable from the run/season counter). <b>Pro:</b> reads as a diary, matches the game's
+        seasonal clock. <b>Con:</b> needs the completion season stamped on the log entry (small schema add).</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Act chapters, ts within</span></div>
+        <div class="tradeoff">Keep Act I/II/III chapter headers but order beats <em>within</em> each act by
+        <code>ts</code>, and collapse repeated act labels. <b>Pro:</b> zero schema change — uses
+        <code>beat.act</code> + the existing log. <b>Con:</b> still no real dates; early game stays one long "Act I".</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>In <span class="filechip">chronicle/index.tsx:14</span>, build the list from
+          <code>story.choiceLog</code> (sorted by <code>ts</code>) joined to <code>STORY_BEATS</code> by
+          <code>beatId</code>, instead of filtering beats by flag in authoring order — mirror
+          <span class="filechip">features/charter/index.tsx:329</span>.</li>
+        <li>Replace <code>dateStr = `Act ${beat.act || 1}`</code> (<span class="filechip">chronicle/index.tsx:50</span>)
+          with a group header; render one header per contiguous group and drop the per-row act label.</li>
+        <li>For Option A, stamp <code>season</code>/<code>year</code> onto each <code>choiceLog</code> entry at write
+          time (<span class="filechip">features/story/slice.ts:119</span>) so the marker is exact rather than
+          inferred.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= S4 · UNIFY -->
+  <article class="prop" id="unify">
+    <div class="phd"><span class="pid">S4</span><span class="sev S2">S2</span><span class="eff">Effort M</span></div>
+    <div class="ptitle">One narrative surface — bundle Fraunces into the story, retire the hardcoded palette</div>
+    <p class="why">The three story variants share a bespoke serif and a hand-tuned color object that live entirely
+    outside the token system. <code>STORY_SERIF</code> is an OS-fallback stack ("Iowan Old Style" → Palatino →
+    Georgia) — <em>not</em> the Fraunces the rest of the game bundles and uses for display type — so story text is
+    set in whatever serif the device happens to have. And because the modal renders on dark iron while the Chronicle
+    renders on warm parchment (<code>hl-card</code>), the <em>same beat</em> reads in two different palettes and two
+    different faces depending on where you meet it.
+    <span class="mut"><code>Modals.tsx:79</code> (STORY_SERIF), <code>:82–94</code> (hardcoded <code>SC</code> color
+    object), <code>StoryStagePanel:340</code> (dark-iron bg). Fraunces is bundled at
+    <code>main.tsx:5–6</code> and led by <code>--font-display</code> (<code>tokens.css:203</code>).</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">same beat, two skins</span></div>
+        <figure>
+          <div class="gm" style="padding:10px;display:flex;flex-direction:column;gap:8px">
+            <div style="background:linear-gradient(180deg,#221710,#1a110a);border:1px solid #c9b993;border-radius:12px;padding:11px 13px">
+              <div style="font-family:'Iowan Old Style',Palatino,Georgia,serif;font-size:14px;color:#f6efe0;font-style:italic">"The mill stands again — the vale has bread."</div>
+              <div class="gm-mini" style="color:rgba(240,230,207,.45);margin-top:5px">story modal · dark iron · OS serif</div>
+            </div>
+            <div class="gm-wrap" style="background:var(--g-paper);border:1px solid var(--g-iron);border-radius:12px;padding:11px 13px">
+              <div style="font-family:'Iowan Old Style',Palatino,Georgia,serif;font-size:14px;color:var(--g-ink-soft);font-style:italic">"The mill stands again — the vale has bread."</div>
+              <div class="gm-mini" style="margin-top:5px">chronicle · warm parchment</div>
+              <span class="gm-flag bad" style="bottom:-8px;right:6px">one beat, two palettes + off-brand serif</span>
+            </div>
+          </div>
+          <figcaption>The identical line rendered by the two surfaces. Neither uses the bundled display face; the
+          background palette is defined twice, by hand, off the token system.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">one story token block</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:10px">
+            <div style="background:linear-gradient(180deg,#221710,#1a110a);border:1px solid var(--g-iron);border-radius:12px;padding:12px 14px">
+              <div class="disp" style="font-size:15px;color:#f6efe0;font-style:italic">"The mill stands again — the vale has bread."</div>
+              <div class="gm-mini" style="color:rgba(240,230,207,.5);margin-top:6px">story surface · Fraunces · <code style="background:transparent;border:0;color:#e2b24a">--story-*</code> tokens</div>
+            </div>
+            <div style="margin-top:10px;display:flex;flex-wrap:wrap;gap:6px;font-size:11px">
+              <span class="gm-status locked"><span class="gm-swatch" style="background:#221710"></span> --story-stage</span>
+              <span class="gm-status locked"><span class="gm-swatch" style="background:#f6efe0"></span> --story-parchment</span>
+              <span class="gm-status locked"><span class="gm-swatch" style="background:#e2b24a"></span> --story-gold</span>
+              <span class="gm-status locked"><span class="gm-swatch" style="background:#7a5e3f"></span> --story-narration</span>
+              <span class="gm-status locked">--font-display (Fraunces)</span>
+            </div>
+          </div>
+          <figcaption>Point <code>STORY_SERIF</code> at <code>--font-display</code> (the bundled Fraunces) and lift the
+          <code>SC</code> literals into a <code>--story-*</code> token block in <code>tokens.css</code>. Both the modal
+          and the Chronicle then read the same variables — one canonical narrative look, themeable in one place.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Set <code>STORY_SERIF = "var(--font-display)"</code> (<span class="filechip">Modals.tsx:79</span>) so
+          story type uses the already-bundled Fraunces (<span class="filechip">main.tsx:5</span>).</li>
+        <li>Add a <code>--story-stage / --story-parchment / --story-gold / --story-narration</code> block to
+          <span class="filechip">src/tokens.css</span> and replace the hardcoded <code>SC</code> object
+          (<span class="filechip">Modals.tsx:82–94</span>) with those vars.</li>
+        <li>Have the Chronicle card (<span class="filechip">chronicle/index.tsx:61</span>) consume the same
+          <code>--story-*</code> tokens so a beat looks identical wherever it appears.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= S5 · BOSS -->
+  <article class="prop" id="boss">
+    <div class="phd"><span class="pid">S5</span><span class="sev S2">S2</span><span class="eff">Effort M–L</span>
+      <span class="chip new">Cross-cutting T3</span></div>
+    <div class="ptitle">Reskin the boss modal into the storybook — and promote the reward to a gold pill</div>
+    <p class="why">The boss encounter is the game's antagonist moment, and its popup reads like a free-to-play
+    interstitial: a hard <code>black/70</code> scrim, a flat tan card with a bright orange 4px frame and orange
+    gradient CTA, and a cute cartoon-blob portrait that undercuts the "frozen titan" the copy is selling. The
+    <em>reward</em> — the thing the player is weighing "accept" against — is the faintest text on the card
+    (<code>white/50</code>, buried between the goal panel and the button).
+    <span class="mut"><code>features/boss/index.tsx:44–52</code> (black/70 scrim + <code>--flame-frame</code> border),
+    <code>:65</code> (emoji-blob fallback), <code>:131–134</code> (faint reward line), <code>:138–148</code>
+    (orange-gradient CTA).</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">mobile · F2P interstitial</span></div>
+        <figure>
+          <img src="../shots/mobile/boss-modal.png" alt="boss modal, tan card orange frame, cartoon blob, faint reward text">
+          <figcaption>Tan gradient, loud orange frame, a friendly blob where a titan should loom, and "Victory
+          reward: +200◉" set in the lowest-contrast grey on the card. Town CTAs also bleed through the scrim at the
+          bottom edge.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">vellum · season-tinted · reward pill</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:14px;background:radial-gradient(120% 90% at 50% 0%,#1a2836,#0c141c);border-radius:10px">
+            <div class="gm-wrap" style="max-width:280px;margin:0 auto;border-radius:18px;padding:16px 16px 14px;
+              background:linear-gradient(180deg,#f7efdc,#ece0c2);
+              border:2px solid var(--g-season-winter);box-shadow:0 0 0 4px rgba(63,111,158,.22),0 16px 40px rgba(4,10,18,.5)">
+              <div class="center">
+                <div style="width:82px;height:82px;margin:0 auto;border-radius:16px;overflow:hidden;
+                  background:radial-gradient(circle at 42% 32%,#cfe6f4 0%,#6f9fc4 55%,#33587a 100%);
+                  border:2px solid var(--g-season-winter);box-shadow:inset 0 -10px 20px rgba(0,0,0,.35),0 4px 14px rgba(0,0,0,.3);
+                  display:flex;align-items:center;justify-content:center;font-size:38px">🧊</div>
+                <div class="disp" style="font-size:20px;font-weight:700;color:#2b2218;margin-top:8px">The Frostmaw</div>
+                <div style="font-style:italic;font-size:11.5px;color:var(--g-ink-soft);margin-top:2px">A frozen titan stirs in the deep winter wood.</div>
+              </div>
+              <div class="gm-card" style="margin-top:12px;padding:10px 11px;background:rgba(63,111,158,.08);border-color:rgba(63,111,158,.4)">
+                <div style="font-size:12px;font-weight:700;color:var(--g-ink);text-align:center;line-height:1.35">Bring 30 logs in 10 turns to keep the hearth lit.</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px">
+                  <span class="gm-mini" style="color:var(--g-ink-light)">Progress</span>
+                  <span class="gm-mini" style="font-weight:800;color:var(--g-season-winter)">11 / 30</span>
+                </div>
+                <div class="gm-bar" style="margin-top:4px"><i style="width:37%;background:var(--g-season-winter)"></i></div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:12px">
+                <button class="gm-cta ember" style="flex:1">⚔️ Accept the challenge</button>
+                <span class="gm-status" style="background:linear-gradient(180deg,#ffe08a,#f0c14a);border-color:#b98a1e;color:#6a4708;font-size:11px;padding:6px 9px">🏆 +200◉</span>
+              </div>
+              <div class="center" style="margin-top:8px"><span class="gm-mini" style="color:var(--g-ink-light)">Decline</span></div>
+              <span class="gm-flag good" style="top:-9px;right:-4px">reward is a gold pill by the CTA</span>
+            </div>
+          </div>
+          <figcaption>A vellum storybook card on a dark, frost-vignetted scrim; the frame takes the season's tint
+          (winter blue here — swaps per boss). The painterly boss reads as a threat, and the victory reward rides a
+          gold pill right beside the ember CTA where the accept decision is actually made.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Swap the modal chrome in <span class="filechip">features/boss/index.tsx:44–52</span>: darker frost-tinted
+          scrim, a vellum (<code>--story-parchment</code>) card, and a frame color driven by the boss's season
+          rather than the fixed <code>--flame-frame</code>.</li>
+        <li>Promote the reward: move the <span class="filechip">features/boss/index.tsx:131–134</span> line into a
+          gold <code>Pill</code> rendered next to the "Accept the challenge" button
+          (<span class="filechip">:138</span>).</li>
+        <li>Replace the emoji fallback (<span class="filechip">:65</span>) with a shaded painterly placeholder
+          (the same treatment as <code>StoryPortrait</code>) so bosses without art still read as menacing; darken
+          the <code>BossCinematic</code> vignette to match (<span class="filechip">src/ui/BossCinematic.tsx</span>).</li>
+        <li>Ensure the card sits on an opaque scrim so town CTAs can't bleed through (shared fix with S6).</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= S6 · POLISH -->
+  <article class="prop" id="polish">
+    <div class="phd"><span class="pid">S6</span><span class="sev S3">S3</span><span class="eff">Effort S each</span></div>
+    <div class="ptitle">Also folded in — small narrative-frame fixes</div>
+    <p class="why">Low-effort corrections found while grounding the above. Each is a localized change, not a
+    redesign.</p>
+    <ul class="small">
+      <li><strong>"Board paused while we talk." shows where there is no board</strong> — the bottom story bar always
+        prints that caption and uses a light <code>rgba(0,0,0,0.28)</code> scrim, so on the Town (no board) it
+        describes something that isn't there and the town's CTAs bleed through the dim
+        (<span class="filechip">Modals.tsx:443</span>, scrim at <span class="filechip">:409</span>). Make the caption
+        context-aware (hide it off-board) and deepen/opaque the scrim so nothing underneath is tappable.</li>
+      <li><strong>Boss intro art undercuts the menace</strong> — the cinematic and modal show a friendly blob. Short
+        term: darken the scene behind the reveal and add a frost/season vignette so even the cartoon reads as a
+        threat (<span class="filechip">src/ui/BossCinematic.tsx</span>); long term is the painterly portrait in S5.</li>
+      <li><strong>Chronicle bakes speaker names into prose</strong> — entries fall back to
+        <code>beat.body || beat.lines[0].text</code>, so any line that names its speaker inline reads awkwardly out
+        of dialogue context (<span class="filechip">chronicle/index.tsx:62</span>). Prefer an authored
+        <code>beat.summary</code>/<code>body</code> written as narration for the log.</li>
+      <li><strong>The win finale buries "sandbox continues" in a parenthetical</strong> — "…there is more of the old
+        kingdom still to find. (Sandbox mode continues.)" (<span class="filechip">src/story.ts:305</span>). Lift it
+        into a proper "Keep playing" affordance on the finale card so players know the game doesn't end.</li>
+      <li><strong>Multi-line beats gate the footer with no progress dots</strong> — a long beat shows a "Next line"
+        cue but no n-of-m indicator, so the reader can't tell how much dialogue remains
+        (<span class="filechip">Modals.tsx:546–553</span>). Add small step dots when
+        <code>canStepDialogue</code> is true.</li>
+    </ul>
+  </article>
+
+  <!-- ============================================================= S7 · NEW -->
+  <article class="prop" id="new">
+    <div class="phd"><span class="pid">S7</span><span class="sev NEW">NEW</span><span class="eff">from this pass</span></div>
+    <div class="ptitle">New findings surfaced while grounding these mockups</div>
+    <p class="why">Not in the original report; found reading the story/level-up/boss code for this pass. Verify against
+    the live build before scheduling.</p>
+    <ul>
+      <li><strong>Level-up unlock copy is hardcoded in the reducer, divorced from <code>ALMANAC_TIERS</code></strong>
+        — the level-up bubble writes "Level 2! Mine biome unlocked…" and otherwise "Level N! New things await." inline
+        in the chain reducer (<span class="filechip">src/state.ts:587–591</span>), while the real per-level reward
+        names live in <code>ALMANAC_TIERS</code> (<span class="filechip">features/almanac/data.ts:14</span>). Two
+        out-of-sync sources of "what leveling gives you." S1 should feed <em>both</em> the cinematic and this bubble
+        from the tier table so they can't drift.</li>
+      <li><strong>Tier rewards require a manual claim, but nothing signals one is waiting</strong> —
+        <code>claimAlmanacTier</code> only grants a reward when the player opens the Almanac and claims it
+        (<span class="filechip">features/almanac/data.ts:111</span>), yet the level-up moment gives zero pointer to
+        go do so. Rewards can silently pile up unclaimed. The S1 cinematic is the natural nudge.</li>
+      <li><strong>The level-up <code>aria-live</code> announces a bare digit</strong> — the region is
+        <code>aria-live="polite"</code> but its only content is the numeral (<span class="filechip">LevelUpCinematic.tsx:36,45</span>),
+        so a screen-reader user hears "5" with no context. Announcing "Level 5 — Master Harvester unlocked" rides for
+        free on the S1 data lookup.</li>
+    </ul>
+  </article>
+
+  <footer>puzzleDrag2 · Story &amp; big-moments proposals · mockups are HTML built from <code>src/tokens.css</code>;
+  "Now" mobile shots (run-summary, boss modal) are real renders of the running game.</footer>
+</main>
+</div>
+<script src="./assets/mockup.js"></script>
+</body>
+</html>
