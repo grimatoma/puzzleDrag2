@@ -1,0 +1,661 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cross-cutting — Proposals & Mockups · puzzleDrag2 Design Review</title>
+<link rel="stylesheet" href="./assets/mockup.css">
+</head>
+<body>
+<header class="top">
+  <span class="brand">puzzleDrag2 · <span class="em">Proposals</span></span>
+  <span class="crumb"><a href="./index.html">All proposals</a> › <strong>07 · Cross-cutting</strong></span>
+  <span class="meta">whole-game programs · grounded in <code>src/</code></span>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <a class="home" href="./index.html">← All proposals</a>
+  <div class="sep">Surfaces</div>
+  <a href="./board.html"><span class="k">01</span>The Board</a>
+  <a href="./town.html"><span class="k">02</span>The Town</a>
+  <a href="./map.html"><span class="k">03</span>World Map</a>
+  <a href="./screens.html"><span class="k">04</span>Screens & panels</a>
+  <a href="./story.html"><span class="k">05</span>Story & moments</a>
+  <a href="./shell.html"><span class="k">06</span>Shell & onboarding</a>
+  <a href="./crosscutting.html" class="active"><span class="k">07</span>Cross-cutting</a>
+  <a href="./additional-findings.html"><span class="k">08</span>Additional findings</a>
+  <div class="sep">On this page</div>
+  <a href="#rewards">X1 · Reward legibility</a>
+  <a href="#icons">X2 · Iconography</a>
+  <a href="#motion">X3 · Motion & game feel</a>
+  <a href="#mobile">X4 · Mobile & responsive</a>
+  <a href="#a11y">X5 · Accessibility</a>
+  <a href="#ia">X6 · Information architecture</a>
+  <a href="#new">X7 · New findings</a>
+</nav>
+
+<main>
+  <p class="eyebrow">Proposals · Cross-cutting lenses 07</p>
+  <h1>Cross-cutting — the six whole-game programs</h1>
+  <p class="lead">These are not single screens; they are <em>systems</em> that touch every surface. Each lens
+  below proposes the <strong>program</strong> — the one shared mechanism to build — and cross-links to the
+  per-surface pages for the concrete spots it lands. The pattern repeats: the game already computes the value,
+  defines the token, or ships the primitive; the work is <em>wiring the last mile</em> so the player sees it.</p>
+
+  <div class="callout tldr"><p style="margin:0"><strong>Cross-cutting through-line.</strong> Almost every gap
+  here is a <em>last-mile</em> gap, not a missing feature. XP is granted (<code>1/chain</code>) but never floated;
+  a 44px hit-target token exists but is applied only in the Dev-Panel wiki; motion-duration tokens are defined
+  but consumed by nothing; an <code>announce()</code> screen-reader bridge exists but the board never calls it; the
+  <code>ProgressTrack</code> primitive ships but fractional harvest progress is shown nowhere. Two lenses carry the
+  most player-felt value — <a href="#rewards">reward legibility (#2)</a> and <a href="#a11y">accessibility</a> —
+  and one carries the most brand value: <a href="#icons">iconography unification (#12)</a>.</p></div>
+
+  <!-- ============================================================= X1 · REWARDS -->
+  <article class="prop" id="rewards">
+    <div class="phd">
+      <span class="pid">X1</span><span class="sev S1">S1</span><span class="eff">Effort M–L</span>
+      <span class="chip good">Top priority #2</span>
+    </div>
+    <div class="ptitle">Build the reward ladder — make every gain the game already computes actually show</div>
+    <p class="why">The economy is generous under the hood but silent on the surface. Every chain grants
+    <strong>+1&nbsp;XP</strong> (<span class="mut"><code>state.ts:573</code> <code>applyAlmanacXp(state, 1)</code></span>)
+    yet the collect float shows only the resource gain (<span class="mut"><code>GameScene.ts:1881</code></span>); the
+    run summary tallies chains, coins, upgrades, bonds and beats but has <em>no XP/level row</em>
+    (<span class="mut"><code>features/runSummary/index.tsx:183-207</code></span>); level-up celebrates a bare numeral
+    even though each level has a named tier + concrete reward sitting unused
+    (<span class="mut"><code>ui/LevelUpCinematic.tsx:44-49</code> vs <code>features/almanac/data.ts</code> ALMANAC_TIERS</span>);
+    a craft produces an item worth its sell value (a Bread Loaf sells 125◉, <code>ITEMS.bread.value</code>) but
+    the recipe pane shows inputs only, never the output or its worth
+    (<span class="mut"><code>crafting/index.tsx:199-217</code></span>);
+    fractional harvest progress accrues in <code>state.resourceProgress</code> toward each threshold but is surfaced
+    in <em>no UI component</em>; and the board states only a decrementing turn budget, never a season goal.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">run summary, no XP anywhere</span></div>
+        <figure>
+          <img src="../shots/mobile/run-summary.png" alt="run summary modal — chains, coins, upgrades, bonds, but no XP or level row">
+          <figcaption>The end-of-run recap shows chains, coins, upgrades and bonds — but the run's XP and any
+          level gained are invisible. The player earned progress and the summary never says so.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">an XP row on the recap</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-card" style="padding:12px">
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);text-align:center;letter-spacing:.16em">HARVEST COMPLETE</div>
+              <div class="gm-title" style="font-size:16px;text-align:center;margin:2px 0 10px">The home vale kept its word.</div>
+              <div style="display:flex;gap:8px">
+                <div class="gm-row" style="margin:0;flex:1;flex-direction:column;align-items:flex-start;gap:2px"><span class="gm-mini">Chains played</span><b style="font-size:16px">9</b></div>
+                <div class="gm-row" style="margin:0;flex:1;flex-direction:column;align-items:flex-start;gap:2px"><span class="gm-mini">Longest</span><b style="font-size:16px;color:var(--g-ember)">x7</b></div>
+              </div>
+              <div class="gm-row gm-wrap" style="margin:8px 0 0;flex-direction:column;align-items:stretch;gap:4px;border-color:var(--g-gold)">
+                <div style="display:flex;align-items:center;gap:6px">
+                  <span style="font-size:15px">✦</span>
+                  <span class="gm-mini disp" style="font-weight:700;color:var(--g-gold-ink)">EXPERIENCE</span>
+                  <span class="gm-spacer"></span>
+                  <b style="color:var(--g-gold-ink)">+9 XP</b>
+                </div>
+                <div class="gm-bar" style="height:8px"><i style="width:63%;background:var(--g-gold)"></i></div>
+                <span class="gm-mini">Level 4 · 95 / 150 to next</span>
+                <span class="gm-flag good" style="top:-6px;right:-4px">the missing row</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>One <code>ProgressTrack</code> row: total XP earned this run, the level bar, and how far to
+          the next tier. All three numbers already exist in <code>state.almanac</code>.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Mock — the reward-moment ladder (chain → level-up → recap)</span>
+    <div class="ba stack">
+      <div class="col">
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;align-items:stretch">
+
+              <!-- Moment 1: chain-collect float -->
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);letter-spacing:.1em">① IN THE MOMENT</div>
+                <div class="gm-wrap" style="flex:1;border-radius:12px;background:linear-gradient(180deg,var(--g-field-spring-top),var(--g-field-spring-bot));border:2px solid var(--g-iron);display:flex;align-items:center;justify-content:center;min-height:120px;position:relative">
+                  <div class="gm-board" style="--n:3;gap:3px;padding:0;background:none;width:70%">
+                    <div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grain sel">🌾</div><div class="gm-tile kraft grass">🌿</div>
+                    <div class="gm-tile kraft grain sel">🌾</div><div class="gm-tile kraft grain sel">🌾</div><div class="gm-tile kraft fruit">🍎</div>
+                    <div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grain sel">🌾</div><div class="gm-tile kraft veg">🥕</div>
+                  </div>
+                  <div style="position:absolute;top:14px;left:50%;transform:translateX(-50%);text-align:center">
+                    <div style="font:800 15px/1 system-ui;color:#8a5a12;text-shadow:0 1px 0 rgba(255,255,255,.6)">+4 Wheat ★×1</div>
+                    <div style="font:800 12px/1 system-ui;color:var(--g-gold-ink);margin-top:3px">+1 XP</div>
+                  </div>
+                </div>
+                <span class="gm-mini">The float already prints the yield — append <code>+N XP</code> in the same tween.</span>
+              </div>
+
+              <!-- Moment 2: level-up "what unlocked" -->
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);letter-spacing:.1em">② AT LEVEL-UP</div>
+                <div style="flex:1;border-radius:12px;background:radial-gradient(120% 90% at 50% 0%,#3a2f18,#1c150e);border:2px solid var(--g-gold);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;text-align:center;min-height:120px">
+                  <div style="font:800 10px/1 system-ui;letter-spacing:.35em;color:var(--g-gold-bright)">LEVEL UP</div>
+                  <div class="disp" style="font-size:38px;font-weight:700;color:var(--g-gold-bright);line-height:1;margin:2px 0">5</div>
+                  <div class="disp" style="font-size:13px;font-weight:700;color:#f6efe0">Master Harvester</div>
+                  <div style="display:inline-flex;align-items:center;gap:5px;margin-top:7px;background:rgba(226,178,74,.16);border:1px solid var(--g-gold);border-radius:999px;padding:4px 9px">
+                    <span style="font-size:13px">🪓</span><span style="font:700 10px/1.2 system-ui;color:var(--g-gold-bright)">Legendary scythe unlocked</span>
+                  </div>
+                </div>
+                <span class="gm-mini"><code>ALMANAC_TIERS[level]</code> already names the tier + reward — feed it in.</span>
+              </div>
+
+              <!-- Moment 3: run summary XP row -->
+              <div style="display:flex;flex-direction:column;gap:6px">
+                <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);letter-spacing:.1em">③ ON THE RECAP</div>
+                <div style="flex:1;border-radius:12px;background:var(--g-paper);border:1.5px solid var(--g-iron);display:flex;flex-direction:column;justify-content:center;gap:6px;padding:12px;min-height:120px">
+                  <div style="display:flex;align-items:center;gap:6px">
+                    <span style="font-size:14px">✦</span><span class="gm-mini disp" style="font-weight:700;color:var(--g-gold-ink)">EXPERIENCE</span>
+                    <span class="gm-spacer"></span><b style="color:var(--g-gold-ink)">+9 XP</b>
+                  </div>
+                  <div class="gm-bar" style="height:9px"><i style="width:63%;background:var(--g-gold)"></i></div>
+                  <span class="gm-mini">Level 4 · 95 / 150 to next tier</span>
+                  <div style="height:1px;background:var(--g-iron);opacity:.4;margin:2px 0"></div>
+                  <span class="gm-mini">Season goal met: <b style="color:var(--g-moss)">240 / 200 coins</b> ✓</span>
+                </div>
+                <span class="gm-mini">Close the loop the recap already opened with chains + coins.</span>
+              </div>
+
+            </div>
+          </div>
+          <figcaption>One ladder, three touchpoints, all fed by values already in state: the collect float gains a
+          <code>+N XP</code> line; the level-up cinematic names the tier and its reward; the recap gains an XP row
+          and states whether the season goal was met. Nothing here is new economy — it is exposure of existing
+          numbers.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — how loud to make level-up</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Keep the cinematic, add the unlock line</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Retain the full-screen hold but replace the bare numeral with tier-name + reward chip
+        (shown). <b>Pro:</b> the level-up already stops the world for 1600ms — spend that hold on <em>meaning</em>,
+        not a lone digit. <b>Con:</b> needs the reward-copy pulled from <code>ALMANAC_TIERS</code> and a graceful
+        empty state for levels past the authored table.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Quiet inline banner</span></div>
+        <div class="tradeoff">Drop the cinematic; surface level-up as a dismissible parchment banner with the same
+        tier + reward. <b>Pro:</b> less interruption, respects reduced-motion by default. <b>Con:</b> loses the
+        "big moment" beat that a leveling game usually wants; weaker celebration.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li><b>Chain float:</b> append <code>+&lt;xpGain&gt; XP</code> to the collect float string in
+          <span class="filechip">GameScene.ts:1881</span>; <code>xpGain</code> is the same <code>1</code> passed to
+          <code>applyAlmanacXp</code> at <span class="filechip">state.ts:573</span> (sync it via the registry like
+          <code>inventory</code> already is).</li>
+        <li><b>Level-up:</b> in <span class="filechip">ui/LevelUpCinematic.tsx:44</span> render
+          <code>ALMANAC_TIERS.find(t =&gt; t.level === shown.level)</code>'s <code>name</code> + a reward chip built
+          from its <code>reward</code> object (<span class="filechip">features/almanac/data.ts</span>) → the moment
+          treatment lives in <a href="./story.html#levelup">Story · Level-up</a>.</li>
+        <li><b>Recap XP row:</b> add a <code>ProgressTrack</code> row to
+          <span class="filechip">features/runSummary/index.tsx:184</span> from a per-run
+          <code>xpGained</code> snapshot recorded in <span class="filechip">features/runSummary/slice.ts</span>
+          (accumulate on each <code>CHAIN_COLLECTED</code>).</li>
+        <li><b>Craft/order value:</b> surface the output item + its sell value
+          (<code>getItem(recipe.item).value</code>) as a "Yields → 1 X · sells N◉" row in
+          <span class="filechip">crafting/index.tsx:216</span>'s detail pane (not the unused
+          <code>recipe.coins</code> field — see N1) → detail lives in
+          <a href="./screens.html#crafting">Screens · Crafting</a>.</li>
+        <li><b>Fractional progress:</b> render <code>resourceProgress[zone][key] / UPGRADE_THRESHOLDS[tileKey]</code>
+          as a <code>ProgressTrack style="pips"</code> on each stockpile chip (board idle panel) → detail lives in
+          <a href="./board.html#b5">Board · Stockpile</a>.</li>
+        <li><b>Season goal:</b> state a goal (coins/harvests target) beside the turn budget on the season strip →
+          detail lives in <a href="./board.html#b4">Board · Season strip</a>.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= X2 · ICONS -->
+  <article class="prop" id="icons">
+    <div class="phd">
+      <span class="pid">X2</span><span class="sev S2">S2</span><span class="eff">Effort L</span>
+      <span class="chip good">Top priority #12</span>
+    </div>
+    <div class="ptitle">Split the icon system by size/role, not by key — one flat line register for metadata, painterly for subjects</div>
+    <p class="why">Two icon families render side by side and the choice between them is made by <em>key identity
+    alone</em>: <code>Icon</code> asks <code>svgRenderFor(iconKey)</code> and, if the key is a registered
+    <code>design.*</code> vector, draws a flat inline SVG (<span class="mut"><code>Icon.tsx:109</code>,
+    <code>:246</code></span>); otherwise it bakes an iconRegistry entry to a painterly PNG
+    (<span class="mut"><code>Icon.tsx:154</code></span>). Nothing keys off render <em>size</em>, so a 14px inline
+    metadata icon and a 40px subject thumbnail can each land in either family — a flat vector chip beside a
+    glossy painted one at the same scale. Add the board's saturated candy squares
+    (<a href="./board.html#b1">Board · B1</a>), the canvas-baked <code>ui_*</code> nav register
+    (<span class="mut"><code>ui.tsx:69-74</code></span>), heavy-gloss inline thumbnails and the season strip's
+    fourth vignette register, and the chrome reads as four illustration languages at once.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">candy squares + mixed icon families</span></div>
+        <figure>
+          <img src="../shots/desktop/board-farm-idle.png" alt="desktop farm board: saturated candy squares plus flat and painterly icons in the same frame">
+          <figcaption>Flat-vector tool/HUD glyphs, painterly baked crop icons and the saturated per-category tile
+          squares share one frame — three registers touching edge to edge, none clearly "primary".</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">size decides the register</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-card" style="padding:12px">
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">METADATA · &lt;28px → flat line</div>
+              <div style="display:flex;align-items:center;gap:12px;margin:8px 0 12px">
+                <span style="font-size:16px;filter:grayscale(.15)">🪙</span>
+                <span style="font-size:16px;filter:grayscale(.15)">✦</span>
+                <span style="font-size:16px;filter:grayscale(.15)">🪓</span>
+                <span style="font-size:16px;filter:grayscale(.15)">🗺️</span>
+                <span style="font-size:16px;filter:grayscale(.15)">📖</span>
+                <span class="gm-mini" style="margin-left:auto">one weight · one stroke · tint via <code>tone</code></span>
+              </div>
+              <div style="height:1px;background:var(--g-iron);opacity:.4"></div>
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);margin-top:10px">SUBJECTS · large thumbnails → painterly matte</div>
+              <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
+                <div style="width:52px;height:52px;border-radius:10px;background:radial-gradient(circle at 40% 32%,#fde7c0,#e6c17a);border:1.5px solid var(--g-iron);display:flex;align-items:center;justify-content:center;font-size:26px">🌾</div>
+                <div style="width:52px;height:52px;border-radius:10px;background:radial-gradient(circle at 40% 32%,#f7d8d0,#dd8f82);border:1.5px solid var(--g-iron);display:flex;align-items:center;justify-content:center;font-size:26px">🍎</div>
+                <div style="width:52px;height:52px;border-radius:10px;background:radial-gradient(circle at 40% 32%,#d7e6c0,#9bc06a);border:1.5px solid var(--g-iron);display:flex;align-items:center;justify-content:center;font-size:26px">🥕</div>
+                <span class="gm-mini" style="margin-left:auto">shared matte bake · no high-gloss specular</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>One rule: below the SVG threshold (~28px) everything is a flat line glyph on a shared stroke
+          weight; at large thumbnail sizes everything is the same painterly matte bake. The two families stop
+          competing because size, not key, decides which speaks.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Family audit — the registers in play today</span>
+    <table>
+      <thead><tr><th>Register</th><th>Where it renders</th><th>Proposed role</th></tr></thead>
+      <tbody>
+        <tr><td><span class="gm-swatch" style="background:var(--g-indigo)"></span> Flat vector <code>design.*</code> SVG</td><td>HUD/metadata glyphs (<code>Icon.tsx:109</code>)</td><td><b>Keep</b> — the one small-icon language</td></tr>
+        <tr><td><span class="gm-swatch" style="background:var(--g-ember)"></span> Painterly canvas PNG</td><td>Crop/subject icons, baked (<code>Icon.tsx:154</code>)</td><td><b>Reserve</b> for ≥ large thumbnails, matte bake</td></tr>
+        <tr><td><span class="gm-swatch" style="background:var(--g-moss)"></span> Canvas <code>ui_*</code> nav set</td><td>Bottom nav (<code>ui.tsx:69-74</code>, <code>textures/categories/uiElements.ts</code>)</td><td><b>Migrate</b> to the flat line register (they are metadata)</td></tr>
+        <tr><td><span class="gm-swatch" style="background:var(--candy-grain)"></span> Saturated tile squares</td><td>Board tiles (<a href="./board.html#b1">B1</a>)</td><td><b>Retire</b> the color backdrop; subject art stays</td></tr>
+        <tr><td><span class="gm-swatch" style="background:var(--g-slate)"></span> Season-strip vignettes</td><td>Season band art (<code>ui/seasonStripScene.ts</code>)</td><td><b>Fold</b> into the shared matte bake spec</td></tr>
+        <tr><td><span class="gm-swatch" style="background:var(--candy-grass)"></span> Town grass speckle</td><td>Town ground fill (<a href="./town.html">Town</a>)</td><td><b>Reconcile</b> with the matte spec so town + board share one surface</td></tr>
+      </tbody>
+    </table>
+
+    <span class="lbl">Options — how far to unify</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Size threshold split</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Flat line for everything under ~28px; painterly matte reserved for large subject
+        thumbnails; migrate the <code>ui_*</code> nav to flat. <b>Pro:</b> two clear jobs, minimal re-art — most
+        <code>design.*</code> icons already exist; the rule is enforceable in one place. <b>Con:</b> a handful of
+        crop icons need a small flat-line variant for their metadata appearances.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · One family everywhere</span></div>
+        <div class="tradeoff">Commit fully to painterly at all sizes (or flat at all sizes). <b>Pro:</b> maximal
+        cohesion, a single language. <b>Con:</b> painterly-at-14px muddies; flat-at-64px loses the storybook
+        warmth that is the game's differentiator. Highest re-art cost.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Make the family decision in <span class="filechip">ui/Icon.tsx:246</span> consider <code>size</code>:
+          below <code>SVG_THRESHOLD</code> prefer the flat <code>design.*</code> render (fall back to a baked
+          line variant), at/above it use the painterly bake. Route <em>all</em> small icons through the vector
+          register.</li>
+        <li>Migrate the six <code>ui_*</code> nav keys (<span class="filechip">ui.tsx:69-74</span>) to
+          <code>design.*</code> equivalents so the bottom nav joins the flat metadata language.</li>
+        <li>Author a shared <b>matte illustration bake spec</b> (flat top light, no specular highlight, single soft
+          contact shadow) and apply it to the crop/subject bakes in
+          <span class="filechip">textures/categories/*</span> and the season vignettes
+          (<span class="filechip">ui/seasonStripScene.ts</span>).</li>
+        <li>Retire the saturated tile backdrops → <a href="./board.html#b1">Board · B1</a>; de-gloss inline
+          thumbnails as part of the matte spec.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= X3 · MOTION -->
+  <article class="prop" id="motion">
+    <div class="phd"><span class="pid">X3</span><span class="sev S2">S2</span><span class="eff">Effort M</span></div>
+    <div class="ptitle">Adopt one duration/easing scale across CSS and canvas, then escalate the reward-motion ladder</div>
+    <p class="why">The motion-duration tokens <code>--motion-fast/med/slow</code> are defined
+    (<span class="mut"><code>tokens.css:190-192</code></span>) but consumed <em>nowhere</em> — a grep for
+    <code>var(--motion-*)</code> returns zero hits, and the canvas <code>_dur()</code> that every board tween
+    routes through is a pure passthrough no-op (<span class="mut"><code>GameScene.ts:577</code></span>). Meanwhile
+    routine chains get lavish juice (shake, radial flash, particles) while the run summary has zero motion, the
+    board hard-gates all idle motion for a flat <strong>1500ms</strong> warm-up
+    (<span class="mut"><code>ANIM_STARTUP_DELAY_MS</code>, <code>GameScene.ts:59</code></span>), and cinematic
+    holds are unrelated magic numbers (<span class="mut"><code>LevelUpCinematic.tsx:5</code> <code>HOLD_MS=1600</code></span>).
+    The tokens are a scale waiting to be plugged in.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">tokens defined, consumed nowhere</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-card" style="padding:12px">
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">DURATIONS IN THE WILD</div>
+              <div class="gm-row" style="margin:8px 0 0"><code>--motion-fast/med/slow</code><span class="gm-spacer"></span><span class="gm-status locked">0 consumers</span></div>
+              <div class="gm-row" style="margin:6px 0 0"><code>_dur(base)</code> → returns base<span class="gm-spacer"></span><span class="gm-status locked">no-op</span></div>
+              <div class="gm-row" style="margin:6px 0 0">tween 70 / 210 / 280 / 380 / 1400 ms<span class="gm-spacer"></span><span class="gm-status need">magic #s</span></div>
+              <div class="gm-row" style="margin:6px 0 0">warm-up 1500 · level hold 1600<span class="gm-spacer"></span><span class="gm-status need">unrelated</span></div>
+              <span class="gm-mini" style="display:block;margin-top:8px">Two token systems (CSS + canvas) that never meet.</span>
+            </div>
+          </div>
+          <figcaption>The scale exists but nothing reads it; canvas durations are scattered literals and
+          <code>_dur()</code> can't scale them because it does nothing.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">one scale, both layers read it</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-card" style="padding:12px">
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">ONE MOTION SCALE</div>
+              <div class="gm-row" style="margin:8px 0 0"><span class="gm-swatch" style="background:var(--g-moss)"></span> <b>fast</b> 120ms<span class="gm-spacer"></span><span class="gm-mini">taps, chip flips</span></div>
+              <div class="gm-row" style="margin:6px 0 0"><span class="gm-swatch" style="background:var(--g-ember)"></span> <b>med</b> 240ms<span class="gm-spacer"></span><span class="gm-mini">collapse, floats</span></div>
+              <div class="gm-row" style="margin:6px 0 0"><span class="gm-swatch" style="background:var(--g-gold)"></span> <b>slow</b> 600ms<span class="gm-spacer"></span><span class="gm-mini">reward beats, holds</span></div>
+              <div style="height:1px;background:var(--g-iron);opacity:.4;margin:9px 0"></div>
+              <span class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">REWARD-MOTION LADDER</span>
+              <div style="display:flex;align-items:center;gap:6px;margin-top:7px">
+                <span class="gm-status ready">x3 · pop</span><span style="opacity:.4">›</span>
+                <span class="gm-status ready" style="background:#fbeccb;border-color:#b98a1e;color:#6a4708">x5 · flash</span><span style="opacity:.4">›</span>
+                <span class="gm-status done">x7 · burst</span>
+              </div>
+            </div>
+          </div>
+          <figcaption><code>_dur()</code> reads a single scale (also exported to CSS custom props); the same
+          three steps govern a chip flip, a board collapse and a reward hold. The reward ladder escalates
+          <em>with</em> chain length instead of firing full juice on every chain.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Turn <span class="filechip">GameScene.ts:577</span> <code>_dur()</code> into a real scaler that reads a
+          shared <code>MOTION</code> table (fast/med/slow + easings) mirroring
+          <span class="filechip">tokens.css:190</span>; replace the scattered literals (70/210/280/380/1400) with
+          named steps.</li>
+        <li>Actually consume <code>var(--motion-*)</code> in the CSS transitions/animations (they are currently
+          orphaned) so DOM and canvas share one vocabulary; fix the stale
+          <span class="filechip">tokens.css:188</span> comment that claims motion is intentionally ungated.</li>
+        <li>Ramp the <span class="filechip">GameScene.ts:2118</span> warm-up amplitude 0→1 rather than hard-gating
+          for 1500ms → detail in <a href="./board.html#b6">Board · B6</a>.</li>
+        <li>Gate the collect juice behind reduced-motion (see <a href="#a11y">X5</a>) while keeping the
+          audio/haptic ladder, so "reward" still lands without vestibular motion.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= X4 · MOBILE -->
+  <article class="prop" id="mobile">
+    <div class="phd"><span class="pid">X4</span><span class="sev S2">S2</span><span class="eff">Effort M</span></div>
+    <div class="ptitle">Apply the 44px hit-target token game-wide and adopt a responsive/safe-area strategy</div>
+    <p class="why">A minimum touch-target token exists — <code>--tap-min: 44px</code>
+    (<span class="mut"><code>tokens.css:186</code></span>) — but it is applied <em>only in the Dev-Panel wiki
+    theme</em> (<span class="mut"><code>wikiTheme.css:1678-1836</code></span>) and never in the game UI. Real
+    controls fall below it: the zone-info "i" button is <code>w-8 h-8</code> = 32×32px
+    (<span class="mut"><code>features/zones/ZoneEntryCostInfo.tsx:37</code></span>). There is also no tablet /
+    landscape / safe-area (notch, home indicator) strategy — the layout is one phone column stretched up.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">32px control, token unused</span></div>
+        <figure>
+          <div class="gm" style="padding:14px">
+            <div class="gm-wrap gm-panel" style="padding:14px;display:flex;align-items:center;gap:10px">
+              <span class="gm-title" style="font-size:13px">Orchard Hollow</span>
+              <span class="gm-spacer"></span>
+              <div style="width:32px;height:32px;border-radius:999px;background:#fff;border:2px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font:700 15px/1 system-ui;color:var(--g-ink);box-shadow:0 1px 3px rgba(0,0,0,.2)">i</div>
+              <span class="gm-flag bad" style="top:2px;right:2px">32×32 · below 44 token</span>
+            </div>
+          </div>
+          <figcaption>The zone "i" button is a 32px tap target — a fiddly hit on a phone, and the 44px token that
+          would fix it is defined but never referenced in the game.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">shared min-hit utility</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:14px">
+            <div class="gm-wrap gm-panel" style="padding:14px;display:flex;align-items:center;gap:10px">
+              <span class="gm-title" style="font-size:13px">Orchard Hollow</span>
+              <span class="gm-spacer"></span>
+              <div style="width:44px;height:44px;border-radius:999px;background:#fff;border:2px solid rgba(255,255,255,.6);display:flex;align-items:center;justify-content:center;font:700 17px/1 system-ui;color:var(--g-ink);box-shadow:0 1px 3px rgba(0,0,0,.2)">i</div>
+              <span class="gm-flag good" style="top:2px;right:2px">44×44 hit · 20px glyph</span>
+            </div>
+          </div>
+          <figcaption>A shared <code>.hit-target</code> utility (<code>min-inline-size/min-block-size:
+          var(--tap-min)</code>) grows the touchable area to 44px while the glyph can stay visually small — the
+          same trick the wiki theme already uses.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Add a shared <code>.hit-target</code> utility keyed off <span class="filechip">tokens.css:186</span>
+          <code>--tap-min</code> (mirroring <span class="filechip">wikiTheme.css:1678</span>) and apply it to the
+          icon-buttons that fall short, starting with
+          <span class="filechip">features/zones/ZoneEntryCostInfo.tsx:37</span>.</li>
+        <li>Adopt <code>env(safe-area-inset-*)</code> padding on the HUD and bottom nav so content clears notches
+          and the home indicator on tall phones.</li>
+        <li>Define a landscape/tablet breakpoint that uses the width instead of stretching the phone column —
+          per-surface specifics: <a href="./board.html#b3">Board desktop composition</a>,
+          <a href="./screens.html">Screens two-pane</a>, <a href="./map.html">Map</a>.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= X5 · A11Y -->
+  <article class="prop" id="a11y">
+    <div class="phd"><span class="pid">X5</span><span class="sev S1">S1</span><span class="eff">Effort M–L</span>
+      <span class="chip good">Top priority #5 (canvas motion)</span></div>
+    <div class="ptitle">Make the board reachable and legible without a pointer or full color vision</div>
+    <p class="why"><b>Verified against code:</b> the DOM/CSS layer <em>is</em> reduced-motion-safe — a global
+    <code>prefers-reduced-motion</code> block collapses transitions/animations
+    (<span class="mut"><code>index.css:533</code></span>). The gaps are canvas-side and input-side. The board host
+    is a bare <code>&lt;div&gt;</code> with no <code>role</code>/<code>aria-label</code>/<code>tabIndex</code>
+    (<span class="mut"><code>prototype.tsx:391</code></span>); it is pointer-only. An <code>announce()</code>
+    aria-live bridge already exists and works (<span class="mut"><code>a11y.ts:20</code></span>, wired to the toast
+    notifier) — but the only caller is the storage-full toast; the canvas never announces a chain result. Chain
+    validity is signalled by color alone: warm orange <code>0xff6d00</code> (valid) vs desaturated brown
+    <code>0x9a4630</code> (too short) (<span class="mut"><code>GameScene.ts:84-85</code></span>) — the worst pairing
+    for red-green CVD. And <code>chain.ts</code> already exports a pure <code>isAdjacent()</code> 8-way check
+    (<span class="mut"><code>game/chain.ts:47</code></span>) that a keyboard path mode could reuse verbatim.</p>
+
+    <span class="lbl">Accessibility program — a checklist, each item already half-built</span>
+    <table>
+      <thead><tr><th>Gap</th><th>What ships already</th><th>The last mile</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><b>Canvas juice ignores reduced-motion</b> <span class="sev S1" style="padding:2px 5px">S1</span></td>
+          <td><code>_motionEnabled()</code> exists and checks the query — but only gates the ambient loop + rebake (<code>GameScene.ts:2159/2124</code>)</td>
+          <td>Route <code>_shake</code> (<code>:2059</code>), <code>radialFlash</code> (<code>:1886</code>) and particles through it too → <a href="./board.html#b6">B6d</a></td>
+        </tr>
+        <tr>
+          <td><b>Board opaque to assistive tech</b> <span class="sev S1" style="padding:2px 5px">S1</span></td>
+          <td>Host div renders (<code>prototype.tsx:391</code>); <code>announce()</code> bridge live (<code>a11y.ts:20</code>)</td>
+          <td>Add <code>role="application"</code> + <code>aria-label</code>; call <code>announce()</code> with each chain result</td>
+        </tr>
+        <tr>
+          <td><b>No keyboard path input</b> <span class="sev S2" style="padding:2px 5px">S2</span></td>
+          <td><code>isAdjacent()</code> + chain evaluator are pure and reusable (<code>chain.ts:47/94</code>)</td>
+          <td>Arrow-keys move a focus cell; Space extends the path reusing the same adjacency</td>
+        </tr>
+        <tr>
+          <td><b>Chain validity is color-only</b> <span class="sev S2" style="padding:2px 5px">S2</span></td>
+          <td>Orange↔brown tween on flip (<code>GameScene.ts:1541</code>)</td>
+          <td>Add a redundant non-color cue: a "N/min" node badge + line thickness/dash on the valid state (mock below)</td>
+        </tr>
+        <tr>
+          <td><b>Sub-44px targets · tiny labels</b> <span class="sev S3" style="padding:2px 5px">S3</span></td>
+          <td><code>--tap-min</code> token exists (<code>tokens.css:186</code>)</td>
+          <td>Apply the <a href="#mobile">X4</a> hit-target utility; raise action-panel labels off the 9–11px floor</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <span class="lbl">Mock — the redundant chain-validity cue</span>
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">orange vs brown — color only</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:14px">
+            <div style="display:flex;gap:16px;align-items:center;justify-content:center">
+              <div style="text-align:center">
+                <div style="width:66px;height:24px;border-radius:999px;background:#9a4630;box-shadow:0 0 8px 1px rgba(154,70,48,.5);margin:0 auto"></div>
+                <span class="gm-mini" style="display:block;margin-top:5px">too short (brown)</span>
+              </div>
+              <div style="text-align:center">
+                <div style="width:66px;height:24px;border-radius:999px;background:#ff6d00;box-shadow:0 0 8px 2px rgba(255,180,40,.6);margin:0 auto"></div>
+                <span class="gm-mini" style="display:block;margin-top:5px">valid (orange)</span>
+              </div>
+            </div>
+            <div style="text-align:center;margin-top:10px;font:700 10px/1.3 system-ui;color:var(--fail)">Under red-green CVD these two hues converge</div>
+          </div>
+          <figcaption>The only difference between "keep dragging" and "release to collect" is a warm-vs-muted hue —
+          precisely the axis red-green color-blind players cannot separate.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">+ shape, weight, count</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:14px">
+            <div style="display:flex;gap:16px;align-items:center;justify-content:center">
+              <div style="text-align:center">
+                <div style="width:66px;height:16px;border-radius:999px;background:#9a4630;opacity:.7;border:1px dashed rgba(255,255,255,.55);margin:0 auto"></div>
+                <span class="gm-mini" style="display:block;margin-top:8px">thin · dashed · <b>2/3</b></span>
+              </div>
+              <div style="text-align:center">
+                <div class="gm-wrap" style="width:66px;height:26px;border-radius:999px;background:#ff6d00;box-shadow:0 0 8px 2px rgba(255,180,40,.6);margin:0 auto;display:flex;align-items:center;justify-content:center;position:relative">
+                  <span style="font:800 12px/1 system-ui;color:#fff">✓</span>
+                </div>
+                <span class="gm-mini" style="display:block;margin-top:8px">thick · solid · <b>3/3 ✓</b></span>
+              </div>
+            </div>
+            <div style="text-align:center;margin-top:10px;font:700 10px/1.3 system-ui;color:var(--next)">Line weight + dash + a "N/min" badge carry the state without color</div>
+          </div>
+          <figcaption>The valid state adds three color-independent cues: the path line thickens, switches from
+          dashed to solid, and the head node shows a <code>3/3 ✓</code> badge. Color still helps; it is no longer
+          load-bearing.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>On the board host add <code>role="application"</code> + <code>aria-label</code> + <code>tabIndex={0}</code>
+          (<span class="filechip">prototype.tsx:391</span>); call <span class="filechip">a11y.ts:20</span>
+          <code>announce()</code> from the collect path (<span class="filechip">GameScene.ts:1881</span>) with e.g.
+          "Collected 4 wheat, chain of 7".</li>
+        <li>Add a keyboard path mode: a focus cell moved by arrow keys, Space to extend, reusing
+          <span class="filechip">game/chain.ts:47</span> <code>isAdjacent()</code> and the evaluator at
+          <code>:94</code> — no new game rules.</li>
+        <li>Add the redundant validity cue when the path crosses min length: thicken + un-dash the line and draw a
+          <code>len/min</code> node badge in <span class="filechip">GameScene.ts:1541</span>'s validity render.</li>
+        <li>Gate <code>_shake</code>/<code>radialFlash</code>/particles behind <code>_motionEnabled()</code>
+          (<span class="filechip">GameScene.ts:2059/1886</span>) → shared with <a href="./board.html#b6">Board · B6d</a>.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= X6 · IA -->
+  <article class="prop" id="ia">
+    <div class="phd"><span class="pid">X6</span><span class="sev S2">S2</span><span class="eff">Effort M</span>
+      <span class="chip">Theme T1</span></div>
+    <div class="ptitle">One nav hub + a consistent taxonomy — the umbrella fix for feature sprawl</div>
+    <p class="why">Feature views have accreted well past the six-slot bottom nav
+    (<span class="mut"><code>ui.tsx:69-74</code></span>): Town, Inventory, Craft, Map, Townsfolk, Quests — while
+    <code>KNOWN_VIEWS</code> also carries almanac, chronicle, charter, boons, market, decorations, tileCollection,
+    festivals and more (<span class="mut"><code>router.ts:34</code> + <code>FEATURE_VIEW_KEYS</code></span>). Labels
+    mix the world's language with the code's: the nav says "Map" but the route and view key are
+    <code>cartography</code>; the tile catalog is <code>tileCollection</code> in code but "Tiles"/"Almanac" to the
+    player. The umbrella fix is a single navigation hub plus a taxonomy that reads one way everywhere. The hub
+    design lives on <a href="./shell.html#nav-hub">Shell · nav hub</a>; this lens is the summary + the rename
+    list.</p>
+
+    <table>
+      <thead><tr><th>Code / route key</th><th>Player-facing label today</th><th>Proposed canonical name</th></tr></thead>
+      <tbody>
+        <tr><td><code>cartography</code></td><td>"Map"</td><td><b>Map</b> — align route + view key to the label</td></tr>
+        <tr><td><code>tileCollection</code> (alias <code>tiles</code>)</td><td>"Tiles" / "Almanac"</td><td><b>Almanac</b> — one name for the tile compendium</td></tr>
+        <tr><td><code>townsfolk</code> vs <code>npcs</code></td><td>"Townsfolk"</td><td><b>Townsfolk</b> — collapse the two into one surface</td></tr>
+        <tr><td><code>crafting</code> vs <code>market</code> vs <code>orders</code></td><td>"Craft" / "Inventory" badge</td><td>Group under a <b>Workshop</b> hub entry</td></tr>
+        <tr><td><code>chronicle</code> / <code>charter</code> / <code>boons</code></td><td>scattered</td><td>Home them under the <b>nav hub's "More"</b> shelf</td></tr>
+      </tbody>
+    </table>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Introduce a nav-hub "More" surface that lists the overflow feature views instead of leaving them
+          route-only — component + entry point spec on <a href="./shell.html#nav-hub">Shell</a>.</li>
+        <li>Settle the taxonomy in one place: label constants consumed by both
+          <span class="filechip">ui.tsx</span> (nav) and <span class="filechip">router.ts:34</span> (keys/aliases),
+          so "Map" and <code>cartography</code> can't drift again.</li>
+        <li>Keep deep-link stability: existing <code>VIEW_ALIASES</code> (<span class="filechip">router.ts:51</span>)
+          already maps <code>tiles → tileCollection</code>; extend the same mechanism for any renamed route.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= X7 · NEW -->
+  <article class="prop" id="new">
+    <div class="phd"><span class="pid">X7</span><span class="sev NEW">NEW</span><span class="eff">from this pass</span></div>
+    <div class="ptitle">New findings surfaced while grounding these programs</div>
+    <p class="why">Items not in the original report, found reading the cross-cutting code for this pass — each
+    re-verified against the live source (one initial reading did not survive that check; see the note).</p>
+    <ul>
+      <li><strong>The recipe <code>coins</code> field is a dead slot; the value to surface is the item's sell
+        value.</strong> <code>grantCraftOutput</code> does <code>coins += (recipe.coins ?? 0)</code>
+        (<span class="filechip">crafting/slice.ts:86</span>) and the type declares an optional <code>coins?</code>
+        (<span class="filechip">crafting/index.tsx:37</span>), but <strong>no recipe in <code>RECIPES</code> ever
+        sets it</strong> (verified across <span class="filechip">constants.ts:934–1000</span>), so the branch
+        always adds 0. The recipe detail pane also renders inputs only
+        (<span class="filechip">crafting/index.tsx:199-217</span>): the player is told the cost but never the
+        output or its worth. Fix by showing <code>getItem(recipe.item).value</code> (a loaf sells 125◉), and
+        either wire or delete the dead <code>coins</code> field (feeds <a href="#rewards">X1</a>).
+        <span class="mut">(An earlier draft of this finding claimed the reducer "pays out" a hidden coin reward;
+        that's false — <code>recipe.coins</code> is never populated. Corrected here.)</span></li>
+      <li><strong>The icon-family split keys off identity, never render size.</strong>
+        <span class="filechip">ui/Icon.tsx:246</span> chooses SVG-vs-painterly purely by
+        <code>svgRenderFor(iconKey)</code>. That is the mechanical root cause of "flat next to painterly at the
+        same size" — the fix is to make <code>size</code> a first-class input to the decision (feeds
+        <a href="#icons">X2</a>).</li>
+      <li><strong>The 44px hit-target token is not "unapplied" — it is applied in the wrong bundle.</strong>
+        <code>--tap-min</code> is consumed only in <span class="filechip">wikiTheme.css:1678-1836</span> (the
+        Dev-Panel wiki), so the mechanism is proven; it simply never reached the game UI (corrects the report's
+        "defined but never applied"; feeds <a href="#mobile">X4</a>).</li>
+      <li><strong>Level-up feedback is inconsistent, not just bare.</strong> The reducer computes
+        <code>leveledUp</code> and fires a congratulatory bubble <em>only at level 2</em>
+        (<span class="filechip">state.ts:587-590</span>), while <code>LevelUpCinematic</code> shows a bare numeral
+        at <em>every</em> level. Two different level-up responses coexist; X1 Option A unifies them.</li>
+    </ul>
+  </article>
+
+  <footer>puzzleDrag2 · Cross-cutting proposals · mockups are HTML built from <code>src/tokens.css</code>; "Now"
+  shots (run summary, desktop board) are real renders of the running game. Per-surface detail lives on the
+  linked board / screens / story / shell pages.</footer>
+</main>
+</div>
+<script src="./assets/mockup.js"></script>
+</body>
+</html>

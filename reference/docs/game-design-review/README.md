@@ -10,6 +10,27 @@ live in [`./shots/`](./shots/). A prior UX/color pass already landed (contrast l
 tokens, bundled Fraunces) — this review deliberately goes **beyond color** into layout, IA, motion/feel,
 per-view UX, and whether the player understands what is happening.*
 
+## → Proposals companion (`proposals/`)
+
+The report says *what's wrong and why*. Its companion — **[`proposals/index.html`](./proposals/index.html)**
+— says *exactly what to build*: every high-leverage finding is paired with a **"Now → Proposed" before/after
+visual** (a real screenshot of the running game next to a game-accurate HTML mock-up rendered from the actual
+`src/tokens.css` palette), **options where the call is yours** (with a recommendation), and a concrete
+`file:line` implementation spec. It's split one page per surface — [Board](./proposals/board.html) ·
+[Town](./proposals/town.html) · [Map](./proposals/map.html) · [Screens](./proposals/screens.html) ·
+[Story](./proposals/story.html) · [Shell](./proposals/shell.html) ·
+[Cross-cutting](./proposals/crosscutting.html) · [Additional findings](./proposals/additional-findings.html)
+— for ~58 fully-defined proposals in all.
+
+Grounding each mock-up in the live code also surfaced **23 findings beyond the 161 in this report** —
+several are *logic* issues, not just UX: silent save-write/load failure (data loss), a debug cheat panel
+shipped in the player-facing menu, an Almanac claim button that enables at the wrong XP, the Boons meta-system
+permanently unreachable without a keeper encounter, and the systemic root cause of the off-screen tutorial
+spotlight. They live in the companion's [New findings](./proposals/index.html#new-findings) section and each
+surface page's *New findings* article. (One in-pass over-reading — a crafting "coin double-grant" — was
+checked against the source and **dismissed**: the recipe `coins` field is dead code that always adds 0, so
+the real fix is to show the item's *sell* value.)
+
 ## How to read the report
 
 The `index.html` is organized into tabs (the "sub-docs"):

@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screens & panels — Proposals & Mockups · puzzleDrag2 Design Review</title>
+<link rel="stylesheet" href="./assets/mockup.css">
+</head>
+<body>
+<header class="top">
+  <span class="brand">puzzleDrag2 · <span class="em">Proposals</span></span>
+  <span class="crumb"><a href="./index.html">All proposals</a> › <strong>04 · Screens &amp; panels</strong></span>
+  <span class="meta">before → after · grounded in <code>src/</code></span>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <a class="home" href="./index.html">← All proposals</a>
+  <div class="sep">Surfaces</div>
+  <a href="./board.html"><span class="k">01</span>The Board</a>
+  <a href="./town.html"><span class="k">02</span>The Town</a>
+  <a href="./map.html"><span class="k">03</span>World Map</a>
+  <a href="./screens.html" class="active"><span class="k">04</span>Screens &amp; panels</a>
+  <a href="./story.html"><span class="k">05</span>Story &amp; moments</a>
+  <a href="./shell.html"><span class="k">06</span>Shell &amp; onboarding</a>
+  <a href="./crosscutting.html"><span class="k">07</span>Cross-cutting</a>
+  <a href="./additional-findings.html"><span class="k">08</span>Additional findings</a>
+  <div class="sep">On this page</div>
+  <a href="#leaks">SC1 · Repair the leaks</a>
+  <a href="#trophies">SC2 · Trophy grid (mobile)</a>
+  <a href="#quests">SC3 · Quests &amp; Almanac</a>
+  <a href="#tiles">SC4 · Tile collection</a>
+  <a href="#crafting">SC5 · Crafting outputs</a>
+  <a href="#inventory">SC6 · Inventory order</a>
+  <a href="#roster">SC7 · Meta roster</a>
+  <a href="#new">SC8 · New findings</a>
+</nav>
+
+<main>
+  <p class="eyebrow">Proposals · Core surface 04</p>
+  <h1>Screens &amp; panels — fully-defined proposals</h1>
+  <p class="lead">The tabbed screens — Quests, Achievements, the Tile Almanac, Crafting, Inventory, and the
+  Townsfolk hub (Workers · Castle · Bosses · Boons · Charter) — are where the game <em>explains itself</em>.
+  They're structurally sound, but a scatter of mislabeled states, buried actions, and hidden values makes the
+  finished systems read as a demo. Each proposal below pairs the panel
+  <span class="chip" style="background:var(--now);color:#fff;border:0">as it is now</span> with a rendered
+  <span class="chip" style="background:var(--next);color:#fff;border:0">build target</span> and a concrete
+  <code>file:line</code> spec.</p>
+
+  <div class="callout tldr"><p style="margin:0"><strong>Screens through-line.</strong> Two priorities carry the
+  page. (SC1, priority&nbsp;#6) <em>Repair the leaks</em> — a cluster of near-one-line bugs where a shipped
+  feature renders as broken or contradictory (a researched tile that says "Locked", blank mining tabs,
+  <code>snake_case</code> boss tributes, a backwards buy-cost line, "✓ Done" over a 12/100 bar). (SC5, priority
+  #8) <em>Show what actions produce and are worth</em> — crafting rows hide the Craft button, the inputs, and
+  the fact that a bake yields both the loaf <em>and</em> its coin value. The rest reclaim buried CTAs on mobile
+  and stop empty/zero rows from out-massing real content.</p></div>
+
+  <!-- ============================================================= SC1 -->
+  <h2><span class="n">SC1</span>Repair the leaked &amp; mislabeled states</h2>
+  <article class="prop" id="leaks">
+    <div class="phd">
+      <span class="pid">SC1</span><span class="sev S1">S1</span><span class="eff">Effort S each</span>
+      <span class="chip good">Top priority #6</span>
+    </div>
+    <div class="ptitle">Fix the class of bugs where a finished feature renders as broken or self-contradictory</div>
+    <p class="why">These aren't design questions — they're placeholder/label defects that survived into the
+    shipped screens, and each one individually reads as "unfinished". They're cheap, isolated, and
+    disproportionately damaging to trust. The table is the whole worklist; two representative before/afters
+    follow. <span class="mut">Every row is confirmed against source below.</span></p>
+
+    <table>
+      <thead><tr><th style="width:30%">Symptom, as shipped</th><th style="width:34%">Where (confirmed)</th><th>One-line fix</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>A tile you're <strong>actively researching</strong> still reads <strong>"Locked"</strong> in the wiki grid.</td>
+          <td><span class="filechip">tileCollection/index.tsx:197</span> subtitle collapses to Active/Locked/Unlocked; <span class="filechip">effects.ts:266</span> sets <code>locked = !discovered</code>.</td>
+          <td>Give the row a distinct "Researching · N/M" subtitle (the detail pane already computes it in <code>statusFor</code>, effects.ts:221).</td>
+        </tr>
+        <tr>
+          <td>Under <strong>Mining</strong>, every category tab renders <strong>no text label</strong> (icon only).</td>
+          <td><span class="filechip">tileCollection/index.tsx:53</span> keys <code>CATEGORY_LABELS</code> as <code>tile_mine_stone…</code> but the catalog categories are <code>mine_stone…</code> (<span class="filechip">tileCatalog.ts:17</span>); <code>treasure</code> is missing entirely.</td>
+          <td>Re-key to the catalog ids (drop the <code>tile_</code> prefix, add <code>treasure</code>) — or source labels from one map in tileCatalog.</td>
+        </tr>
+        <tr>
+          <td>Boss tributes print raw keys: <strong>"Tribute: 30 tile_tree_oak"</strong>.</td>
+          <td><span class="filechip">bosses/Gallery.tsx:91</span> renders <code>boss.target.resource</code> verbatim (<code>tile_tree_oak</code>, data.ts:28).</td>
+          <td>Resolve through <code>getItem(resource)?.label</code> / <code>displayKey()</code> → "30 Oak".</td>
+        </tr>
+        <tr>
+          <td>Buy-cost line reads <strong>backwards</strong>: "1,000 / 200 coins" under a "Cost" label.</td>
+          <td><span class="filechip">tileCollection/index.tsx:271</span> prints <code>{coins} / {coinCost} coins</code> — your balance first, the price second.</td>
+          <td>Label the direction ("Need 200 ◉ · you have 1,000") or put the price in the CTA. Mock below.</td>
+        </tr>
+        <tr>
+          <td>A trophy shows <strong>"✓ Done" over a 12/100 bar</strong>.</td>
+          <td><span class="filechip">achievements/index.tsx:290</span> passes <code>trophyState="claimed"</code> whenever unlocked; the bar (lines 111–123) still reads the raw counter.</td>
+          <td>Drive badge and bar from one truth: badge "Done" only when <code>current&nbsp;≥&nbsp;target</code>, and fill the bar to 100% for a claimed trophy. Mock below.</td>
+        </tr>
+        <tr>
+          <td>Zero-count resources render at <strong>full prominence</strong> in Inventory.</td>
+          <td><span class="filechip">ui/Inventory.tsx:553</span> never filters <code>count&gt;0</code> for biome resources; <span class="filechip">inventory/index.tsx:209</span> hardcodes alpha sort.</td>
+          <td>Count-desc default + tuck empties (see <a href="#inventory">SC6</a>).</td>
+        </tr>
+        <tr>
+          <td>Undiscovered resources are a wall of <strong>"???"</strong> chips.</td>
+          <td><span class="filechip">achievements/index.tsx:174</span> renders a "?" glyph + "???" label with zero hint of how to find it.</td>
+          <td>Keep the mystery chip but add the discovery verb ("Chain 8 to find") so the wall becomes a checklist.</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <span class="lbl">Before → after — the backwards buy-cost line</span>
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">balance / price, unlabeled</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-wrap gm-card" style="padding:11px">
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">COST</div>
+              <div style="font:800 20px/1.1 var(--g-display);color:#9c3a2a;margin-top:4px">1,000 / 200 coins</div>
+              <div class="gm-cta gold" style="margin-top:9px">Buy</div>
+              <span class="gm-flag bad" style="top:6px;right:6px">reads as 1,000 needed of 200</span>
+            </div>
+          </div>
+          <figcaption>The player's balance is printed <em>first</em> and the price second, under a bare "Cost"
+          label — so a cheap tile looks unaffordable. The one value that matters (200) is the smaller,
+          right-hand number.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">price stated, direction clear</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-card" style="padding:11px">
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">TO UNLOCK</div>
+              <div style="display:flex;align-items:center;gap:8px;margin-top:5px">
+                <span style="font:800 18px/1 var(--g-display);color:#3a5410">200 ◉</span>
+                <span class="gm-status ready">you have 1,000</span>
+              </div>
+              <div class="gm-cta gold" style="margin-top:9px">Buy · 200 ◉</div>
+            </div>
+          </div>
+          <figcaption>Price leads, affordability is a chip beside it, and the number is echoed in the CTA. Same
+          two values, unambiguous reading. (When short, swap the green chip for a red "need 60 more".)</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Before → after — "Done" over a 12/100 bar</span>
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">badge and bar disagree</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-wrap gm-card" style="padding:9px 11px;border-color:#91bf24;box-shadow:0 0 0 1px rgba(145,191,36,.35)">
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="font-size:22px">🏆</span>
+                <div style="flex:1;min-width:0">
+                  <div class="gm-title" style="font-size:13px">Tireless</div>
+                  <div class="gm-mini">Complete 100 chains</div>
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+                    <div class="gm-bar" style="flex:1"><i style="width:12%;background:#91bf24"></i></div>
+                    <span class="gm-mini" style="font-weight:700">12/100</span>
+                  </div>
+                </div>
+                <span style="font:800 10px/1 system-ui;color:#91bf24;display:inline-flex;align-items:center;gap:3px">✓ Done</span>
+              </div>
+              <span class="gm-flag bad" style="top:4px;right:4px">green "Done" on a 12% bar</span>
+            </div>
+          </div>
+          <figcaption>The card is styled "claimed" (green border, green fill, "✓ Done") yet the numeral reads
+          12/100. The badge keys off the unlocked map; the bar keys off the live counter; nothing reconciles them.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">one source of truth</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-card" style="padding:9px 11px">
+              <div style="display:flex;align-items:center;gap:9px">
+                <span style="font-size:22px">🏆</span>
+                <div style="flex:1;min-width:0">
+                  <div class="gm-title" style="font-size:13px">Tireless</div>
+                  <div class="gm-mini">Complete 100 chains</div>
+                  <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+                    <div class="gm-bar" style="flex:1"><i style="width:12%;background:var(--g-gold)"></i></div>
+                    <span class="gm-mini" style="font-weight:700">12/100</span>
+                  </div>
+                </div>
+                <span class="gm-status need">In&nbsp;progress</span>
+              </div>
+            </div>
+          </div>
+          <figcaption>Badge and bar agree — an in-progress trophy stays amber with an honest "In progress" pill.
+          When <code>current ≥ target</code>, the same card flips to a full green bar + "✓ Done" together, never
+          one without the other.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Achievements: compute a single <code>earned = current &gt;= target</code> in <code>TrophyCard</code>
+          (<span class="filechip">achievements/index.tsx:76</span>); use it for both the "Done" badge and to cap
+          the bar at 100%. Stop passing the unconditional <code>"claimed"</code> at
+          <span class="filechip">achievements/index.tsx:290</span>.</li>
+        <li>Tile wiki subtitle: add a "researching / in-progress" branch to the row view-model
+          (<span class="filechip">effects.ts:264</span> <code>getCategoryViewModel</code>) so
+          <span class="filechip">tileCollection/index.tsx:197</span> can show it instead of "Locked".</li>
+        <li>Category labels: re-key <code>CATEGORY_LABELS</code>/<code>CATEGORY_ICONS</code>
+          (<span class="filechip">tileCollection/index.tsx:40</span>) to the catalog category ids from
+          <span class="filechip">tileCatalog.ts:10</span>, or export a <code>CATEGORY_LABEL</code> map there and import it.</li>
+        <li>Boss tribute: render <code>getItem(boss.target.resource)?.label ?? displayKey(...)</code> at
+          <span class="filechip">bosses/Gallery.tsx:91</span>.</li>
+        <li>Buy line: reformat <span class="filechip">tileCollection/index.tsx:271</span> to lead with the price
+          and echo it in the <code>BUY_TILE</code> CTA label.</li>
+        <li>"???" chip: append the discovery instruction (already available as <code>d.chainLength</code> etc. in
+          the collection data) under the mystery glyph at <span class="filechip">achievements/index.tsx:157</span>.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= Quests · Orders · Achievements -->
+  <h2><span class="n">SC2–3</span>Quests · Orders · Achievements</h2>
+
+  <!-- ---------------- SC2 -->
+  <article class="prop" id="trophies">
+    <div class="phd"><span class="pid">SC2</span><span class="sev S1">S1</span><span class="eff">Effort S</span></div>
+    <div class="ptitle">Stop the mobile trophy grid from forcing two columns and truncating every title</div>
+    <p class="why">The trophy list renders <code>grid-cols-3 portrait:grid-cols-2</code>, so on a phone each card
+    is barely wider than its icon — every title and description is <code>truncate</code>/<code>line-clamp-1</code>
+    to "First St…", "Patient…", "Trusted…", "Village V…". A wall of ellipses is unreadable and, next to a "✓ Done"
+    badge, reads as broken. <span class="mut"><code>achievements/index.tsx:284</code> grid; titles clamp at
+    <code>:107–108</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">2 cols, every label clipped</span></div>
+        <figure>
+          <img src="../shots/mobile/achievements-trophies-mixed.png" alt="mobile trophies, two narrow columns with truncated titles">
+          <figcaption>"First St…", "Patient…", "Trusted…", "Village V…", "Po…", "Ch…", "Town Pla…" — the two-column
+          grid leaves no room for the name, the description, or the reward, on the one screen whose whole job is
+          to show off what you earned.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">one-column full-width rows</span></div>
+        <figure class="light">
+          <div class="device phone"><div class="screen">
+            <div class="gm-hud"><span class="burger">☰</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 12,500</span><span class="gm-pill ember">Lv 3</span></div>
+            <div class="gm-bg" style="padding:8px;gap:7px">
+              <div style="display:flex;gap:6px">
+                <span class="gm-cta ember" style="flex:1;padding:6px">Trophies</span>
+                <span class="gm-cta ghost" style="flex:1;padding:6px">Collection</span>
+              </div>
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);letter-spacing:.08em">CHAINS</div>
+              <div class="gm-card" style="padding:8px 10px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:20px">🏅</span>
+                  <div style="flex:1;min-width:0">
+                    <div class="gm-title" style="font-size:12px">First Steps</div>
+                    <div class="gm-mini">Complete your first chain</div>
+                  </div>
+                  <span class="gm-status done">✓ Done</span>
+                </div>
+              </div>
+              <div class="gm-card" style="padding:8px 10px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:20px">🏆</span>
+                  <div style="flex:1;min-width:0">
+                    <div class="gm-title" style="font-size:12px">Tireless</div>
+                    <div class="gm-mini">Complete 100 chains</div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+                      <div class="gm-bar" style="flex:1"><i style="width:12%;background:var(--g-gold)"></i></div>
+                      <span class="gm-mini" style="font-weight:700">12/100</span>
+                    </div>
+                  </div>
+                  <span class="chip" style="font-size:10px;margin:0">+100◉</span>
+                </div>
+              </div>
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);letter-spacing:.08em;margin-top:2px">BOSSES</div>
+              <div class="gm-card" style="padding:8px 10px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:20px">🐉</span>
+                  <div style="flex:1;min-width:0">
+                    <div class="gm-title" style="font-size:12px">Chill of the Deep</div>
+                    <div class="gm-mini">Defeat the Frost Titan</div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:4px">
+                      <div class="gm-bar" style="flex:1"><i style="width:25%;background:var(--g-gold)"></i></div>
+                      <span class="gm-mini" style="font-weight:700">1/4</span>
+                    </div>
+                  </div>
+                  <span class="chip" style="font-size:10px;margin:0">🪄 +1 Wand</span>
+                </div>
+              </div>
+            </div>
+            <div class="gm-nav"><span class="t"><span class="ic">🏘️</span>Town</span><span class="t"><span class="ic">📦</span>Inv</span><span class="t"><span class="ic">🔨</span>Craft</span><span class="t"><span class="ic">🗺️</span>Map</span><span class="t"><span class="ic">👥</span>Folk</span><span class="t on"><span class="ic">📖</span>Quests</span></div>
+          </div></div>
+          <figcaption>One column, full-width rows: the whole name and description fit, the reward gets a real
+          chip, and the progress bar has room. Same information density, zero ellipses.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Change the grid to <code>portrait:grid-cols-1</code> (from <code>grid-cols-3 portrait:grid-cols-2</code>)
+          at <span class="filechip">achievements/index.tsx:284</span>; keep 2–3 columns at desktop widths.</li>
+        <li>Drop <code>truncate</code> on the title and <code>line-clamp-1</code> on the desc
+          (<span class="filechip">achievements/index.tsx:107</span>) in the single-column layout — or bump to
+          <code>line-clamp-2</code> so long feats wrap instead of clipping.</li>
+        <li>Add a phone-width visual golden so the density stays regression-gated (mirrors the Board B-suite).</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ---------------- SC3 -->
+  <article class="prop" id="quests">
+    <div class="phd"><span class="pid">SC3</span><span class="sev S2">S1–S2</span><span class="eff">Effort S–M</span></div>
+    <div class="ptitle">Reconcile the Almanac ladder with its own reducer, and reuse the reward manifest everywhere</div>
+    <p class="why">The Quest board already does rewards beautifully — a full itemized manifest (tile, rune, coins,
+    Almanac XP, tool) per card. Two panels next to it don't get the benefit, and the Almanac's numbers openly
+    contradict the code that gates it.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">the manifest done right (Quests)</span></div>
+        <figure>
+          <img src="../shots/desktop/quests-daily-mixed.png" alt="desktop quest board with full reward manifest per card">
+          <figcaption>Every quest card lists exactly what it pays. This is the pattern to reuse — but Achievements
+          renders its reward as a single 9px string (<code>achievements/index.tsx:127</code>), and the Almanac tier
+          cards below undercount their own cost.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">Almanac tier that matches the gate</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px;display:flex;flex-direction:column;gap:9px">
+            <div class="gm-wrap gm-card" style="padding:9px 11px;border-color:#c0392b">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span class="gm-title" style="font-size:12px">Tier 5 — Master Harvester</span>
+                <span class="gm-spacer"></span>
+                <span class="gm-mini" style="font-weight:700">500 / <s>500</s>✦</span>
+              </div>
+              <div class="gm-cta primary" style="margin-top:7px;padding:6px 12px">CLAIM</div>
+              <span class="gm-flag bad" style="top:4px;right:4px">enabled, but claim silently fails</span>
+            </div>
+            <div class="gm-card" style="padding:9px 11px">
+              <div style="display:flex;align-items:center;gap:6px">
+                <span class="gm-title" style="font-size:12px">Tier 5 — Master Harvester</span>
+                <span class="gm-spacer"></span>
+                <span class="gm-mini" style="font-weight:700">500 / 600✦</span>
+              </div>
+              <div class="gm-bar" style="margin-top:6px"><i style="width:83%;background:var(--g-arcane)"></i></div>
+              <div class="gm-status locked" style="margin-top:7px">100✦ to go</div>
+            </div>
+          </div>
+          <figcaption>The panel shows a ×100 ladder (tier 5 "unlocks" at 500✦) but the reducer levels on
+          <code>XP_PER_LEVEL = 150</code> and gates claim on <code>level ≥ tier</code> — so tier 5 truly needs
+          600✦. Above: button lights up and the claim no-ops. Below: cost, bar, and gate all read the real 600.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Derive the tier cost from the same constant the reducer uses:
+          <code>cost = tierDef.level * XP_PER_LEVEL</code> (from <span class="filechip">almanac/data.ts:9</span>),
+          replacing the hardcoded <code>tier * 100</code> at <span class="filechip">quests/index.tsx:212</span>
+          and the <code>/ 100</code> progress math at <span class="filechip">quests/index.tsx:367</span> /
+          <span class="filechip">quests/index.tsx:419</span>.</li>
+        <li>Gate the CLAIM button on the reducer's real predicate (<code>almanac.level ≥ def.level</code>,
+          <span class="filechip">almanac/data.ts:120</span>) so it never enables on an unclaimable tier.</li>
+        <li>Reuse <code>&lt;RewardManifest&gt;</code> (<span class="filechip">quests/RewardBundle.jsx</span>) inside
+          <code>TrophyCard</code> instead of the 9px reward string at
+          <span class="filechip">achievements/index.tsx:127</span>.</li>
+      </ul>
+    </div>
+
+    <h3 class="disp" style="margin-top:16px">Also folded in (S3 / polish)</h3>
+    <ul class="small">
+      <li><strong>The "Deliver 1 order" daily duplicates the Orders board.</strong> A daily whose entire body is
+        "go use the other tab" is busywork; cross-link it to the Orders panel (or drop the trivial N=1 variant)
+        rather than making it a standalone card. <span class="mut">Quest templates, category <code>order</code>
+        (quests/index.tsx:68).</span></li>
+      <li><strong>Order-reward "×1.25" invites re-multiplying.</strong> Showing a bond multiplier next to an
+        already-multiplied coin figure reads like the player should multiply again; present it as the resulting
+        uplift ("+25% → +50◉") instead of the raw factor.</li>
+      <li><strong>Almanac header bar is a fixed <code>max=100</code>.</strong> <span class="filechip">quests/index.tsx:315</span>
+        hardcodes the progress denominator to 100; it should track <code>xpIntoTier / XP_PER_LEVEL</code> so the
+        fill matches the real per-level distance once the ladder is fixed above.</li>
+    </ul>
+  </article>
+
+  <!-- ============================================================= Tile Collection & research -->
+  <h2><span class="n">SC4</span>Tile Collection &amp; research</h2>
+  <article class="prop" id="tiles">
+    <div class="phd"><span class="pid">SC4</span><span class="sev S2">S2</span><span class="eff">Effort M</span></div>
+    <div class="ptitle">Turn the Almanac from a mislabeled catalog into a legible discovery checklist</div>
+    <p class="why">The tile wiki is where the game teaches its deepest system — tile variants, research, and the
+    active-tile slot. But its collapsed rows say only "Locked / Unlocked / Active", the Mining tabs are blank
+    (see <a href="#leaks">SC1</a>), and a locked tile's whole story ("how do I get it?") lives one tap deep in the
+    detail pane. The catalog data already carries the answer for every method — chain N, research N/M, buy N◉,
+    build X, reach zone Y (<code>effects.ts statusFor</code>) — it's just not surfaced on the row.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">state word only; how-to hidden</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px;display:flex;flex-direction:column;gap:7px">
+            <div class="gm-row" style="margin:0"><span style="font-size:20px;filter:grayscale(1) brightness(.6)">🌾</span><div style="flex:1"><div class="gm-title" style="font-size:12px">Meadow Grass</div><div class="gm-mini">Locked</div></div></div>
+            <div class="gm-row" style="margin:0"><span style="font-size:20px;filter:grayscale(1) brightness(.6)">🌾</span><div style="flex:1"><div class="gm-title" style="font-size:12px">Spiky Grass</div><div class="gm-mini">Locked</div></div></div>
+            <div class="gm-wrap gm-row" style="margin:0;border-color:var(--g-moss)"><span style="font-size:20px;filter:grayscale(1) brightness(.6)">🌾</span><div style="flex:1"><div class="gm-title" style="font-size:12px">Golden Wheat</div><div class="gm-mini">Locked</div></div>
+              <span class="gm-flag bad" style="top:-6px;right:2px">"Locked" — but it's mid-research</span>
+            </div>
+          </div>
+          <figcaption>Three tiles, three identical "Locked" labels — even the one you're actively researching. The
+          player can't tell what to <em>do</em> without opening each one.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">the discovery verb on the row</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px;display:flex;flex-direction:column;gap:7px">
+            <div class="gm-row" style="margin:0"><span style="font-size:20px;filter:grayscale(1) brightness(.6)">🌾</span><div style="flex:1"><div class="gm-title" style="font-size:12px">Meadow Grass</div><div class="gm-mini">Chain 20 Grass to find</div></div><span class="gm-status locked">🔒</span></div>
+            <div class="gm-row" style="margin:0"><span style="font-size:20px;filter:grayscale(1) brightness(.6)">🌾</span><div style="flex:1"><div class="gm-title" style="font-size:12px">Spiky Grass</div><div class="gm-mini">Buy · 200 ◉</div></div><span class="gm-status need">200◉</span></div>
+            <div class="gm-row" style="margin:0;border-color:var(--g-moss)"><span style="font-size:20px;filter:grayscale(1) brightness(.6)">🌾</span><div style="flex:1"><div class="gm-title" style="font-size:12px">Golden Wheat</div><div style="display:flex;align-items:center;gap:6px;margin-top:3px"><div class="gm-bar" style="flex:1"><i style="width:60%;background:var(--g-moss)"></i></div><span class="gm-mini" style="font-weight:700">18/30</span></div></div><span class="gm-status ready">Researching</span></div>
+          </div>
+          <figcaption>Each locked row states its own path: "Chain 20 Grass", "Buy · 200◉", or a live research bar
+          with a "Researching" pill. The Almanac becomes a to-do list, not a wall of "Locked".</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Extend <code>CategoryRowViewModel</code> with a short <code>rowStatus</code> string + a
+          <code>progress</code> pair, computed from the same <code>discovery</code> fields <code>statusFor</code>
+          already reads (<span class="filechip">effects.ts:203</span>).</li>
+        <li>Render it as the <code>subtitle</code> (and an optional inline bar for research) in <code>TileListItem</code>
+          (<span class="filechip">tileCollection/index.tsx:189</span>), replacing the flat Active/Locked/Unlocked
+          string at <span class="filechip">tileCollection/index.tsx:197</span>.</li>
+        <li>Fold in the SC1 "???" hint and category-label re-key here so the whole Almanac lands in one pass.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= Crafting -->
+  <h2><span class="n">SC5</span>Crafting</h2>
+  <article class="prop" id="crafting">
+    <div class="phd">
+      <span class="pid">SC5</span><span class="sev S1">S1</span><span class="eff">Effort M</span>
+      <span class="chip good">Top priority #8</span>
+    </div>
+    <div class="ptitle">Surface the Craft action, the inputs, and the output value on the recipe row itself</div>
+    <p class="why">On a phone every recipe is a bare row — icon, name, "Ready" — and the actual craft (inputs,
+    have/need, the Craft button) is hidden behind a tap that expands the accordion body
+    (<code>ExpandRow</code> renders no body while collapsed, <span class="mut">ExpandList.tsx:168</span>; the body
+    is <code>RecipeCraftBody</code>, <span class="mut">crafting/index.tsx:224</span>). Worse, no row — collapsed
+    <em>or</em> expanded — ever shows what the craft <strong>produces</strong> or its coin worth: the
+    <code>CostGrid</code> is fed inputs only (<span class="mut">crafting/index.tsx:243</span>), and no row shows
+    the produced item or what it's worth — a Bread Loaf <em>sells for 125◉</em>
+    (<code>ITEMS.bread.value</code>, <span class="mut">constants.ts:410</span>) and also doubles as a build
+    ingredient. <span class="mut">(The recipe grants the item only; the schema's <code>coins</code> field is
+    dead — <code>coins += (recipe.coins ?? 0)</code> at crafting/slice.ts:86, but <strong>no recipe sets
+    <code>coins</code></strong>, verified across RECIPES — so surface the item's <em>sell value</em>, not that
+    unused field.)</span> The player commits blind and never learns the payoff.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">name + "Ready", nothing else</span></div>
+        <figure>
+          <img src="../shots/mobile/crafting-bakery.png" alt="mobile bakery recipe list, collapsed rows showing only name and Ready">
+          <figcaption>"Bread Loaf · Ready", "Harvest Pie · Ready" — and a big empty canvas below. No inputs, no
+          Craft button, no hint that a loaf pays 125◉. You must tap each row to do anything, and even then the
+          output stays invisible.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">inputs + Craft + payoff on the row</span></div>
+        <figure class="light">
+          <div class="device phone"><div class="screen">
+            <div class="gm-hud"><span class="burger">☰</span><span class="gm-pill title" style="font-size:11px">Mira's Bakery</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 12,500</span></div>
+            <div class="gm-bg" style="padding:9px;gap:8px">
+              <div class="gm-panel" style="padding:8px 10px">
+                <div class="gm-mini disp" style="font-weight:700;color:var(--g-ember)">HEARTHWOOD VALE</div>
+                <div style="display:flex;align-items:center;gap:6px"><span class="gm-title" style="font-size:14px">Mira's Bakery</span><span class="gm-spacer"></span><span class="gm-status ready">2/2 ready</span></div>
+              </div>
+              <div class="gm-card" style="padding:9px 10px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:22px">🍞</span>
+                  <div style="flex:1;min-width:0">
+                    <div class="gm-title" style="font-size:13px">Bread Loaf</div>
+                    <div style="display:flex;gap:4px;margin-top:3px">
+                      <span class="chip" style="margin:0;font-size:10px;padding:2px 6px">🌾 3</span>
+                      <span class="chip" style="margin:0;font-size:10px;padding:2px 6px">🥚 1</span>
+                    </div>
+                  </div>
+                  <span class="gm-cta primary" style="padding:8px 14px">Craft</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:7px;border-top:1px solid rgba(168,137,90,.35)">
+                  <span class="gm-mini" style="font-weight:700;color:var(--g-ink-soft)">YIELDS</span>
+                  <span style="font-size:12px">→ 1 Bread Loaf</span>
+                  <span class="gm-pill gold" style="padding:2px 7px;font-size:10px">sells 125◉</span>
+                </div>
+              </div>
+              <div class="gm-card" style="padding:9px 10px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:22px">🥧</span>
+                  <div style="flex:1;min-width:0">
+                    <div class="gm-title" style="font-size:13px">Harvest Pie</div>
+                    <div style="display:flex;gap:4px;margin-top:3px">
+                      <span class="chip" style="margin:0;font-size:10px;padding:2px 6px">🌾 2</span>
+                      <span class="chip" style="margin:0;font-size:10px;padding:2px 6px">🫙 1</span>
+                      <span class="chip" style="margin:0;font-size:10px;padding:2px 6px">🥚 1</span>
+                    </div>
+                  </div>
+                  <span class="gm-cta primary" style="padding:8px 14px">Craft</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px;margin-top:8px;padding-top:7px;border-top:1px solid rgba(168,137,90,.35)">
+                  <span class="gm-mini" style="font-weight:700;color:var(--g-ink-soft)">YIELDS</span>
+                  <span style="font-size:12px">→ 1 Harvest Pie</span>
+                  <span class="gm-pill gold" style="padding:2px 7px;font-size:10px">sells 175◉</span>
+                </div>
+              </div>
+            </div>
+            <div class="gm-nav"><span class="t"><span class="ic">🏘️</span>Town</span><span class="t"><span class="ic">📦</span>Inv</span><span class="t on"><span class="ic">🔨</span>Craft</span><span class="t"><span class="ic">🗺️</span>Map</span><span class="t"><span class="ic">👥</span>Folk</span><span class="t"><span class="ic">📖</span>Quests</span></div>
+          </div></div>
+          <figcaption>The collapsed row now shows input chips, a right-aligned <strong>Craft</strong> pill (fire
+          it without expanding), and an explicit <em>YIELDS → 1 Bread Loaf · sells 125◉</em> line. Tap still
+          expands for have/need detail and descriptions.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Add the inputs + a Craft button to the <em>collapsed</em> header. Either pass a
+          <code>trailing</code>/<code>headerExtra</code> slot into <code>ExpandRow</code>
+          (<span class="filechip">ExpandList.tsx:152</span>) that survives the collapsed branch at
+          <span class="filechip">ExpandList.tsx:168</span>, or render <code>RecipeExpandRow</code>
+          (<span class="filechip">crafting/index.tsx:265</span>) as a custom row rather than a bare
+          <code>ExpandRow</code>.</li>
+        <li>Add an explicit outputs line: feed <code>CostGrid</code> (or a sibling "Yields" grid) the produced
+          item plus its sell value <code>getItem(recipe.item).value</code> alongside inputs in
+          <code>RecipeCraftBody</code> (<span class="filechip">crafting/index.tsx:229</span>) and
+          <code>RecipeDetail</code> (<span class="filechip">crafting/index.tsx:187</span>). Do <em>not</em> read
+          <code>recipe.coins</code> — it's unused (see the new finding below); either wire it as a deliberate
+          craft-for-coins bonus or delete the dead field.</li>
+        <li>Fix the locked-station dead end: at <span class="filechip">crafting/index.tsx:541</span> the "Build the
+          {station} in town" copy is plain text — add a button that routes to the Town build flow for that station.</li>
+      </ul>
+    </div>
+
+    <h3 class="disp" style="margin-top:16px">Also folded in (S3 / polish)</h3>
+    <ul class="small">
+      <li><strong>No batch / repeat craft.</strong> Crafting 12 bread is 12 taps + 12 "Crafted!" bubbles. Add a
+        quantity stepper or a "Craft ×N / Craft max" affordance on the row.</li>
+      <li><strong>Ambiguous status vocabulary.</strong> "Ready", "Missing inputs", "No station", and the header
+        pill "2/2 ready" / "Locked" (<span class="mut">crafting/index.tsx:160, :521</span>) overlap in meaning;
+        standardize one status lexicon shared with the tile wiki.</li>
+      <li><strong>Empty canvas under a short list.</strong> A two-recipe bakery leaves ~60% of the phone blank
+        (visible in the NOW shot). Center a short list or add a "what unlocks more recipes" hint so the space reads
+        as intentional.</li>
+    </ul>
+  </article>
+
+  <!-- ============================================================= Inventory -->
+  <h2><span class="n">SC6</span>Inventory</h2>
+  <article class="prop" id="inventory">
+    <div class="phd"><span class="pid">SC6</span><span class="sev S1">S1</span><span class="eff">Effort S</span></div>
+    <div class="ptitle">Sort the storehouse by what you actually have, and stop empties out-massing real stock</div>
+    <p class="why">The Storehouse hardcodes <code>sort="alpha"</code> (<span class="mut">inventory/index.tsx:209</span>),
+    overriding the grid's own <code>count</code> default — so a stack of 40 wheat sorts below a resource you own
+    zero of, purely by name. And every biome resource is listed whether or not you own any (the resource filter
+    never checks <code>count&gt;0</code>, <span class="mut">ui/Inventory.tsx:553</span>), so the list is padded
+    with empties while the header pill counts only non-empty kinds — "N kinds" over a visibly longer list.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">alpha; zeros interleaved</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-wrap">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px"><span class="gm-title" style="font-size:12px">The Storehouse</span><span class="gm-spacer"></span><span class="hl-board-pill" style="font:700 10px/1 system-ui;background:var(--g-well);border:1px solid var(--g-iron);border-radius:999px;padding:3px 8px">8 kinds</span></div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <div class="gm-row" style="margin:0;opacity:.45">🍎 Apple <span class="gm-spacer"></span><b>0</b></div>
+                <div class="gm-row" style="margin:0">🌾 Hay <span class="gm-spacer"></span><b>4</b></div>
+                <div class="gm-row" style="margin:0;opacity:.45">🥚 Eggs <span class="gm-spacer"></span><b>0</b></div>
+                <div class="gm-row" style="margin:0;opacity:.45">🪵 Logs <span class="gm-spacer"></span><b>0</b></div>
+                <div class="gm-row" style="margin:0">🥕 Carrot <span class="gm-spacer"></span><b>12</b></div>
+                <div class="gm-row" style="margin:0;opacity:.45">🌽 Corn <span class="gm-spacer"></span><b>0</b></div>
+              </div>
+              <span class="gm-flag bad" style="top:22px;right:2px">40 wheat sorts under 0 apple</span>
+            </div>
+          </div>
+          <figcaption>Alphabetical order buries your real stock among empties; the "8 kinds" pill disagrees with
+          the ~28 rows on screen. Scanning "what do I have a lot of?" is impossible.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">count-desc; empties tucked</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div>
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px"><span class="gm-title" style="font-size:12px">The Storehouse</span><span class="gm-spacer"></span><span class="hl-board-pill" style="font:700 10px/1 system-ui;background:var(--g-well);border:1px solid var(--g-iron);border-radius:999px;padding:3px 8px">8 kinds · 3 zones</span></div>
+              <div style="display:flex;flex-direction:column;gap:5px">
+                <div class="gm-row" style="margin:0">🥕 Carrot <span class="gm-spacer"></span><b>12</b></div>
+                <div class="gm-row" style="margin:0">🌾 Hay <span class="gm-spacer"></span><b>4</b></div>
+                <div class="gm-row" style="margin:0">🐟 Sardine <span class="gm-spacer"></span><b>3</b></div>
+                <div style="display:flex;align-items:center;gap:6px;justify-content:center;padding:6px;color:var(--g-ink-light)">
+                  <span style="width:60px;height:1px;background:var(--g-iron);opacity:.5"></span>
+                  <span class="gm-mini" style="font-weight:700">Show 20 not-yet-gathered ▾</span>
+                  <span style="width:60px;height:1px;background:var(--g-iron);opacity:.5"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <figcaption>Owned stock first, largest first; the empties collapse behind one "not-yet-gathered" divider
+          (keeping their almanac value without padding the view). The pill now matches the visible rows.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Drop the <code>sort="alpha"</code> override at <span class="filechip">inventory/index.tsx:209</span>
+          so the grid uses its <code>sort="count"</code> default (<span class="filechip">ui/Inventory.tsx:426</span>),
+          or expose a small sort control.</li>
+        <li>Filter zero-count biome resources out of the default view in <code>visibleResourceKeys</code>
+          (<span class="filechip">ui/Inventory.tsx:553</span>), behind a "show not-yet-gathered" toggle; items and
+          tools already require <code>count&gt;0</code> (<span class="filechip">ui/Inventory.tsx:447</span>).</li>
+        <li>Confirm the header pill <code>{distinctItems} kinds</code> (<span class="filechip">inventory/index.tsx:175</span>)
+          now equals the visible row count.</li>
+      </ul>
+    </div>
+
+    <h3 class="disp" style="margin-top:16px">Also folded in (S3 / polish)</h3>
+    <ul class="small">
+      <li><strong>The grid/list toggle is pixel-identical clutter.</strong> The list and grid modes
+        (<span class="mut">inventory/index.tsx:192</span>) render nearly the same on a phone; either differentiate
+        them meaningfully (dense chips vs. detailed rows) or drop the toggle.</li>
+      <li><strong>Fractional order progress never surfaces.</strong> A shared <code>ProgressTrack</code> primitive
+        exists (<span class="mut">ui/primitives/ProgressTrack.tsx</span>) but the inventory order state renders as a
+        bare wrapping word; show the "3/5 filled" bar the component already supports.</li>
+      <li><strong>Filters are by catalog kind, not intent.</strong> "Resources / Tools / Items"
+        (<span class="mut">inventory/index.tsx:12</span>) don't answer the real questions ("what can I sell?",
+        "what does an order need?"); add intent filters (sellable, order-needed) alongside kind.</li>
+    </ul>
+  </article>
+
+  <!-- ============================================================= Meta roster -->
+  <h2><span class="n">SC7</span>Meta roster — Workers · Castle · Bosses · Boons · Charter</h2>
+  <article class="prop" id="roster">
+    <div class="phd"><span class="pid">SC7</span><span class="sev S1">S1–S2</span><span class="eff">Effort S–M</span></div>
+    <div class="ptitle">Give the meta panels an in-game door, and put the hire action back on the worker row</div>
+    <p class="why">The Townsfolk hub holds the game's long-game systems, but two of them can't be reached without
+    the debug panel, and the one you <em>can</em> reach hides its only verb behind a tap. On mobile a worker row
+    shows just a portrait, a truncated effect, and "2/2" — the per-hire effect, the cost, and the
+    <strong>Hire</strong> button all live in the collapsed accordion body (<span class="mut">workers/index.tsx:310</span>,
+    <code>WorkerHireBody</code>). Meanwhile Castle and Bosses have <code>viewKey</code>s but are only navigated to
+    from <span class="mut">features/debug/index.tsx:34,36</span> — there is no production entry point.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">effect clipped, no hire on row</span></div>
+        <figure>
+          <img src="../shots/mobile/townsfolk-workers.png" alt="mobile worker roster, rows show portrait, truncated effect, and count only">
+          <figcaption>"Each hired Farmer trims one tile off th…", "2/2". No cost, no effect total, no Hire button
+          until you tap. Also note the header contradiction: "0 villagers · 7 hired" — the same word, two meanings
+          (spendable vs. employed).</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">effect + cost + Hire on the row</span></div>
+        <figure class="light">
+          <div class="device phone"><div class="screen">
+            <div class="gm-hud"><span class="burger">☰</span><span class="gm-pill title" style="font-size:11px">Townsfolk</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 12,500</span></div>
+            <div class="gm-bg" style="padding:9px;gap:8px">
+              <div class="gm-panel" style="padding:8px 10px;display:flex;align-items:center;gap:6px">
+                <span class="gm-title" style="font-size:13px">Hands for Hire</span><span class="gm-spacer"></span>
+                <span class="gm-status ready">🏠 3 free</span><span class="gm-status locked">7 working</span>
+              </div>
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft);letter-spacing:.08em">FARM</div>
+              <div class="gm-card" style="padding:9px 10px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:26px">🧑‍🌾</span>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px"><span class="gm-title" style="font-size:13px">Farmer</span><span class="gm-mini" style="font-weight:700">2/2</span></div>
+                    <div class="gm-mini">−2 grain chain steps (max −2)</div>
+                  </div>
+                  <span class="gm-status done">Maxed</span>
+                </div>
+              </div>
+              <div class="gm-card" style="padding:9px 10px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:26px">🪓</span>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px"><span class="gm-title" style="font-size:13px">Lumberjack</span><span class="gm-mini" style="font-weight:700">1/3</span></div>
+                    <div class="gm-mini">−1 wood chain steps (max −3)</div>
+                    <div style="display:flex;gap:4px;margin-top:4px">
+                      <span class="chip" style="margin:0;font-size:10px;padding:2px 6px">🏠 1</span>
+                      <span class="chip" style="margin:0;font-size:10px;padding:2px 6px">◉ 320</span>
+                    </div>
+                  </div>
+                  <span class="gm-cta primary" style="padding:8px 13px">＋ Hire</span>
+                </div>
+              </div>
+            </div>
+            <div class="gm-nav"><span class="t"><span class="ic">🏘️</span>Town</span><span class="t"><span class="ic">📦</span>Inv</span><span class="t"><span class="ic">🔨</span>Craft</span><span class="t"><span class="ic">🗺️</span>Map</span><span class="t on"><span class="ic">👥</span>Folk</span><span class="t"><span class="ic">📖</span>Quests</span></div>
+          </div></div>
+          <figcaption>Each row states the effect total, the next-hire cost chips (villager + coins), and a
+          <strong>＋ Hire</strong> button — or "Maxed" when full. Tap still opens the full detail. Header pills are
+          relabeled "3 free / 7 working" to kill the "0 villagers" contradiction.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">The two panels with no in-game door</span>
+    <table>
+      <thead><tr><th style="width:22%">Panel</th><th style="width:30%">Reachable today via</th><th>Fix</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Bosses gallery</strong> (<span class="filechip">bosses/index.tsx:5</span>)</td>
+          <td>Debug panel only (<span class="filechip">debug/index.tsx:34</span>).</td>
+          <td>Surface as a Townsfolk sub-tab (it already sits in that hub family); the active foe should link to the fight, not just pulse "Active".</td></tr>
+        <tr><td><strong>Castle / Capital's Call</strong> (<span class="filechip">castle/index.tsx:8</span>)</td>
+          <td>Debug panel only (<span class="filechip">debug/index.tsx:36</span>).</td>
+          <td>Gate a Town card / hub entry behind its unlock flag; and state the <em>reward</em> for completing the Call — the screen shows needs &amp; progress but never what you get (castle/index.tsx has no reward copy).</td></tr>
+      </tbody>
+    </table>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Move the effect summary + next-hire cost chips + Hire button onto the collapsed worker header, same
+          mechanism as SC5 (a header slot on <code>ExpandRow</code>, or a bespoke row) at
+          <span class="filechip">workers/index.tsx:297</span>; the data is already computed by
+          <code>computeHireInfo</code> / <code>effectSummary</code> (<span class="filechip">workers/index.tsx:129</span>).</li>
+        <li>Relabel the two header pills at <span class="filechip">workers/index.tsx:280</span> to distinguish
+          spendable villagers ("free") from employed workers ("working").</li>
+        <li>Add production routes to <code>castle</code> and <code>bosses</code> (a Townsfolk sub-tab and/or a Town
+          card), each behind its unlock flag; register in the hub, not just <code>KNOWN_VIEWS</code>.</li>
+      </ul>
+    </div>
+
+    <h3 class="disp" style="margin-top:16px">Also folded in (S3 / polish)</h3>
+    <ul class="small">
+      <li><strong>Bosses gallery is read-only even for the active foe.</strong>
+        <span class="mut">bosses/Gallery.tsx</span> renders a pulsing "Active" badge but no button to engage or
+        review the current fight; wire the active card to the boss encounter.</li>
+      <li><strong>Boons wallet icons are unlabeled.</strong> The rune/boon currency chips need a text label or a
+        press-to-explain, same as any HUD currency.</li>
+      <li><strong>Castle "Contribute 1" is fine — the reward isn't stated.</strong> (An "All (N)" batch button
+        already exists at <span class="mut">castle/index.tsx:70</span>, so the "40+ taps" concern is resolved; the
+        remaining gap is that nothing tells the player what the Capital gives back.)</li>
+      <li><strong>Charter "violated" has no stated stakes.</strong> A charter that can be "violated" must say what
+        breaking it costs; surface the consequence next to the status.</li>
+    </ul>
+  </article>
+
+  <!-- ============================================================= SC8 -->
+  <h2><span class="n">SC8</span>New findings</h2>
+  <article class="prop" id="new">
+    <div class="phd"><span class="pid">SC8</span><span class="sev NEW">NEW</span><span class="eff">from this pass</span></div>
+    <div class="ptitle">Surfaced while grounding these mockups in the panel code</div>
+    <p class="why">Not in the original report; found reading the screen code for this pass. Each was re-verified
+    against the live source (including one initial reading that did <em>not</em> hold up — see the note).</p>
+    <ul>
+      <li><strong>The recipe <code>coins</code> field is dead code.</strong> <code>grantCraftOutput</code> adds the
+        crafted item (<span class="filechip">crafting/slice.ts:80</span>) and does
+        <code>coins += (recipe.coins ?? 0)</code> (<span class="filechip">crafting/slice.ts:86</span>), and the
+        <code>RecipeDefinition</code> type declares an optional <code>coins?</code>
+        (<span class="filechip">crafting/index.tsx:37</span>) — but <strong>no recipe in <code>RECIPES</code> ever
+        sets <code>coins</code></strong> (verified across <span class="filechip">constants.ts:934–1000</span>;
+        <code>rec_bread</code> is just <code>{item, station, tier, inputs}</code>). So the branch always adds 0: a
+        harmless-but-misleading dead slot. Decide its fate — either <em>wire</em> it as a deliberate craft-for-coins
+        bonus (and show it on the row), or <em>delete</em> the field so nobody mistakes it for a live reward.
+        <span class="mut">(An earlier reading of this pass claimed crafting "double-grants" the item plus its 125◉
+        sell value; on inspection that's false — <code>recipe.coins</code> is never populated, and the loaf's 125 is
+        its <em>sell</em> value realized only when you sell it. Corrected here and in the SC5 proposal, which now
+        sources the shown value from <code>getItem(recipe.item).value</code>.)</span></li>
+      <li><strong>The Almanac claim button can enable an unclaimable tier.</strong> Because the UI's ×100 unlock
+        math (<span class="filechip">quests/index.tsx:212</span>) is looser than the reducer's ×150 level gate
+        (<span class="filechip">almanac/data.ts:120</span>), for higher tiers the CLAIM button lights up at an XP the
+        reducer rejects, so the tap no-ops with no feedback (fixed by SC3, called out here as its own defect).</li>
+      <li><strong>Mining wiki tabs also drop <code>treasure</code> entirely.</strong> Beyond the
+        <code>tile_</code>-prefix key drift (SC1), the coin-tile category <code>treasure</code>
+        (<span class="filechip">tileCatalog.ts:64</span>) has no entry in <code>CATEGORY_LABELS</code> at all, so its
+        tab is blank even after the prefix fix — the re-key must add it.</li>
+      <li><strong>The "recent" inventory sort is dead on the Storehouse.</strong> <code>useRecentOrder</code> tracks
+        deltas and is threaded through as <code>recentOrder</code> (<span class="filechip">inventory/index.tsx:139</span>),
+        but with <code>sort="alpha"</code> hardcoded the recency data is computed and never used — SC6's sort fix
+        also reclaims this.</li>
+    </ul>
+  </article>
+
+  <footer>puzzleDrag2 · Screens &amp; panels proposals · mockups are HTML built from <code>src/tokens.css</code>;
+  "Now" shots are real renders of the running game. Every <code>file:line</code> confirmed against
+  <code>src/features/*</code> on this pass.</footer>
+</main>
+</div>
+<script src="./assets/mockup.js"></script>
+</body>
+</html>

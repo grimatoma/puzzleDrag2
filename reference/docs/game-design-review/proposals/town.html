@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Town — Proposals & Mockups · puzzleDrag2 Design Review</title>
+<link rel="stylesheet" href="./assets/mockup.css">
+</head>
+<body>
+<header class="top">
+  <span class="brand">puzzleDrag2 · <span class="em">Proposals</span></span>
+  <span class="crumb"><a href="./index.html">All proposals</a> › <strong>02 · The Town</strong></span>
+  <span class="meta">before → after · grounded in <code>src/</code></span>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <a class="home" href="./index.html">← All proposals</a>
+  <div class="sep">Surfaces</div>
+  <a href="./board.html"><span class="k">01</span>The Board</a>
+  <a href="./town.html" class="active"><span class="k">02</span>The Town</a>
+  <a href="./map.html"><span class="k">03</span>World Map</a>
+  <a href="./screens.html"><span class="k">04</span>Screens & panels</a>
+  <a href="./story.html"><span class="k">05</span>Story & moments</a>
+  <a href="./shell.html"><span class="k">06</span>Shell & onboarding</a>
+  <a href="./crosscutting.html"><span class="k">07</span>Cross-cutting</a>
+  <a href="./additional-findings.html"><span class="k">08</span>Additional findings</a>
+  <div class="sep">On this page</div>
+  <a href="#t1">T1 · Living board beds</a>
+  <a href="#t2">T2 · Grass speckle noise</a>
+  <a href="#t3">T3 · Empty "Plot" ghosts</a>
+  <a href="#t4">T4 · Found-settlement sign</a>
+  <a href="#t5">T5 · CTA emphasis swap</a>
+  <a href="#t6">T6 · Harbor HUD collision</a>
+  <a href="#t7">T7 · Also folded in</a>
+  <a href="#t8">T8 · New findings</a>
+</nav>
+
+<main>
+  <p class="eyebrow">Proposals · Core surface 02</p>
+  <h1>The Town — fully-defined proposals</h1>
+  <p class="lead">The town is the game's home screen and its first impression, and the painterly Phaser render is
+  genuinely lovely — but the three <em>gameplay entrances</em> (Farm, Harbor, Mine) look like unbuilt land, a
+  double flower system speckles the whole ground into noise, and the overlay CTAs stack like a debug HUD.
+  Each proposal pairs a picture of the game <span class="chip" style="background:var(--now);color:#fff;border:0">as it is now</span>
+  with a rendered mock of <span class="chip" style="background:var(--next);color:#fff;border:0">what to build</span>,
+  and a concrete <code>file:line</code> spec.</p>
+
+  <div class="callout tldr"><p style="margin:0"><strong>Town through-line.</strong> The town already grows,
+  animates, and reads as a real place. The work is in the last 15%: (T1) dress the Farm/Harbor beds so the
+  primary entrance looks alive instead of abandoned; (T2) kill the compounding flower speckle so the ground
+  reads as painted, not dithered; (T3–T4) turn the placeholder "Plot" ghosts and the stacked found-settlement
+  boxes into in-world signage; and (T5–T6) fix an inverted CTA hierarchy and a Harbor HUD collision. None is a
+  rebuild — the Phaser scene and tokens are all in place.</p></div>
+
+  <!-- ============================================================= T1 -->
+  <article class="prop" id="t1">
+    <div class="phd">
+      <span class="pid">T1</span><span class="sev S1">S1</span><span class="eff">Effort L</span>
+      <span class="chip good">Top priority #10</span>
+    </div>
+    <div class="ptitle">Dress each board bed as a living mini-scene — the primary entrance shouldn't read as unbuilt land</div>
+    <p class="why">The Farm and Harbor boards — the whole reason to enter the puzzle — render as a flat brown
+    dirt pit and a flat blue rectangle. <code>drawBoards</code> fills each bed with a single ground tile
+    (<code>DIRT</code>/<code>WATER</code>), strokes a 2px border and drops a label plate; only the Mine bed gets
+    any props (four ore boulders). Farm gets no furrows or crops, Harbor gets no water motion or boat. Next to
+    the lavishly-detailed cottages and windmill, the <em>entrance to the game</em> looks like the one lot nobody
+    finished. <span class="mut">Bed fill + border + plate at <code>src/ui/town/TownScene.ts:688–720</code>; mine
+    boulders (the only dressed bed) at <code>:694</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">desktop, fresh town</span></div>
+        <figure>
+          <img src="../shots/desktop/shell-town-fresh.png" alt="fresh town, flat brown Farm dirt pit, two empty Plot ghosts, floating tier sign">
+          <figcaption>The "Farm" bed (lower-centre) is a featureless brown rectangle with a label — visually it
+          reads as tilled-but-empty land, not a farm you'd tap into. The mobile shot
+          (<code>town-home-built-out.png</code>) shows the same flat bed fenced but bare.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">furrows + seasonal crop + scarecrow + enter-halo</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-wrap" style="max-width:340px;margin:0 auto">
+              <!-- soil bed with furrow rows, crop sprites, scarecrow, and a tap-to-enter halo -->
+              <div style="position:relative;border-radius:14px;padding:14px 12px 12px;
+                   background:
+                     repeating-linear-gradient(90deg, #6f4a29 0 26px, #7d5731 26px 34px),
+                     linear-gradient(180deg,#7a5330,#5f3f22);
+                   border:2px solid var(--g-farm);
+                   box-shadow:0 0 0 4px rgba(90,158,46,.28), 0 6px 18px rgba(30,18,8,.4)">
+                <!-- carved label plate -->
+                <div style="position:absolute;top:-13px;left:50%;transform:translateX(-50%);
+                     background:linear-gradient(180deg,#6b4d2c,#4a3318);color:#f6e8c8;
+                     font:800 11px/1 system-ui;padding:5px 12px;border-radius:7px;border:1.5px solid #2f2012">🌾 Farm Field</div>
+                <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:6px 4px;margin-top:4px">
+                  <span style="text-align:center;font-size:17px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))">🌾</span>
+                  <span style="text-align:center;font-size:17px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))">🥕</span>
+                  <span style="text-align:center;font-size:17px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))">🌾</span>
+                  <span style="text-align:center;font-size:17px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))">🥬</span>
+                  <span style="text-align:center;font-size:17px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))">🌾</span>
+                  <span style="text-align:center;font-size:17px;filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))">🎃</span>
+                  <span style="text-align:center;font-size:17px">🥕</span>
+                  <span style="text-align:center;font-size:17px">🌾</span>
+                  <span style="text-align:center;font-size:19px">🧑‍🌾</span>
+                  <span style="text-align:center;font-size:17px">🌾</span>
+                  <span style="text-align:center;font-size:17px">🥬</span>
+                  <span style="text-align:center;font-size:17px">🌾</span>
+                </div>
+              </div>
+              <span class="gm-flag good" style="top:8px;right:-4px">furrows + crop rows read as a working farm</span>
+            </div>
+            <!-- the same pattern across all three beds -->
+            <div style="display:flex;gap:8px;margin-top:12px">
+              <div style="flex:1;text-align:center">
+                <div style="height:52px;border-radius:9px;border:2px solid var(--g-fish);position:relative;overflow:hidden;
+                     background:repeating-linear-gradient(180deg,#3f7e96 0 8px,#4a90a8 8px 12px),linear-gradient(180deg,#2f7e96,#245e70)">
+                  <span style="position:absolute;left:8px;top:8px;font-size:9px;opacity:.85">〰️〰️</span>
+                  <span style="position:absolute;right:10px;bottom:6px;font-size:18px">⛵</span>
+                </div>
+                <div class="gm-mini" style="margin-top:3px">Harbor · ripple + moored boat</div>
+              </div>
+              <div style="flex:1;text-align:center">
+                <div style="height:52px;border-radius:9px;border:2px solid var(--g-mine);position:relative;overflow:hidden;
+                     background:linear-gradient(180deg,#7a6d55,#5a5040)">
+                  <span style="position:absolute;left:9px;top:12px;font-size:16px">🪨</span>
+                  <span style="position:absolute;right:22px;top:8px;font-size:14px">⛏️</span>
+                  <span style="position:absolute;right:6px;bottom:6px;font-size:15px">🛒</span>
+                </div>
+                <div class="gm-mini" style="margin-top:3px">Mine · boulders (today) + cart</div>
+              </div>
+            </div>
+          </div>
+          <figcaption>Farm: furrow rows + season-appropriate crop sprites + a scarecrow. Harbor: animated
+          ripple/foam + a moored boat. Mine: keep the existing boulders and add a cart. Each bed also carries a
+          soft "tap to enter" halo (the green ring) so it reads as interactive, not decorative.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — how alive the beds should be</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Static dressed beds</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Furrows + a fixed cluster of crop/boat/cart props + the enter-halo, chosen once per
+        season for the current zone. <b>Pro:</b> ships now, reuses the existing prop-placement path
+        (<code>placeTownTile</code>) and seasonal tile art; big first-impression win for little code. <b>Con:</b>
+        the bed doesn't reflect how full your stockpile is.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Stateful bed</span></div>
+        <div class="tradeoff">Crop density / boat count scales with recent yield, and the bed animates a tiny
+        harvest when you exit a run. <b>Pro:</b> the town visibly reflects play. <b>Con:</b> needs a state feed
+        into the scene and per-frame work; do it as a follow-up to A, not instead of it.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>In <span class="filechip">src/ui/town/TownScene.ts:683 drawBoards</span> branch per <code>b.kind</code>:
+          for <code>farm</code>, paint a furrow variant into the DIRT bed and scatter seasonal crop props via the
+          existing <code>placeTownTile</code>/season-aware art; for <code>fish</code>, add a moored-boat prop and a
+          foam/ripple tween (reuse the <code>rowboat</code> bob at <span class="filechip">TownScene.ts:642</span>).</li>
+        <li>Add a persistent "enter" halo: a soft biome-accent ring drawn under the board container (farm =
+          <code>--biome-farm</code>, fish = <code>--biome-fish</code>, mine = <code>--biome-mine</code>), matching
+          the DOM board-entry pills so bed and pill read as one affordance.</li>
+        <li>Keep the mine's boulder scatter (<span class="filechip">TownScene.ts:694</span>); add one cart prop for
+          parity so all three beds are dressed.</li>
+        <li>Gate the ripple/boat tween behind the scene's existing reduced-motion check so it stays a still image
+          when motion is off.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= T2 -->
+  <article class="prop" id="t2">
+    <div class="phd"><span class="pid">T2</span><span class="sev S2">S2</span><span class="eff">Effort S</span></div>
+    <div class="ptitle">Stop the compounding flower speckle — one clustered system, not two per-pixel ones</div>
+    <p class="why">The grass is peppered with tiny multicoloured dots that read as dithering noise, not
+    meadow. Two independent random systems compound: the baked ground paints per-<em>pixel</em> flower specks
+    wherever a hash clears <code>0.993</code>, and the scene then <em>also</em> stamps a full
+    <code>GRASS_FLOWER</code> tile on 4% of grass cells on top. Together they cover the whole map in
+    evenly-scattered confetti. <span class="mut">Per-pixel specks at
+    <code>src/ui/town/proceduralGround.ts:291–293</code>; the 4% tile scatter at
+    <code>src/ui/town/TownScene.ts:562</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">mobile, built-out town</span></div>
+        <figure>
+          <img src="../shots/mobile/town-home-built-out.png" alt="built-out mobile town with dense multicolored flower speckle over all grass">
+          <figcaption>Every green surface is stippled with red/pink/yellow specks at a near-uniform density —
+          the eye reads it as camera noise or a compression artifact, and it flattens the depth the painterly
+          grass otherwise has.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">clustered beds, quieter field</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div style="display:flex;gap:10px">
+              <div style="flex:1">
+                <div class="gm-wrap" style="height:120px;border-radius:12px;overflow:hidden;border:1.5px solid var(--g-iron);
+                     background:radial-gradient(closest-side at 30% 40%, #86ab54, #6f9647)">
+                  <!-- dense uniform confetti -->
+                  <div style="position:absolute;inset:0;background-image:
+                    radial-gradient(rgba(220,80,120,.9) 1px, transparent 1px),
+                    radial-gradient(rgba(240,210,70,.9) 1px, transparent 1px),
+                    radial-gradient(rgba(215,105,168,.9) 1px, transparent 1px);
+                    background-size:13px 13px, 17px 15px, 11px 19px;
+                    background-position:0 0, 5px 8px, 9px 3px"></div>
+                  <span class="gm-flag bad" style="bottom:6px;left:6px">two systems → uniform noise</span>
+                </div>
+                <div class="gm-mini center" style="margin-top:4px">NOW · speckle everywhere</div>
+              </div>
+              <div style="flex:1">
+                <div class="gm-wrap" style="height:120px;border-radius:12px;overflow:hidden;border:1.5px solid var(--g-iron);
+                     background:radial-gradient(closest-side at 35% 35%, #82a557, #6b8f4c)">
+                  <!-- a couple of intentional clusters, desaturated -->
+                  <div style="position:absolute;left:16%;top:30%;font-size:12px;filter:saturate(.8)">🌼🌸<br>🌸🌼</div>
+                  <div style="position:absolute;right:14%;bottom:14%;font-size:12px;filter:saturate(.8)">🌷🌼<br>🌸</div>
+                  <span class="gm-flag good" style="bottom:6px;left:6px">clusters read as flower beds</span>
+                </div>
+                <div class="gm-mini center" style="margin-top:4px">PROPOSED · one clustered system</div>
+              </div>
+            </div>
+          </div>
+          <figcaption>Drop the per-pixel specks entirely; keep a single tile-scatter but lower it to ~1.2% and
+          <em>cluster</em> the placements (seed a few patches, grow neighbours) so flowers read as intentional
+          beds. Desaturate the flower palette ~20% so it sits inside the painterly grass instead of vibrating on it.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Options — which system survives</span>
+    <div class="opts two">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · One clustered tile system</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Delete the per-pixel specks; keep the tile scatter but cluster it and drop the rate
+        to ~0.012. <b>Pro:</b> one place to tune, reads as flower beds, cheapest baked ground. <b>Con:</b> loses
+        the sub-tile fleck detail (which was the noise anyway).</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Keep both, tuned</span></div>
+        <div class="tradeoff">Keep per-pixel specks but raise the threshold well past <code>0.993</code> and
+        desaturate; keep the tile scatter but clustered. <b>Pro:</b> retains fine baked-in texture. <b>Con:</b>
+        two knobs to balance forever; easy to drift back to noise.</div>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Remove (or gate off) the per-pixel flower branch at
+          <span class="filechip">src/ui/town/proceduralGround.ts:291</span> — the <code>fh &gt; 0.993</code> speck
+          write; it is the dominant noise source.</li>
+        <li>In <span class="filechip">src/ui/town/TownScene.ts:554 scatterGroundDetail</span>, lower the flower
+          rate from <code>0.04</code> (line 562) to ~<code>0.012</code> and cluster: when a cell wins the roll,
+          also flower 2–3 seeded neighbours instead of scattering independently.</li>
+        <li>Desaturate the <code>GRASS_FLOWER</code> palette ~20% (in the flower tile art / <code>C.flower</code>
+          colours) so it recedes into the grass.</li>
+        <li>Add a golden-image assertion on the home-town render so speckle density can't silently regress.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= T3 -->
+  <article class="prop" id="t3">
+    <div class="phd"><span class="pid">T3</span><span class="sev S2">S2</span><span class="eff">Effort S–M</span></div>
+    <div class="ptitle">Turn the "Plot" ghosts into in-world buildable land — and make them tappable always</div>
+    <p class="why">Empty lots render as a white-on-14%-black rounded rectangle labelled "Plot". Floating over the
+    painterly map they read as unfinished placeholder UI, and they're <em>inert</em> outside build mode — the tap
+    zone is only added when <code>isPlacing</code> is true, so a curious player tapping a "Plot" gets nothing and
+    no hint of how to build. <span class="mut">Ghost rect + "Plot" label at
+    <code>src/ui/town/TownScene.ts:773–784</code>; hit-zone gated on <code>isPlacing</code> at
+    <code>:788</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">translucent placeholder box</span></div>
+        <figure>
+          <div class="gm" style="padding:14px">
+            <div class="gm-wrap" style="height:150px;border-radius:12px;overflow:hidden;border:1.5px solid var(--g-iron);
+                 background:radial-gradient(closest-side at 40% 40%,#82a557,#6b8f4c);display:flex;align-items:center;justify-content:center">
+              <div style="width:96px;height:78px;border-radius:8px;border:2.5px solid rgba(255,255,255,.4);
+                   background:rgba(0,0,0,.14);display:flex;align-items:center;justify-content:center;
+                   color:#fff;font:700 13px/1 Arial">Plot</div>
+              <span class="gm-flag bad" style="top:8px;right:8px">reads as broken UI · inert unless placing</span>
+            </div>
+          </div>
+          <figcaption>A grey translucent box with a bare "Plot" label. Nothing about it says "buildable land",
+          and tapping it does nothing until you've already entered build mode from elsewhere.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">cleared lot + signpost, tappable</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:14px">
+            <div class="gm-wrap" style="height:150px;border-radius:12px;overflow:hidden;border:1.5px solid var(--g-iron);
+                 background:radial-gradient(closest-side at 40% 40%,#82a557,#6b8f4c);display:flex;align-items:center;justify-content:center">
+              <div style="position:relative;width:100px;height:80px;border-radius:8px;
+                   border:2.5px dashed #b98a1e;
+                   background:radial-gradient(120% 120% at 50% 30%, rgba(255,240,190,.55), rgba(180,150,90,.28));
+                   display:flex;align-items:flex-end;justify-content:center;padding-bottom:8px">
+                <div style="background:linear-gradient(180deg,#6b4d2c,#4a3318);color:#f6e8c8;
+                     font:800 10px/1 system-ui;padding:5px 9px;border-radius:6px;border:1.5px solid #2f2012;transform:translateY(4px)">🪧 For Build</div>
+              </div>
+              <span class="gm-flag good" style="top:8px;right:8px">sunlit cleared lot · tap to build</span>
+            </div>
+          </div>
+          <figcaption>A cleared, sunlit patch ringed by a dashed picket/rope line with a little carved "For
+          Build" signpost. It reads as prepared ground, and it's tappable anytime — a tap opens the build picker
+          pre-targeted to that lot.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Replace the ghost rect at <span class="filechip">src/ui/town/TownScene.ts:773</span> with a dashed
+          picket/rope border + a warm sunlit-grass fill, and swap the "Plot" text for a small signpost prop
+          (reuse <code>placeTownTile("signpost", …)</code>).</li>
+        <li>Add the plot hit-zone unconditionally (not only when <code>isPlacing</code>) at
+          <span class="filechip">src/ui/town/TownScene.ts:788</span>: outside build mode a tap emits a new
+          <code>town.plotpoke</code> event that opens the build picker seeded to that <code>lotIndex</code>;
+          inside build mode it keeps the current <code>town.placebuilding</code> behaviour.</li>
+        <li>Wire the new event through <span class="filechip">src/ui/TownPhaserCanvas.tsx:241</span> alongside the
+          existing <code>town.clickboard</code> handler, and open <code>BuildPicker</code> from
+          <span class="filechip">src/ui/Town.tsx:480</span> with the poked plot pre-selected.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= T4 -->
+  <article class="prop" id="t4">
+    <div class="phd"><span class="pid">T4</span><span class="sev S2">S2</span><span class="eff">Effort S</span></div>
+    <div class="ptitle">Collapse the found-settlement stack into one carved-wood signpost card</div>
+    <p class="why">Arriving at an unfounded settleable zone stacks three floating boxes top-centre: a dark
+    "<em>{name} isn't yours yet</em>" pill, the Found button, and (when blocked) a dark-red reason chip. The
+    button itself was already given a carved-wood look via <code>signStyle</code>, but the two translucent boxes
+    bracketing it still read as a debug overlay dropped on the map. <span class="mut">Stacked boxes at
+    <code>src/ui/Town.tsx:114–141</code>; the <code>signStyle</code> helper at <code>:72</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">three floating boxes</span></div>
+        <figure>
+          <div class="gm" style="padding:16px;background:radial-gradient(closest-side at 50% 30%,#82a557,#6b8f4c);border-radius:12px">
+            <div class="gm-wrap" style="display:flex;flex-direction:column;align-items:center;gap:5px">
+              <div style="background:rgba(15,14,20,.85);color:#fff;font:700 10px/1 system-ui;padding:5px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.18)">Mistmoor Fen isn't yours yet</div>
+              <div style="background:linear-gradient(180deg,#6b4d2c,#4a3318);color:#f6e8c8;font:800 11px/1 system-ui;padding:8px 14px;border-radius:9px;border:2px solid #2f2012">🏗 Found this settlement · 40 Plank · 200◉</div>
+              <div style="background:rgba(120,30,30,.85);color:#fff;font:700 9px/1 system-ui;padding:3px 8px;border-radius:5px;border:1px solid rgba(255,255,255,.2)">Complete your first settlement first</div>
+              <span class="gm-flag bad" style="top:-6px;right:-6px">3 stacked boxes = debug HUD</span>
+            </div>
+          </div>
+          <figcaption>Three separate overlays — a translucent title pill, the sign button, and a red reason
+          chip — floating unanchored over the map. The composite reads as scaffolding, not a place.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">one signpost card</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:16px;background:radial-gradient(closest-side at 50% 30%,#82a557,#6b8f4c);border-radius:12px">
+            <div class="gm-wrap" style="max-width:250px;margin:0 auto">
+              <div style="background:linear-gradient(180deg,#6b4d2c,#4a3318);border:2px solid #2f2012;border-radius:12px;
+                   padding:12px 14px;box-shadow:0 6px 18px rgba(30,18,8,.5);text-align:center;color:#f6e8c8">
+                <div class="disp" style="font-weight:700;font-size:15px">🪧 Found Mistmoor Fen</div>
+                <div style="display:flex;gap:6px;justify-content:center;margin:9px 0 8px;flex-wrap:wrap">
+                  <span class="gm-status done" style="background:#e3f0d4;border-color:var(--g-moss);color:#2f4d17">40/40 Plank</span>
+                  <span class="gm-status need">120/200 ◉</span>
+                </div>
+                <div style="font:700 10px/1.3 system-ui;color:#e8cfa0;background:rgba(0,0,0,.28);border-radius:6px;padding:5px 8px">🔒 Complete your first settlement first</div>
+              </div>
+              <span class="gm-flag good" style="top:-6px;right:-6px">one in-world sign</span>
+            </div>
+          </div>
+          <figcaption>A single carved-wood signpost card: the title, a <code>RequirementChips</code> cost row
+          (each chip green/amber by whether you can pay it), and one lock line for the gate. When affordable the
+          whole card becomes the CTA and takes the gold accent.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>Rewrite <span class="filechip">src/ui/Town.tsx:112 FoundSettlementBanner</span>'s return to one
+          wood-styled card (reuse <code>signStyle(blocked, …)</code> at <span class="filechip">:72</span> for the
+          fill) containing: the title, a <code>RequirementChip</code> row built from
+          <code>settlementFoundingCost(state).resources</code>, and a single lock line from
+          <code>blockedReason</code>. Drop the separate title pill (<span class="filechip">:117</span>) and reason
+          chip (<span class="filechip">:133</span>).</li>
+        <li>Apply the same single-card treatment to <span class="filechip">src/ui/Town.tsx:162 TierUpgradeBanner</span>
+          so the two settlement signs share one component (see also T7 — anchoring them to the town centre).</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= T5 -->
+  <article class="prop" id="t5">
+    <div class="phd"><span class="pid">T5</span><span class="sev S2">S2</span><span class="eff">Effort S</span></div>
+    <div class="ptitle">Swap the CTA emphasis — the entrance should be loud, "Build" should be quiet</div>
+    <p class="why">The visual weight is inverted. "Enter Farm Field" — the primary action, the thing the town
+    exists to lead you to — is a pale cream pill (<code>#fbf4e2</code>) with only a thin biome-accent border,
+    while "Build" is a loud filled green gradient. So the eye is pulled to the secondary economy action and away
+    from the game. <span class="mut">Enter pill fill at <code>src/ui/Town.tsx:454</code>; Build green gradient at
+    <code>:413</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">Enter pale · Build loud</span></div>
+        <figure>
+          <div class="gm" style="padding:16px;background:radial-gradient(closest-side at 50% 60%,#82a557,#6b8f4c);border-radius:12px">
+            <div class="gm-wrap" style="display:flex;justify-content:space-between;align-items:center">
+              <span class="gm-cta" style="background:#fbf4e2;border-color:var(--g-farm);color:var(--g-ink)">➜ Enter Farm Field</span>
+              <span class="gm-cta primary">🔨 Build · 2/3 plots</span>
+              <span class="gm-flag bad" style="top:-8px;left:50%;transform:translateX(-50%)">primary action is the pale one</span>
+            </div>
+          </div>
+          <figcaption>Both pills are visible together at the bottom of the town (see the T1/T2 screenshots). The
+          filled green "Build" out-shouts the washed-cream "Enter" — the hierarchy points at the wrong thing.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">Enter filled biome · Build soft</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:16px;background:radial-gradient(closest-side at 50% 60%,#82a557,#6b8f4c);border-radius:12px">
+            <div class="gm-wrap" style="display:flex;justify-content:space-between;align-items:center">
+              <span class="gm-cta" style="background:linear-gradient(180deg,#5a9e2e,#41791f);border-color:#2f5a14;color:#fff">➜ Enter Farm Field</span>
+              <span class="gm-cta ghost">🔨 Build · 2 free</span>
+              <span class="gm-flag good" style="top:-8px;left:50%;transform:translateX(-50%)">entrance leads the eye</span>
+            </div>
+          </div>
+          <figcaption>"Enter" takes the filled biome accent (green for farm, blue for mine, teal for harbor) so
+          the entrance is the loudest thing on the map; "Build" drops to a soft parchment/ghost pill. Same shapes,
+          reversed weight. (The label fix in T7 also lands here.)</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>At <span class="filechip">src/ui/Town.tsx:452</span> give the unlocked board-entry pill a filled
+          <code>biomeAccent</code> background with white text (keep locked = the muted <code>#cdbfa6</code>),
+          instead of the cream <code>#fbf4e2</code> fill.</li>
+        <li>At <span class="filechip">src/ui/Town.tsx:413</span> soften the "Build" pill to a parchment/ghost fill
+          (<code>--paper-soft</code> + iron border) in its idle state; keep the danger-red "Cancel placement"
+          state loud since that one <em>should</em> grab attention.</li>
+        <li>No layout change — both already share the pill shape + shadow, so this is purely the fill/weight swap.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= T6 -->
+  <article class="prop" id="t6">
+    <div class="phd"><span class="pid">T6</span><span class="sev S2">S2</span><span class="eff">Effort S</span></div>
+    <div class="ptitle">Harbor HUD: let the settlement name truncate so it stops colliding with the Tide pill</div>
+    <p class="why">In a fishing settlement the HUD shows the settlement name, a Tide pill, and the coin/level
+    pills at once. The name span is <code>flex-shrink-0</code>, so on a narrow phone it refuses to shrink and
+    shoves the centred Tide chip into the coins — the three overlap. <span class="mut">Non-shrinking name span at
+    <code>src/ui/Hud.tsx:180</code>; Tide shown in town/board for fish zones at <code>:143</code>; centre group at
+    <code>:203</code>.</span></p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">name + tide + coins collide</span></div>
+        <figure>
+          <div class="gm" style="padding:10px">
+            <div class="device phone" style="max-width:250px"><div class="screen">
+              <div class="gm-hud" style="gap:3px;flex-wrap:nowrap">
+                <span class="burger">≡</span>
+                <span class="gm-pill title" style="flex:none;white-space:nowrap">Saltmarsh Landing</span>
+                <span class="gm-pill" style="flex:none;background:#dff0f4;border-color:var(--g-fish);color:#1c5563;padding:3px 6px">🌊 High ·3</span>
+                <span class="gm-pill gold" style="flex:none;padding:3px 6px">◉ 12,500</span>
+                <span class="gm-pill ember" style="flex:none;padding:3px 6px">Lv 3</span>
+              </div>
+              <div class="gm-bg" style="align-items:center;justify-content:center"><span class="gm-mini">harbor town…</span></div>
+            </div></div>
+            <span class="gm-flag bad" style="top:16px;right:8px">title won't shrink → overlap</span>
+          </div>
+          <figcaption>The long settlement name (<code>flex-shrink-0</code>) plus the Tide pill plus coins can't
+          all fit; on real phones they overprint each other.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">truncate title · tide → icon</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:10px">
+            <div class="device phone" style="max-width:250px"><div class="screen">
+              <div class="gm-hud" style="gap:4px;flex-wrap:nowrap">
+                <span class="burger">≡</span>
+                <span class="gm-pill title" style="min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">Saltmarsh Lan…</span>
+                <span class="gm-spacer"></span>
+                <span class="gm-pill" style="flex:none;background:#dff0f4;border-color:var(--g-fish);color:#1c5563;padding:3px 6px" title="High Tide · 3">🌊</span>
+                <span class="gm-pill gold" style="flex:none;padding:3px 6px">◉ 12,500</span>
+                <span class="gm-pill ember" style="flex:none;padding:3px 6px">Lv 3</span>
+              </div>
+              <div class="gm-bg" style="align-items:center;justify-content:center"><span class="gm-mini">harbor town…</span></div>
+            </div></div>
+            <span class="gm-flag good" style="top:16px;right:8px">title truncates · tide compact</span>
+          </div>
+          <figcaption>Give the title <code>min-w-0</code> + truncation so it yields first; on narrow widths the
+          Tide pill collapses to its icon (full "High Tide · 3" moves into the tap/coins popover). Everything
+          fits with breathing room.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <div class="spec">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li>At <span class="filechip">src/ui/Hud.tsx:180</span> drop <code>flex-shrink-0</code> from the title
+          span, add <code>min-w-0</code> + <code>truncate</code> so the name is the first thing to give up width.</li>
+        <li>In <code>TideChip</code> (rendered at <span class="filechip">src/ui/Hud.tsx:213</span>) add a narrow
+          variant: below a breakpoint show only the tide icon with the label in <code>title</code>/the currency
+          popover, matching how coins already fold detail into a popover at <span class="filechip">:219</span>.</li>
+        <li>Add an e2e/visual assertion at a 360px width that the HUD children don't overlap in a fish zone.</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- ============================================================= T7 -->
+  <article class="prop" id="t7">
+    <div class="phd"><span class="pid">T7</span><span class="sev S3">S3 / polish</span><span class="eff">Effort S each</span></div>
+    <div class="ptitle">Also folded in — smaller town coherence fixes</div>
+    <p class="why">Lower-severity items found in the same files; each is a small, isolated change.</p>
+    <ul class="small">
+      <li><strong>Divergent town renderers — mostly resolved, one stale spot.</strong> The report's premise
+        (placement mode drops to a flat SVG grid) doesn't reproduce: the game renders <em>everything</em> —
+        including placement — through the Phaser scene (<span class="filechip">src/ui/town/TownScene.ts:770
+        rebuildBuildingsAndPlots</span> draws the green "+ Build" plots in-canvas). The only remaining low-fidelity
+        town is the Dev-Panel <em>wiki</em>'s static SVG (<span class="filechip">src/balanceManager/wiki/EntityVisual.tsx:139
+        ZoneTownMap</span>), which mirrors <code>buildTownPlan</code>. Fix: either bring that SVG to visual parity
+        or replace it with a baked Phaser snapshot, and add a test asserting the game's placement path never
+        mounts a non-Phaser renderer. (See also T8.)</li>
+      <li><strong>Settlement signs float unanchored.</strong> Both the Found and Tier-up signs are
+        <code>absolute top-12</code> overlays (<span class="filechip">src/ui/Town.tsx:187</span>), so they hover in
+        dead sky rather than standing in the town — the code comment at <span class="filechip">:66</span> even
+        says they "should read as an in-world signpost." Anchor the card to the town-centre plaza in world space
+        (or add a post/stake graphic + ground shadow) so it plants in the map.</li>
+      <li><strong>Default camera is zoomed too far in on portrait.</strong> Resting framing uses
+        <code>coverZoom()</code> (fill-the-viewport, no letterbox) at <span class="filechip">src/ui/town/TownScene.ts:975
+        restCamera</span>, so on a tall phone the town is cropped and you only see a slice on first load. Offer a
+        gentle "fit-to-content" default (contain, with a small margin) so the whole settlement is legible at rest;
+        the player can still pinch in.</li>
+      <li><strong>Locked board entry is under-communicated.</strong> The reason a board is locked lives only in a
+        <code>title</code> attribute (<span class="filechip">src/ui/Town.tsx:450</span>) — invisible on touch.
+        Surface it as a small lock chip on the pill (e.g. "🔒 Needs the Harbor Dock") or a tap-toast, so mobile
+        players learn why.</li>
+      <li><strong>"Build · N/M plots" polarity is backwards.</strong> The label reads
+        <code>Build · {freePlots}/{plotCount}</code> (<span class="filechip">src/ui/Town.tsx:423</span>), where the
+        numerator is <em>free</em> plots — but "2/3" universally reads as "2 of 3 used". Relabel to "Build · 2
+        free" or "1/3 built" so the number matches intuition. (Reflected in the T5 proposed pill.)</li>
+    </ul>
+  </article>
+
+  <!-- ============================================================= T8 -->
+  <article class="prop" id="t8">
+    <div class="phd"><span class="pid">T8</span><span class="sev NEW">NEW</span><span class="eff">from this pass</span></div>
+    <div class="ptitle">New findings surfaced while grounding these mockups</div>
+    <p class="why">Items not in the original report (or where the report is now stale), found reading the town
+    code for this proposal pass. Verify against the live build before scheduling.</p>
+    <ul>
+      <li><strong>The "flat SVG-grid fallback in placement mode" finding is stale.</strong> Current placement is
+        Phaser-native (<span class="filechip">src/ui/town/TownScene.ts:747/770</span> silence the board zones and
+        draw the "+ Build" plots in-canvas while <code>isPlacing</code>); there is no separate SVG grid in the game
+        view. The divergence the report saw now only exists in the Dev-Panel wiki (T7). The S3 should be
+        re-scoped from "game placement downgrades" to "the wiki ships a second, lower-fi town look."</li>
+      <li><strong>The furrow system already exists but never reaches the board beds.</strong> The baked ground
+        <em>does</em> draw soil furrows — but only for <code>spec.field</code> parcels
+        (<span class="filechip">src/ui/town/proceduralGround.ts:295–305</span>), not for the DIRT tiles
+        <code>drawBoards</code> stamps. T1 can reuse that exact furrow math for the Farm bed rather than inventing
+        new art — cheaper than it looks.</li>
+      <li><strong>Board label plates are hard-coded Arial, off the type system.</strong> The Farm/Mine/Harbor
+        plates use <code>fontFamily: "Arial"</code> (<span class="filechip">src/ui/town/TownScene.ts:718</span>),
+        as do the "Plot"/"+ Build" labels (<span class="filechip">:781</span>) — so the one bit of in-world text
+        ignores the Fraunces/display stack every other surface uses. Route them through the display font when T1/T3
+        redraw those plates.</li>
+      <li><strong>Villager count ignores town scale.</strong> <code>spawnVillagers</code> caps at 4–7 by waypoint
+        count (<span class="filechip">src/ui/town/TownScene.ts:835</span>); a fully built-out city and a two-plot
+        hamlet feel similarly populated. Consider scaling villager density with tier so growth reads as "busier,"
+        reinforcing the settlement-growth fantasy.</li>
+    </ul>
+  </article>
+
+  <footer>puzzleDrag2 · Town proposals · mockups are HTML built from <code>src/tokens.css</code>; "Now"
+  desktop/mobile shots are real renders of the running game.</footer>
+</main>
+</div>
+<script src="./assets/mockup.js"></script>
+</body>
+</html>
