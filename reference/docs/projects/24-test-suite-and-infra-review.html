@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test Suite &amp; Testing-Infra Health Review (doc 24)</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --ink:#1b2130; --muted:#667085; --line:#e3e7ef; --bg:#f5f8fb;
+    --paper:#ffffff; --code:#eef2f9;
+    --accent:#1f8a70;       /* verdigris green — "verified / passing"   */
+    --accent2:#c2410c;      /* rust — "rot / drift"                     */
+    --shadow:0 1px 2px rgba(20,28,48,.06), 0 6px 20px -10px rgba(20,28,48,.22);
+    --ok:#2f9e44; --warn:#e8830c; --info:#1971c2; --danger:#c02f2f; --idle:#868e96;
+    --serif:"Fraunces",Georgia,"Times New Roman",serif;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --mono:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    font:400 16px/1.64 var(--sans); color:var(--ink); margin:0;
+    background:
+      radial-gradient(1200px 520px at 84% -8%, color-mix(in srgb,var(--accent) 9%,transparent), transparent 60%),
+      radial-gradient(1000px 460px at -10% 4%, color-mix(in srgb,var(--accent2) 8%,transparent), transparent 55%),
+      linear-gradient(180deg, var(--bg) 0%, #eceff6 100%);
+    background-attachment:fixed; background-color:var(--bg);
+  }
+  a{color:var(--accent);text-decoration:none;} a:hover{text-decoration:underline;}
+  code{background:var(--code);padding:.08rem .36rem;border-radius:4px;font:.83em var(--mono);color:#345; word-break:break-word;}
+  pre{background:#10182a;color:#dbe4f3;padding:.9rem 1.05rem;border-radius:10px;overflow-x:auto;box-shadow:var(--shadow);font:.82rem/1.5 var(--mono);}
+  pre code{background:none;padding:0;color:inherit;}
+  .page{max-width:1080px;margin:0 auto;padding:1.5rem 1.25rem 5rem;}
+
+  header.hero{
+    border-bottom:3px solid var(--accent); padding:1.6rem 1.7rem 1.2rem; margin-bottom:1.1rem;
+    background:linear-gradient(135deg, color-mix(in srgb,var(--accent) 11%,transparent), color-mix(in srgb,var(--accent2) 7%,transparent));
+    border-radius:14px 14px 6px 6px; box-shadow:var(--shadow);
+  }
+  header.hero h1{font:800 2.6rem/1.06 var(--serif);letter-spacing:-.018em;margin:.1rem 0 .35rem;color:var(--ink);}
+  .sub{color:#374151;font-size:1.05rem;margin:.2rem 0 .8rem;max-width:74ch;}
+  .meta{font-size:.82rem;color:var(--muted);margin:.4rem 0 .75rem;}
+  .meta b{color:var(--accent);font-weight:700;}
+  .chips{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .chip{font-size:.77rem;font-weight:600;padding:.2rem .6rem;border-radius:999px;background:color-mix(in srgb,var(--accent) 12%,#fff);color:#12715c;border:1px solid color-mix(in srgb,var(--accent) 30%,#fff);}
+  .chip.alt{background:color-mix(in srgb,var(--accent2) 12%,#fff);color:#9a3412;border-color:color-mix(in srgb,var(--accent2) 32%,#fff);}
+
+  nav.toc{position:sticky;top:0;z-index:20;display:flex;flex-wrap:wrap;gap:.3rem;padding:.6rem .5rem;margin:0 0 1.6rem;
+    background:color-mix(in srgb,var(--paper) 86%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);border-radius:0 0 10px 10px;}
+  nav.toc a{font:600 .82rem/1 var(--sans);padding:.4rem .6rem;border-radius:7px;color:var(--muted);}
+  nav.toc a:hover{color:var(--ink);background:color-mix(in srgb,var(--accent) 9%,transparent);text-decoration:none;}
+
+  section{scroll-margin-top:3.6rem;}
+  h2{font:800 1.75rem/1.15 var(--serif);letter-spacing:-.01em;margin-top:0;border-bottom:1px solid var(--line);padding-bottom:.25rem;color:var(--ink);}
+  section + section h2{margin-top:2.6rem;}
+  h3{font:600 1.18rem/1.28 var(--serif);margin-top:1.6rem;color:var(--ink);}
+  h3 .n{color:var(--accent2);font-weight:700;font-family:var(--mono);font-size:.82em;margin-right:.35rem;}
+  p{max-width:82ch;} li{max-width:80ch;}
+
+  .card{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:1rem 1.2rem;box-shadow:var(--shadow);margin:1rem 0;}
+  .lede{font-size:1.06rem;border-left:4px solid var(--accent);background:color-mix(in srgb,var(--accent) 6%,#fff);border-radius:0 10px 10px 0;padding:.85rem 1.15rem;margin:1rem 0;}
+  .lede.warn{border-left-color:var(--accent2);background:color-mix(in srgb,var(--accent2) 6%,#fff);}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:.7rem;margin:1.1rem 0;}
+  .stat{background:var(--paper);border:1px solid var(--line);border-radius:11px;padding:.75rem .85rem;box-shadow:var(--shadow);}
+  .stat .num{font:800 1.7rem/1 var(--serif);color:var(--ink);}
+  .stat .lbl{font-size:.76rem;color:var(--muted);margin-top:.28rem;line-height:1.35;}
+  .stat.good .num{color:var(--ok);} .stat.bad .num{color:var(--danger);} .stat.warnn .num{color:var(--warn);}
+
+  .sev{display:inline-block;font:700 .68rem/1 var(--sans);letter-spacing:.03em;text-transform:uppercase;padding:.24rem .5rem;border-radius:6px;vertical-align:middle;margin-right:.5rem;}
+  .sev.high{background:#fbe6e6;color:#a12525;border:1px solid #f0c2c2;}
+  .sev.med{background:#fdf0dd;color:#9a5a06;border:1px solid #f4d9ac;}
+  .sev.low{background:#e7f0fb;color:#1d5aa0;border:1px solid #c6dcf3;}
+  .sev.good{background:#e4f4e7;color:#217a35;border:1px solid #bfe3c7;}
+  .tag{display:inline-block;font:700 .68rem/1 var(--mono);padding:.2rem .45rem;border-radius:5px;margin-left:.35rem;vertical-align:middle;}
+  .tag.conf{background:#e4f4e7;color:#1d6b30;border:1px solid #bfe3c7;}
+  .tag.part{background:#fdf0dd;color:#8a5206;border:1px solid #f4d9ac;}
+  .tag.ref{background:#eceef2;color:#556;border:1px solid #d6dbe4;}
+
+  .find{border:1px solid var(--line);border-left:4px solid var(--idle);border-radius:9px;padding:.75rem .95rem;margin:.7rem 0;background:var(--paper);box-shadow:var(--shadow);}
+  .find.high{border-left-color:var(--danger);} .find.med{border-left-color:var(--warn);} .find.low{border-left-color:var(--info);} .find.good{border-left-color:var(--ok);}
+  .find h4{margin:.1rem 0 .4rem;font:700 1.02rem/1.35 var(--sans);}
+  .find .ev{font-size:.9rem;color:#3d4657;}
+  .find .ev b{color:var(--ink);}
+  .find .fix{font-size:.9rem;margin-top:.45rem;color:#245;}
+  .find .fix::before{content:"→ ";color:var(--accent);font-weight:700;}
+
+  table{border-collapse:collapse;width:100%;margin:1rem 0;font-size:.87rem;background:var(--paper);border-radius:10px;overflow:hidden;box-shadow:var(--shadow);}
+  th,td{border-bottom:1px solid var(--line);padding:.5rem .65rem;text-align:left;vertical-align:top;}
+  th{background:color-mix(in srgb,var(--accent) 8%,#fff);font-weight:700;font-size:.78rem;text-transform:uppercase;letter-spacing:.02em;color:#2a3342;}
+  tr:last-child td{border-bottom:none;}
+  td code{font-size:.8em;}
+  .eff{font:700 .72rem/1 var(--mono);padding:.18rem .4rem;border-radius:5px;background:#eef2f9;color:#3a4a63;}
+
+  ul.clean{list-style:none;padding-left:0;} ul.clean li{padding-left:1.4rem;position:relative;margin:.35rem 0;}
+  ul.clean li::before{content:"▸";position:absolute;left:.2rem;color:var(--accent);}
+  ul.keep li::before{content:"✓";color:var(--ok);}
+  ul.kill li::before{content:"✕";color:var(--danger);}
+
+  footer{margin-top:3rem;padding-top:1rem;border-top:1px solid var(--line);color:var(--muted);font-size:.82rem;}
+  @media (max-width:640px){header.hero h1{font-size:2rem;} .page{padding:1rem .8rem 4rem;}}
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="hero">
+  <h1>Test Suite &amp; Testing-Infra Health Review</h1>
+  <div class="sub">An audit of every test and every testing gate in puzzleDrag2 — which tests are <em>valid</em>, which have quietly gone out of date, and what to do about it. The suite is large and green; the problems are concentrated and specific.</div>
+  <div class="meta">Project brief <b>24</b> · reference/docs/projects · verified against <b>HEAD</b> (branch <code>claude/test-suite-infra-review-6y0z2f</code>) · authored from the source, not the docs</div>
+  <div class="chips">
+    <span class="chip">369 vitest files · 4,136 tests</span>
+    <span class="chip">20 e2e specs · ~63 tests</span>
+    <span class="chip">110 visual goldens</span>
+    <span class="chip alt">reviewed via 40-agent adversarial audit</span>
+  </div>
+</header>
+
+<nav class="toc">
+  <a href="#tldr">TL;DR</a>
+  <a href="#healthy">What's healthy</a>
+  <a href="#rotted">Rotted guards</a>
+  <a href="#vacuous">Vacuous / name-lie</a>
+  <a href="#phased">Phased suites</a>
+  <a href="#coverage">Coverage gate</a>
+  <a href="#meta">Meta/schema tests</a>
+  <a href="#ci">CI gating</a>
+  <a href="#visual">Visual</a>
+  <a href="#e2e">E2E</a>
+  <a href="#infra">Infra health</a>
+  <a href="#tooling">Non-vitest tooling</a>
+  <a href="#proposals">Proposals</a>
+  <a href="#donttouch">Don't touch</a>
+  <a href="#appendix">Appendix</a>
+</nav>
+
+<main>
+
+<!-- ══════════════════════════════ TLDR ══════════════════════════════ -->
+<section id="tldr">
+  <h2>TL;DR</h2>
+
+  <div class="stats">
+    <div class="stat good"><div class="num">4,136</div><div class="lbl">unit tests passing · 2 skipped · 0 failing · ~128 s</div></div>
+    <div class="stat"><div class="num">~95%</div><div class="lbl">of test files are valid (meaningfully verify current behavior)</div></div>
+    <div class="stat bad"><div class="num">0</div><div class="lbl">gating coverage of the entire UI / canvas layer</div></div>
+    <div class="stat bad"><div class="num">2</div><div class="lbl">drift-guards that have rotted into always-pass no-ops</div></div>
+    <div class="stat warnn"><div class="num">3</div><div class="lbl">whole test layers that run but <em>don't gate</em> merges (e2e, visual, coverage-of-UI)</div></div>
+  </div>
+
+  <div class="lede">
+    <b>The suite is not broken — it is green, and most of it is genuinely valid.</b> The feeling that "things are going out of date" is real, but it is <em>not</em> a story of thousands of stale tests. It is three specific stories:
+  </div>
+
+  <ol>
+    <li><b>A few guards have silently rotted into no-ops</b> — tests that <em>look</em> like they protect a contract but, after the TS migration or a hand-copied list drifted, can no longer fail. These are worse than no test: they lie to the next reader.</li>
+    <li><b>The <em>gates</em> went out of date, not the tests.</b> Green ≠ protected. The e2e suite, the visual suite, and all UI/canvas code run but do not block a merge — so they can rot again undetected, exactly as e2e already did once (<a href="09-ci-e2e-gate-findings.md">doc 09</a>).</li>
+    <li><b>Rapid growth left sediment</b> — 237 commits in one week produced a copy-not-moved "phased" shadow suite, a coverage-padding family, and ~315 weak assertions. Individually minor; collectively they inflate the count and the maintenance surface without adding protection.</li>
+  </ol>
+
+  <p><b>Are they all valid?</b> No — but the invalid fraction is small and nameable. The adversarial pass <em>refuted</em> three of the auditors' own "delete this" claims, defending tests that turned out to be load-bearing (see <a href="#donttouch">Don't touch</a>). The honest headline is: <b>a mostly-healthy suite with a rotted gate layer and a dozen genuinely dead/misleading tests.</b></p>
+
+  <div class="card">
+    <b>Methodology (so you can trust the numbers).</b> Every one of the 369 vitest files was read by one of 16 auditor agents, each cross-referencing the <em>source under test</em> (not the reference docs — per <code>CLAUDE.md</code>, the code is truth). Every "this test is invalid" claim was then handed to an independent <em>adversarial verifier</em> told to refute it by reading the actual source; only claims that survived are reported as <span class="tag conf">CONFIRMED</span>. Eight further agents audited the infra (CI, coverage, visual, e2e, perf/type-safety, tooling). The headline findings below were additionally re-confirmed by hand.
+  </div>
+</section>
+
+<!-- ══════════════════════════════ HEALTHY ══════════════════════════════ -->
+<section id="healthy">
+  <h2>What's healthy (credit where due)</h2>
+  <p>Before the problems: the large majority of this suite earns its keep, and several parts are better than most repos ship.</p>
+  <ul class="clean keep">
+    <li><b>The core behavior tests are real.</b> 8 of 16 audited file-groups came back with <em>zero</em> flagged files. Reducer slices, chain/spawn/layout math, boss modifiers, market pricing, save migrations, and the feature slices assert exact numeric outputs and the CLAUDE.md referential-equality contract against the real reducer.</li>
+    <li><b>The live drift-guards are excellent.</b> The wiki/concept guards (<code>derivedFacts</code> dangling-key check, <code>staleContent</code> forbidden-token scan, <code>conceptEntities</code>/<code>conceptSchemas</code> exhaustive round-trips, <code>catalog-keys-invariants</code>) <em>iterate live data structures</em> and fail the moment new content is added without wiring — exactly the drift this repo produces.</li>
+    <li><b>The <code>reachability</code> exhaustive-scope guard</b> pins the entire unreachable-content catalog so scoped-out content can never silently leak to players — and it's the same report the live <code>/b#unreachable</code> wiki page renders. Deliberately un-driftable.</li>
+    <li><b>The playtest harness</b> drives the real reducer deterministically (seeded RNG) and is pinned by value-sensitive snapshots in the gating <code>test</code> job — a balance-constant edit genuinely breaks it.</li>
+    <li><b>The infra design is thoughtful.</b> The node/jsdom split (fast <code>node</code> for logic, per-file <code>jsdom</code> opt-in for components), the <code>beforeEach</code> localStorage reset guarding order-dependence, a three-layer typecheck strategy, and a documented console-error allowlist are all above-average rigor.</li>
+    <li><b>The e2e specs are genuinely de-rotted.</b> Every stale assumption <a href="09-ci-e2e-gate-findings.md">doc 09</a> flagged (starting coins, nav selectors, zoned inventory, biome gating, dialogs-disabled) now resolves correctly against current <code>src/</code>. The only residual staleness is a <em>comment in doc 09 itself</em>, not the tests.</li>
+  </ul>
+  <p>The rest of this document is about the minority that doesn't work — and the gates that let the good tests go unprotected.</p>
+</section>
+
+<!-- ══════════════════════════════ ROTTED GUARDS ══════════════════════════════ -->
+<section id="rotted">
+  <h2>1 · Guards that have rotted into no-ops <span class="sev high">highest priority</span></h2>
+  <p>These are the most dangerous finding class: tests that <em>appear</em> to protect a contract but can no longer fail. Each was confirmed by hand.</p>
+
+  <div class="find high">
+    <h4><code>flag-reads-drift.test.ts</code> — a drift guard that guards nothing <span class="tag conf">CONFIRMED (by hand)</span></h4>
+    <div class="ev">The file walks <code>src/</code> to prove "every direct story-flag read is documented in <code>FLAG_READS</code>." But its walker filters <code>/\.(js|jsx)$/</code> (line 15) — and after the TS migration <b>exactly 4 <code>.js</code> files remain in <code>src/</code></b> (all under <code>textures/categories/</code>), none of which read a flag. So <code>directFlagReads()</code> returns an empty map, <code>missing</code> is always <code>[]</code>, and <code>expect(missing).toEqual([])</code> is <b>trivially true and can never fail</b>. Real reads (<code>story.ts:637 state.flags.festival_announced</code>, plus <code>hearth_lit</code>, <code>keeper_choice_made</code>, …) are invisible. The <code>FLAG_READS</code> registry in <code>src/flagReads.ts</code> also still lists dead <code>.js/.jsx</code> paths.</div>
+    <div class="fix">Fix, don't delete: change the filter to <code>/\.(ts|tsx)$/</code>, then reconcile <code>flagReads.ts</code> (it will immediately surface the many undocumented reads the guard was meant to catch).</div>
+  </div>
+
+  <div class="find high">
+    <h4><code>actionTypes.test.ts</code> — the slice-routing footgun test has itself silently drifted <span class="tag conf">CONFIRMED (by hand)</span></h4>
+    <div class="ev">This test hand-copies a <code>SLICE_PRIMARY</code> list meant to mirror <code>SLICE_PRIMARY_ACTIONS</code> in <code>state.ts:1760</code> — the #1 footgun called out in <code>CLAUDE.md</code>. The copy has drifted: it <b>omits <code>SETTINGS/SET_TILE_ART_MODE</code>, <code>CIVIC/CLAIM</code>, <code>CIVIC/OPEN_CARE_PACKAGE</code>, <code>TOASTS/DISMISS</code></b> (all present in the real set). And it only asserts each entry is <em>a member of the <code>ACTION_TYPES</code> catalog</em> (subset check) — it never compares against the real <code>state.ts</code> set, so the drift produces no failure. The guard is decorative. Worse, the CI gate named for this — <code>action-types:check</code> — only de-dupes the generated list; it never reads <code>state.ts</code> and cannot detect an unregistered slice action at all.</div>
+    <div class="fix">Export <code>SLICE_PRIMARY_ACTIONS</code>/<code>ALWAYS_RUN_SLICES</code> from <code>state.ts</code>, delete the hand-copied list, and assert set-equality against the imported source. Then add the real check the codebase <em>thinks</em> it has: every slice-owned action string must appear in one of those sets (automate the <code>check-slice-action</code> skill).</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ VACUOUS ══════════════════════════════ -->
+<section id="vacuous">
+  <h2>2 · Vacuous, name-lie &amp; tautological tests</h2>
+  <p>Tests that pass no matter what the code does, or whose name promises a behavior the body never exercises. All <span class="tag conf">CONFIRMED</span> by the adversarial pass.</p>
+
+  <div class="find high">
+    <h4><code>tests/phase-11-polish.test.ts</code> — "CLOSE_SEASON increments shuffle count" is a name-lie over removed behavior <span class="tag conf">CONFIRMED</span></h4>
+    <div class="ev">The test named <code>CLOSE_SEASON increments shuffle count</code> never dispatches <code>CLOSE_SEASON</code>; it calls <code>createInitialState()</code> and asserts <code>next.tools.shuffle</code> is <em>defined</em> — satisfied by the <code>shuffle: 0</code> initial value. The claimed behavior was <b>deliberately removed</b>: <code>state.ts:1083</code> says verbatim "Spec §11: shuffles are earned via almanac/quests — not free per season." The file's other two tests are bare <code>is-defined</code> smoke. A test whose name asserts a behavior the game intentionally does not have is worse than none.</div>
+    <div class="fix">Delete the file (or rewrite the season-close test to dispatch <code>CLOSE_SEASON</code> and assert what it <em>does</em>: <code>turnsUsed</code> reset, bonus coins, worker/building season-end tools).</div>
+  </div>
+
+  <div class="find med">
+    <h4><code>tests/phase-7-quests.test.ts</code> — <code>expect(true).toBe(true)</code> in disguise + a tautological loop <span class="tag conf">CONFIRMED</span></h4>
+    <div class="ev">"fresh state quests is an array or has active/claimed" asserts <code>expect(s.quests !== null &amp;&amp; s.quests !== undefined).toBe(true)</code> — the argument collapses to the boolean literal <code>true</code> before <code>s.quests</code> is even inspected. The achievements-unlocked test reconstructs <code>Object.fromEntries(ACHIEVEMENT_LIST.map(a=&gt;[a.id,false]))</code> — the <em>exact</em> expression <code>init.ts:170</code> uses, from the same imported list, so it cannot fail. (The almanac spot-checks in the same file are fine.)</div>
+    <div class="fix">Replace with a real shape assertion (<code>Array.isArray(s.quests) &amp;&amp; length === 6</code>) and drop the self-referential loop.</div>
+  </div>
+
+  <div class="find med">
+    <h4><code>tests/phase-8-boss-weather.test.ts</code> — two assertions, one duplicated, "weather" is fiction <span class="tag conf">CONFIRMED</span></h4>
+    <div class="ev">The 24-line file has exactly two live assertions: <code>boss</code> is null (valid) and <code>CLOSE_SEASON</code> resets <code>turnsUsed</code> to 0 — which <code>phase-38</code> already asserts as a strict superset (it also checks <code>view==='town'</code>). The filename and header promise "weather / portal / decorations / boss-8.x" cases; none exist (grep finds them only in the comment). On fresh state <code>boss</code> is null, so this never even exercises the boss slice's own <code>CLOSE_SEASON</code> branch.</div>
+    <div class="fix">Drop the duplicate assertion, fold the null-boss check into a real fresh-state or boss-slice test, and stop naming a file after content it doesn't contain.</div>
+  </div>
+
+  <div class="find med">
+    <h4>Local-stub tautologies &amp; empty bodies <span class="tag conf">CONFIRMED</span></h4>
+    <div class="ev"><b><code>reshuffle-horn.test.ts</code></b>: tests 5–6 build the test's <em>own</em> <code>mockShuffleBoard()</code>/<code>invokeShuffleAnimation()</code> and assert them against themselves — they import no app code (tests 1–4, which drive the real <code>reshuffle_board</code> reducer path, are valid). <b><code>iconUsage.test.ts</code></b>: the test "does NOT include obviously-never-referenced UI icons" (lines 54–59) has an <em>empty body</em> — no <code>expect</code>, always passes. <b><code>coverage-misc.test.ts:34</code></b>: <code>expect(sellPriceFor("iron_frame")).toBeGreaterThanOrEqual(0)</code> — a price is always ≥0; the name claims "returns 0 when no coins field," but <code>iron_frame</code> resolves to 28 and the "coins field" concept no longer exists (pricing reads <code>item.value</code>). <b><code>resource-to-threshold.test.ts</code></b>: guards <code>RESOURCE_TO_THRESHOLD</code>, an export <em>no app module imports</em> (grep-confirmed), and opens with a can't-be-empty <code>length &gt; 0</code> check.</div>
+    <div class="fix">Delete the tautological/empty cases; keep the real ones alongside them. For <code>resource-to-threshold</code>, delete the test and the dead export together (or wire a real consumer first).</div>
+  </div>
+
+  <div class="find low">
+    <h4>A permanently-skipped "flagship" test <span class="tag conf">CONFIRMED</span></h4>
+    <div class="ev"><code>qa-pass-3-hazard-smoke.test.ts</code> (and <code>farm-10.7</code>) gate their fire-spawn test on <code>it.skipIf(!FIRE_HAZARD_ENABLED)</code>, but <code>featureFlags.ts:6</code> hardcodes <code>FIRE_HAZARD_ENABLED = false</code> with no override — so it is the suite's permanent skip and never asserts farm-fire spawning works. (These are the "2 skipped" in the baseline.)</div>
+    <div class="fix">Either delete the skipped case or replace the flag-gate with a direct unit test of the spawn function that runs regardless of the flag, so the file stops implying coverage it doesn't provide.</div>
+  </div>
+
+  <div class="find low">
+    <h4>~315 weak assertions across the suite <span class="tag part">quantified</span></h4>
+    <div class="ev">Suite-wide grep: <b>187</b> <code>toBeDefined()</code>, <b>110</b> <code>toBeTruthy()</code>, <b>18</b> <code>toBeGreaterThanOrEqual(0)</code>. Not all are bad (a <code>toBeDefined</code> after a lookup can be meaningful), but the <code>≥0</code>-on-a-count family is always-true by construction, and the volume signals a habit of shape-smoke over behavior-assertion.</div>
+    <div class="fix">No mass action needed; treat as a lint-style code-review nudge (prefer exact-value assertions). Add an ESLint rule flagging <code>toBeGreaterThanOrEqual(0)</code> on counts.</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ PHASED ══════════════════════════════ -->
+<section id="phased">
+  <h2>3 · The phased suites (<code>tests/phase-*</code>) — shadow copies &amp; poor discoverability</h2>
+  <div class="lede warn">The 29 <code>tests/phase-*.test.ts</code> files are named after historical dev sprints, not features. Roughly a third are <b>copy-not-moved duplicates</b> of live co-located tests, and the naming scheme actively obstructs finding "the test for X."</div>
+
+  <div class="find high">
+    <h4>Copy-not-move duplication across ~9 low-phase files</h4>
+    <div class="ev">Every low-phase file's header says "Migrated from &lt;src file&gt;" — but the migration was a <b>copy</b>: every source it claims to replace still exists. <code>phase-1-chain</code> is byte-identical in assertions to <code>src/__tests__/upgrade-thresholds.test.ts</code>; <code>phase-0-bugs</code> re-covers helpers already in <code>utils-coverage.test.ts</code>; <code>phase-2/3/5/6/7/9/10</code> shadow <code>story-slice</code>, <code>market</code>, <code>species-5.x</code>, <code>npc-6.x</code>, <code>quests-7.x</code>, <code>mine-9.x</code>. Topical counts confirm the imbalance — story: 14 co-located vs 1 phase; farm 10 vs 2; mine/boss/species 7–8 vs 1. Net: ~9 files / ~90 tests of pure duplication doubling CI time and drift risk.</div>
+    <div class="fix">Finish the move: delete <code>phase-0,1,2,3,5,6,7,9,10</code> after a diff-confirm that each assertion is covered by its still-present <code>src/__tests__</code> counterpart.</div>
+  </div>
+
+  <div class="find med">
+    <h4>The <code>phase-12-*</code> meta-tests test the toolchain, not the game</h4>
+    <div class="ev"><code>phase-12-ci.test.ts</code> regex-asserts the text of <code>ci.yml</code> (job names, <code>node-version: 20</code>, timeout presence) — a duplicate of what CI proves by running, brittle to any benign YAML edit. <code>phase-12-infra.test.ts</code> asserts Vitest globals are functions (tautological — they're the globals running the test) and <b>self-enforces the very <code>phase-N</code> naming convention this review recommends retiring</b>. <code>phase-12-build.test.ts</code> runs a full <code>npm run build</code> <em>inside</em> the 128 s vitest loop to check chunk-splitting. (The one keeper: <code>phase-12-infra</code>'s <code>SMOKE_INVARIANTS</code> shape check.)</div>
+    <div class="fix">Move CI/build meta-tests out of the unit loop (the build guard belongs in the build job); reduce <code>phase-12-ci</code> to at most "ci.yml exists and defines the gating jobs by name"; extract the <code>SMOKE_INVARIANTS</code> test to its own file.</div>
+  </div>
+
+  <div class="find med">
+    <h4>Source-text-regex behavior guards (<code>phase-40</code>, <code>phase-41</code>) <span class="tag part">brittle, but keep</span></h4>
+    <div class="ev">Both <code>readFileSync</code> a <code>.tsx</code> and regex the source: <code>phase-40</code> asserts <code>/windowEvents:\s*false/</code>; <code>phase-41</code> slices a fixed 900-char window and matches <code>setLoading(false)</code> / <code>mountedRef.current</code>. They pass on a comment and die on a benign reformat, and boot no Phaser. <b>But</b> the adversarial pass confirmed each guards a real, documented regression (leaked pointer events; stuck loading overlay). Brittle, not invalid.</div>
+    <div class="fix">Keep, but harden: assert against the actual Phaser boot config object (or a jsdom render of <code>TownPhaserCanvas</code>), or downgrade to an ESLint rule — not a passing-on-comment "test."</div>
+  </div>
+
+  <div class="find low">
+    <h4>The <code>CLOSE_SEASON</code> reset is re-tested in 6 different phase files</h4>
+    <div class="ev">The same "turnsUsed resets to 0" assertion appears in <code>phase-4</code>, <code>phase-6</code>, <code>phase-8</code>, <code>phase-11</code>, <code>phase-38</code>, and <code>phase-13-qa-quests</code> — a change to <code>CLOSE_SEASON</code> semantics forces edits in six unrelated-looking files.</div>
+    <div class="fix">Consolidate to one canonical <code>closeSeason.test.ts</code> after relocation.</div>
+  </div>
+
+  <p><b>The deeper problem is discoverability.</b> "Where is the test for zones?" has no answer unless you know zones were built in "phase 30." The repo's own dominant convention is co-location (222 files already live under <code>src/</code>). <b>Retire the phase-N scheme</b>: relocate the surviving meaningful files (phase-30/32/33 → <code>src/features/zones/</code>, phase-34/36 → <code>src/features/workers/</code>, the QA batch → their features), keeping the test bodies. First delete the <code>phase-12-infra</code> assertions that mandate the old naming.</p>
+</section>
+
+<!-- ══════════════════════════════ COVERAGE ══════════════════════════════ -->
+<section id="coverage">
+  <h2>4 · The coverage gate — honest numbers, hollow scope</h2>
+  <div class="lede warn">The 70% / 60% thresholds are <b>not gamed</b> (vitest's <code>coverage.all</code> keeps the denominator honest — untested included files count as 0%). The problem is the <em>include list</em>: the gate measures ~20% of the app and says nothing about whether the game renders, drags, or boots.</div>
+
+  <div class="stats">
+    <div class="stat"><div class="num">~18k</div><div class="lbl">source lines the gate measures (features/game/state/config + utils/state)</div></div>
+    <div class="stat bad"><div class="num">~40k</div><div class="lbl">lines of <code>.tsx</code> UI (189 components) excluded entirely by <code>**/*.&lbrace;jsx,tsx&rbrace;</code></div></div>
+    <div class="stat warnn"><div class="num">~20%</div><div class="lbl">of non-generated source is measured (~8% counting textures)</div></div>
+    <div class="stat bad"><div class="num">0%</div><div class="lbl">of rendering / interaction / data-table code is gated</div></div>
+  </div>
+
+  <div class="find high">
+    <h4>The whole canvas / UI / data layer is invisible to the gate</h4>
+    <div class="ev">Unmeasured because they fall outside every include glob: <code>GameScene.ts</code> (2,429 lines), <code>TileObj.ts</code>, <code>phaserBridge.ts</code>, <code>constants.ts</code> (1,226 lines — the central resource/zone data table), <code>story.ts</code>, <code>router.ts</code>, <code>market.ts</code>, <code>townLayout.ts</code>, all of <code>textures/**</code>, all of <code>ui/**</code> (5,109 lines), plus <b>every <code>.tsx</code> component and <code>prototype.tsx</code></b> (the reducer↔Phaser bootstrap) via the blanket exclude. The gate can catch a regression in a reducer helper — not in board layout, drag/merge, spawn tables, routing, or the town.</div>
+  </div>
+
+  <div class="find med">
+    <h4>Excluding the <code>cartography</code> slice contradicts the gate's stated purpose</h4>
+    <div class="ev">The config comment says the gate protects "the riskiest reducer code," yet <code>exclude</code> lists <code>features/cartography/**</code> — a <b>live, wired slice</b> (<code>slice.ts</code>, 8 action handlers; <code>data.ts</code>, 630 lines) that biome-entry gating depends on. (The sibling <code>townsfolk</code> exclusion is harmless — it's a 20-line <code>.tsx</code> re-export already caught by the blanket exclude, so that entry is redundant.)</div>
+  </div>
+
+  <div class="find med">
+    <h4>The coverage-padding family is mostly legitimate — with a few wasted/loose spots <span class="tag ref">auditor over-claim refuted</span></h4>
+    <div class="ev">Contrary to first suspicion, the 11 <code>coverage-*</code> / <code>*-coverage</code> files mostly assert <em>concrete</em> outputs (boss reward increments, portal turn-budget extension 10→15, castle contribution deductions, lava spread) and the referential-equality no-op contract. <b>Do not mass-delete them.</b> Real defects are narrow: <code>story-engine-coverage.test.ts</code> covers <code>src/story.ts</code>, which the gate doesn't even measure (its coverage is thrown away); and ~6 loose assertions (<code>utils-coverage.test.ts:176</code> <code>typeof === "boolean"</code> after <code>runSelfTests()</code> passes whether self-tests pass <em>or fail</em>; <code>story-engine</code> wraps its only assertion in <code>if (r) {}</code>).</div>
+    <div class="fix">Keep the family; tighten the ~6 loose assertions; add <code>story.ts</code> to the include so its padding actually counts.</div>
+  </div>
+
+  <p><b>The compounding risk:</b> the coverage gate excludes UI/canvas → visual regression is non-gating → e2e (the only thing that <em>can</em> see the canvas bridge) is not a required check. So the entire rendering/interaction layer of a drag-based game has <b>no gating coverage from any layer</b>. That is the single most important structural gap in this report.</p>
+</section>
+
+<!-- ══════════════════════════════ META ══════════════════════════════ -->
+<section id="meta">
+  <h2>5 · Meta / schema / invariant tests — split the wheat from the restatement</h2>
+  <p>This family divides cleanly. Keep the half that iterates live data; thin the half that re-types source into the test.</p>
+  <table>
+    <tr><th>Load-bearing (keep — iterate live data)</th><th>Restatement (thin to a smoke/invariant)</th></tr>
+    <tr>
+      <td><code>conceptEntities</code> ownership round-trips · <code>conceptSchemas</code> exhaustive coverage · <code>derivedFacts</code> dangling-key guard · <code>staleContent</code> token scan · <code>catalog-keys-invariants</code> · <code>schemaDoc.test.ts</code> introspection-engine unit tests</td>
+      <td><code>actionTypes</code> hand-copied list <em>(already drifted — see §1)</em> · <code>feature-flags-catalog-invariants</code> restates the enum verbatim · <code>conceptTiles</code> hardcodes the 7-key list · <code>schemaDoc.test.ts</code> real-schema fixtures pin exact field lists &amp; <code>describe()</code> strings · <code>htmlContent</code> hardcodes ~30 entity keys (manual smoke, <em>not</em> a drift guard)</td>
+    </tr>
+  </table>
+  <div class="find med">
+    <h4><code>schemaDoc.probe.test.ts</code> — 31 tests pinning Zod-4 internals for one cosmetic consumer</h4>
+    <div class="ev">The probe asserts private Zod shapes field-by-field so a library upgrade fails loudly — a legitimate pattern. But the only consumer is <code>schemaDoc.ts</code>, which feeds the <em>Dev-Panel</em> wiki "schema" tab (a developer docs table, not gameplay or persistence), and it overlaps <code>schemaDoc.test.ts</code> on the real-schema fixtures. 31 tests is disproportionate to the blast radius.</div>
+    <div class="fix">Prune to a compact ~6–8 assertion "Zod-4 internals canary" tied to the pinned version; drop the per-type micro-assertions.</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ CI ══════════════════════════════ -->
+<section id="ci">
+  <h2>6 · CI gating — the root of "things going out of date"</h2>
+  <div class="lede warn">The tests aren't the thing that rotted first — the <b>gates</b> did. A job existing in <code>ci.yml</code> does not mean it blocks a merge; required checks live only in GitHub repo settings, which are <em>not in the tree</em> and cannot be verified from the code.</div>
+
+  <div class="find high">
+    <h4>The sharded e2e check name can <em>never</em> match the documented required check</h4>
+    <div class="ev">The e2e job runs a <code>matrix: shard: [1,2,3]</code>, so GitHub reports the checks as <b><code>e2e (1)</code>, <code>e2e (2)</code>, <code>e2e (3)</code></b>. Every doc and the <code>ci.yml</code> header tell a human to add a required check named <b><code>e2e</code></b> — which matches none of them. The yaml author noticed (<code>ci.yml:135-136</code>) but the required-checks list (<code>ci.yml:3</code>) was never updated. So even a diligent maintainer following the docs would create a gate that silently never applies. <code>doc 09</code>'s "e2e is now gating — DONE" is only half true: <code>continue-on-error</code> was removed (the job can fail red), but nothing blocks a merge.</div>
+    <div class="fix">Require all three <code>e2e (1..3)</code> contexts, <em>or</em> add a fan-in <code>e2e-required</code> job (<code>needs: [e2e], if: always()</code>) that asserts all shards passed and require that one stable name.</div>
+  </div>
+
+  <div class="find high">
+    <h4><code>visual-smoke</code> is <code>continue-on-error: true</code> — it protects nothing</h4>
+    <div class="ev"><code>ci.yml:179</code>. A <code>continue-on-error</code> job reports success to the checks API even when the step fails, so it cannot gate regardless of settings. (Full detail in §7.)</div>
+  </div>
+
+  <div class="find med">
+    <h4>Gates encoded as comments/intentions, with nothing keeping settings in sync</h4>
+    <div class="ev">The required-checks list at <code>ci.yml:3</code> is a comment; <code>ci.yml:179</code> "REMOVE after goldens…" and <code>ci.yml:5-6</code> "A HUMAN must still add e2e…" are unenforced TODOs. No in-tree ruleset/branch-protection/CODEOWNERS exists (confirmed: <code>.github/</code> holds only <code>workflows/</code>), so the authoritative gate list can drift from the comment forever, undetected.</div>
+    <div class="fix">Add a tiny <code>gate-guard</code> job that reads branch protection via the API and asserts the required-check set equals a checked-in <code>.github/required-checks.json</code>, failing on drift.</div>
+  </div>
+
+  <div class="find low">
+    <h4>Doc 09 has itself gone stale vs the code</h4>
+    <div class="ev"><code>09-ci-e2e-visual-gate.md</code> predates the sharding + de-rot work and contradicts current <code>playwright.config.js</code> (retries, reporter) and <code>ci.yml</code> (sharding). Per <code>CLAUDE.md</code>, code is truth — a future agent trusting the brief would mis-audit the gate.</div>
+    <div class="fix">Banner the brief as historical, pointing at <code>09-ci-e2e-gate-findings.md</code> and this doc as current.</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ VISUAL ══════════════════════════════ -->
+<section id="visual">
+  <h2>7 · Visual regression — running, but zero pixel protection</h2>
+  <div class="find high">
+    <h4>The Playwright visual system gates nothing today</h4>
+    <div class="ev">The only visual CI job, <code>visual-smoke</code>, is <code>continue-on-error</code>, non-required, and runs only the 3 <code>*.desktop-smoke</code> specs on <code>--project=desktop</code>. By the file's own admission the goldens "were not generated on this Linux runner, so the first run is expected to diff" (<code>ci.yml:172-175</code>). It is expected to fail, its failure is swallowed, and nothing gates. The only <em>gating</em> visual check is a vitest manifest test — and it validates file presence and bookkeeping, <b>not pixels</b>.</div>
+  </div>
+  <div class="find high">
+    <h4>The committed goldens have local-host provenance — declared invalid for the runner that compares them</h4>
+    <div class="ev">Git history shows the 110 goldens were committed by normal author PRs, <em>not</em> by the <code>visual-rebaseline</code> bot (whose commit <code>test(visual): re-baseline…</code> never appears). The config itself warns off-runner captures drift 3–5% (DOM) to <b>~38% (Phaser WebGL)</b>. So the baselines are the very captures the system says are wrong for CI — which is exactly why the gate can't be turned on. There is no hash/platform/commit provenance recorded, so staleness is undetectable by any automated check.</div>
+  </div>
+  <div class="find med">
+    <h4>The bulk of the goldens (80 mobile) never run in CI; the diff-detector is never even proven</h4>
+    <div class="ev">Of 110 goldens: <b>80 are mobile</b> (<code>visual.spec.ts/iphone-portrait</code>), 16 desktop-smoke, the rest small balance/story sets. No CI job invokes the mobile project — those 80 are compared only when a developer runs <code>npm run test:visual:mobile</code> locally. The negative-control spec (which proves the harness <em>can</em> catch a diff) is <code>test.skip</code> unless <code>VISUAL_NEGATIVE</code> is set, and that env is set nowhere in CI. For a mobile-first game, the largest golden asset is dormant and the safety check unproven.</div>
+  </div>
+  <div class="find low">
+    <h4>The rebaseline recovery path is fragile and partial</h4>
+    <div class="ev">The <code>visual-rebaseline</code> workflow force-commits to the branch (fails on a protected <code>main</code>), has no concurrency guard, and regenerates only the desktop-smoke set — it <b>can never re-baseline the 80 mobile or the balance/story goldens</b>. It has never actually been exercised.</div>
+  </div>
+  <p class="fix" style="color:#245">Path forward: run the rebaseline on Linux CI, wire the negative control into CI, record golden provenance (hash + platform), then remove <code>continue-on-error</code> and require the check — <em>or</em> explicitly decide the WebGL-golden maintenance cost isn't worth it, retire the board pixel-goldens to structural/DOM smoke, and drop the "REMOVE after…" TODOs so they stop reading as unfinished.</p>
+</section>
+
+<!-- ══════════════════════════════ E2E ══════════════════════════════ -->
+<section id="e2e">
+  <h2>8 · E2E — load-bearing, de-rotted, but non-gating</h2>
+  <p>The e2e suite is the <em>only</em> coverage of the React→registry→GameScene→TileObj bridge that node/vitest structurally cannot see (getContext is unimplemented under jsdom). It reads as genuinely current. But at the gate level its protective value is near-zero, and it can rot again exactly as it did before.</p>
+  <div class="find high">
+    <h4>Non-required + mis-named gate (see §6) means the canvas layer can silently rot again</h4>
+    <div class="ev">The suite bit-rotted 32→38 failures once while ungated (<code>doc 09</code>). The moment it's non-required, that failure mode recurs. The name mismatch (<code>e2e</code> vs <code>e2e (1..3)</code>) means even the intended fix wouldn't work.</div>
+    <div class="fix">Make it required (fan-in job), and add a nightly <code>main</code> run so rot is caught within a day even between PRs.</div>
+  </div>
+  <div class="find med">
+    <h4><code>full-year.spec.ts</code> is a timeout cliff against the shard cap</h4>
+    <div class="ev"><code>full-year.spec.ts:21</code> sets a 360 s (6 min) budget for one test (4 seasons + a mid-run reload; already overran a 180 s budget). With CI <code>retries: 2</code>, a slow/failing run can consume <b>3 × 360 s = 18 min</b> inside a shard capped at <code>timeout-minutes: 20</code> that also runs ~20 other boot-heavy tests serially. Playwright shards round-robin, so it isn't isolated. One slowdown can fail the whole shard for an unrelated reason.</div>
+    <div class="fix">Pin <code>full-year</code> to 0 retries and/or trim to 2 seasons, or move it to a nightly non-PR run.</div>
+  </div>
+  <div class="find med">
+    <h4>Interactive e2e is mobile-landscape-only — desktop layout is behaviorally untested</h4>
+    <div class="ev"><code>playwright.config.js</code> declares exactly one project, <code>iphone-landscape</code> (844×390). Desktop (1280×1024) exists only in the <em>visual</em> config, which is non-gating and screenshot-only. So the state-bridge is verified at two mobile viewports and never at a desktop breakpoint — any desktop DPR/hit-testing regression (the <code>hidpi.spec</code> concern) is invisible.</div>
+    <div class="fix">Add a desktop project to the interactive config, even scoped to a smoke subset.</div>
+  </div>
+  <div class="find med">
+    <h4>The fiber-walking bridge + broad console allowlist can swallow the errors it should catch</h4>
+    <div class="ev"><code>helpers.ts</code> hand-walks the React fiber tree for a hook with a <code>"view"</code> key — brittle to any component refactor (the exact break <code>doc 09</code> recorded). And <code>/Cannot read properties of null/i</code> is on the ignored-console list, so a bridge returning <code>null</code> degrades to a slow timeout, and a genuinely new null-deref <code>console.error</code> is swallowed by the guard meant to catch it.</div>
+    <div class="fix">Expose a dev/e2e-only <code>window.__hearthStore = { getState, dispatch }</code> hook; scope the null-deref allowlist to the specific known Phaser-tween message.</div>
+  </div>
+  <div class="find low">
+    <h4>A few specs assert nothing (boot-only smoke mislabeled as behavior)</h4>
+    <div class="ev"><code>chain.spec.ts</code> "chain via touch" ends in a <code>console.log</code> with no assertion on the drag outcome (synthetic pointer events are unreliable); <code>tile-collection</code> accepts "either outcome"; <code>town-buildings</code> decoration asserts only <code>toBeTruthy()</code>. Fine as no-crash checks, but their titles overclaim.</div>
+    <div class="fix">Assert a real outcome or rename to mark them boot-only.</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ INFRA ══════════════════════════════ -->
+<section id="infra">
+  <h2>9 · Test-infra health — perf &amp; type-safety</h2>
+  <div class="find high">
+    <h4>The <code>typecheck-test-files</code> gate is O(n) and already eats most of its 20-min budget</h4>
+    <div class="ev"><code>tools/scan-test-tsc.mjs</code> spawns a fresh <code>npx tsc</code> per file over 222 files, each rebuilding the entire ~349-file program (~51k lib lines) at ~0.9–1.3 s/file → an estimated <b>200–290 s serial</b>, trending toward the cap as the suite grows. The design intent (isolate per-file leakage) is valid; the implementation pays full program-build cost 222 times instead of once.</div>
+    <div class="fix">Replace the spawn loop with a single <code>tsc</code> program over a test-only tsconfig (keep <code>isolatedModules</code>). ~200 s → ~5–15 s.</div>
+  </div>
+  <div class="find high">
+    <h4>142 test files get no strict typecheck, and 160 <code>as Action</code> casts defeat the TypedAction guard</h4>
+    <div class="ev"><code>tsconfig.json</code> excludes all <code>*.test.*</code>; <code>tsconfig.tests.json</code> covers only e2e/visual/setup (and runs <code>strict:false</code>); the per-file scanner is <code>src/__tests__/*.test.ts</code>-only and non-recursive. So <b>142 files</b> (109 co-located <code>src</code> tests incl. every feature <code>slice.test.ts</code>, 4 <code>.test.tsx</code>, 29 <code>tests/</code>) escape strict checking entirely. Compounding it, <b>160 <code>as Action</code> / <code>as unknown as …Action</code></b> casts on real dispatches bypass the <code>TypedAction</code> discriminated union — renaming a slice payload field would not fail these tests at compile time, and with loose assertions, often not at runtime. Green here does not mean "verifies current behavior."</div>
+    <div class="fix">Point one strict <code>tsc</code> program at <em>all</em> test files (fold into the fix above), and add a lint rule banning <code>as Action</code> on dispatch objects (steer to un-cast typed dispatches or the <code>testAction()</code> helper).</div>
+  </div>
+  <div class="find med">
+    <h4>The <code>getContext()</code> canvas flood drowns the console-warning channel</h4>
+    <div class="ev"><code>Icon.tsx</code> calls <code>canvas.getContext("2d")</code>; under jsdom that returns null (handled gracefully) but jsdom routes "Not implemented: HTMLCanvasElement's getContext()" to <code>console.error</code> — hundreds-to-thousands of lines across the ~52 jsdom files, with no stub anywhere. It masks nothing <em>today</em>, but it buries any real React <code>act()</code>/key/prop-type warning a future jsdom test would emit.</div>
+    <div class="fix">Add a jsdom-guarded <code>getContext</code> stub in <code>setup.ts</code> (return null; Icon already tolerates it). One-line, reopens the warning channel.</div>
+  </div>
+  <div class="find low">
+    <h4>Default <code>forks</code>+<code>isolate:true</code> re-imports the heavy graph per file</h4>
+    <div class="ev">No pool/isolate config; <code>state.ts</code> (1,908 lines / 68 imports) + <code>constants.ts</code> re-import into a fresh registry for each of 133+ files — the dominant chunk of the reported "import 152.91 s." Not incorrect, just untuned.</div>
+    <div class="fix">Measure <code>pool:'threads'</code> and/or <code>isolate:false</code>, scoping isolation to the ~7 files that use <code>resetModules</code>/module-global caches.</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ TOOLING ══════════════════════════════ -->
+<section id="tooling">
+  <h2>10 · Non-vitest validation tooling</h2>
+  <div class="find med">
+    <h4><code>action-types:check</code> doesn't guard the footgun it's named for</h4>
+    <div class="ev">The CI gate (<code>list-action-types.mjs --check</code>) only regex-parses <code>ACTION_TYPES</code> and de-dupes. It never reads <code>state.ts</code>, never sees <code>SLICE_PRIMARY_ACTIONS</code>, and cannot detect an unregistered pure-slice action — the CLAUDE.md footgun is not gated by the check named for action types. (Pairs with the drifted <code>actionTypes.test.ts</code> in §1.)</div>
+    <div class="fix">Add a real completeness check: every slice-owned action string must be in <code>SLICE_PRIMARY_ACTIONS</code>/<code>ALWAYS_RUN_SLICES</code>, driven off the exported sets + a scan of <code>features/*/slice.ts</code>.</div>
+  </div>
+  <div class="find med">
+    <h4><code>build:docs</code> is coupled to the production build and can hard-fail it</h4>
+    <div class="ev"><code>package.json</code> <code>build</code>: <code>vite build &amp;&amp; npm run build:docs</code>. <code>build-docs.mjs</code> calls <code>execFileSync('git', ['ls-files'…])</code> with no try/catch and imports <code>marked</code> at top level. If git is unavailable (shallow/exported checkout) or a doc is malformed, <code>npm run build</code> exits non-zero <em>even though <code>dist/</code> was already emitted</em>. Per CLAUDE.md, <code>reference/</code> is NOT the game — reference material breaking the shippable build is a category error.</div>
+    <div class="fix">Split <code>build</code> (vite only) from <code>build:site</code> (vite + docs); guard the git/marked calls to warn-and-exit-0.</div>
+  </div>
+  <div class="find low">
+    <h4>The playtest CLI/apply glue is unguarded, and <code>--apply</code> auto-updates its own snapshot</h4>
+    <div class="ev">The harness <em>math</em> is well-tested and gated — but the 344-line CLI (SSR loading, HTML marker splicing, baseline promotion) and <code>applyChangeList.mjs</code> have no CI coverage. And <code>runApply()</code> runs <code>vitest -u</code> to update the drift-guard snapshot on every apply, so a bad balance edit can update its own tripwire; the only signal left is a git diff a human must read.</div>
+    <div class="fix">Add a <code>--no-write</code> smoke run of the CLI to CI; gate <code>--apply</code>'s snapshot regen behind a tolerance band or explicit <code>--accept-snapshot</code>.</div>
+  </div>
+</section>
+
+<!-- ══════════════════════════════ PROPOSALS ══════════════════════════════ -->
+<section id="proposals">
+  <h2>Proposals — prioritized</h2>
+  <p>Ordered by value-per-effort. The top tier is where the "going out of date" pain actually lives.</p>
+
+  <h3><span class="n">A</span>Tier 1 — stop the silent rot (do first)</h3>
+  <table>
+    <tr><th>Action</th><th>Effort</th><th>Fixes</th></tr>
+    <tr><td>Fix the e2e required-check name: add a fan-in <code>e2e-required</code> job (or require <code>e2e (1..3)</code>) and actually add it to branch protection. Verify the current required set via <code>gh api …/branches/main/protection</code>.</td><td><span class="eff">S</span></td><td>§6, §8</td></tr>
+    <tr><td>Repair the two rotted guards: fix <code>flag-reads-drift</code>'s <code>.ts/.tsx</code> filter (+ reconcile <code>flagReads.ts</code>); make <code>actionTypes</code> import &amp; assert set-equality against the exported <code>state.ts</code> sets.</td><td><span class="eff">S</span></td><td>§1</td></tr>
+    <tr><td>Add the real slice-registration check the repo thinks it has (every slice-owned action ∈ the primary/always-run sets) to <code>action-types:check</code>.</td><td><span class="eff">M</span></td><td>§1, §10</td></tr>
+    <tr><td>Decide visual's fate: run the Linux rebaseline + wire the negative control + record golden provenance, then gate it — <em>or</em> retire board pixel-goldens and delete the dead TODOs.</td><td><span class="eff">M</span></td><td>§7</td></tr>
+    <tr><td>Decouple <code>build:docs</code> from <code>npm run build</code>; guard its git/marked calls.</td><td><span class="eff">S</span></td><td>§10</td></tr>
+  </table>
+
+  <h3><span class="n">B</span>Tier 2 — delete the dead weight &amp; the lies</h3>
+  <table>
+    <tr><th>Action</th><th>Effort</th><th>Fixes</th></tr>
+    <tr><td>Delete the confirmed vacuous/name-lie tests: <code>phase-11</code> shuffle test, <code>phase-7</code> quests block + achievements loop, <code>phase-8</code> duplicate, <code>reshuffle-horn</code> tests 5–6, <code>iconUsage</code> empty test, <code>resource-to-threshold</code> (+ its dead export), the permanently-skipped fire-spawn case.</td><td><span class="eff">S</span></td><td>§2</td></tr>
+    <tr><td>Finish the copy-not-move: delete the ~9 redundant low-phase files after diff-confirming co-located coverage. (~90 tests, zero coverage loss.)</td><td><span class="eff">M</span></td><td>§3</td></tr>
+    <tr><td>Move CI/build meta-tests out of the unit loop; reduce <code>phase-12-ci</code> to a name-only smoke; extract <code>SMOKE_INVARIANTS</code>.</td><td><span class="eff">M</span></td><td>§3</td></tr>
+    <tr><td>Tighten the ~6 loose coverage-padding assertions; thin the restatement meta-tests; prune <code>schemaDoc.probe</code> to a compact canary.</td><td><span class="eff">S</span></td><td>§4, §5</td></tr>
+  </table>
+
+  <h3><span class="n">C</span>Tier 3 — widen what's actually protected</h3>
+  <table>
+    <tr><th>Action</th><th>Effort</th><th>Fixes</th></tr>
+    <tr><td>Rescope the coverage include: add <code>constants.ts</code>, <code>story.ts</code>, <code>market.ts</code>, <code>router.ts</code>; drop the <code>cartography</code> exclude; document the gate as a "reducer/logic gate" in CLAUDE.md. Add a per-file floor so large files can't be masked.</td><td><span class="eff">M</span></td><td>§4</td></tr>
+    <tr><td>Fix the O(n) test-typecheck: one <code>tsc</code> program over ALL test files under the strict config (closes the 142-file hole and the ~200 s cost together). Add a lint rule banning <code>as Action</code> on dispatches.</td><td><span class="eff">M</span></td><td>§9</td></tr>
+    <tr><td>Add a desktop e2e project; de-risk <code>full-year</code> (0 retries / trim / nightly); harden the fiber bridge into a real <code>window.__hearthStore</code> hook.</td><td><span class="eff">M</span></td><td>§8</td></tr>
+    <tr><td>Add pure-function tests for the highest-risk unmeasured logic: spawn-table/board-layout math extracted from GameScene, and a <code>constants.ts</code> internal-consistency smoke (every referenced resource exists).</td><td><span class="eff">L</span></td><td>§4</td></tr>
+    <tr><td>Add a jsdom canvas stub in <code>setup.ts</code>; measure a vitest pool/isolate perf pass.</td><td><span class="eff">S–M</span></td><td>§9</td></tr>
+  </table>
+
+  <h3><span class="n">D</span>Tier 4 — structural hygiene</h3>
+  <table>
+    <tr><th>Action</th><th>Effort</th><th>Fixes</th></tr>
+    <tr><td>Retire the <code>phase-N</code> naming: relocate surviving files to feature-co-located paths (keep bodies); delete the <code>phase-12-infra</code> assertions that mandate the old scheme first. Consolidate the 6 <code>CLOSE_SEASON</code> copies to one canonical test.</td><td><span class="eff">L</span></td><td>§3</td></tr>
+    <tr><td>Add a <code>gate-guard</code> job asserting branch-protection required checks == a checked-in list; banner the stale doc 09.</td><td><span class="eff">M</span></td><td>§6</td></tr>
+    <tr><td>Add a <code>--no-write</code> playtest-CLI smoke; gate <code>--apply</code>'s snapshot regen.</td><td><span class="eff">M</span></td><td>§10</td></tr>
+  </table>
+</section>
+
+<!-- ══════════════════════════════ DONT TOUCH ══════════════════════════════ -->
+<section id="donttouch">
+  <h2>Don't touch — tests the audit tried to kill and couldn't</h2>
+  <p>The adversarial pass <em>refuted</em> these "delete/merge" claims by reading the source. A cleanup that lumps them in as "meta tests" would delete real protection. Named here so they're spared.</p>
+  <ul class="clean keep">
+    <li><b><code>reachability.test.ts</code> exhaustive-scope guard</b> — the ~90-id pinned catalog is the point: it enforces the <code>SCOPED_OUT</code> manifest so scoped-out content can't silently reach players. Same report as the live <code>/b#unreachable</code> page.</li>
+    <li><b><code>upgradeThresholds.test.ts</code> "no imports" regex guard</b> — a genuine architectural cycle-guard; the file is deliberately import-free so <code>constants.ts</code>/<code>tileCatalog.ts</code>/<code>productionLines</code> can share it without a circular dep. Regex-on-source is the only way to assert "zero imports."</li>
+    <li><b><code>mine-hazards-coverage.test.ts</code></b> — not a mergeable duplicate; it lands unique branches (boss guard, base-rate gate boundary, null/undefined tile, no-grid bails, referential-identity no-op, floater text) that the <code>mine-9.x</code> phase files don't.</li>
+    <li><b>The live drift-guards</b> (<code>derivedFacts</code>, <code>staleContent</code>, <code>conceptEntities</code>/<code>conceptSchemas</code> exhaustive, <code>catalog-keys-invariants</code>) — these iterate live data and fail on real drift; keep every one.</li>
+    <li><b><code>iconUsage.test.ts</code> prefix block</b> — a two-sided registry+classifier contract (breaks if an icon is deregistered <em>or</em> a prefix is dropped), not a self-referential tautology. Only the one empty test goes.</li>
+    <li><b>The playtest harness snapshot tests</b> and the <b>e2e specs</b> — de-rotted and load-bearing; the fix is to <em>gate</em> them, not touch them.</li>
+  </ul>
+</section>
+
+<!-- ══════════════════════════════ APPENDIX ══════════════════════════════ -->
+<section id="appendix">
+  <h2>Appendix — verified findings ledger</h2>
+  <p>Individual file-level findings that survived adversarial verification. <span class="tag conf">CONFIRMED</span> = defect independently reproduced; <span class="tag part">PARTIAL</span> = real but narrower/brittle-not-invalid; <span class="tag ref">REFUTED</span> = auditor over-claimed, test defended.</p>
+  <table>
+    <tr><th>File</th><th>Verdict</th><th>Issue</th><th>Recommendation</th></tr>
+    <tr><td><code>flag-reads-drift.test.ts</code></td><td><span class="tag conf">CONF</span></td><td>Guard scans 4 <code>.js</code> files → always passes (TS-migration rot)</td><td>Fix filter + reconcile registry</td></tr>
+    <tr><td><code>actionTypes.test.ts</code></td><td><span class="tag conf">CONF</span></td><td>Hand-copied SLICE_PRIMARY drifted 4 entries; subset-only assertion</td><td>Import &amp; assert set-equality</td></tr>
+    <tr><td><code>tests/phase-11-polish.test.ts</code></td><td><span class="tag conf">CONF</span></td><td>Name-lie over removed behavior; 3 vacuous smoke tests</td><td>Delete / rewrite</td></tr>
+    <tr><td><code>tests/phase-7-quests.test.ts</code></td><td><span class="tag conf">CONF</span></td><td>Vacuous quests block + tautological achievements loop</td><td>Fix (real shape assert)</td></tr>
+    <tr><td><code>tests/phase-8-boss-weather.test.ts</code></td><td><span class="tag conf">CONF</span></td><td>2 assertions, one dup of phase-38; "weather" is fiction</td><td>Reduce-scope / rename</td></tr>
+    <tr><td><code>reshuffle-horn.test.ts</code></td><td><span class="tag conf">CONF</span></td><td>Tests 5–6 assert the test's own stubs</td><td>Delete tests 5–6</td></tr>
+    <tr><td><code>iconUsage.test.ts</code></td><td><span class="tag conf">CONF</span></td><td>One empty-body test; prefix block is valid</td><td>Delete empty test only</td></tr>
+    <tr><td><code>coverage-misc.test.ts</code></td><td><span class="tag conf">CONF</span></td><td><code>sellPriceFor ≥0</code> vacuous + stale "coins field" name-lie</td><td>Fix to a real zero-value id</td></tr>
+    <tr><td><code>resource-to-threshold.test.ts</code></td><td><span class="tag conf">CONF</span></td><td>Guards a dead export + vacuous non-empty check</td><td>Delete test + export</td></tr>
+    <tr><td><code>qa-pass-3-hazard-smoke.test.ts</code></td><td><span class="tag conf">CONF</span></td><td>Flagship fire-spawn test permanently skipped (flag=false)</td><td>Delete or de-flag</td></tr>
+    <tr><td><code>tests/phase-12-ci.test.ts</code></td><td><span class="tag part">PART</span></td><td>Regex-asserts ci.yml text; brittle, not vacuous</td><td>Reduce-scope</td></tr>
+    <tr><td><code>tests/phase-12-infra.test.ts</code></td><td><span class="tag part">PART</span></td><td>Tautological globals + filename hygiene; keep SMOKE_INVARIANTS</td><td>Reduce-scope</td></tr>
+    <tr><td><code>tests/phase-40 / phase-41</code></td><td><span class="tag part">PART</span></td><td>Source-text regex guards; brittle but guard real contracts</td><td>Keep / harden</td></tr>
+    <tr><td><code>coverage-round-6.test.ts</code></td><td><span class="tag ref">REF</span></td><td>Auditor mis-attributed a defect; file is strong &amp; current</td><td>Keep as-is</td></tr>
+    <tr><td><code>mine-hazards-coverage.test.ts</code></td><td><span class="tag ref">REF</span></td><td>"Mergeable duplicate" — actually lands unique branches</td><td>Keep as-is</td></tr>
+    <tr><td><code>upgradeThresholds.test.ts</code></td><td><span class="tag ref">REF</span></td><td>"Low-value meta" — real architectural cycle-guard</td><td>Keep as-is</td></tr>
+    <tr><td><code>reachability.test.ts</code></td><td><span class="tag ref">REF</span></td><td>"Brittle" — deliberate un-driftable scope contract</td><td>Keep as-is</td></tr>
+  </table>
+
+  <h3>Baseline &amp; scale (measured, this HEAD)</h3>
+  <ul class="clean">
+    <li><b>Unit/integration:</b> 369 vitest files, 4,136 tests passing, 2 skipped, 0 failing, ~128 s (import ~153 s aggregate).</li>
+    <li><b>E2E:</b> 20 specs / ~63 tests, 1 project (<code>iphone-landscape</code>), sharded ×3 on CI.</li>
+    <li><b>Visual:</b> 110 goldens (80 mobile / 16 desktop-smoke / rest balance+story), <code>visual-smoke</code> non-gating.</li>
+    <li><b>Coverage gate:</b> ~18k measured lines (~20% of non-generated source); ~40k <code>.tsx</code> UI lines excluded.</li>
+    <li><b>Weak assertions:</b> 187 <code>toBeDefined()</code>, 110 <code>toBeTruthy()</code>, 18 <code>toBeGreaterThanOrEqual(0)</code>.</li>
+    <li><b>Type-safety:</b> 160 <code>as Action</code> casts; 142 test files outside any strict typecheck.</li>
+  </ul>
+
+  <h3>How this review was produced</h3>
+  <p>16 auditor agents read all 369 vitest files against their source-under-test; a per-group adversarial verifier refuted or confirmed each "invalid" claim by re-reading the code (3 auditor claims were refuted). 8 infra specialists audited CI, coverage, visual, e2e, perf/type-safety, and non-vitest tooling; 3 of those (CI, visual, e2e) were re-run individually after the first pass returned malformed output. The two headline rotted-guard findings and the coverage/CI facts were additionally re-verified by hand. Total: ~40 agents, ~2.7M tokens of analysis. Nothing here was taken from a <code>reference/</code> doc as fact — every claim is anchored to <code>src/</code>, per the CLAUDE.md "code is truth" rule.</p>
+</section>
+
+<footer>
+  puzzleDrag2 · project brief 24 · Test Suite &amp; Testing-Infra Health Review · a findings-and-proposals audit, not an implementation spec — pair Tier-1 items with the <code>check-slice-action</code>, <code>coverage-gaps</code>, and <code>pre-pr-check</code> skills when acting on them.
+</footer>
+
+</main>
+</div>
+</body>
+</html>
