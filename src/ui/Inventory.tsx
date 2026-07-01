@@ -145,7 +145,7 @@ function InventoryAccordion({ entry, isOpen, arrowLeft, marketBuilt, dispatch, o
       // whole panel is on screen — a selection near the bottom of the grid
       // otherwise opens below the fold. `block: "nearest"` scrolls the minimum
       // needed, so an already-visible panel doesn't jump.
-      rootRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      rootRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
     }
   };
 
@@ -259,7 +259,7 @@ function InventoryListItemExpanded({ entry, marketBuilt, dispatch, onCollapse }:
   // height animation), so scroll it into view on mount when it opens below the
   // fold. `block: "nearest"` leaves an already-visible row untouched.
   useEffect(() => {
-    rootRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    rootRef.current?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
   }, []);
 
   return (
