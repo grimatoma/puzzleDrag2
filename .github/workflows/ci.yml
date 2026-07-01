@@ -108,8 +108,8 @@ jobs:
   # (tools/verify-build-output.mjs, moved out of the vitest loop — §3), then
   # builds the docs site too so /docs/ is validated + uploaded. build:docs is
   # guarded (warn-and-exit-0) so a reference-doc/git failure can never fail this
-  # job. NOTE: if GitHub Pages deploys via `npm run build`, switch it to
-  # `npm run build:site` to keep shipping /docs.
+  # job. NOTE: GitHub Pages (deploy.yml) deploys via `npm run build:site` so it
+  # keeps shipping /docs — keep those two in sync.
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 5

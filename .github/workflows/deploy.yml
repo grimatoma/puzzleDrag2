@@ -34,7 +34,9 @@ jobs:
           cache: npm
 
       - run: npm ci
-      - run: npm run build
+      # build:site = `vite build` + `build:docs`. Plain `npm run build` only runs
+      # Vite, so dist/docs/ is never generated and /puzzleDrag2/docs/ 404s.
+      - run: npm run build:site
 
 
 
