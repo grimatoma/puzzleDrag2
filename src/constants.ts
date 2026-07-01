@@ -369,20 +369,6 @@ export const TILES_PER_RESOURCE: Record<string, number> = buildTilesPerResource(
   },
 );
 
-// Derived map: resource key → upgrade threshold of the tile that produces it.
-// Built once at module load from UPGRADE_THRESHOLDS + tileFamilyResource.
-// When multiple tile variants in the same family share a threshold (grass,
-// bird, fruit, etc.) all map to the same resource — we take the first
-// threshold encountered (families are uniform in practice).
-export const RESOURCE_TO_THRESHOLD: Record<string, number> = (() => {
-  const out: Record<string, number> = {};
-  for (const [tileKey, threshold] of Object.entries(UPGRADE_THRESHOLDS)) {
-    const resource = tileFamilyResource(tileKey);
-    if (resource && out[resource] == null) out[resource] = threshold as number;
-  }
-  return out;
-})();
-
 /**
  * The legacy items registry — entries are tiles, resources, or tools
  * discriminated by `kind`. New code should reach for TILES / RESOURCES /

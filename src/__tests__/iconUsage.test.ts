@@ -51,13 +51,6 @@ describe("iconUsage", () => {
     expect(isIconUsed("legacy_ui_lock")).toBe(false);
   });
 
-  it("does NOT include obviously-never-referenced UI icons", () => {
-    // ui_settings is in the registry but no code path uses it — the
-    // hardcoded allow-list includes it because RichText literals might,
-    // so this serves as documentation of the current state more than a
-    // hard invariant. Skip if the hardcoded list includes it.
-  });
-
   it("isIconUsed is cached and consistent across calls", () => {
     const a = isIconUsed("tile_grass_grass");
     const b = isIconUsed("tile_grass_grass");

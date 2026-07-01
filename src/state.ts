@@ -1757,7 +1757,7 @@ function coreReducer(state: GameState, action: Action): GameState {
 // (because coreReducer has no handler for them — it falls through to `default: return state`).
 // Referential-equality no-op semantics are preserved: if every slice also returns the same
 // state for a rejected action, the final result still === the original state.
-const SLICE_PRIMARY_ACTIONS = new Set([
+export const SLICE_PRIMARY_ACTIONS = new Set([
   // Type-tier workers slice
   "WORKERS/HIRE",
   "WORKERS/FIRE",
@@ -1812,7 +1812,7 @@ const SLICE_PRIMARY_ACTIONS = new Set([
 // Actions where coreReducer intentionally defers to slices (e.g. CRAFTING/CRAFT_RECIPE
 // fires a story beat in core but the actual craft logic lives in crafting/slice.js).
 // When no story beat fires, core returns the same state — but slices still need to run.
-const ALWAYS_RUN_SLICES = new Set([
+export const ALWAYS_RUN_SLICES = new Set([
   "CRAFTING/CRAFT_RECIPE",
   "USE_TOOL",  // magic tool variants (hourglass, magic_seed, magic_fertilizer) handled in portal/slice
 ]);

@@ -13,6 +13,12 @@ import {
  * season transitions, town nav, modal flow, and persistence in one run.
  */
 
+// Pin this spec to 0 retries. Its 360s budget + CI's global `retries: 2` means a
+// single slow run could burn 3×360s (18min) inside a 20-min-capped shard and
+// starve the rest of the shard. A slow render here is a legit signal, not flake
+// worth re-running, so fail fast on the first attempt.
+test.describe.configure({ retries: 0 });
+
 test('plays 4 farm sessions end-to-end without crashing or losing state', async ({ page }) => {
   // Highest-coverage e2e: 4 full seasons of scene-driven chains + a mid-run
   // reload. The per-chain settle waits + Phaser tweens make it genuinely slow

@@ -28,10 +28,10 @@ describe("market/pricing", () => {
     expect(sellPriceFor("no_such")).toBe(0);
   });
 
-  it("sellPriceFor returns 0 when recipe has no coins field", () => {
-    // bread is a real recipe with coins:125 → not 0; pick something with no coins.
-    // Use the snake_case alias targets `iron_frame` — those resolve via RECIPES merge.
-    expect(sellPriceFor("iron_frame")).toBeGreaterThanOrEqual(0);
+  it("sellPriceFor resolves snake_case aliases (iron_frame → round(275 * 0.10) = 28)", () => {
+    // iron_frame is a snake_case alias resolving to the `ironframe` item
+    // (value 275). Sell price = round(275 * 0.10) = round(27.5) = 28.
+    expect(sellPriceFor("iron_frame")).toBe(28);
   });
 
   it("sellPriceFor rounds bread (125 * 0.10 = 12.5 → 13)", () => {

@@ -11,13 +11,20 @@
  *
  * Flags: --zones <csv>  --runs <n>  --seed <n>  --policy <name>
  *        --rows <n>  --cols <n>  --out <dir>  --no-write  --campaign  --progression
- *        --apply [--apply-from <path>] [--format] [--no-snapshot]
+ *        --apply [--apply-from <path>] [--format] [--no-snapshot] [--accept-snapshot]
+ *
+ * --no-write is a DRY RUN: the CLI still loads/simulates/reports/applies in memory
+ * but writes NOTHING to disk (no report splicing, no baseline promotion, no
+ * snapshot regen, no constants edit). It logs what it WOULD have written. CI runs
+ * `node tools/playtest/cli.mjs --no-write` as an end-to-end smoke of the plumbing.
  *
  * --apply CLOSES the balance loop: it writes a proposed change-list.json (from a
  * prior run, default <out>/change-list.json) BACK into src/constants.ts via the
- * codemod in src/playtest/applyPatch.ts, then regenerates the harness drift-guard
- * snapshot (the fixed-seed metrics move by design on a balance edit, so the
- * snapshot diff is the reviewable record). No hand-editing of constants.
+ * codemod in src/playtest/applyPatch.ts. It then runs the harness drift-guard
+ * test in CHECK mode (`vitest run`) — a moved snapshot FAILS LOUDLY so a human
+ * reviews the balance change. Pass --accept-snapshot to instead REGENERATE the
+ * snapshot (`vitest run -u`), accepting the fixed-seed metric movement as the
+ * reviewable record. No hand-editing of constants.
  *
  * --campaign switches to the sequential progression sim (src/playtest/campaign.ts):
  * one persistent state, runs carried forward, measuring runs-to-coin-milestone +
@@ -59,7 +66,7 @@ globalThis.localStorage = {
 };
 
 function parseArgs(argv) {
-  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", macro: "floor", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, compare: false, optimize: false, accept: false, apply: false, applyFrom: null, format: false, snapshot: true };
+  const out = { zones: ["home"], runs: 10, seed: 1, policy: "greedy", macro: "floor", rows: 6, cols: 6, outDir: "reference/docs/playtest", write: true, campaign: false, progression: false, compare: false, optimize: false, accept: false, apply: false, applyFrom: null, format: false, snapshot: true, acceptSnapshot: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     const val = () => argv[++i];
@@ -82,6 +89,7 @@ function parseArgs(argv) {
       case "--apply-from": out.applyFrom = val(); break;
       case "--format": out.format = true; break;
       case "--no-snapshot": out.snapshot = false; break;
+      case "--accept-snapshot": out.acceptSnapshot = true; break;
       default:
         if (a.startsWith("--")) console.warn(`[playtest] ignoring unknown flag: ${a}`);
     }
@@ -108,28 +116,60 @@ function replaceMarkerBlock(html, name, payload) {
 async function runApply(args) {
   const { applyChangeList, summarizeApply } = await import("./applyChangeList.mjs");
   const patchPath = path.resolve(process.cwd(), args.applyFrom ?? path.join(args.outDir, "change-list.json"));
-  console.log(`\npuzzleDrag2 — applying balance patch from ${path.relative(process.cwd(), patchPath)}`);
+  console.log(`\npuzzleDrag2 — applying balance patch from ${path.relative(process.cwd(), patchPath)}${args.write ? "" : "  (dry run: --no-write)"}`);
+  // --no-write is a DRY RUN: applyChangeList computes the resolved edits but
+  // writes nothing to constants.ts (write:false), and the snapshot step below is
+  // skipped entirely.
   const res = await applyChangeList({ patchPath, write: args.write, format: args.format });
   summarizeApply(res);
   if (!res.ok) { process.exitCode = 1; return; }
 
-  // A balance edit moves the fixed-seed harness metrics BY DESIGN; regenerate the
-  // drift-guard snapshot so the loop self-heals and the snapshot diff becomes the
-  // reviewable record of the change. Skip on no-op / --no-write / --no-snapshot.
-  if (args.write && args.snapshot && res.applied.length) {
-    console.log(`\n[apply] regenerating harness drift-guard snapshot…`);
+  // DRY RUN: nothing was written; the snapshot test would only be meaningful
+  // against a mutated tree, so skip it and report what WOULD have happened.
+  if (!args.write) {
+    if (res.applied.length) {
+      console.log(`\n[apply] (dry run) would write ${res.applied.length} edit(s) to constants.ts; skipped.`);
+      const wouldSnapshot = args.snapshot;
+      console.log(`[apply] (dry run) would ${wouldSnapshot ? (args.acceptSnapshot ? "REGENERATE (vitest run -u)" : "CHECK (vitest run)") : "SKIP"} the harness drift-guard snapshot; skipped.`);
+    }
+    return;
+  }
+
+  // A balance edit moves the fixed-seed harness metrics BY DESIGN. By default we
+  // run the drift-guard test in CHECK mode (`vitest run`, no -u): a moved snapshot
+  // FAILS LOUDLY, forcing a human to review the balance change before accepting.
+  // Only --accept-snapshot regenerates (`vitest run -u`), recording the movement
+  // as the reviewable snapshot diff. --no-snapshot skips the step entirely.
+  if (args.snapshot && res.applied.length) {
+    const regen = args.acceptSnapshot;
+    const vitestArgs = ["vitest", "run", "src/__tests__/playtest-harness.test.ts", ...(regen ? ["-u"] : [])];
+    console.log(`\n[apply] ${regen ? "regenerating" : "checking"} harness drift-guard snapshot (${vitestArgs.join(" ")})…`);
     try {
       const { stdout } = await execFileP(
-        "npx", ["vitest", "run", "src/__tests__/playtest-harness.test.ts", "-u"],
+        "npx", vitestArgs,
         { cwd: process.cwd(), maxBuffer: 64 * 1024 * 1024 },
       );
       console.log(stdout.trim().split("\n").slice(-4).join("\n"));
-      console.log(`[apply] snapshot updated — review src/__tests__/__snapshots__/ alongside the constants diff.`);
+      if (regen) {
+        console.log(`[apply] snapshot updated — review src/__tests__/__snapshots__/ alongside the constants diff.`);
+      } else {
+        console.log(`[apply] snapshot check PASSED — metrics unchanged by this edit (no snapshot movement).`);
+      }
     } catch (e) {
-      console.warn(`[apply] snapshot regen reported issues (review manually):\n${String(e.stdout || e.message || "").slice(-1000)}`);
+      if (regen) {
+        console.warn(`[apply] snapshot regen reported issues (review manually):\n${String(e.stdout || e.message || "").slice(-1000)}`);
+      } else {
+        // Expected on a real balance edit: the snapshot moved. Fail loudly so a
+        // human reviews it. Re-run with --accept-snapshot to accept the movement.
+        console.error(`\n[apply] ✗ drift-guard snapshot CHANGED — this balance edit moves the fixed-seed metrics.\n` +
+          `[apply]   Review the effect, then re-run with --accept-snapshot to accept & regenerate the snapshot\n` +
+          `[apply]   (or drop the constants change). Vitest output:\n${String(e.stdout || e.message || "").slice(-1000)}`);
+        process.exitCode = 1;
+      }
     }
   } else if (res.applied.length) {
-    console.log(`\n[apply] note: harness snapshot NOT regenerated (run \`npm test -- -u src/__tests__/playtest-harness.test.ts\` or drop --no-snapshot).`);
+    console.log(`\n[apply] note: harness snapshot NOT checked/regenerated (--no-snapshot). ` +
+      `Verify with \`npx vitest run src/__tests__/playtest-harness.test.ts\` (or \`-u\` to accept).`);
   }
 }
 

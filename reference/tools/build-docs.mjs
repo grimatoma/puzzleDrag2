@@ -38,10 +38,16 @@ const outRoot = join(repoRoot, "dist", "docs");
 
 /** @returns {string[]} repo-relative paths of every tracked file under docs/ */
 function trackedDocs() {
-  const out = execFileSync("git", ["ls-files", "reference/docs"], {
-    cwd: repoRoot,
-    encoding: "utf8",
-  });
+  let out;
+  try {
+    out = execFileSync("git", ["ls-files", "reference/docs"], {
+      cwd: repoRoot,
+      encoding: "utf8",
+    });
+  } catch (e) {
+    console.warn("[build-docs] skipped: git unavailable — " + e.message);
+    return [];
+  }
   return out
     .split("\n")
     .map((l) => l.trim())
@@ -886,104 +892,114 @@ ${bodyHtml}
 
 marked.setOptions({ gfm: true, breaks: false, mangle: false, headerIds: false });
 
-const files = trackedDocs();
-const entries = [];
-let assetCount = 0;
+// The entire build body is wrapped so that a reference-docs build step can
+// never hard-fail the production build. `dist/` is already emitted by vite
+// before this runs; per CLAUDE.md this reference tooling is not the shippable
+// game, so on ANY failure (git unavailable, a malformed doc that trips a
+// marked parse, an fs error) we warn and exit 0 rather than propagate.
+try {
+  const files = trackedDocs();
+  const entries = [];
+  let assetCount = 0;
 
-// Folders that already ship their own index.html — used to decide whether a
-// folder's README should be promoted into that folder's hub page.
-const indexFolders = new Set();
-for (const repoRel of files) {
-  const docRel = relative(docsRoot, join(repoRoot, repoRel)).replace(/\\/g, "/");
-  if (/(^|\/)index\.html?$/i.test(docRel)) {
-    indexFolders.add(docRel.replace(/\/?index\.html?$/i, ""));
+  // Folders that already ship their own index.html — used to decide whether a
+  // folder's README should be promoted into that folder's hub page.
+  const indexFolders = new Set();
+  for (const repoRel of files) {
+    const docRel = relative(docsRoot, join(repoRoot, repoRel)).replace(/\\/g, "/");
+    if (/(^|\/)index\.html?$/i.test(docRel)) {
+      indexFolders.add(docRel.replace(/\/?index\.html?$/i, ""));
+    }
   }
-}
 
-for (const repoRel of files) {
-  const abs = join(repoRoot, repoRel);
-  // Normalize to forward slashes so section grouping + featured/archive
-  // matching behave identically on Windows (path.relative uses "\") and CI.
-  const docRel = relative(docsRoot, abs).replace(/\\/g, "/"); // path relative to docs/
-  const file = docRel.split("/").pop();
-  const depth = docRel.split("/").length - 1;
-  const dir = docRel.includes("/") ? docRel.slice(0, docRel.lastIndexOf("/")) : "";
+  for (const repoRel of files) {
+    const abs = join(repoRoot, repoRel);
+    // Normalize to forward slashes so section grouping + featured/archive
+    // matching behave identically on Windows (path.relative uses "\") and CI.
+    const docRel = relative(docsRoot, abs).replace(/\\/g, "/"); // path relative to docs/
+    const file = docRel.split("/").pop();
+    const depth = docRel.split("/").length - 1;
+    const dir = docRel.includes("/") ? docRel.slice(0, docRel.lastIndexOf("/")) : "";
 
-  const isReadme = /^readme\.md$/i.test(file);
-  // A folder README with no sibling index.html becomes that folder's hub page
-  // (rendered to <dir>/index.html), so the folder gets a real landing page on
-  // the deployed site — e.g. projects/README.md → projects/index.html, the
-  // index of every brief. Archived folders keep their existing handling.
-  const promoteReadme = isReadme && dir && !isArchived(docRel) && !indexFolders.has(dir);
+    const isReadme = /^readme\.md$/i.test(file);
+    // A folder README with no sibling index.html becomes that folder's hub page
+    // (rendered to <dir>/index.html), so the folder gets a real landing page on
+    // the deployed site — e.g. projects/README.md → projects/index.html, the
+    // index of every brief. Archived folders keep their existing handling.
+    const promoteReadme = isReadme && dir && !isArchived(docRel) && !indexFolders.has(dir);
 
-  if (/\.html?$/i.test(file)) {
-    const html = readFileSync(abs, "utf8");
-    const outPath = join(outRoot, docRel);
-    mkdirSync(dirname(outPath), { recursive: true });
-    copyFileSync(abs, outPath);
-    entries.push({
-      rel: docRel,
-      href: docRel,
-      src: docRel,
-      file,
-      kind: "html",
-      title: titleFromHtml(html, prettyName(file)),
-      summary: summaryFromHtml(html),
-      minutes: readingMinutes(textFromHtml(html)),
-      thumb: pickThumb(html, docRel),
-      ...docMeta(repoRel, file),
-    });
-  } else if (promoteReadme) {
-    const md = readFileSync(abs, "utf8");
-    const title = titleFromMarkdown(md, prettyName(dir.split("/").pop()));
-    const body = rewriteMdLinks(marked.parse(md));
-    const outRel = `${dir}/index.html`;
-    const outPath = join(outRoot, outRel);
-    mkdirSync(dirname(outPath), { recursive: true });
-    writeFileSync(outPath, renderMarkdownPage(title, body, depth));
-    entries.push({
-      rel: outRel,
-      href: outRel,
-      src: docRel,
-      file: "index.html",
-      kind: "md",
-      title,
-      summary: summaryFromMarkdown(md),
-      minutes: readingMinutes(textFromMarkdown(md)),
-      thumb: pickThumb(md, docRel),
-      ...docMeta(repoRel, file),
-    });
-  } else if (/\.md$/i.test(file) && !isReadme) {
-    const md = readFileSync(abs, "utf8");
-    const title = titleFromMarkdown(md, prettyName(file));
-    const body = rewriteMdLinks(marked.parse(md));
-    const outRel = docRel.replace(/\.md$/i, ".html");
-    const outPath = join(outRoot, outRel);
-    mkdirSync(dirname(outPath), { recursive: true });
-    writeFileSync(outPath, renderMarkdownPage(title, body, depth));
-    entries.push({
-      rel: outRel,
-      href: outRel,
-      src: docRel,
-      file,
-      kind: "md",
-      title,
-      summary: summaryFromMarkdown(md),
-      minutes: readingMinutes(textFromMarkdown(md)),
-      thumb: pickThumb(md, docRel),
-      ...docMeta(repoRel, file),
-    });
-  } else {
-    const outPath = join(outRoot, docRel);
-    mkdirSync(dirname(outPath), { recursive: true });
-    copyFileSync(abs, outPath);
-    assetCount += 1;
+    if (/\.html?$/i.test(file)) {
+      const html = readFileSync(abs, "utf8");
+      const outPath = join(outRoot, docRel);
+      mkdirSync(dirname(outPath), { recursive: true });
+      copyFileSync(abs, outPath);
+      entries.push({
+        rel: docRel,
+        href: docRel,
+        src: docRel,
+        file,
+        kind: "html",
+        title: titleFromHtml(html, prettyName(file)),
+        summary: summaryFromHtml(html),
+        minutes: readingMinutes(textFromHtml(html)),
+        thumb: pickThumb(html, docRel),
+        ...docMeta(repoRel, file),
+      });
+    } else if (promoteReadme) {
+      const md = readFileSync(abs, "utf8");
+      const title = titleFromMarkdown(md, prettyName(dir.split("/").pop()));
+      const body = rewriteMdLinks(marked.parse(md));
+      const outRel = `${dir}/index.html`;
+      const outPath = join(outRoot, outRel);
+      mkdirSync(dirname(outPath), { recursive: true });
+      writeFileSync(outPath, renderMarkdownPage(title, body, depth));
+      entries.push({
+        rel: outRel,
+        href: outRel,
+        src: docRel,
+        file: "index.html",
+        kind: "md",
+        title,
+        summary: summaryFromMarkdown(md),
+        minutes: readingMinutes(textFromMarkdown(md)),
+        thumb: pickThumb(md, docRel),
+        ...docMeta(repoRel, file),
+      });
+    } else if (/\.md$/i.test(file) && !isReadme) {
+      const md = readFileSync(abs, "utf8");
+      const title = titleFromMarkdown(md, prettyName(file));
+      const body = rewriteMdLinks(marked.parse(md));
+      const outRel = docRel.replace(/\.md$/i, ".html");
+      const outPath = join(outRoot, outRel);
+      mkdirSync(dirname(outPath), { recursive: true });
+      writeFileSync(outPath, renderMarkdownPage(title, body, depth));
+      entries.push({
+        rel: outRel,
+        href: outRel,
+        src: docRel,
+        file,
+        kind: "md",
+        title,
+        summary: summaryFromMarkdown(md),
+        minutes: readingMinutes(textFromMarkdown(md)),
+        thumb: pickThumb(md, docRel),
+        ...docMeta(repoRel, file),
+      });
+    } else {
+      const outPath = join(outRoot, docRel);
+      mkdirSync(dirname(outPath), { recursive: true });
+      copyFileSync(abs, outPath);
+      assetCount += 1;
+    }
   }
+
+  mkdirSync(outRoot, { recursive: true });
+  writeFileSync(join(outRoot, "index.html"), renderIndex(entries));
+
+  console.log(
+    `[build-docs] wrote ${entries.length} docs + ${assetCount} assets + index → dist/docs/`,
+  );
+} catch (e) {
+  console.warn("[build-docs] skipped: " + ((e && e.stack) || e));
+  process.exit(0);
 }
-
-mkdirSync(outRoot, { recursive: true });
-writeFileSync(join(outRoot, "index.html"), renderIndex(entries));
-
-console.log(
-  `[build-docs] wrote ${entries.length} docs + ${assetCount} assets + index → dist/docs/`,
-);

@@ -41,7 +41,7 @@ export default defineConfig(({ command }) => ({
     // `registration.update()` (installed PWAs that stay resident rarely re-check
     // on their own) so resumed installs pick the new build up promptly. Emits
     // sw.js / workbox-*.js / registerSW.js at the dist ROOT (not dist/assets/),
-    // so the phase-12-build asset guardrails are unaffected.
+    // so the tools/verify-build-output.mjs asset guardrails are unaffected.
     VitePWA({
       registerType: "autoUpdate",
       injectRegister: "auto",

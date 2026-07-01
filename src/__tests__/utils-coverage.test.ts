@@ -14,6 +14,14 @@ import {
   currentCap,
   runSelfTests,
 } from "../utils.js";
+import { ROWS, COLS } from "../constants.js";
+
+describe("constants — board dimensions", () => {
+  it("board is 6×6", () => {
+    expect(ROWS).toBe(6);
+    expect(COLS).toBe(6);
+  });
+});
 
 describe("utils — clamp / contrast / adjacency", () => {
   it("clamp constrains to [a, b]", () => {
@@ -173,7 +181,9 @@ describe("utils — runSelfTests smoke shim", () => {
     const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
     const result = await runSelfTests();
     logSpy.mockRestore();
-    expect(typeof result).toBe("boolean");
+    // runSelfTests() returns `failed === 0`; assert the smoke invariants
+    // actually PASS, not merely that a boolean was returned.
+    expect(result).toBe(true);
     },
   );
 });

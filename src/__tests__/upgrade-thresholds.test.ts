@@ -11,4 +11,6 @@ describe("1.1 — per-resource upgrade thresholds", () => {
   it("6 chicken → 1 eggs upgrade", () => expect(upgradeCountForChain(6, "tile_bird_chicken")).toBe(1));
   it("wheat threshold is 5, not 4", () => expect(upgradeCountForChain(4, "tile_grain_wheat")).toBe(0));
   it("5 wheat → 1 upgrade", () => expect(upgradeCountForChain(5, "tile_grain_wheat")).toBe(1));
+  // Trees → Logs chain: oak upgrades at 6.
+  it("oak threshold is 6", () => expect(upgradeCountForChain(6, "tile_tree_oak")).toBe(1));
 });

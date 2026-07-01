@@ -4,7 +4,6 @@
  */
 import { describe, it, expect } from "vitest";
 import { createInitialState, rootReducer } from "../state.js";
-import { FIRE_HAZARD_ENABLED } from "../featureFlags.js";
 
 function makeGrid(rows = 6, cols = 6, key = "tile_grass_grass") {
   return Array.from({ length: rows }, () =>
@@ -26,22 +25,28 @@ function dispatchChain(state, n = 3) {
 }
 
 describe("QA Pass 3 — hazard spawn wired into CHAIN_COLLECTED", () => {
-  it.skipIf(!FIRE_HAZARD_ENABLED)("farm: fire can spawn within 200 chains (4% rate)", () => {
-    const base = {
+  it("farm: a seeded fire spreads through the CHAIN_COLLECTED tick path", () => {
+    // Fire *spawning* is behind FIRE_HAZARD_ENABLED, but the tickFire spread
+    // mechanic wired into CHAIN_COLLECTED runs unconditionally. Seed a single
+    // fire cell and confirm repeated chains grow it (each cell has a 50% spread
+    // chance per turn, so 40 turns makes staying at 1 cell astronomically
+    // unlikely) while never dropping below the seeded cell.
+    let s = {
       ...createInitialState(),
       biomeKey: "farm",
       biome: "farm",
       grid: makeGrid(),
-      hazards: { rats: [], fire: null, wolves: null },
+      hazards: { rats: [], fire: { cells: [{ row: 2, col: 2 }] }, wolves: null },
       boss: null,
     };
-    let s = base;
-    let spawned = false;
-    for (let i = 0; i < 200; i++) {
+    let maxCells = 1;
+    for (let i = 0; i < 40; i++) {
       s = dispatchChain(s, 3);
-      if (s.hazards?.fire) { spawned = true; break; }
+      const n = s.hazards?.fire?.cells?.length ?? 0;
+      expect(n).toBeGreaterThanOrEqual(1); // never loses the seeded cell
+      maxCells = Math.max(maxCells, n);
     }
-    expect(spawned).toBe(true);
+    expect(maxCells).toBeGreaterThan(1); // it actually spread
   });
 
   it("farm: hazard tick advances fire when active", () => {

@@ -36,6 +36,24 @@ export default defineConfig({
         isMobile: true,
       },
     },
+    {
+      // Desktop layout coverage. The mobile project drives the full suite at
+      // 844×390 (touch/isMobile); this project re-runs a small SMOKE subset at a
+      // wide desktop viewport (no touch, dsf 1) so the ≥1024px CSS layout branch
+      // (the `max-[1024px]` overrides in prototype.tsx flip off here) is actually
+      // exercised behaviorally. Scoped via testMatch to a couple of specs so it
+      // doesn't 2× the whole suite — smoke covers boot/HUD/nav-presence and menu;
+      // navigation covers view/modal routing across the desktop layout.
+      name: 'desktop',
+      testMatch: /(smoke|navigation)\.spec\.ts$/,
+      use: {
+        browserName: 'chromium',
+        viewport: { width: 1280, height: 1024 },
+        deviceScaleFactor: 1,
+        hasTouch: false,
+        isMobile: false,
+      },
+    },
   ],
   webServer: {
     command: 'node ./node_modules/vite/bin/vite.js',
