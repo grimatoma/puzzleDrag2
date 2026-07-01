@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>puzzleDrag2 — Full Game Design Review</title>
+<style>
+  :root{
+    /* This doc practices what it preaches: a real contrast ladder. */
+    --page:#efe6cf; --panel:#faf4e4; --card:#fffdf6; --well:#e7dcc0;
+    --border:#b59a6a; --border-strong:#94774b;
+    --ink:#2b2218; --ink-2:#5c4a33; --ink-3:#8a7350;
+    --ember:#cf5520; --gold:#b9851f; --farm:#4f7a2a; --mine:#3f5d80; --fish:#2f7e96;
+    --danger:#b1322a; --arcane:#5b3f86;
+    --ok:#2f7d3a; --warn:#b8801c; --fail:#b1322a;
+    --s1:#b1322a; --s2:#cf5520; --s3:#b8801c; --polish:#5a5e62;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--page);color:var(--ink);
+    font:16px/1.62 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased;}
+  a{color:var(--ember);text-decoration:none} a:hover{text-decoration:underline}
+  code{font-family:var(--mono);font-size:.84em;background:var(--well);border:1px solid var(--border);
+    border-radius:5px;padding:1px 5px;color:#4a3a22}
+  strong{color:var(--ink)}
+
+  /* ── Layout: sticky top bar + left tab rail + content ─────────────── */
+  header.top{position:sticky;top:0;z-index:50;background:linear-gradient(180deg,#fffdf6,#f3ead2);
+    border-bottom:2px solid var(--border);padding:14px 26px;display:flex;align-items:baseline;gap:16px;
+    box-shadow:0 2px 12px rgba(60,40,20,.08)}
+  header.top .brand{font-family:var(--serif);font-weight:700;font-size:20px;color:var(--ink)}
+  header.top .brand .em{color:var(--ember)}
+  header.top .meta{color:var(--ink-3);font-size:12.5px;margin-left:auto}
+  .shell{display:grid;grid-template-columns:232px 1fr;align-items:start;max-width:1200px;margin:0 auto}
+  nav.rail{position:sticky;top:57px;align-self:start;height:calc(100vh - 57px);overflow:auto;
+    padding:20px 12px 60px;border-right:1px solid var(--border)}
+  nav.rail a{display:block;padding:9px 13px;border-radius:9px;color:var(--ink-2);font-size:14px;font-weight:600;
+    margin-bottom:3px;border:1px solid transparent}
+  nav.rail a .k{color:var(--ink-3);font-weight:700;font-size:11px;margin-right:8px}
+  nav.rail a:hover{background:var(--card);text-decoration:none}
+  nav.rail a.active{background:var(--card);border-color:var(--border);color:var(--ink);
+    box-shadow:0 1px 0 var(--border),0 2px 6px rgba(60,40,20,.07)}
+  nav.rail .sep{font:700 11px/1 system-ui;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);
+    padding:16px 13px 6px}
+  main{padding:26px 34px 120px;min-width:0}
+  section.tab{display:none} section.tab.active{display:block;animation:fade .2s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+  h1{font-family:var(--serif);font-size:clamp(26px,4vw,38px);line-height:1.06;margin:4px 0 6px}
+  h2{font-family:var(--serif);font-size:25px;margin:38px 0 8px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+  h2:first-of-type{margin-top:14px}
+  h3{font-size:18px;margin:26px 0 6px;color:var(--ink)}
+  h2 .n,h3 .n{color:var(--ember);font-size:.72em;margin-right:.45em}
+  p{margin:11px 0}
+  .lead{font-size:18px}
+  .eyebrow{font:700 12px/1 system-ui;letter-spacing:.16em;text-transform:uppercase;color:var(--ember);margin:0 0 10px}
+  ul,ol{padding-left:22px} li{margin:5px 0}
+
+  .callout{background:var(--card);border:1.5px solid var(--border);border-left:5px solid var(--ember);
+    border-radius:12px;padding:16px 20px;margin:20px 0;box-shadow:0 2px 8px rgba(60,40,20,.06)}
+  .callout.tldr{border-left-color:var(--ember)} .callout.good{border-left-color:var(--ok)}
+  .callout.q{border-left-color:var(--arcane)} .callout.warn{border-left-color:var(--warn)}
+
+  table{border-collapse:collapse;width:100%;margin:16px 0;font-size:14px;background:var(--card);
+    border:1.5px solid var(--border);border-radius:12px;overflow:hidden}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid #e6d9bd;vertical-align:top}
+  th{background:#f1e7cd;font:700 11.5px/1.2 system-ui;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-2)}
+  tr:last-child td{border-bottom:none} tr:nth-child(even) td{background:#fbf6e9}
+
+  /* ── Finding cards ────────────────────────────────────────────────── */
+  .find{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:15px 18px;margin:14px 0;
+    box-shadow:0 1px 0 var(--border),0 2px 6px rgba(60,40,20,.06)}
+  .find .hd{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+  .find .ft{font-weight:700;font-size:15.5px;color:var(--ink)}
+  .find .body{font-size:14px;color:var(--ink-2)}
+  .find .body .lbl{font-weight:700;color:var(--ink);text-transform:uppercase;font-size:10.5px;letter-spacing:.06em;
+    display:block;margin:9px 0 1px;color:var(--ink-3)}
+  .sev{font:800 10.5px/1 system-ui;letter-spacing:.05em;color:#fff;padding:4px 8px;border-radius:6px;flex:none}
+  .sev.S1{background:var(--s1)} .sev.S2{background:var(--s2)} .sev.S3{background:var(--s3)} .sev.POLISH{background:var(--polish)}
+  .eff{font:700 10.5px/1 system-ui;color:var(--ink-3);border:1px solid var(--border);border-radius:6px;padding:4px 7px;flex:none}
+
+  .chip{display:inline-block;font:700 11px/1 system-ui;padding:4px 9px;border-radius:999px;margin:2px 4px 2px 0;
+    border:1px solid var(--border);background:var(--well);color:var(--ink-2)}
+  .chip.good{background:#e3f0d4;border-color:var(--farm);color:#2f4d17}
+
+  figure{margin:18px 0;background:var(--card);border:1.5px solid var(--border);border-radius:14px;padding:10px;
+    box-shadow:0 3px 12px rgba(60,40,20,.08)}
+  figure img{width:100%;display:block;border-radius:8px;border:1px solid #e0d2b4;background:#fff}
+  figcaption{font-size:12.5px;color:var(--ink-2);padding:9px 5px 2px;font-style:italic}
+  .shots{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  .shots.m{grid-template-columns:repeat(auto-fill,minmax(190px,1fr))}
+  .shots figure img{background:#111}
+  @media(max-width:760px){.shots{grid-template-columns:1fr}.shell{grid-template-columns:1fr}nav.rail{display:none}}
+
+  .phase{background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:14px 18px;margin:12px 0;
+    border-left:5px solid var(--farm)}
+  .phase h3{margin:0 0 4px} .phase .tag{font:800 10.5px/1 system-ui;letter-spacing:.07em;text-transform:uppercase;
+    color:#fff;background:var(--farm);padding:4px 8px;border-radius:5px;display:inline-block;margin-bottom:7px}
+  .phase.p0{border-left-color:var(--ember)} .phase.p0 .tag{background:var(--ember)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:900px){.grid2{grid-template-columns:1fr}}
+  footer{margin:50px 0 0;padding-top:16px;border-top:2px solid var(--border);color:var(--ink-3);font-size:12.5px}
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="brand">puzzleDrag2 · <span class="em">Full Game Design Review</span></span>
+  <span class="meta" id="topmeta">Read from live <code>src/</code> · screenshots of the running game · mobile-first lens</span>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <div class="sep">Start</div>
+  <a href="#overview" data-tab="overview"><span class="k">00</span>Overview &amp; roadmap</a>
+  <div class="sep">The core</div>
+  <a href="#board" data-tab="board"><span class="k">01</span>The Board (puzzle)</a>
+  <a href="#town" data-tab="town"><span class="k">02</span>The Town</a>
+  <a href="#map" data-tab="map"><span class="k">03</span>World Map</a>
+  <div class="sep">Systems &amp; screens</div>
+  <a href="#screens" data-tab="screens"><span class="k">04</span>Screens &amp; panels</a>
+  <a href="#story" data-tab="story"><span class="k">05</span>Story &amp; big moments</a>
+  <a href="#shell" data-tab="shell"><span class="k">06</span>Shell, nav &amp; onboarding</a>
+  <div class="sep">Cross-cutting</div>
+  <a href="#crosscut" data-tab="crosscut"><span class="k">07</span>Cross-cutting themes</a>
+  <a href="#roadmap" data-tab="roadmap"><span class="k">08</span>Prioritized roadmap</a>
+</nav>
+
+<main>
+<!-- ===================== OVERVIEW ===================== -->
+<section class="tab active" id="tab-overview">
+  <p class="eyebrow">Full design review · 2026-07</p>
+  <h1>puzzleDrag2 — a complete design pass</h1>
+  <p class="lead">Every view, layout, interaction, animation, and critical journey — read from the
+  live code in <code>src/</code> (not the <code>reference/</code> docs), with the running game
+  screenshotted across ~85 states at both a phone (390×844) and a desktop (1280×1024) viewport, and
+  judged mobile-first through a frontend-design lens. Findings <em>and</em> concrete proposals, organized
+  into the tabs at left.</p>
+
+  <div class="callout tldr">
+    <p style="margin-top:0"><strong>The short version.</strong> This is a genuinely charming, deep game
+    with a <strong>excellent signature interaction</strong> and a strong storybook art identity. The prior
+    color/contrast pass landed well — the parchment UI now has a real contrast ladder. The work that's
+    left is <strong>not</strong> more color. It is four things: (1) <strong>the game has no
+    wide-screen layout</strong> — every DOM screen is an unadapted phone column stranded in empty
+    parchment on desktop/web; (2) <strong>the town's world-overlays and its central Farm plot look
+    unfinished</strong> next to the rich building art; (3) a class of <strong>legibility/polish papercuts</strong>
+    (label truncation, redundant reward rows, grass "confetti" noise, dead desktop space); and (4)
+    <strong>the reward/feedback and motion languages don't yet form one escalating ladder</strong> from
+    the board out into the chrome. None require a rebuild — they're targeted, high-leverage fixes.</p>
+  </div>
+
+  <h2><span class="n">§</span>How this was evaluated</h2>
+  <ul>
+    <li><strong>Source of truth = the code.</strong> Assessments were formed from <code>src/</code>, the
+      three Vite entries, and the running game — never from <code>reference/</code> docs.</li>
+    <li><strong>Screenshots of the real game.</strong> All ~85 visual scenarios (from
+      <code>src/visualTesting/matrix.ts</code>) were rendered against the running dev server at a phone and
+      a desktop viewport. Shots referenced below live in <code>./shots/</code>.</li>
+    <li><strong>Mobile-first.</strong> The primary target is a phone in portrait; density, tap targets,
+      reach and truncation are judged there first. Desktop shots reveal full layouts.</li>
+    <li><strong>Beyond color.</strong> A prior review already rebuilt the token contrast ladder, accent
+      system, season accents and bundled the display font (see <code>src/tokens.css</code>). This pass
+      deliberately pushes past that into layout, IA, motion/feel, per-view UX, and whether the player
+      understands what is happening.</li>
+    <li><strong>Method.</strong> Four subsystem maps (views/IA, critical journeys, design system,
+      interaction/animation) grounded a fan-out of focused reviewers — one per surface and per
+      cross-cutting lens — each citing the screenshot and the <code>file:line</code> behind every finding.</li>
+  </ul>
+
+  <h2><span class="n">§</span>What's genuinely strong — protect these</h2>
+  <div class="callout good">
+  <ul style="margin:0">
+    <li><strong>The chain-drag is a great signature interaction.</strong> The glowing path with node
+      dots and halo, the star-burst upgrade previews, chain-length-scaled screen-shake + radial flash,
+      escalating haptics and audio pitch, squash-stretch landing, and the BONUS→DOUBLE→TRIPLE→FRENZY combo
+      panel all combine into a satisfying, legible harvest. The held-chain state (see the Board tab) reads
+      beautifully. This is the heart of the game and it works.</li>
+    <li><strong>The town & building art is rich and characterful.</strong> The painterly settlement —
+      bakery, mill, portal, market stalls, houses, lamps, benches, river with a boat — genuinely feels
+      like a place that grows across tiers.</li>
+    <li><strong>The World Map is the best-realized screen.</strong> A cohesive parchment atlas with themed
+      zone nodes, solid-vs-dashed roads, a clean detail panel and a real legend. It nails the storybook
+      identity and it actually uses the widescreen space. It is the internal benchmark for every other screen.</li>
+    <li><strong>Quest / tile / research cards are legible.</strong> Category tags, have/need progress bars,
+      reward chips, and clear claim states make goals scannable.</li>
+    <li><strong>The season system is ambitious and mostly reads.</strong> Distinct field gradients and
+      per-season accents give each of the four seasons a felt identity.</li>
+  </ul>
+  </div>
+
+  <h2><span class="n">§</span>The big themes</h2>
+  <p class="ink-3"><em>(Synthesized across all reviewers — see the Cross-cutting tab for detail and the
+  Roadmap tab for sequencing.)</em></p>
+  <!-- PLACEHOLDER:overview-themes -->
+
+  <h2><span class="n">§</span>Top priorities at a glance</h2>
+  <!-- PLACEHOLDER:overview-priorities -->
+</section>
+<section class="tab" id="tab-board"><!-- PLACEHOLDER:board --></section>
+<section class="tab" id="tab-town"><!-- PLACEHOLDER:town --></section>
+<section class="tab" id="tab-map"><!-- PLACEHOLDER:map --></section>
+<section class="tab" id="tab-screens"><!-- PLACEHOLDER:screens --></section>
+<section class="tab" id="tab-story"><!-- PLACEHOLDER:story --></section>
+<section class="tab" id="tab-shell"><!-- PLACEHOLDER:shell --></section>
+<section class="tab" id="tab-crosscut"><!-- PLACEHOLDER:crosscut --></section>
+<section class="tab" id="tab-roadmap"><!-- PLACEHOLDER:roadmap --></section>
+<footer>puzzleDrag2 design review · generated from the live codebase and screenshots of the running game.</footer>
+</main>
+</div>
+
+<script>
+  const tabs = document.querySelectorAll('section.tab');
+  const links = document.querySelectorAll('nav.rail a');
+  function show(id){
+    tabs.forEach(t=>t.classList.toggle('active', t.id==='tab-'+id));
+    links.forEach(a=>a.classList.toggle('active', a.dataset.tab===id));
+    window.scrollTo({top:0,behavior:'instant'});
+  }
+  links.forEach(a=>a.addEventListener('click',e=>{e.preventDefault();const id=a.dataset.tab;history.replaceState(null,'','#'+id);show(id);}));
+  const start=(location.hash||'#overview').slice(1);
+  show(document.getElementById('tab-'+start)?start:'overview');
+</script>
+</body>
+</html>

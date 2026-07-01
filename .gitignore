@@ -56,3 +56,6 @@ graphify-out/GRAPH_REPORT.md
 # only the README (how to run + what it found) is committed here.
 reference/docs/playtest/*
 !reference/docs/playtest/README.md
+
+# Design-review workflow scratch script (transient)
+scratchpad-review-workflow.mjs
