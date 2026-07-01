@@ -283,6 +283,30 @@
     width: 116px;
     height: 116px;
   }
+  /* Worker/townsfolk portraits are self-framed circular badges (see
+     charactersVector.ts FRAME — each draws its own rim on a circle). The stock
+     square "well" box (border + fill) just double-frames them and leaves the art
+     floating small inside it, so here we drop the box and size the portrait up
+     to fill the row — and make it a hero in the detail card. The is-selected
+     override is repeated so the green icon tint doesn't reappear as a square
+     behind the bare circle. */
+  .hl-workers .hl-browser-item__icon,
+  .hl-workers .hl-browser-item.is-selected .hl-browser-item__icon {
+    width: 56px;
+    height: 56px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
+  .hl-workers .hl-detail-pane__icon {
+    width: 112px;
+    height: 112px;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    overflow: visible;
+  }
   .hl-browser-item__main {
     @apply flex-1 min-w-0 flex flex-col gap-0.5;
   }
