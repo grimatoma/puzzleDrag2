@@ -37,6 +37,11 @@ async function waitForVisualReady(page, scenario) {
   await page.waitForFunction(() => window.__hearthVisual?.ready);
   await page.evaluate(() => window.__hearthVisual.ready);
   await page.waitForSelector('[data-visual-root="app"]');
+  // The index.html boot splash is a fixed overlay painted above the app root, so
+  // an element screenshot composites it in. `ready` can resolve before the board
+  // engine boots and dismisses it, so wait for it to fully detach — otherwise a
+  // slow board boot lets a golden capture the splash instead of the UI.
+  await page.waitForSelector("#boot-splash", { state: "detached", timeout: 15_000 }).catch(() => {});
   if (scenario.hash === "#/board" || scenario.state?.startsWith?.("board")) {
     await page.waitForFunction(() => window.__phaserScene?.grid?.flat?.().filter(Boolean).length >= 36);
     await page.evaluate(() => window.__hearthVisual.syncScene());

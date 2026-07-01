@@ -151,6 +151,37 @@ function rngFrom(seedStr: string): () => number {
 }
 
 /**
+ * Build a concrete {@link Quest} from a template, a chosen target, and a stable
+ * id. Coins scale with the target; the reward bundle carries over whichever
+ * optional grants the template declares. Shared by {@link rollQuests} (random
+ * board) and {@link showcaseQuests} (the fixed starter set) so both paths mint
+ * identically-shaped quests.
+ */
+function questFromTemplate(tpl: QuestTemplate, target: number, id: string): Quest {
+  return {
+    id,
+    template: tpl.id,
+    category: tpl.category,
+    key: tpl.key,
+    item: tpl.item,
+    tool: tpl.tool,
+    minLength: tpl.minLength,
+    target,
+    progress: 0,
+    claimed: false,
+    reward: {
+      coins: tpl.coinBase + Math.floor(target * tpl.coinPerUnit),
+      xp: QUEST_CLAIM_XP,
+      ...(tpl.rewardTools ? { tools: tpl.rewardTools } : {}),
+      ...(tpl.rewardItems ? { items: tpl.rewardItems } : {}),
+      ...(tpl.rewardRunes ? { runes: tpl.rewardRunes } : {}),
+      ...(tpl.rewardUnlockTile ? { unlockTile: tpl.rewardUnlockTile } : {}),
+      ...(tpl.rewardUnlockBuilding ? { unlockBuilding: tpl.rewardUnlockBuilding } : {}),
+    },
+  };
+}
+
+/**
  * Roll 6 quests deterministically from (saveSeed, year, season).
  * Same inputs always produce the same 6 quests.
  *
@@ -177,28 +208,41 @@ export function rollQuests(
     const tpl = pool.splice(idx, 1)[0];
     const range = tpl.targetMax - tpl.targetMin;
     const target = tpl.targetMin + Math.floor(rng() * (range + 1));
-    out.push({
-      id: `${tpl.id}-${year}-${season}-${out.length}`,
-      template: tpl.id,
-      category: tpl.category,
-      key: tpl.key,
-      item: tpl.item,
-      tool: tpl.tool,
-      minLength: tpl.minLength,
-      target,
-      progress: 0,
-      claimed: false,
-      reward: {
-        coins: tpl.coinBase + Math.floor(target * tpl.coinPerUnit),
-        xp: QUEST_CLAIM_XP,
-        ...(tpl.rewardTools ? { tools: tpl.rewardTools } : {}),
-        ...(tpl.rewardItems ? { items: tpl.rewardItems } : {}),
-        ...(tpl.rewardRunes ? { runes: tpl.rewardRunes } : {}),
-        ...(tpl.rewardUnlockTile ? { unlockTile: tpl.rewardUnlockTile } : {}),
-        ...(tpl.rewardUnlockBuilding ? { unlockBuilding: tpl.rewardUnlockBuilding } : {}),
-      },
-    });
+    out.push(questFromTemplate(tpl, target, `${tpl.id}-${year}-${season}-${out.length}`));
   }
+  return out;
+}
+
+/**
+ * A fixed, hand-picked starter board that showcases every quest *type* and the
+ * distinct reward-card styles, so a fresh game immediately shows the full range:
+ * a plain building unlock (framed gold row + tools), a tile unlock (framed green
+ * row + rune), and one basic card per remaining category (collect / craft /
+ * order / tool). These are real, fully-functional quests — they tick and claim
+ * exactly like a rolled quest — not mock data. Every pick is farm-fulfillable
+ * (orders and chains are biome-agnostic to complete), and the board re-rolls
+ * normally via {@link rollQuests} once the first season turns.
+ *
+ * Targets are clamped into each template's authored [targetMin, targetMax].
+ */
+export function showcaseQuests(): Quest[] {
+  // Lead with the two eye-catching unlock cards, then one of each basic type.
+  const picks: Array<{ id: string; target: number }> = [
+    { id: "raise_the_mill", target: 3 },     // order → building unlock + tools
+    { id: "bones_back_forty", target: 2 },   // chain → tile unlock + rune + tool
+    { id: "collect_hay", target: 30 },       // collect (Gather)
+    { id: "craft_bread", target: 3 },        // craft  (Craft)
+    { id: "orders_any", target: 4 },         // order  (Deliver)
+    { id: "tool_scythe", target: 3 },        // tool   (Toil)
+  ];
+  const byId = new Map((QUEST_TEMPLATES as QuestTemplate[]).map((t) => [t.id, t]));
+  const out: Quest[] = [];
+  picks.forEach((p, i) => {
+    const tpl = byId.get(p.id);
+    if (!tpl) return;
+    const target = Math.min(Math.max(p.target, tpl.targetMin), tpl.targetMax);
+    out.push(questFromTemplate(tpl, target, `showcase-${tpl.id}-${i}`));
+  });
   return out;
 }
 

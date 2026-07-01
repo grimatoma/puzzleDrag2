@@ -1,5 +1,5 @@
 import { SAVE_SCHEMA_VERSION } from "../constants.js";
-import { rollQuests } from "../features/quests/data.js";
+import { showcaseQuests } from "../features/quests/data.js";
 import { INITIAL_STORY_STATE } from "../story.js";
 import { initialFlagState } from "../flags.js";
 import { FIRE_HAZARD_ENABLED } from "../featureFlags.js";
@@ -79,9 +79,11 @@ export function createFreshState(overrides?: { saveSeed?: string; tools?: Record
     /** Per-resource fractional progress toward the next whole unit, keyed by settlement. */
     resourceProgress: {},
     orders: [o1, o2, o3],
-    // Fresh game: only the home village (a farm board) is reachable, so the
-    // quest board must not commission fish/mine catches the player can't get.
-    quests: rollQuests(saveSeed, 1, "spring", ["farm"]),
+    // Fresh game: seed a fixed showcase board covering every quest type and
+    // reward-card style (building unlock, tile unlock, and one of each basic
+    // category) so the different quest types are visible from the start. Each
+    // is farm-fulfillable; the board re-rolls normally once the season turns.
+    quests: showcaseQuests(),
     // Transient global toast queue (quest completions, etc.) — never persisted.
     toasts: [],
     tools: {
