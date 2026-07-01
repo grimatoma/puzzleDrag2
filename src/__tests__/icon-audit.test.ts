@@ -48,7 +48,12 @@ describe("icon audit (Round 3)", () => {
     }
   });
 
-  it("keeps v1 portraits on canonical keys and v2 alternates registered separately", () => {
+  it("promotes the vector portraits onto canonical keys, with v2 alternates registered separately", () => {
+    // The canonical char_*/boss_*/worker_* keys now carry the "Decorative Detail
+    // Vector" redesign (textures/categories/charactersVector.ts). Accent colours are
+    // preserved (board tunic for npcs/workers, rim for bosses), and the previous-
+    // generation `_v2` alternates stay registered under their own keys with distinct
+    // draw functions.
     expect(ICON_REGISTRY.char_mira?.color).toBe("#d6612a");
     expect(ICON_REGISTRY.char_mira_v2?.color).toBe("#e0833a");
     expect(ICON_REGISTRY.char_mira?.draw).not.toBe(ICON_REGISTRY.char_mira_v2?.draw);
