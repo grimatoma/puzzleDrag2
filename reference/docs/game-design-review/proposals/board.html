@@ -25,6 +25,7 @@
   <a href="./shell.html"><span class="k">06</span>Shell & onboarding</a>
   <a href="./crosscutting.html"><span class="k">07</span>Cross-cutting</a>
   <a href="./additional-findings.html"><span class="k">08</span>Additional findings</a>
+  <a href="./icons-animation.html"><span class="k">09</span>Animated icons</a>
   <div class="sep">On this page</div>
   <a href="#b1">B1 · Tile treatment</a>
   <a href="#b2">B2 · Mobile real-estate</a>
@@ -327,19 +328,21 @@
         <figure class="light">
           <div class="device desktop"><div class="screen">
             <div class="gm-hud"><span class="burger">☰</span><span class="gm-pill title">Hearthwood Vale · Farm</span><span class="gm-spacer"></span><span class="gm-pill gold">◉ 1,240</span><span class="gm-pill ember">Lv 4 ▸</span></div>
-            <div class="gm-bg" style="flex-direction:row;padding:12px;gap:12px">
-              <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0">
-                <div style="display:flex;align-items:center;gap:8px;font:700 11px/1 system-ui;color:var(--g-ink-soft);width:min(340px,100%);margin-bottom:6px">
+            <div class="gm-bg" style="flex-direction:row;padding:12px;gap:12px;min-height:0">
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;min-width:0;min-height:0">
+                <div style="display:flex;flex-direction:column;gap:6px;height:min(100%,340px)">
+                <div style="display:flex;align-items:center;gap:8px;font:700 11px/1 system-ui;color:var(--g-ink-soft)">
                   <span class="gm-title" style="color:var(--g-season-spring)">🌸 Spring</span>
                   <div class="gm-bar" style="flex:1"><i style="width:55%;background:var(--g-season-spring)"></i></div><span>8 turns</span>
                 </div>
-                <div class="gm-board" style="--n:6;width:min(340px,100%);background:linear-gradient(180deg,var(--g-field-spring-top),var(--g-field-spring-bot));border:2px solid var(--g-iron);padding:9px">
+                <div class="gm-board" style="--n:6;flex:1;aspect-ratio:1;width:auto;background:linear-gradient(180deg,var(--g-field-spring-top),var(--g-field-spring-bot));border:2px solid var(--g-iron);padding:9px">
                   <div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grass">🌳</div>
                   <div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft fruit">🍎</div>
                   <div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌸</div>
                   <div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft veg">🥕</div>
                   <div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft grass">🌿</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌿</div>
                   <div class="gm-tile kraft grass">🌳</div><div class="gm-tile kraft grain">🌾</div><div class="gm-tile kraft fruit">🍎</div><div class="gm-tile kraft veg">🥕</div><div class="gm-tile kraft grass">🌸</div><div class="gm-tile kraft grass">🌿</div>
+                </div>
                 </div>
               </div>
               <div style="width:150px;flex:none;display:flex;flex-direction:column;gap:8px">
@@ -396,81 +399,93 @@
   <!-- ============================================================= B4 -->
   <article class="prop" id="b4">
     <div class="phd"><span class="pid">B4</span><span class="sev S1">S1</span><span class="eff">Effort M</span></div>
-    <div class="ptitle">Season strip: stop overprinting four words on the art and the wagon</div>
-    <p class="why">Season zones are proportional to turn-count (not equal quarters) and each full label is
-    centered in its often-narrow zone with no width-fit, sharing the same bottom band as the walking wagon
-    sprite. On a 390px phone four words collide with the icons and the wagon — worst on fishing.
-    <span class="mut"><code>seasonStripScene.ts:306</code>, <code>buildLabels ~776</code>,
-    <code>buildWagon:821</code>.</span></p>
+    <div class="ptitle">Season strip: keep the animated art — fix the label ↔ wagon collision</div>
+    <p class="why"><strong>Re-reviewed against the live scene.</strong> The strip is a bespoke Phaser scene and
+    one of the most <em>alive</em> things in the game: proportional Spring→Winter zones, per-season painterly
+    vignettes (a cherry tree, a smiling sun with pulsing rays, a maple&nbsp;+&nbsp;pumpkin, evergreens&nbsp;+&nbsp;a
+    snowman that puffs breath), four continuous particle systems (petals, gold motes, falling leaves, snow) and an
+    articulated wagon whose wheels spin, horse legs pump and body bobs as it walks left→right to mark turns spent.
+    The defect isn't the art — it's the <em>packaging</em>: all of it is crammed into one 52px band. The four
+    season names are fixed-size, zone-centered, bottom-anchored with <strong>no width-fit or truncation</strong>
+    (<span class="mut"><code>seasonStripScene.ts:771</code></span>), and the label layer is composited <em>on top
+    of</em> the wagon (layers built labels-after-wagon, <span class="mut"><code>:136</code></span>) — so the moving
+    sprite and the low-contrast type share the bottom third of the strip, worst on the narrow autumn/winter/fishing
+    zones. <span class="mut">Zones <code>:298</code>; wagon+animation <code>:819–969</code>; numeral panel
+    <code>NUMERAL_PANEL_PX = 56</code>.</span></p>
 
     <div class="ba">
       <div class="col">
-        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">text-on-art-on-sprite</span></div>
+        <div class="caph"><span class="pin now">NOW — real render</span><span class="lead-in">winter · wagon on the word</span></div>
         <figure>
-          <div class="gm" style="padding:10px">
-            <div class="gm-wrap" style="height:52px;border-radius:10px;overflow:hidden;border:1.5px solid var(--g-iron);display:flex">
-              <div style="width:56px;background:#2f3f57;color:#dfe8f4;display:flex;flex-direction:column;align-items:center;justify-content:center;font:800 15px/1 system-ui">8<span style="font-size:7px;letter-spacing:.06em">TURNS</span></div>
-              <div style="flex:1;position:relative;background:linear-gradient(90deg,#9fc758 0 32%,#e0a52a 32% 60%,#cf6a1f 60% 82%,#3f6f9e 82% 100%)">
-                <span style="position:absolute;left:6%;top:50%;transform:translateY(-50%);font:700 9px/1 system-ui;color:#20300f;text-shadow:0 1px 1px rgba(255,255,255,.4)">Spring</span>
-                <span style="position:absolute;left:38%;top:50%;transform:translateY(-50%);font:700 9px/1 system-ui;color:#3a2a08">Sum…</span>
-                <span style="position:absolute;left:64%;top:50%;transform:translateY(-50%);font:700 9px/1 system-ui;color:#fff">Aut…</span>
-                <span style="position:absolute;left:86%;top:50%;transform:translateY(-50%);font:700 8px/1 system-ui;color:#dfe8f4">Wi…</span>
-                <span style="position:absolute;left:24%;bottom:2px;font-size:13px">🛻</span>
-                <span class="gm-flag bad" style="top:-2px;right:2px">labels + wagon share pixels</span>
-              </div>
-            </div>
-          </div>
-          <figcaption>The wagon overlaps "Summer", narrow zones truncate their own labels, and the only
-          "what season / how many turns" readout is the least legible thing on the board.</figcaption>
+          <img src="../shots/desktop/season-strip-winter.png" alt="real season strip: four zones with painterly vignettes, the wagon overlapping the WINTER label and the snowman">
+          <figcaption>Real render. The wagon has walked into the winter zone and sits <em>on top of</em> the
+          "WINTER" label and the snowman; "SUMMER" and "AUTUMN" read as ghosts on their own gradients. The
+          vignettes are lovely — the type and the moving sprite are just fighting for the same 52px.</figcaption>
         </figure>
       </div>
       <div class="col">
-        <div class="caph"><span class="pin next">PROPOSED — Option A</span><span class="lead-in">current season named once + ticks</span></div>
+        <div class="caph"><span class="pin next">PROPOSED — Option A</span><span class="lead-in">name once · wagon on its own rail · vignettes kept</span></div>
         <figure class="light">
           <div class="gm" style="padding:10px">
-            <div style="height:52px;border-radius:10px;overflow:hidden;border:1.5px solid var(--g-iron);display:flex;background:var(--g-paper)">
+            <div style="height:56px;border-radius:10px;overflow:hidden;border:1.5px solid var(--g-iron);display:flex;background:var(--g-paper)">
               <div style="flex:none;padding:0 12px;display:flex;flex-direction:column;justify-content:center;background:linear-gradient(180deg,#eaf3d8,#d6e8b0);border-right:1.5px solid var(--g-iron)">
                 <span class="gm-title" style="font-size:13px;color:var(--g-season-spring)">🌸 Spring</span>
                 <span style="font:800 10px/1 system-ui;color:var(--g-ink-soft)">8 turns left</span>
               </div>
-              <div style="flex:1;position:relative;display:flex;align-items:center;padding:0 10px">
-                <div class="gm-bar" style="flex:1;height:8px"><i style="width:26%;background:var(--g-season-spring)"></i></div>
-                <div style="position:absolute;inset:0;display:flex;align-items:center;padding:0 10px;pointer-events:none">
-                  <span style="position:absolute;left:26%;font-size:11px">🌸</span>
-                  <span style="position:absolute;left:52%;font-size:11px;opacity:.5">☀️</span>
-                  <span style="position:absolute;left:74%;font-size:11px;opacity:.5">🍂</span>
-                  <span style="position:absolute;left:94%;font-size:11px;opacity:.5">❄️</span>
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:4px;padding:5px 12px 6px">
+                <div style="position:relative;height:15px">
+                  <div style="position:absolute;left:0;right:0;top:12px;height:2px;border-radius:2px;background:rgba(122,94,63,.28)"></div>
+                  <span style="position:absolute;left:24%;top:-1px;font-size:14px;transform:translateX(-50%)">🛒</span>
+                </div>
+                <div style="position:relative;height:14px;display:flex;align-items:center">
+                  <div class="gm-bar" style="flex:1;height:6px"><i style="width:24%;background:var(--g-season-spring)"></i></div>
+                  <span style="position:absolute;left:2%;font-size:12px">🌸</span>
+                  <span style="position:absolute;left:36%;font-size:12px;opacity:.4">☀️</span>
+                  <span style="position:absolute;left:64%;font-size:12px;opacity:.4">🍂</span>
+                  <span style="position:absolute;left:92%;font-size:12px;opacity:.4">❄️</span>
                 </div>
               </div>
             </div>
           </div>
-          <figcaption>Season name + turns-left is stated once, large, in the panel; the track shows the four
-          seasons as glyph ticks (dimmed until reached). The wagon gets its own track above, never over text.</figcaption>
+          <figcaption>Current season + turns-left is named once, legibly, in the panel. The wagon rides its
+          <em>own</em> hairline rail (top), never over text; the four seasons keep their existing painterly
+          vignettes on the progress track below (dimmed until reached), width-fit so nothing overprints. Zone-
+          proportional timing survives in the marker spacing. <span class="mut">(Glyphs stand in for the real
+          sprites — the vignettes and wagon animation are kept, not flattened to emoji.)</span></figcaption>
         </figure>
       </div>
     </div>
 
     <span class="lbl">Options</span>
     <div class="opts two">
-      <div class="opt rec"><div class="oh"><span class="name">A · Name once + glyph ticks</span><span class="badge">Recommended</span></div>
-        <div class="tradeoff">Current season spelled out in the numeral panel; other seasons are dimmed glyph
-        ticks on a progress track. <b>Pro:</b> zero text-on-art collisions, works at any width. <b>Con:</b>
-        the exact turn each season starts is implicit (glyph position).</div></div>
+      <div class="opt rec"><div class="oh"><span class="name">A · Name once · own wagon rail · keep vignettes</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Current season + turns spelled out once in the numeral panel; the four painterly
+        vignettes stay as markers on the progress track (dimmed until reached); the wagon moves to its own hairline
+        rail above them. <b>Pro:</b> zero text-on-sprite collision, keeps the charming animated art, works at any
+        width. <b>Con:</b> the exact turn each season starts becomes implicit (marker position).</div></div>
       <div class="opt"><div class="oh"><span class="name">B · SPR/SUM/AUT/WIN + elide</span></div>
-        <div class="tradeoff">Keep four zones but 3-letter abbreviations, and elide any label whose zone is
-        narrower than its text. <b>Pro:</b> keeps the timeline metaphor. <b>Con:</b> still puts text on the
-        gradient; wagon still needs its own track.</div></div>
+        <div class="tradeoff">Keep four in-zone labels but 3-letter abbreviations, and <code>measureText</code>-elide
+        any label whose zone is narrower than its text. <b>Pro:</b> keeps the explicit timeline metaphor.
+        <b>Con:</b> still puts text on the gradient; the wagon still needs its own track to stop the collision.</div></div>
     </div>
 
     <div class="spec">
       <span class="lbl">Implementation</span>
       <ul>
-        <li>Rework <span class="filechip">seasonStripScene.ts buildLabels ~776</span> to render only the current
-          season name in the numeral panel; draw the other three as glyphs at their zone starts.</li>
-        <li>Move <span class="filechip">buildWagon:821</span> to a dedicated y-track above the label band so
-          sprite and text never share pixels.</li>
-        <li>On fishing, give the tide chip its own row (see B6 status-chip slot).</li>
+        <li>Rework the labels at <span class="filechip">seasonStripScene.ts:771</span> to render only the
+          <em>current</em> season name (in the numeral panel) and keep the other three as their existing vignettes
+          on the track; add a <code>measureText</code> width-fit / elide so a label can never overflow its zone.</li>
+        <li>Give the wagon its own y-track above the label band (<span class="filechip">seasonStripScene.ts:819</span>)
+          so the animated sprite and any text never share pixels — and fix the layer order that composites the
+          season label <em>over</em> the wagon (<span class="filechip">seasonStripScene.ts:136</span>).</li>
+        <li>State the season <em>goal</em> (coins / harvest target) beside the turns readout so the strip answers
+          "what am I working toward", not only "how many turns left" (feeds
+          <a href="../crosscutting.html#rewards">X1 · reward legibility</a>).</li>
+        <li>On fishing, give the tide chip its own row (see <a href="#b6">B6</a> status-chip slot).</li>
       </ul>
+      <p class="small mut" style="margin:8px 0 0">Re-review verdict: <strong>keep the scene</strong>. The wheel-spin
+      (1100ms) and horse-leg cadence (230ms) are fixed and unrelated to travel speed — decorative, not a bug. The
+      only real fixes are the width-fit and the wagon/label depth separation above.</p>
     </div>
   </article>
 
@@ -654,7 +669,42 @@
     <div class="phd"><span class="pid">B7</span><span class="sev NEW">NEW</span><span class="eff">from this pass</span></div>
     <div class="ptitle">New findings surfaced while grounding these mockups</div>
     <p class="why">Items not in the original report, found reading the board code for this proposal pass. Verify
-    against the live build before scheduling.</p>
+    against the live build before scheduling. The most visual one — the overloaded dim signal — now has a
+    Now → Proposed picture.</p>
+
+    <span class="lbl">Now → proposed — the overloaded 0.35 dim</span>
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">"disabled" and "low-value" look identical</span></div>
+        <figure class="light">
+          <div class="gm gm-wrap" style="padding:14px">
+            <div style="display:flex;gap:6px;justify-content:center">
+              <div class="gm-tile kraft grain" style="width:44px">🌾</div>
+              <div class="gm-tile kraft grain" style="width:44px;opacity:.35">🌾</div>
+              <div class="gm-tile kraft veg" style="width:44px;opacity:.35">🥕</div>
+            </div>
+            <span class="gm-flag bad" style="bottom:6px;right:6px">both 0.35 — which can I still use?</span>
+          </div>
+          <figcaption>"Can't select" and "legal but low-value" both render at 0.35 alpha, so a usable tool target
+          reads as disabled — the player can't tell which dim tiles are still in play.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">two distinct states</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:14px">
+            <div style="display:flex;gap:6px;justify-content:center">
+              <div class="gm-tile kraft grain" style="width:44px">🌾</div>
+              <div class="gm-tile kraft grain" style="width:44px;opacity:.62;box-shadow:inset 0 0 0 2px rgba(90,158,46,.55)">🌾</div>
+              <div class="gm-tile kraft veg" style="width:44px;opacity:.35;filter:grayscale(.6)">🥕</div>
+            </div>
+          </div>
+          <figcaption>Suboptimal-but-legal stays brighter (~0.6) with a faint positive ring; only truly unusable tiles
+          get the deep 0.35 + desaturation. The dim axis now carries one meaning, not two.</figcaption>
+        </figure>
+      </div>
+    </div>
+
     <ul>
       <li><strong>The season field gradient is drawn but almost fully occluded</strong> — the <code>--field-*</code>
         tokens exist and the bed reads them, yet 36 opaque candy tiles + a 0.55 band leave only a sliver visible.

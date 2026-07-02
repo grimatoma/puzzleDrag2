@@ -1,0 +1,406 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Animated icons — Proposals & Mockups · puzzleDrag2 Design Review</title>
+<link rel="stylesheet" href="./assets/mockup.css">
+<style>
+/* Live idle-animation demos — these literally show the motion the concept proposes.
+   Scoped under .ia- so they never touch the shared mockup atoms. Each honours
+   reduced-motion, mirroring the game's own gate. */
+.ia-stage{display:flex;align-items:flex-end;justify-content:center;gap:2px;height:74px;
+  background:linear-gradient(180deg,var(--g-field-spring-top),var(--g-field-spring-bot));
+  border:1.5px solid var(--g-iron);border-radius:12px;overflow:hidden;position:relative}
+.ia-stage.summer{background:linear-gradient(180deg,var(--g-field-summer-top),var(--g-field-summer-bot))}
+.ia-stage.fall{background:linear-gradient(180deg,var(--g-field-fall-top),var(--g-field-fall-bot))}
+.ia-stage.winter{background:linear-gradient(180deg,var(--g-field-winter-top),var(--g-field-winter-bot))}
+.ia-subj{font-size:34px;transform-origin:50% 100%;line-height:1;filter:drop-shadow(0 2px 2px rgba(0,0,0,.25))}
+.ia-sway{animation:ia-sway 6s ease-in-out infinite}
+.ia-peck{animation:ia-peck 2.2s ease-in-out infinite}
+.ia-hop{animation:ia-hop 3.2s cubic-bezier(.4,0,.5,1) infinite}
+.ia-shimmer{animation:ia-shimmer 1.8s ease-in-out infinite}
+.ia-leaf{position:absolute;top:10px;left:56%;font-size:13px;animation:ia-leaf 4.5s linear infinite;opacity:0}
+@keyframes ia-sway{0%,100%{transform:rotate(-3deg) translateY(0)}50%{transform:rotate(3deg) translateY(-2px)}}
+@keyframes ia-peck{0%,64%,100%{transform:translateY(0) rotate(0)}72%{transform:translateY(7px) rotate(-6deg)}80%{transform:translateY(0) rotate(2deg)}}
+@keyframes ia-hop{0%,70%,100%{transform:translateY(0) scaleY(1)}78%{transform:translateY(-16px) scaleY(1.08)}86%{transform:translateY(0) scaleY(.92)}92%{transform:translateY(0) scaleY(1)}}
+@keyframes ia-shimmer{0%,100%{filter:drop-shadow(0 0 0 rgba(255,210,72,0))}50%{filter:drop-shadow(0 0 6px rgba(255,210,72,.9))}}
+@keyframes ia-leaf{0%{opacity:0;transform:translate(0,0) rotate(0)}10%{opacity:1}100%{opacity:0;transform:translate(-16px,58px) rotate(220deg)}}
+.ia-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ia-cell{border-radius:10px;overflow:hidden;border:1.5px solid var(--g-iron)}
+.ia-cap{font:800 9px/1 system-ui;letter-spacing:.08em;color:var(--g-ink-soft);text-transform:uppercase;padding:4px 6px;text-align:center;background:var(--g-paper)}
+.ia-reg{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:middle;margin-right:5px;border:1px solid rgba(0,0,0,.15)}
+@media (prefers-reduced-motion: reduce){.ia-sway,.ia-peck,.ia-hop,.ia-shimmer,.ia-leaf{animation:none}}
+</style>
+</head>
+<body>
+<header class="top">
+  <span class="brand">puzzleDrag2 · <span class="em">Proposals</span></span>
+  <span class="crumb"><a href="./index.html">All proposals</a> › <strong>09 · Animated icons</strong></span>
+  <span class="meta">review both pixel &amp; painterly · grounded in <code>src/</code></span>
+</header>
+
+<div class="shell">
+<nav class="rail" id="rail">
+  <a class="home" href="./index.html">← All proposals</a>
+  <div class="sep">Surfaces</div>
+  <a href="./board.html"><span class="k">01</span>The Board</a>
+  <a href="./town.html"><span class="k">02</span>The Town</a>
+  <a href="./map.html"><span class="k">03</span>World Map</a>
+  <a href="./screens.html"><span class="k">04</span>Screens &amp; panels</a>
+  <a href="./story.html"><span class="k">05</span>Story &amp; moments</a>
+  <a href="./shell.html"><span class="k">06</span>Shell &amp; onboarding</a>
+  <a href="./crosscutting.html"><span class="k">07</span>Cross-cutting</a>
+  <a href="./additional-findings.html"><span class="k">08</span>Additional findings</a>
+  <a href="./icons-animation.html" class="active"><span class="k">09</span>Animated icons</a>
+  <div class="sep">On this page</div>
+  <a href="#landscape">IA1 · The five registers</a>
+  <a href="#outofline">IA2 · What's out of line</a>
+  <a href="#concept">IA3 · One living language</a>
+  <a href="#examples">IA4 · Season + idle examples</a>
+  <a href="#spec">IA5 · Where it lands in code</a>
+</nav>
+
+<main>
+  <p class="eyebrow">Proposals · Concept study 09</p>
+  <h1>Animated icons — one living language</h1>
+  <p class="lead">The game already ships genuinely lovely motion — season morphs, two-tier idle "gestures", a
+  walking wagon. But that motion is spoken in <strong>several different visual languages at once</strong>, and the
+  "aliveness" is uneven: the board breathes while the chrome is frozen. This study <strong>reviews both the pixel
+  and the non-pixel (painterly / flat-vector) art</strong>, says what reads as <em>out of line</em> with the cozy
+  storybook direction, and proposes one coherent animated language — with full <strong>season + idle</strong> worked
+  examples for two subjects. It extends the static-icon unification on <a href="./crosscutting.html#icons">X2 ·
+  Iconography</a> into the <em>motion</em> dimension.</p>
+
+  <div class="callout tldr"><p style="margin:0"><strong>Concept in one line.</strong> Keep the beautiful
+  hand-drawn <em>vector</em> season-morph + idle system as the game's one animated language (it's authored in the
+  same painterly idiom as the parchment UI); make the crisp <em>pixel</em> route an explicit opt-in "retro skin",
+  not a competing default medium; unify the two <em>static</em> icon families by size (X2); and give a restrained
+  idle to a few chrome icons so aliveness is consistent rather than board-only. Two worked examples — an oak and a
+  hen — show the season lifecycle and the idle loop the way the code actually does them.</p></div>
+
+  <!-- ============================================================= IA1 -->
+  <h2 id="landscape"><span class="n">IA1</span>The five registers on screen today</h2>
+  <article class="prop">
+    <div class="phd"><span class="pid">IA1</span><span class="sev POLISH" style="background:var(--polish)">REVIEW</span><span class="eff">read first</span></div>
+    <div class="ptitle">One <code>&lt;Icon&gt;</code> component, but five illustration registers — two static, three animated</div>
+    <p class="why">Every icon flows through one component (<span class="filechip">ui/Icon.tsx:246</span>), which
+    dispatches to one of <strong>two static families purely by key identity</strong> — a flat-vector
+    <code>design.*</code> SVG set (~50 keys, 24×24 viewBox) and a painterly Canvas-2D <code>iconRegistry</code> set
+    (hundreds of keys, baked from a 64px box). On the board, motion adds <strong>three more animated systems</strong>,
+    switched by a 3-way <code>tileArtMode</code> (<span class="mut">static | animated | pixel</span>,
+    <span class="filechip">seasonalArt.ts:96</span>): a hand-drawn <em>vector</em> season-morph + idle set (80 tiles),
+    a baked <em>PixelLab pixel-sprite</em> spritesheet set (~48 subjects), and a cheap ambient <em>sway</em> (rigid
+    sprite rotation) for plain tiles. <span class="mut">(There is a fourth, dev-panel-only animation registry that
+    never renders in-game — <code>iconAnimations.ts</code>.) And, notably, the game uses <strong>no OS emoji
+    anywhere</strong> — the emoji in these mock-ups stand in for the real canvas/vector art.</span></p>
+
+    <table>
+      <thead><tr><th style="width:22%">Register</th><th style="width:12%">Static / animated</th><th style="width:30%">How it's drawn</th><th>Where</th></tr></thead>
+      <tbody>
+        <tr><td><span class="ia-reg" style="background:var(--g-indigo)"></span><strong>Flat-vector <code>design.*</code></strong></td>
+          <td>static</td><td>Inline SVG, 24×24 viewBox, gradients + thin outlines, tintable via <code>tone</code>.</td>
+          <td>Some HUD/currency/tool glyphs. <span class="mut">ui/icons/*, Icon.tsx:109</span></td></tr>
+        <tr><td><span class="ia-reg" style="background:var(--g-ember)"></span><strong>Painterly canvas <code>iconRegistry</code></strong></td>
+          <td>static</td><td>Canvas-2D <code>draw(ctx)</code> in a 64px box, baked to PNG; shaded/painterly.</td>
+          <td>Most subjects, tools, nav, buildings. <span class="mut">textures/categories/*, Icon.tsx:154</span></td></tr>
+        <tr><td><span class="ia-reg" style="background:var(--g-moss)"></span><strong>Vector seasonal showcase</strong></td>
+          <td>animated</td><td>Per-season Canvas-2D <em>redraw</em> + forward season→season morph + two-tier idle; re-baked ~30fps.</td>
+          <td>80 board tiles (default "animated"). <span class="mut">seasonal/showcaseTiles.ts, seasonalTiles.ts</span></td></tr>
+        <tr><td><span class="ia-reg" style="background:var(--g-slate)"></span><strong>Baked PixelLab sprites</strong></td>
+          <td>animated</td><td>PNG spritesheet frame-banks (<code>idle-*/trans-*/gesture-*</code>), <code>imageSmoothingEnabled=false</code>.</td>
+          <td>~48 subjects; the whole board under <code>tileArtMode:'pixel'</code>. <span class="mut">public/seasonal-tiles/*, seasonalArt.ts</span></td></tr>
+        <tr><td><span class="ia-reg" style="background:var(--candy-grass)"></span><strong>Ambient sway</strong></td>
+          <td>animated</td><td>Rigid whole-sprite rotation under a staggered bell envelope — the art itself is static.</td>
+          <td>Plain tiles with <code>look.sway</code>. <span class="mut">TileObj.ts:196</span></td></tr>
+      </tbody>
+    </table>
+
+    <span class="lbl">Now — two mediums in one game (real renders)</span>
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — painterly</span><span class="lead-in">the default board look</span></div>
+        <figure>
+          <img src="../shots/icons/painterly-tiles.png" alt="painterly canvas board tiles: a shaded tree, pig and cow on soft category squares">
+          <figcaption>The default board and all chrome are <strong>painterly</strong> — soft shading, rounded forms,
+          drop-shadows, at home with the parchment + Fraunces UI. (These sit on the saturated category squares
+          <a href="./board.html#b1">B1</a> retires — ignore the backdrop; look at the <em>drawing</em>.)</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — pixel</span><span class="lead-in">the <code>pixel</code> tile-art mode</span></div>
+        <figure>
+          <img src="../shots/icons/chicken-seasons-pixel.png" alt="pixel-art chicken across four seasons: crisp pixel grid, hard edges">
+          <figcaption>The <strong>pixel</strong> route (baked PixelLab sprites) is a crisp, hard-edged pixel grid —
+          beautiful, but a fundamentally <em>different medium</em> from the painterly art above and the vector UI.
+          One flip of <code>tileArtMode</code> swaps the entire board between these two languages.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </article>
+
+  <!-- ============================================================= IA2 -->
+  <h2 id="outofline"><span class="n">IA2</span>What reads as out of line</h2>
+  <article class="prop">
+    <div class="phd"><span class="pid">IA2</span><span class="sev S3">S3</span><span class="eff">diagnosis</span></div>
+    <div class="ptitle">Three mismatches: pixel vs painterly medium, flat vs painterly at one size, and board-only aliveness</div>
+    <p class="why">None of the art is <em>bad</em> — each register is well-made. The problem is that they don't
+    agree, and the disagreements are exactly the kind the eye reads as "unfinished" on a cohesive storybook game.</p>
+
+    <div class="opts three">
+      <div class="opt">
+        <div class="oh"><span class="name">a · Pixel vs. painterly medium</span></div>
+        <div class="tradeoff">The <code>pixel</code> route (<code>imageSmoothingEnabled=false</code>, hard pixel grid)
+        is a different <em>medium</em> than the painterly parchment/Fraunces UI and the painterly board icons. On its
+        own it's charming; mixed in, it reads as a retro skin bolted onto a storybook. It's the sharpest mismatch.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">b · Flat vs. painterly at one size</span></div>
+        <div class="tradeoff">The <code>design.*</code> flat SVG and the painterly canvas set duplicate the same
+        subjects and render at the <em>same px</em> — the HUD draws a flat SVG coin (14px) beside a painterly canvas
+        XP glyph (12px). Two languages, one scale (<span class="mut">Hud.tsx:229,255</span>). This is the
+        <a href="./crosscutting.html#icons">X2</a> collision, in motion's static substrate.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">c · Board-only aliveness</span></div>
+        <div class="tradeoff">Board tiles animate lavishly (season morphs + two-tier idle), but tools, HUD and nav
+        icons are <em>static</em> canvas with no idle at all (<span class="mut">Tools.tsx:67</span>). The world
+        breathes; the chrome is frozen — the liveliness is uneven, so the animation reads as a board feature, not a
+        game character.</div>
+      </div>
+    </div>
+
+    <span class="lbl">The same subject, three ways — pick one voice</span>
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — willow, pixel</span><span class="lead-in">crisp pixel grid</span></div>
+        <figure>
+          <img src="../shots/icons/willow-seasons-pixel.png" alt="pixel-art willow across seasons">
+          <figcaption>The willow in the pixel register — hard pixels, dithered ramps. A different hand than the UI.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">DIRECTION</span><span class="lead-in">the vector season-morph is already this</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="ia-strip">
+              <div class="ia-cell"><div class="ia-stage"><span class="ia-subj ia-sway">🌳</span></div><div class="ia-cap">Spring</div></div>
+              <div class="ia-cell"><div class="ia-stage summer"><span class="ia-subj ia-sway" style="animation-delay:-1.5s">🌳</span></div><div class="ia-cap">Summer</div></div>
+              <div class="ia-cell"><div class="ia-stage fall"><span class="ia-subj ia-sway" style="animation-delay:-3s">🌳</span><span class="ia-leaf">🍂</span></div><div class="ia-cap">Autumn</div></div>
+              <div class="ia-cell"><div class="ia-stage winter"><span class="ia-subj" style="filter:grayscale(.4) drop-shadow(0 2px 2px rgba(0,0,0,.25))">🌲</span></div><div class="ia-cap">Winter</div></div>
+            </div>
+          </div>
+          <figcaption>The painterly <em>vector</em> route already speaks the UI's language: soft forms, seamless
+          season morphs, a gentle idle sway (this row is literally swaying — reduced-motion off). Make <em>this</em>
+          the one animated voice; keep pixel as an opt-in skin.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </article>
+
+  <!-- ============================================================= IA3 -->
+  <h2 id="concept"><span class="n">IA3</span>The concept — one living language</h2>
+  <article class="prop">
+    <div class="phd"><span class="pid">IA3</span><span class="sev S2">S2</span><span class="eff">Effort M–L</span></div>
+    <div class="ptitle">Pick the vector season-morph as the default voice; make pixel an opt-in skin; consistent, restrained idle everywhere</div>
+    <p class="why">The good news is the strongest option already exists and is the cheapest to commit to: the
+    hand-drawn <em>vector</em> season-morph + two-tier idle system is authored in the same painterly idiom as the UI
+    and morphs seamlessly. The concept is to <strong>choose it as the one animated language</strong> and stop letting
+    a second medium compete for the default.</p>
+
+    <div class="opts three">
+      <div class="opt rec">
+        <div class="oh"><span class="name">A · Vector default + pixel skin</span><span class="badge">Recommended</span></div>
+        <div class="tradeoff">Make the painterly vector season-morph the default animated board and extend it across
+        the spawnable roster; keep the pixel route as an explicit "Pixel / retro" toggle (the existing
+        <code>tileArtMode:'pixel'</code>), presented as a <em>skin</em>, not a quality tier. <b>Pro:</b> one coherent
+        voice, reuses shipped systems, players who love pixel keep it. <b>Con:</b> vector coverage must reach every
+        spawnable tile so the default never falls back to a clashing medium.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">B · Commit to pixel everywhere</span></div>
+        <div class="tradeoff">Re-skin the whole game — UI included — to pixel. <b>Pro:</b> total cohesion, a strong
+        market identity. <b>Con:</b> throws away the painterly parchment/Fraunces direction the rest of the review
+        protects; highest re-art cost by far. Not aligned with the current look.</div>
+      </div>
+      <div class="opt">
+        <div class="oh"><span class="name">C · Keep both, just fix collisions</span></div>
+        <div class="tradeoff">Leave both mediums as co-defaults; only fix the flat-vs-painterly static split (X2).
+        <b>Pro:</b> least work. <b>Con:</b> the pixel↔painterly medium clash (the loudest mismatch) survives; the
+        game keeps reading as two art teams.</div>
+      </div>
+    </div>
+
+    <p style="margin-top:12px">Alongside the medium decision, two supporting moves make the language feel like one
+    character rather than a board feature:</p>
+    <ul>
+      <li><strong>Unify the static families by size, not key</strong> — small (&lt;28px) = flat line; large = painterly
+        matte; the animated showcase shares that matte spec so a still frame of an animated tile matches its icon
+        elsewhere. This is <a href="./crosscutting.html#icons">X2</a> extended to cover the animation substrate.</li>
+      <li><strong>Give the chrome a restrained idle</strong> — an armed tool breathes/shimmers, a freshly-unlocked nav
+        item settles once. A little, deliberate, and reduced-motion-gated — enough that the aliveness reads as the
+        <em>game's</em>, not just the board's.</li>
+    </ul>
+
+    <span class="lbl">A restrained chrome idle — the armed tool "breathes" (live demo)</span>
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">static tool tiles</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:14px"><div style="display:flex;gap:8px;justify-content:center">
+            <div class="gm-tile candy-veg" style="width:44px;border-radius:10px">🪓</div>
+            <div class="gm-tile candy-grain" style="width:44px;border-radius:10px">💣</div>
+            <div class="gm-tile" style="width:44px;border-radius:10px;background:var(--g-well);border:1px solid var(--g-iron)">🪄</div>
+          </div></div>
+          <figcaption>Tool icons never move — armed or idle they look identical, so "this tool is ready to fire"
+          carries no motion cue.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">armed = a soft breathing glow</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:14px"><div style="display:flex;gap:8px;justify-content:center">
+            <div class="gm-tile candy-veg" style="width:44px;border-radius:10px"><span class="ia-shimmer">🪓</span></div>
+            <div class="gm-tile candy-grain" style="width:44px;border-radius:10px">💣</div>
+            <div class="gm-tile" style="width:44px;border-radius:10px;background:var(--g-well);border:1px solid var(--g-iron)">🪄</div>
+          </div></div>
+          <figcaption>The armed tool (left) pulses a soft gold glow — a single, calm idle that says "ready" without
+          the carnival. One shared, reduced-motion-gated idle primitive covers tools, nav and reward chips.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </article>
+
+  <!-- ============================================================= IA4 -->
+  <h2 id="examples"><span class="n">IA4</span>Season + idle — two worked subjects</h2>
+  <p>Both examples describe the motion <em>the code actually performs</em> in the vector route, so a re-review can
+  check the concept against the live system. The strips below animate — turn on reduced-motion to see the season
+  stills alone.</p>
+
+  <!-- Oak -->
+  <article class="prop" id="oak">
+    <div class="phd"><span class="pid">IA4-a</span><span class="sev POLISH" style="background:var(--polish)">EXAMPLE</span><span class="eff">tile_tree_oak</span></div>
+    <div class="ptitle">Oak — four unmistakable seasons over one constant trunk, a two-tier idle, and a leaf-fall showpiece morph</div>
+    <p class="why">The oak keeps one trunk and canopy silhouette all year; only the <em>dressing</em> changes. Source:
+    <span class="mut">textures/seasonal/tree/oak.ts</span>.</p>
+    <div class="gm" style="padding:12px">
+      <div class="ia-strip">
+        <div class="ia-cell"><div class="ia-stage"><span class="ia-subj ia-sway">🌳</span><span style="position:absolute;top:8px;left:30%;font-size:11px">🌸</span></div><div class="ia-cap">Spring · blossom</div></div>
+        <div class="ia-cell"><div class="ia-stage summer"><span class="ia-subj ia-sway" style="animation-delay:-2s">🌳</span></div><div class="ia-cap">Summer · deep green</div></div>
+        <div class="ia-cell"><div class="ia-stage fall"><span class="ia-subj ia-sway" style="animation-delay:-3.5s">🌳</span><span class="ia-leaf">🍂</span><span class="ia-leaf" style="left:44%;animation-delay:-2.2s">🍁</span></div><div class="ia-cap">Autumn · fire + drift</div></div>
+        <div class="ia-cell"><div class="ia-stage winter"><span class="ia-subj">🌲</span><span style="position:absolute;top:6px;left:34%;font-size:10px">❄️</span></div><div class="ia-cap">Winter · bare + snow</div></div>
+      </div>
+    </div>
+    <div class="grid2" style="margin-top:12px">
+      <div class="spec" style="margin:0"><span class="lbl">Season stills</span><ul>
+        <li><b>Spring</b> — lime canopy with pink/white blossom puffs + fallen petals.</li>
+        <li><b>Summer</b> — deep saturated round green crown.</li>
+        <li><b>Autumn</b> — gold→orange→red fire ramp with a steady spiralling leaf drift.</li>
+        <li><b>Winter</b> — bare dark <em>wet</em> branches under white snow ridges + hanging icicles.</li>
+      </ul></div>
+      <div class="spec" style="margin:0"><span class="lbl">Idle + transitions</span><ul>
+        <li><b>Common idle</b> (~6s) — a ~13px canopy lean-and-return with a settle bob.</li>
+        <li><b>Rare special</b> (~18s) — a robin lands on a branch, looks around, flits off (~1.3s) — <em>except</em>
+          autumn, where the rare event is a gust that blows a leaf flurry off the crown.</li>
+        <li><b>Morph showpiece</b> — autumn→winter (3.2s): three leaves fall in sequence as the branches bare and snow
+          settles; then the idle resumes at rest with no snap.</li>
+      </ul></div>
+    </div>
+  </article>
+
+  <!-- Chicken -->
+  <article class="prop" id="chicken">
+    <div class="phd"><span class="pid">IA4-b</span><span class="sev POLISH" style="background:var(--polish)">EXAMPLE</span><span class="eff">tile_bird_chicken</span></div>
+    <div class="ptitle">Chicken — identity-locked hen; seasons change only dressing &amp; fluff; a peck + hop-flap idle</div>
+    <p class="why">The hen's silhouette is constant every season — a plump white/cream body, red comb, orange beak.
+    Only plumage <em>volume</em>, the ground pad, light wash, and bold seasonal dressing change. Source:
+    <span class="mut">textures/seasonal/bird/chicken.ts</span>.</p>
+
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — pixel route</span><span class="lead-in">real render, four seasons</span></div>
+        <figure>
+          <img src="../shots/icons/chicken-seasons-pixel.png" alt="pixel chicken across seasons — same hen, seasonal ground and dressing">
+          <figcaption>The shipped pixel hen already nails "same character, seasonal dressing" — spring flowers, summer
+          grass, autumn leaves, winter snow pad. The concept keeps this <em>design</em>, in the painterly vector voice.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">DIRECTION — vector + idle</span><span class="lead-in">peck (common) · hop-flap (rare)</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="ia-strip">
+              <div class="ia-cell"><div class="ia-stage"><span class="ia-subj ia-peck">🐔</span></div><div class="ia-cap">Spring · sleek</div></div>
+              <div class="ia-cell"><div class="ia-stage summer"><span class="ia-subj ia-peck" style="animation-delay:-1s">🐔</span></div><div class="ia-cap">Summer</div></div>
+              <div class="ia-cell"><div class="ia-stage fall"><span class="ia-subj ia-peck" style="animation-delay:-1.6s">🐔</span></div><div class="ia-cap">Autumn · leaf</div></div>
+              <div class="ia-cell"><div class="ia-stage winter"><span class="ia-subj ia-hop">🐔</span><span style="position:absolute;top:8px;left:60%;font-size:10px">❄️</span></div><div class="ia-cap">Winter · puffed</div></div>
+            </div>
+          </div>
+          <figcaption>Same hen, seasonal fluff + dressing (winter: puffed, scarf, breath-fog). The three left cells run
+          the <em>common</em> idle — a ~6s peck (head dips ~12px, body squash, tail flick); the winter cell runs the
+          <em>rare</em> ~18s hop+wing-flap (~16px up). Raised-cosine windows make every loop return exactly to the
+          season still — no snap.</figcaption>
+        </figure>
+      </div>
+    </div>
+  </article>
+
+  <!-- Willow transition strip (real) -->
+  <article class="prop" id="willow">
+    <div class="phd"><span class="pid">IA4-c</span><span class="sev POLISH" style="background:var(--polish)">EXAMPLE</span><span class="eff">the seamless morph</span></div>
+    <div class="ptitle">Willow — a real season→season transition, frame by frame</div>
+    <p class="why">The season change isn't a cross-fade — it's an authored <em>morph</em>. Below is the shipped
+    autumn→winter transition for the willow, played out as its actual frames: the golden canopy sheds to bare branches
+    over snow, then settles into the winter idle. This is the seamless morph→idle handoff the vector route does for
+    every subject (<span class="mut">seasonalTiles.ts seasonalVectorAdvance</span>).</p>
+    <figure class="light" style="background:var(--card);border:1.5px solid var(--border);border-radius:12px;padding:8px">
+      <img src="../shots/icons/willow-autumn-winter-strip.png" alt="willow autumn-to-winter transition, ~16 frames from golden canopy to bare snowy branches" style="width:100%;display:block;border-radius:7px;image-rendering:pixelated">
+      <figcaption style="font-size:12px;color:var(--ink-2);padding:8px 4px 2px;font-style:italic">Autumn → winter, left to
+      right: the canopy shifts gold→russet, sheds leaf by leaf, branches bare, snow builds on the pad. Every subject has
+      three such forward morphs (Spr→Sum, Sum→Aut, Aut→Win); a skipped or backward step snaps instead.</figcaption>
+    </figure>
+  </article>
+
+  <!-- ============================================================= IA5 -->
+  <h2 id="spec"><span class="n">IA5</span>Where it lands in code</h2>
+  <article class="prop">
+    <div class="phd"><span class="pid">IA5</span><span class="sev S2">S2</span><span class="eff">implementation</span></div>
+    <div class="ptitle">The moves are policy + coverage, not a rewrite — the systems already exist</div>
+    <div class="spec" style="margin-top:6px">
+      <span class="lbl">Implementation</span>
+      <ul>
+        <li><b>Default voice:</b> present <code>tileArtMode</code> (<span class="filechip">seasonalArt.ts:96</span>) as
+          "Storybook" (vector, default) vs an opt-in "Pixel" skin in Settings (feeds <a href="./additional-findings.html#af5">AF5</a>);
+          make sure the vector season-morph set (<span class="filechip">seasonal/showcaseTiles.ts</span>) covers every
+          <em>spawnable</em> tile so the default never falls back to a clashing pixel bake.</li>
+        <li><b>Static split by size:</b> make <code>size</code> a first-class input to the family decision at
+          <span class="filechip">ui/Icon.tsx:246</span> (below ~28px → flat <code>design.*</code>; at/above → painterly
+          matte), and author the matte bake spec once — shared by the canvas set <em>and</em> the animated showcase
+          stills — see <a href="./crosscutting.html#icons">X2</a>.</li>
+        <li><b>Restrained chrome idle:</b> add one reduced-motion-gated idle primitive (breathe/settle) and apply it to
+          the armed-tool tile (<span class="filechip">ui/Tools.tsx:67</span>), a freshly-unlocked nav item, and reward
+          chips — nothing more, so the HUD stays calm.</li>
+        <li><b>Keep the good parts:</b> the two-tier idle timing (<span class="filechip">textures/seasonalIdleTiming.ts</span>),
+          the seamless morph→idle state machine (<span class="filechip">seasonalTiles.ts seasonalVectorAdvance</span>) and
+          the deterministic per-cell stagger already do the hard work — this concept chooses <em>which</em> language to
+          spend them on, it doesn't re-implement them.</li>
+        <li><b>Retire the confusion source:</b> the dev-only <code>iconAnimations.ts</code> concept batches never render
+          in-game (<span class="filechip">iconRegistry.ts:49</span>) — keep them in the Dev Panel, but don't let their
+          existence imply a third in-game animated style.</li>
+      </ul>
+    </div>
+    <p class="small mut" style="margin-top:10px">Scope note: this is a <em>direction</em> study, not a per-tile art
+    spec. The two subjects above are worked examples of the season lifecycle + idle; the seasonal-tile pipeline skills
+    (<code>seasonal-vector-tile</code>, <code>seasonal-tile-pipeline</code>, <code>pixel-art-animation</code>) are the
+    production path once the direction is chosen.</p>
+  </article>
+
+  <footer>puzzleDrag2 · Animated-icons concept · reviews the pixel <em>and</em> painterly/vector art. "Now" images are
+  real renders (painterly board tiles; shipped pixel &amp; willow-transition sprites); the animated strips are live
+  CSS stand-ins for the painterly vector motion, all reduced-motion-gated. Extends <a href="./crosscutting.html#icons">X2 ·
+  Iconography</a> into motion.</footer>
+</main>
+</div>
+<script src="./assets/mockup.js"></script>
+</body>
+</html>

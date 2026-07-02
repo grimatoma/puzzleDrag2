@@ -25,7 +25,9 @@
   <a href="./shell.html"><span class="k">06</span>Shell &amp; onboarding</a>
   <a href="./crosscutting.html"><span class="k">07</span>Cross-cutting</a>
   <a href="./additional-findings.html"><span class="k">08</span>Additional findings</a>
+  <a href="./icons-animation.html"><span class="k">09</span>Animated icons</a>
   <div class="sep">On this page</div>
+  <a href="#expanded">§ · Expanded rows</a>
   <a href="#leaks">SC1 · Repair the leaks</a>
   <a href="#trophies">SC2 · Trophy grid (mobile)</a>
   <a href="#quests">SC3 · Quests &amp; Almanac</a>
@@ -54,6 +56,85 @@
   #8) <em>Show what actions produce and are worth</em> — crafting rows hide the Craft button, the inputs, and
   the fact that a bake yields both the loaf <em>and</em> its coin value. The rest reclaim buried CTAs on mobile
   and stop empty/zero rows from out-massing real content.</p></div>
+
+  <!-- ============================================================= Expanded rows (shared context) -->
+  <h2 id="expanded"><span class="n">§</span>The expanded row — the detail state the mockups skipped</h2>
+  <article class="prop">
+    <div class="phd"><span class="pid">DETAIL</span><span class="sev POLISH" style="background:var(--polish)">CONTEXT</span><span class="eff">read before SC5–SC7</span></div>
+    <div class="ptitle">Every stacked row on these screens is an accordion — the proposals act on the <em>collapsed</em> half; here is the other half</div>
+    <p class="why">Inventory, Workers and Crafting all render through one shared primitive — <code>ExpandRow</code> +
+    <code>useAccordion</code> (<span class="filechip">ui/primitives/ExpandList.tsx:32,168</span>). <strong>Collapsed</strong>, a
+    row is only icon + title + subtitle + a right-aligned count + an optional status pill — the detail body is never rendered
+    (the <code>if (!open)</code> branch drops <code>children</code>, <span class="mut">ExpandList.tsx:168</span>).
+    <strong>Tap</strong> and a single-open accordion animates a per-feature detail body open. So the collapsed-row proposals
+    below (SC5, SC6, SC7) don't invent a detail view — they pull the one <em>action</em> and the one <em>number</em> that
+    matter <em>up</em> onto the always-visible header, while keeping the tap-to-expand detail. At <code>≥720px</code>
+    (<span class="mut">BREAKPOINTS.browserStack</span>) the accordion is dropped entirely for a two-pane browser + a persistent
+    detail pane carrying the same content. <strong>These proposals were only mocked collapsed — this section is the missing
+    half.</strong></p>
+
+    <span class="lbl">Now (collapsed) → Now (expanded) — the body a tap reveals, and what's still absent (Crafting)</span>
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — collapsed</span><span class="lead-in">name + status, nothing actionable</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-row" style="margin:0"><span style="font-size:22px">🍞</span><div style="flex:1"><div class="gm-title" style="font-size:13px">Bread Loaf</div><div class="gm-mini">Ready</div></div><span style="font-size:12px;color:var(--g-ink-light)">▾</span></div>
+          </div>
+          <figcaption>Collapsed, the row shows only the produced item's name and a one-word status — no inputs, no Craft
+          button. You must tap to do anything.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW — expanded (tap)</span><span class="lead-in">description + inputs + Craft</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-wrap gm-card" style="padding:11px;border-color:var(--g-moss)">
+              <div style="display:flex;align-items:center;gap:8px"><span style="font-size:22px">🍞</span><div style="flex:1"><div class="gm-title" style="font-size:13px">Bread Loaf</div><div class="gm-mini">Ready</div></div><span style="font-size:12px;color:var(--g-ink-light)">▴</span></div>
+              <p class="gm-mini" style="margin:8px 0 6px">A humble loaf — the vale's daily bread, and a build ingredient.</p>
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">INPUTS</div>
+              <div style="display:flex;gap:6px;margin:5px 0 10px">
+                <span class="gm-status ready">🌾 3/3</span>
+                <span class="gm-status need">🥚 0/1</span>
+              </div>
+              <div class="gm-cta primary" style="opacity:.55">Craft</div>
+              <span class="gm-flag bad" style="bottom:8px;right:8px">no YIELD / value — even expanded</span>
+            </div>
+          </div>
+          <figcaption>Expanded (<code>RecipeCraftBody</code>, <span class="mut">crafting/index.tsx:224</span>): a description, an
+          <em>inputs</em> have/need grid, and the Craft button. What's absent <em>even in the detail body</em>: the
+          <strong>output</strong> item and its <strong>worth</strong> — the <code>CostGrid</code> is fed inputs only. SC5 fixes
+          both the collapsed row <em>and</em> this gap.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">What each expanded body shows today — per screen</span>
+    <table>
+      <thead><tr><th style="width:15%">Screen</th><th style="width:27%">Collapsed header</th><th style="width:33%">Expanded body (today)</th><th>Still missing</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Crafting</strong> <span class="mut">→ <a href="#crafting">SC5</a></span></td>
+          <td>Icon · item name · status word (Ready / Missing inputs / No station / Village) · <code>×N</code> times-built.</td>
+          <td><code>RecipeCraftBody</code>: description + <b>Inputs</b> have/need grid + Craft button. <span class="mut">crafting/index.tsx:224</span></td>
+          <td>The <b>output</b> item + its sell value (a loaf sells 125◉); a route to build a missing station.</td></tr>
+        <tr><td><strong>Workers</strong> <span class="mut">→ <a href="#roster">SC7</a></span></td>
+          <td>Portrait · name · truncated effect · <code>count/max</code>.</td>
+          <td><code>WorkerHireBody</code>: a <b>Next-hire cost</b> grid (Coins + Villager + materials, have/need) + an <b>Effect</b> line + a Hire button (or "Maxed"). <span class="mut">workers/index.tsx:191</span></td>
+          <td>Nothing missing in the body — but the header's "0 villagers / 7 hired" pills contradict (SC7).</td></tr>
+        <tr><td><strong>Inventory</strong> <span class="mut">→ <a href="#inventory">SC6</a></span></td>
+          <td>Icon · label · count · order status.</td>
+          <td>Detail: description + <b>Sell</b> / <b>Buy</b> buttons (gated on a built Market) + a Tags well + a "Current orders ask for N" line. <span class="mut">ui/Inventory.tsx:242,320</span></td>
+          <td>Fractional order progress as a bar — the <code>ProgressTrack</code> primitive exists but is unused here.</td></tr>
+        <tr><td><strong>Buildings</strong> <span class="mut">→ <a href="./town.html">Town</a></span></td>
+          <td colspan="2"><em>Not an accordion.</em> The Build flow is a two-pane <code>BuildPicker</code> modal → pick → place on a plot → a purchase modal. The detail pane carries description, status/reason, ability pills, and a <b>Build cost</b> have/need grid. <span class="mut">ui/Town.tsx:697,527</span></td>
+          <td>No per-building <b>tier</b> shown; Decorations are flat, non-expandable cards.</td></tr>
+      </tbody>
+    </table>
+    <p class="small mut">Context for SC5–SC7 (and <a href="./town.html">Town</a> for buildings): each "surface it on the row"
+    proposal below <em>keeps</em> this expanded detail as the tap-through — it lifts the one verb + one number onto the header,
+    it does not delete the body. The one place the body itself is deficient is Crafting (no yield/value), fixed in
+    <a href="#crafting">SC5</a>.</p>
+  </article>
 
   <!-- ============================================================= SC1 -->
   <h2><span class="n">SC1</span>Repair the leaked &amp; mislabeled states</h2>
@@ -335,31 +416,43 @@
         </figure>
       </div>
       <div class="col">
-        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">Almanac tier that matches the gate</span></div>
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">the full manifest, reused everywhere · cost fixed</span></div>
         <figure class="light">
           <div class="gm" style="padding:12px;display:flex;flex-direction:column;gap:9px">
-            <div class="gm-wrap gm-card" style="padding:9px 11px;border-color:#c0392b">
-              <div style="display:flex;align-items:center;gap:6px">
-                <span class="gm-title" style="font-size:12px">Tier 5 — Master Harvester</span>
-                <span class="gm-spacer"></span>
-                <span class="gm-mini" style="font-weight:700">500 / <s>500</s>✦</span>
+            <!-- Trophy card — now carrying the full manifest instead of a 9px string -->
+            <div class="gm-wrap gm-card" style="padding:9px 11px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px">🐉</span>
+                <div style="flex:1;min-width:0"><div class="gm-title" style="font-size:12px">Chill of the Deep</div><div class="gm-mini">Defeat the Frost Titan</div></div>
+                <span class="gm-mini" style="font-weight:700">1/4</span>
               </div>
-              <div class="gm-cta primary" style="margin-top:7px;padding:6px 12px">CLAIM</div>
-              <span class="gm-flag bad" style="top:4px;right:4px">enabled, but claim silently fails</span>
+              <div class="gm-bar" style="margin:6px 0"><i style="width:25%;background:var(--g-gold)"></i></div>
+              <div style="display:flex;align-items:center;gap:6px;padding-top:6px;border-top:1px solid rgba(168,137,90,.35)">
+                <span style="font-size:13px">🪄</span><span class="gm-mini" style="font-weight:700">Magic Wand</span>
+                <span class="gm-spacer"></span><span class="gm-status locked">Tool ×1</span>
+              </div>
+              <span class="gm-flag good" style="top:4px;right:4px">quest manifest, reused (was a 9px string)</span>
             </div>
+            <!-- Almanac tier card — full manifest + corrected cost/gate -->
             <div class="gm-card" style="padding:9px 11px">
               <div style="display:flex;align-items:center;gap:6px">
                 <span class="gm-title" style="font-size:12px">Tier 5 — Master Harvester</span>
                 <span class="gm-spacer"></span>
                 <span class="gm-mini" style="font-weight:700">500 / 600✦</span>
               </div>
-              <div class="gm-bar" style="margin-top:6px"><i style="width:83%;background:var(--g-arcane)"></i></div>
-              <div class="gm-status locked" style="margin-top:7px">100✦ to go</div>
+              <div style="display:flex;flex-direction:column;gap:3px;margin:7px 0 6px">
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px">🔺</span><span class="gm-mini" style="font-weight:700">Extra Turn token</span><span class="gm-spacer"></span><span class="gm-status locked">Perk</span></div>
+                <div style="display:flex;align-items:center;gap:6px"><span style="font-size:13px">◉</span><span class="gm-mini" style="font-weight:700">Coins</span><span class="gm-spacer"></span><span class="chip" style="margin:0;font-size:10px">+300</span></div>
+              </div>
+              <div class="gm-bar"><i style="width:83%;background:var(--g-arcane)"></i></div>
+              <div class="gm-status locked" style="margin-top:7px">100✦ to go · real gate is 600, not 500</div>
             </div>
           </div>
-          <figcaption>The panel shows a ×100 ladder (tier 5 "unlocks" at 500✦) but the reducer levels on
-          <code>XP_PER_LEVEL = 150</code> and gates claim on <code>level ≥ tier</code> — so tier 5 truly needs
-          600✦. Above: button lights up and the claim no-ops. Below: cost, bar, and gate all read the real 600.</figcaption>
+          <figcaption>Keep the Quest board's <em>full itemized manifest</em> in every panel: a trophy's reward is no
+          longer squashed to a 9px string (it carries icon + name + <code>Tool&nbsp;×1</code>), and an Almanac tier lists
+          its perk + coins in the same rows. The tier's cost/bar/gate now read the real <strong>600✦</strong>
+          (<code>XP_PER_LEVEL 150 × level</code>) so CLAIM never lights up on an XP the reducer rejects. Nothing is
+          reduced — the rich reward read the quest board already nails is applied, not stripped.</figcaption>
         </figure>
       </div>
     </div>
@@ -406,6 +499,19 @@
     detail pane. The catalog data already carries the answer for every method — chain N, research N/M, buy N◉,
     build X, reach zone Y (<code>effects.ts statusFor</code>) — it's just not surfaced on the row.</p>
 
+    <div class="callout q" style="margin:10px 0 14px"><p style="margin:0"><strong>What the research bar actually
+    counts</strong> — the question the row must answer. Research is <em>not</em> "number of tiles collected" and
+    <em>not</em> "number of bread crafted": it is the <strong>cumulative chain-length of a <em>source</em> resource</strong>.
+    Each time you chain that source, the bar advances by that chain's length, capped at the target, and the tile unlocks
+    when the total is reached (<span class="filechip">state.ts:228–239</span>; the config literally documents it as
+    "cumulative chain progress of the source resource", <span class="filechip">tileDiscoveryMethods.ts:51</span>).
+    Crucially the source can <em>differ from the tile</em>: <b>Mushroom</b> is researched by chaining <b>Carrots</b>&nbsp;(×50),
+    <b>Spiky&nbsp;Grass</b> by chaining <b>Grass</b>&nbsp;(×50), <b>Turkey</b> by chaining <b>eggs</b>&nbsp;(×20),
+    <b>Pepper</b> by <b>Eggplant</b>&nbsp;(×80) — see <span class="filechip">tileCatalog.ts:100,124,196,203</span>. And it
+    only advances while that tile is its category's <em>active research focus</em>; otherwise it reads <b>Paused</b>
+    (<span class="filechip">effects.ts:221–225</span>, <code>state.ts:234</code>). So the row must state the <em>source</em>
+    and the focus state — "Chaining Carrots · 18/50", not a bare "18/30".</p></div>
+
     <div class="ba">
       <div class="col">
         <div class="caph"><span class="pin now">NOW</span><span class="lead-in">state word only; how-to hidden</span></div>
@@ -426,11 +532,13 @@
         <figure class="light">
           <div class="gm" style="padding:12px;display:flex;flex-direction:column;gap:7px">
             <div class="gm-row" style="margin:0"><span style="font-size:20px;filter:grayscale(1) brightness(.6)">🌾</span><div style="flex:1"><div class="gm-title" style="font-size:12px">Meadow Grass</div><div class="gm-mini">Chain 20 Grass to find</div></div><span class="gm-status locked">🔒</span></div>
-            <div class="gm-row" style="margin:0"><span style="font-size:20px;filter:grayscale(1) brightness(.6)">🌾</span><div style="flex:1"><div class="gm-title" style="font-size:12px">Spiky Grass</div><div class="gm-mini">Buy · 200 ◉</div></div><span class="gm-status need">200◉</span></div>
-            <div class="gm-row" style="margin:0;border-color:var(--g-moss)"><span style="font-size:20px;filter:grayscale(1) brightness(.6)">🌾</span><div style="flex:1"><div class="gm-title" style="font-size:12px">Golden Wheat</div><div style="display:flex;align-items:center;gap:6px;margin-top:3px"><div class="gm-bar" style="flex:1"><i style="width:60%;background:var(--g-moss)"></i></div><span class="gm-mini" style="font-weight:700">18/30</span></div></div><span class="gm-status ready">Researching</span></div>
+            <div class="gm-row" style="margin:0;border-color:var(--g-moss)"><span style="font-size:20px;filter:grayscale(1) brightness(.6)">🍄</span><div style="flex:1"><div class="gm-title" style="font-size:12px">Mushroom</div><div style="display:flex;align-items:center;gap:6px;margin-top:3px"><div class="gm-bar" style="flex:1"><i style="width:36%;background:var(--g-moss)"></i></div><span class="gm-mini" style="font-weight:700">18/50</span></div><div class="gm-mini" style="margin-top:2px">chaining <b>Carrots</b></div></div><span class="gm-status ready">Researching</span></div>
+            <div class="gm-row" style="margin:0"><span style="font-size:20px;filter:grayscale(1) brightness(.6)">🌶️</span><div style="flex:1"><div class="gm-title" style="font-size:12px">Pepper</div><div style="display:flex;align-items:center;gap:6px;margin-top:3px"><div class="gm-bar" style="flex:1;opacity:.55"><i style="width:0%;background:var(--g-ink-light)"></i></div><span class="gm-mini" style="font-weight:700">0/80</span></div><div class="gm-mini" style="margin-top:2px">chain <b>Eggplant</b> · not your focus</div></div><span class="gm-status need">Paused ▸</span></div>
           </div>
-          <figcaption>Each locked row states its own path: "Chain 20 Grass", "Buy · 200◉", or a live research bar
-          with a "Researching" pill. The Almanac becomes a to-do list, not a wall of "Locked".</figcaption>
+          <figcaption>Each locked row states its own path and, for research, <em>which source to chain</em> and how far
+          along: "chaining Carrots · 18/50" (active focus, advancing) vs. "chain Eggplant · 0/80 · Paused" (advances only
+          once you make it the category's focus). The Almanac becomes a to-do list that names the exact action — not a wall
+          of "Locked", and never an unlabelled "18/30".</figcaption>
         </figure>
       </div>
     </div>
@@ -441,6 +549,11 @@
         <li>Extend <code>CategoryRowViewModel</code> with a short <code>rowStatus</code> string + a
           <code>progress</code> pair, computed from the same <code>discovery</code> fields <code>statusFor</code>
           already reads (<span class="filechip">effects.ts:203</span>).</li>
+        <li>For research rows, name the <em>source</em> resource (<code>discovery.researchOf</code>) and the focus state —
+          <code>statusFor</code> already builds "Researching {researchOf}: p / N" vs "Paused — {researchOf}: p / N"
+          (<span class="filechip">effects.ts:221–225</span>); surface that verbatim (with the bar) instead of collapsing to
+          "Researching". The progress numerator is <code>researchProgress[id]</code>, the cumulative chain count
+          (<span class="filechip">state.ts:236</span>), so the "N/M" is chained-source-so-far / target.</li>
         <li>Render it as the <code>subtitle</code> (and an optional inline bar for research) in <code>TileListItem</code>
           (<span class="filechip">tileCollection/index.tsx:189</span>), replacing the flat Active/Locked/Unlocked
           string at <span class="filechip">tileCollection/index.tsx:197</span>.</li>
@@ -770,8 +883,88 @@
     <div class="phd"><span class="pid">SC8</span><span class="sev NEW">NEW</span><span class="eff">from this pass</span></div>
     <div class="ptitle">Surfaced while grounding these mockups in the panel code</div>
     <p class="why">Not in the original report; found reading the screen code for this pass. Each was re-verified
-    against the live source (including one initial reading that did <em>not</em> hold up — see the note).</p>
+    against the live source (including one initial reading that did <em>not</em> hold up — see the note). Per the
+    request, the two most visual new findings now carry a Now → Proposed picture.</p>
+
+    <span class="lbl">Now → proposed — the blank Mining tabs</span>
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">icon-only tabs · no Treasure</span></div>
+        <figure class="light">
+          <div class="gm gm-wrap" style="padding:16px 14px">
+            <div style="display:flex;gap:6px;justify-content:center">
+              <span class="gm-status locked" style="font-size:14px;padding:6px 11px">⛏️</span>
+              <span class="gm-status locked" style="font-size:14px;padding:6px 11px">🪨</span>
+              <span class="gm-status locked" style="font-size:14px;padding:6px 11px">💎</span>
+            </div>
+            <span class="gm-flag bad" style="bottom:6px;right:6px">no labels · Treasure tab absent</span>
+          </div>
+          <figcaption>Under Mining every category tab renders icon-only — the labels map is keyed
+          <code>tile_mine_stone…</code> but the catalog ids are <code>mine_stone…</code> — and <code>treasure</code> has
+          no entry at all, so a whole coin-tile category has no tab. <span class="mut">tileCollection/index.tsx:53;
+          tileCatalog.ts:64.</span></figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">re-keyed + Treasure added</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:16px 14px">
+            <div style="display:flex;gap:6px;justify-content:center;flex-wrap:wrap">
+              <span class="gm-status ready">⛏️ Stone</span>
+              <span class="gm-status locked">🪨 Copper</span>
+              <span class="gm-status locked">💎 Gems</span>
+              <span class="gm-status locked">🪙 Treasure</span>
+            </div>
+          </div>
+          <figcaption>Re-key <code>CATEGORY_LABELS</code>/<code>CATEGORY_ICONS</code> to the catalog ids and add the
+          missing <code>treasure</code> entry — every tab reads, and the coin-tile category gets a home.</figcaption>
+        </figure>
+      </div>
+    </div>
+
+    <span class="lbl">Now → proposed — a building's detail never states its tier (new)</span>
+    <div class="ba">
+      <div class="col">
+        <div class="caph"><span class="pin now">NOW</span><span class="lead-in">BuildPicker detail · no tier</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-wrap gm-card" style="padding:11px">
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">BUILDING</div>
+              <div class="gm-title" style="font-size:14px;margin-top:2px">Mira's Bakery</div>
+              <p class="gm-mini" style="margin:5px 0 8px">Where flour and patience become warm bread.</p>
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">BUILD COST</div>
+              <div style="display:flex;gap:6px;margin-top:5px"><span class="gm-status ready">◉ 300/300</span><span class="gm-status ready">🪵 4/4</span></div>
+              <span class="gm-flag bad" style="top:8px;right:8px">no tier — which level unlocks this?</span>
+            </div>
+          </div>
+          <figcaption>The BuildPicker detail (<span class="mut">Town.tsx:738</span>) shows description, status, ability
+          pills and a Build-cost grid — but never the building's <strong>tier</strong>. Tier surfaces only at the
+          settlement level, so a locked building can't say which upgrade unlocks it.</figcaption>
+        </figure>
+      </div>
+      <div class="col">
+        <div class="caph"><span class="pin next">PROPOSED</span><span class="lead-in">a tier chip on the detail</span></div>
+        <figure class="light">
+          <div class="gm" style="padding:12px">
+            <div class="gm-card" style="padding:11px">
+              <div style="display:flex;align-items:center;gap:6px"><span class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">BUILDING</span><span class="gm-spacer"></span><span class="gm-status need">Tier 2</span></div>
+              <div class="gm-title" style="font-size:14px;margin-top:2px">Mira's Bakery</div>
+              <p class="gm-mini" style="margin:5px 0 8px">Where flour and patience become warm bread.</p>
+              <div class="gm-mini disp" style="font-weight:700;color:var(--g-ink-soft)">BUILD COST</div>
+              <div style="display:flex;gap:6px;margin-top:5px"><span class="gm-status ready">◉ 300/300</span><span class="gm-status ready">🪵 4/4</span></div>
+            </div>
+          </div>
+          <figcaption>Add a tier chip beside the "Building" eyebrow so a locked building states the settlement tier it
+          needs — the number is already known at build-eligibility time.</figcaption>
+        </figure>
+      </div>
+    </div>
+
     <ul>
+      <li><strong>NEW — a building's detail never states its tier.</strong> The BuildPicker DetailPane
+        (<span class="filechip">ui/Town.tsx:738</span>) renders description, status/reason, ability pills and a
+        Build-cost grid, but no tier; tier is shown only at the settlement level (<code>TierUpgradeBanner</code>). Add a
+        tier chip (mock above).</li>
       <li><strong>The recipe <code>coins</code> field is dead code.</strong> <code>grantCraftOutput</code> adds the
         crafted item (<span class="filechip">crafting/slice.ts:80</span>) and does
         <code>coins += (recipe.coins ?? 0)</code> (<span class="filechip">crafting/slice.ts:86</span>), and the

@@ -19,8 +19,11 @@ visual** (a real screenshot of the running game next to a game-accurate HTML moc
 `file:line` implementation spec. It's split one page per surface — [Board](./proposals/board.html) ·
 [Town](./proposals/town.html) · [Map](./proposals/map.html) · [Screens](./proposals/screens.html) ·
 [Story](./proposals/story.html) · [Shell](./proposals/shell.html) ·
-[Cross-cutting](./proposals/crosscutting.html) · [Additional findings](./proposals/additional-findings.html)
-— for ~58 fully-defined proposals in all.
+[Cross-cutting](./proposals/crosscutting.html) · [Additional findings](./proposals/additional-findings.html) ·
+[Animated icons](./proposals/icons-animation.html)
+— for ~58 fully-defined proposals in all, plus an animated-icon concept study (pixel vs. painterly, season + idle
+worked examples). The Screens page now also documents the **expanded/detail state** of the hiring, crafting,
+inventory and building rows (not just the collapsed mockups), and several new findings carry Now → Proposed visuals.
 
 Grounding each mock-up in the live code also surfaced **23 findings beyond the 161 in this report** —
 several are *logic* issues, not just UX: silent save-write/load failure (data loss), a debug cheat panel
